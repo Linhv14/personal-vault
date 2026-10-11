@@ -1,11 +1,12 @@
-# Mẫu secret cho bản chạy local (`cf dev`).
-# `cf deploy` tự sinh secret thật trên Cloudflare — không dùng file này.
-# Copy thành .dev.vars nếu muốn đặt tay. .dev.vars đã được gitignore.
+# Template for local development secrets (`npm run dev` writes this file for
+# you if it is missing). `cf deploy` generates real secrets on Cloudflare and
+# never reads this file. Copy to .dev.vars to set them by hand; .dev.vars is
+# gitignored.
 
-# Bắt buộc khi gọi /api/auth/register. Không có nó thì bất cứ ai tìm thấy URL
-# Worker cũng tạo được account trên đó.
+# Required by /api/auth/register. Without it, anyone who finds your Worker URL
+# can create an account on it.
 REGISTRATION_TOKEN="token-dev-local"
 
-# Khoá HMAC sinh KDF params giả cho email không tồn tại, để không ai dò được
-# email nào đã đăng ký. Đặt một chuỗi ngẫu nhiên bất kỳ.
-EMAIL_PROBE_SECRET="doi-thanh-chuoi-ngau-nhien-cua-ban"
+# HMAC key used to fabricate KDF parameters for addresses that do not exist, so
+# nobody can probe which emails are registered. Any random string works.
+EMAIL_PROBE_SECRET="replace-with-a-random-string"

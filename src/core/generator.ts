@@ -1,11 +1,12 @@
 /**
- * Sinh mật khẩu. Toàn bộ tính ngẫu nhiên lấy từ `crypto.getRandomValues()`.
+ * Password generation. All randomness comes from `crypto.getRandomValues()`.
  *
- * KHÔNG BAO GIỜ dùng `Math.random()` ở đây: nó không phải CSPRNG, trạng thái nội
- * bộ của nó khôi phục được từ vài giá trị đầu ra, nên mật khẩu sinh ra dự đoán
- * được nếu kẻ tấn công thấy một mẫu bất kỳ do cùng tab tạo ra.
+ * NEVER use `Math.random()` here: it is not a CSPRNG, its internal state can be
+ * recovered from a handful of outputs, so passwords become predictable to an
+ * attacker who sees any sample produced by the same context.
  */
 
+import { VaultError } from "./errors.js";
 import { EFF_SHORT_WORDLIST } from "./wordlist.js";
 
 const LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
@@ -14,8 +15,8 @@ const DIGITS = "0123456789";
 const SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?";
 
 /**
- * Ký tự dễ đọc lẫn nhau khi phải đọc mật khẩu qua điện thoại hoặc gõ lại từ màn
- * hình khác. Không tăng an toàn, chỉ giảm nhầm lẫn.
+ * Characters easily confused when a password has to be read aloud or retyped
+ * from another screen. Dropping them does not add security, only fewer mistakes.
  */
 const AMBIGUOUS = new Set([..."0OoIl1|`'\"{}[]()"]);
 
@@ -30,20 +31,22 @@ export interface PasswordOptions {
 
 export interface GeneratedSecret {
   value: string;
-  /** Entropy tính bằng bit — thước đo duy nhất đáng tin về độ mạnh. */
+  /** Entropy in bits — the only trustworthy measure of strength. */
   entropyBits: number;
 }
 
 /**
- * Trả về số nguyên ngẫu nhiên đều trong [0, max).
+ * A uniformly distributed integer in [0, max).
  *
- * Cách làm sai phổ biến là `randomValue % max`: nếu `max` không chia hết 2^32 thì
- * các giá trị đầu dải xuất hiện nhiều hơn — gọi là modulo bias, và nó làm giảm
- * entropy thật của mật khẩu. Ở đây ta loại bỏ (rejection sampling) những giá trị
- * nằm trong phần dư để phân phối còn lại đều tuyệt đối.
+ * The common mistake is `randomValue % max`: when `max` does not divide 2^32
+ * evenly, low values occur slightly more often. That is modulo bias, and it
+ * reduces the real entropy of generated passwords. Rejection sampling discards
+ * the values in the ragged tail so the rest is exactly uniform.
  */
 export function randomInt(max: number): number {
-  if (!Number.isInteger(max) || max <= 0) throw new Error("max phải là số nguyên dương");
+  if (!Number.isInteger(max) || max <= 0) {
+    throw new VaultError("generator.invalid_max", {}, `max must be a positive integer, got ${max}`);
+  }
   if (max === 1) return 0;
 
   const limit = Math.floor(0x1_0000_0000 / max) * max;
@@ -60,7 +63,7 @@ function pick<T>(items: readonly T[]): T {
   return items[randomInt(items.length)]!;
 }
 
-/** Fisher-Yates dùng randomInt, để kết quả trộn cũng không lệch. */
+/** Fisher-Yates driven by randomInt, so the shuffle is unbiased too. */
 function shuffle<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i--) {
     const j = randomInt(i + 1);
@@ -88,18 +91,19 @@ export function buildAlphabet(options: PasswordOptions = {}): string {
     alphabet = [...alphabet].filter((c) => !AMBIGUOUS.has(c)).join("");
   }
   if (alphabet.length === 0) {
-    throw new Error("Phải chọn ít nhất một nhóm ký tự");
+    throw new VaultError("generator.no_character_set", {}, "No character set selected");
   }
   return alphabet;
 }
 
 /**
- * Sinh mật khẩu ngẫu nhiên, đảm bảo có ít nhất một ký tự từ mỗi nhóm đã chọn.
+ * Generate a random password containing at least one character from every
+ * selected set.
  *
- * Nhiều site bắt buộc "phải có chữ hoa, số và ký tự đặc biệt", nên nếu không đảm
- * bảo điều này thì cứ vài lần lại phải bấm sinh lại. Cách làm: sinh một ký tự
- * bắt buộc cho mỗi nhóm, điền phần còn lại từ bảng chữ cái đầy đủ, rồi trộn —
- * giữ được tính ngẫu nhiên đều ở từng vị trí.
+ * Plenty of sites demand "an uppercase letter, a digit and a symbol", so without
+ * this guarantee you would be hitting regenerate every few tries. The approach:
+ * take one mandatory character per set, fill the rest from the full alphabet,
+ * then shuffle — which keeps every position uniformly random.
  */
 export function generatePassword(options: PasswordOptions = {}): GeneratedSecret {
   const { length = 20 } = options;
@@ -107,17 +111,23 @@ export function generatePassword(options: PasswordOptions = {}): GeneratedSecret
 
   const requiredSets = activeSets(options);
   if (length < requiredSets.length) {
-    throw new Error(`Độ dài tối thiểu là ${requiredSets.length} để đủ mỗi nhóm một ký tự`);
+    throw new VaultError(
+      "generator.length_too_short",
+      { min: requiredSets.length },
+      `Length ${length} is below the ${requiredSets.length} required sets`,
+    );
   }
-  if (length > 256) throw new Error("Độ dài tối đa là 256");
+  if (length > 256) {
+    throw new VaultError("generator.length_too_long", { max: 256 }, "Length above 256");
+  }
 
   const chars = requiredSets.map((set) => pick([...set]));
   while (chars.length < length) chars.push(pick([...alphabet]));
 
   return {
     value: shuffle(chars).join(""),
-    // Đây là chặn trên: ràng buộc "mỗi nhóm ít nhất một ký tự" làm hẹp không
-    // gian một chút. Với độ dài >= 16 thì chênh lệch dưới 1 bit, không đáng kể.
+    // An upper bound: the "one per set" constraint narrows the space slightly.
+    // At length >= 16 the difference is under one bit, which is negligible.
     entropyBits: round(length * Math.log2(alphabet.length)),
   };
 }
@@ -151,13 +161,14 @@ export interface PassphraseOptions {
 }
 
 /**
- * Passphrase kiểu "acid-zone-tulip-cargo". Dài hơn nhưng gõ lại bằng tay dễ hơn
- * nhiều — hữu ích cho mật khẩu phải nhập trên TV, máy chơi game, hay đọc qua
- * điện thoại cho người khác.
+ * A passphrase like "acid-zone-tulip-cargo". Longer, but far easier to retype by
+ * hand — useful for passwords you must enter on a TV, a console, or read aloud
+ * over the phone.
  *
- * Mặc định 8 từ, không phải 5. Wordlist ngắn chỉ cho 10,34 bit mỗi từ, nên 5 từ
- * ra 51,7 bit — `rateStrength` xếp "yếu", nằm trong tầm brute-force offline. 8 từ
- * cho 82,7 bit, ngang một mật khẩu ngẫu nhiên 13 ký tự.
+ * The default is 8 words, not 5. The short word list carries only 10.34 bits per
+ * word, so 5 words is 51.7 bits — which `rateStrength` calls weak, and which is
+ * within reach of offline brute force. 8 words gives 82.7 bits, about the same
+ * as a random 13-character password.
  */
 export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSecret {
   const {
@@ -168,9 +179,15 @@ export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSe
     wordlist = EFF_SHORT_WORDLIST,
   } = options;
 
-  if (words < 2) throw new Error("Passphrase cần ít nhất 2 từ");
-  if (words > 32) throw new Error("Tối đa 32 từ");
-  if (wordlist.length < 2) throw new Error("Wordlist quá ngắn");
+  if (words < 2) {
+    throw new VaultError("generator.too_few_words", { min: 2 }, `Too few words: ${words}`);
+  }
+  if (words > 32) {
+    throw new VaultError("generator.too_many_words", { max: 32 }, `Too many words: ${words}`);
+  }
+  if (wordlist.length < 2) {
+    throw new VaultError("generator.wordlist_too_small", {}, "Word list has fewer than 2 entries");
+  }
 
   const chosen = Array.from({ length: words }, () => {
     const word = pick(wordlist);
@@ -178,7 +195,8 @@ export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSe
   });
 
   let value = chosen.join(separator);
-  // Entropy tính từ chính độ dài wordlist, nên đổi wordlist không làm sai số liệu.
+  // Entropy is computed from the actual list length, so swapping word lists
+  // never makes the displayed figure wrong.
   let entropyBits = words * Math.log2(wordlist.length);
 
   if (appendDigit) {
@@ -189,25 +207,31 @@ export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSe
   return { value, entropyBits: round(entropyBits) };
 }
 
-/** PIN số — cho khoá màn hình, thẻ ATM, két. */
+/** A numeric PIN — for screen locks, bank cards, safes. */
 export function generatePin(length = 6): GeneratedSecret {
-  if (length < 3 || length > 32) throw new Error("Độ dài PIN phải từ 3 đến 32");
+  if (length < 3 || length > 32) {
+    throw new VaultError(
+      "generator.pin_length_out_of_range",
+      { min: 3, max: 32 },
+      `PIN length out of range: ${length}`,
+    );
+  }
   const value = Array.from({ length }, () => randomInt(10)).join("");
   return { value, entropyBits: round(length * Math.log2(10)) };
 }
 
-export type Strength = "rất yếu" | "yếu" | "khá" | "mạnh" | "rất mạnh";
+export type Strength = "very_weak" | "weak" | "fair" | "strong" | "very_strong";
 
 /**
- * Xếp hạng theo entropy, không theo luật "có chữ hoa và số" như nhiều site.
- * Mốc 75 bit trở lên nằm ngoài tầm với của brute-force offline hiện nay.
+ * Rate by entropy, not by "has an uppercase and a digit" rules. Anything from
+ * 75 bits up is beyond the reach of present-day offline brute force.
  */
 export function rateStrength(entropyBits: number): Strength {
-  if (entropyBits < 40) return "rất yếu";
-  if (entropyBits < 60) return "yếu";
-  if (entropyBits < 75) return "khá";
-  if (entropyBits < 100) return "mạnh";
-  return "rất mạnh";
+  if (entropyBits < 40) return "very_weak";
+  if (entropyBits < 60) return "weak";
+  if (entropyBits < 75) return "fair";
+  if (entropyBits < 100) return "strong";
+  return "very_strong";
 }
 
 function round(n: number): number {

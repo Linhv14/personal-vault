@@ -1,19 +1,19 @@
 /**
- * Hai vùng lưu trữ, và ranh giới giữa chúng là quyết định bảo mật quan trọng
- * nhất của extension:
+ * Two storage areas, and the boundary between them is the extension's most
+ * important security decision:
  *
- * - `chrome.storage.local` nằm TRÊN ĐĨA, dạng rõ. Chỉ chứa ciphertext và cấu
- *   hình. Không bao giờ chứa khoá hay plaintext.
- * - `chrome.storage.session` nằm TRONG BỘ NHỚ, tự xoá khi đóng browser. Chứa
- *   vault key và session token.
+ * - `chrome.storage.local` is ON DISK in the clear. Ciphertext and settings only.
+ * - `chrome.storage.session` is in memory and cleared when the browser closes.
+ *   The vault key and session token live here.
  *
- * Nhầm hai vùng này là lỗi làm sụp toàn bộ mô hình bảo mật mà không có dấu hiệu
- * nào nhìn thấy được: app vẫn chạy đúng, chỉ là khoá của bạn đã nằm trên đĩa.
+ * Mixing the two is a failure with no visible symptom: everything keeps working,
+ * your keys are just sitting on disk.
  */
 
 import type { KdfParams, SealedData } from "../../src/core/crypto.js";
+import type { LocalePreference } from "../../src/i18n/index.js";
 
-/** Bản ghi item như server lưu — luôn là ciphertext. */
+/** An item exactly as the server stores it — always ciphertext. */
 export interface CachedItem {
   id: string;
   ciphertext: string | null;
@@ -26,13 +26,14 @@ export interface LocalState {
   apiUrl?: string;
   email?: string;
   kdf?: KdfParams;
-  /** Cache để unlock được khi không có mạng. */
+  /** Cached so the vault can be unlocked without a network connection. */
   wrappedVaultKey?: SealedData;
   items?: CachedItem[];
   lastSync?: number;
   autoLockMinutes?: number;
-  /** Lệch đồng hồ máy so với server, tính bằng giây. */
+  /** Offset of this machine's clock against the server, in seconds. */
   clockSkew?: number;
+  locale?: LocalePreference;
 }
 
 interface SessionState {
@@ -59,8 +60,8 @@ export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: stri
   const session = await getSession();
   if (!session.vaultKeyRaw) return null;
 
-  // Kiểm tra hạn auto-lock ngay tại đây, không chỉ dựa vào alarm: service worker
-  // của MV3 có thể bị kill và alarm trễ, nhưng popup mở ra là phải đúng.
+  // Check the deadline here rather than trusting the alarm alone: MV3 can kill
+  // the service worker and delay alarms, but the popup must always be right.
   if (session.lockAt && Date.now() > session.lockAt) {
     await lock();
     return null;
@@ -78,7 +79,7 @@ export async function unlock(vaultKeyRaw: string, token: string | undefined): Pr
   await scheduleLockAlarm();
 }
 
-/** Gia hạn mỗi lần người dùng thao tác, để không bị khoá giữa lúc đang dùng. */
+/** Extend the deadline on activity so the vault never locks mid-use. */
 export async function touch(): Promise<void> {
   const session = await getSession();
   if (!session.vaultKeyRaw) return;
@@ -87,8 +88,8 @@ export async function touch(): Promise<void> {
 }
 
 export async function lock(): Promise<void> {
-  // `clear()` chứ không xoá từng khoá: nếu sau này thêm trường mới vào session mà
-  // quên cập nhật hàm này, khoá vẫn bị xoá sạch.
+  // clear() rather than deleting named keys, so adding a field later cannot
+  // leave a secret behind.
   await chrome.storage.session.clear();
 }
 
@@ -99,6 +100,5 @@ export async function setToken(token: string): Promise<void> {
 export const LOCK_ALARM = "auto-lock";
 
 export async function scheduleLockAlarm(): Promise<void> {
-  // Alarm tối thiểu của Chrome là 30 giây; chạy mỗi phút là đủ mịn và không tốn pin.
   await chrome.alarms.create(LOCK_ALARM, { periodInMinutes: 1 });
 }

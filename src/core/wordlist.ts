@@ -1,11 +1,12 @@
 /**
- * EFF Short Wordlist #1 — 1296 từ, tải từ
+ * EFF Short Wordlist #1 — 1296 words, from
  * https://www.eff.org/files/2016/09/08/eff_short_wordlist_1.txt
  *
- * Chọn list ngắn (1296 từ) thay vì list dài (7776 từ): mỗi từ mang
- * log2(1296) = 10,34 bit thay vì 12,92 bit, nhưng từ ngắn hơn và dễ gõ hơn
- * nhiều. Bù lại bằng cách tăng số từ — entropy được tính từ chính độ dài list
- * trong generator, nên thay list khác không làm sai con số hiển thị.
+ * The short list (1296 words) is used instead of the long one (7776): each word
+ * carries log2(1296) = 10.34 bits rather than 12.92, but the words are shorter
+ * and much easier to type. The generator compensates with more words, and it
+ * computes entropy from the list length itself — so swapping in another list
+ * never makes the displayed figure wrong.
  */
 
 export const EFF_SHORT_WORDLIST: readonly string[] = [

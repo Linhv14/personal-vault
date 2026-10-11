@@ -1,9 +1,9 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  /** Bắt buộc khi đăng ký. Không có nó thì Worker của bạn là trang đăng ký công khai. */
+  /** Required to register. Without it your Worker is a public signup page. */
   REGISTRATION_TOKEN: string;
-  /** Khoá HMAC để sinh KDF params giả cho email không tồn tại. */
+  /** HMAC key used to fabricate KDF params for addresses that do not exist. */
   EMAIL_PROBE_SECRET: string;
 }
 
@@ -12,7 +12,7 @@ export interface SessionContext {
   tokenHash: string;
 }
 
-/** Biến context của Hono. Khai báo để `c.get("session")` có kiểu đúng. */
+/** Hono context variables, declared so `c.get("session")` is typed. */
 export type AppBindings = {
   Bindings: Env;
   Variables: { session: SessionContext };

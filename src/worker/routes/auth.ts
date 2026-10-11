@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { DEFAULT_KDF_ITERATIONS, hashAuthKey } from "../../core/crypto.js";
 import { fromBase64, timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
+import { apiError } from "../errors.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
 
@@ -17,8 +18,8 @@ function now(): number {
 function normalizeEmail(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const email = value.trim().toLowerCase();
-  // Kiểm tra vừa đủ: email ở đây là định danh account và là salt của KDF, không
-  // phải địa chỉ để gửi thư, nên không cần xác thực chặt chẽ hơn.
+  // Only a sanity check: here an email is an account identifier and the KDF
+  // salt, not an address anything is delivered to.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : null;
 }
 
@@ -30,7 +31,8 @@ interface SealedBody {
 function isSealed(value: unknown, maxBytes = 4096): value is SealedBody {
   if (typeof value !== "object" || value === null) return false;
   const { ciphertext, nonce } = value as Record<string, unknown>;
-  // Nonce của AES-GCM luôn đúng 12 byte; khác đi là client sai hoặc ai đó đang thử.
+  // An AES-GCM nonce is always exactly 12 bytes; anything else means a broken
+  // client or someone probing.
   return isBase64(ciphertext, maxBytes) && isBase64(nonce, 12);
 }
 
@@ -46,8 +48,9 @@ function isKdf(value: unknown): value is KdfBody {
   return (
     type === "pbkdf2-sha256" &&
     typeof iterations === "number" &&
-    // Chặn dưới để client không tự hạ số vòng xuống mức dò được; chặn trên để
-    // không ai tự khoá mình ra khỏi vault bằng một con số làm treo browser.
+    // Lower bound so a client cannot downgrade itself into brute-force range;
+    // upper bound so nobody locks themselves out with a number that hangs the
+    // browser.
     iterations >= 100_000 &&
     iterations <= 5_000_000 &&
     isBase64(salt, 64)
@@ -55,31 +58,32 @@ function isKdf(value: unknown): value is KdfBody {
 }
 
 /**
- * Đăng ký phải có token bí mật.
+ * Registration requires a secret token.
  *
- * Không có bước này thì Worker đang bật công khai là một trang đăng ký cho bất
- * cứ ai tìm thấy URL — họ không đọc được vault của bạn, nhưng dùng hết quota và
- * biến hạ tầng của bạn thành chỗ chứa dữ liệu của người lạ.
+ * Without this step, a Worker that is reachable on the internet is an open
+ * signup page for anyone who finds the URL. They could not read your vault, but
+ * they would consume your quota and turn your infrastructure into a host for
+ * strangers' data.
  */
 auth.post("/register", async (c) => {
   const provided = c.req.header("x-registration-token") ?? "";
   const expected = c.env.REGISTRATION_TOKEN;
   if (!expected || !timingSafeEqual(utf8Encode(provided), utf8Encode(expected))) {
-    return c.json({ error: "Token đăng ký không đúng" }, 403);
+    return c.json(apiError("auth.bad_registration_token"), 403);
   }
 
   const body = await c.req.json().catch(() => null);
   if (typeof body !== "object" || body === null) {
-    return c.json({ error: "Body không phải JSON" }, 400);
+    return c.json(apiError("auth.invalid_body"), 400);
   }
 
   const { email: rawEmail, kdf, authKey, wrappedVaultKey } = body as Record<string, unknown>;
   const email = normalizeEmail(rawEmail);
-  if (!email) return c.json({ error: "Email không hợp lệ" }, 400);
-  if (!isKdf(kdf)) return c.json({ error: "KDF params không hợp lệ" }, 400);
-  if (!isBase64(authKey, 32)) return c.json({ error: "authKey không hợp lệ" }, 400);
+  if (!email) return c.json(apiError("auth.invalid_email"), 400);
+  if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
+  if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
   if (!isSealed(wrappedVaultKey, 64)) {
-    return c.json({ error: "wrappedVaultKey không hợp lệ" }, 400);
+    return c.json(apiError("auth.invalid_wrapped_key"), 400);
   }
 
   const timestamp = now();
@@ -106,7 +110,7 @@ auth.post("/register", async (c) => {
       .run();
   } catch (error) {
     if (String(error).includes("UNIQUE")) {
-      return c.json({ error: "Email đã được đăng ký" }, 409);
+      return c.json(apiError("auth.email_taken"), 409);
     }
     throw error;
   }
@@ -116,16 +120,18 @@ auth.post("/register", async (c) => {
 });
 
 /**
- * Trả KDF params để client dẫn xuất auth key *trước khi* đăng nhập.
+ * Hand back the KDF params so the client can derive its auth key *before*
+ * signing in.
  *
- * Email không tồn tại cũng trả về params trông hợp lệ, sinh xác định từ HMAC của
- * một secret phía server. Nếu trả 404 ở đây, bất cứ ai cũng dò được email nào đã
- * đăng ký — và với vault cá nhân thì chính email đó là nửa đầu của mục tiêu.
+ * An address that does not exist still receives plausible params, derived
+ * deterministically from an HMAC of a server-side secret. Returning 404 here
+ * would let anyone enumerate which addresses are registered — and for a personal
+ * vault that address is half of the target.
  */
 auth.post("/prelogin", async (c) => {
   const body = await c.req.json().catch(() => null);
   const email = normalizeEmail((body as Record<string, unknown> | null)?.email);
-  if (!email) return c.json({ error: "Email không hợp lệ" }, 400);
+  if (!email) return c.json(apiError("auth.invalid_email"), 400);
 
   const row = await c.env.DB.prepare(
     "SELECT kdf_type, kdf_iterations, kdf_salt FROM accounts WHERE email = ?",
@@ -163,13 +169,13 @@ auth.post("/login", async (c) => {
   const { email: rawEmail, authKey } = (body ?? {}) as Record<string, unknown>;
   const email = normalizeEmail(rawEmail);
   if (!email || !isBase64(authKey, 32)) {
-    return c.json({ error: "Thông tin đăng nhập không hợp lệ" }, 400);
+    return c.json(apiError("auth.invalid_credentials"), 400);
   }
 
   const timestamp = now();
   const lock = await checkLock(c.env, email, timestamp);
   if (lock) {
-    return c.json({ error: `Thử lại sau ${lock} giây` }, 429);
+    return c.json(apiError("auth.rate_limited", { seconds: lock }), 429);
   }
 
   const row = await c.env.DB.prepare(
@@ -185,14 +191,15 @@ auth.post("/login", async (c) => {
     }>();
 
   const providedHash = await hashAuthKey(authKey);
-  // So sánh timing-safe và luôn chạy dù account không tồn tại, để thời gian phản
-  // hồi không tiết lộ email nào có thật.
+  // Compare in constant time, and run the comparison even when no account
+  // exists, so response timing does not reveal which addresses are real.
   const expectedHash = row?.auth_key_hash ?? providedHash.replace(/.$/, "A");
-  const matches = row !== null && timingSafeEqual(fromBase64(providedHash), fromBase64(expectedHash));
+  const matches =
+    row !== null && timingSafeEqual(fromBase64(providedHash), fromBase64(expectedHash));
 
   if (!matches) {
     await recordFailure(c.env, email, timestamp);
-    return c.json({ error: "Email hoặc master password không đúng" }, 401);
+    return c.json(apiError("auth.invalid_credentials"), 401);
   }
 
   await clearFailures(c.env, email);
@@ -210,15 +217,15 @@ auth.post("/logout", async (c) => {
 });
 
 /**
- * Đổi master password. Client tự dẫn xuất khoá mới và bọc lại vault key, nên
- * server chỉ việc thay ba cột — không item nào bị chạm tới.
+ * Change the master password. The client derives the new keys and re-wraps the
+ * vault key itself, so the server only swaps three columns — no item is touched.
  */
 auth.post("/change-password", async (c) => {
   const body = await c.req.json().catch(() => null);
   const { kdf, authKey, wrappedVaultKey } = (body ?? {}) as Record<string, unknown>;
-  if (!isKdf(kdf) || !isBase64(authKey, 32) || !isSealed(wrappedVaultKey, 64)) {
-    return c.json({ error: "Dữ liệu không hợp lệ" }, 400);
-  }
+  if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
+  if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
+  if (!isSealed(wrappedVaultKey, 64)) return c.json(apiError("auth.invalid_wrapped_key"), 400);
 
   const { accountId } = c.get("session");
   await c.env.DB.prepare(
@@ -238,14 +245,13 @@ auth.post("/change-password", async (c) => {
     )
     .run();
 
-  // Thu hồi mọi session: thiết bị khác đang giữ vault key cũ phải nhập lại.
+  // Revoke every session: other devices still hold the old vault key and must
+  // unlock again.
   await revokeAllSessions(c.env, accountId);
   return c.json({ ok: true });
 });
 
-// ---------------------------------------------------------------------------
-// Chặn dò mật khẩu qua đường online
-// ---------------------------------------------------------------------------
+// Online password-guessing defence
 
 async function checkLock(env: Env, email: string, timestamp: number): Promise<number | null> {
   const row = await env.DB.prepare("SELECT locked_until FROM login_attempts WHERE email = ?")
@@ -262,7 +268,7 @@ async function recordFailure(env: Env, email: string, timestamp: number): Promis
     .bind(email)
     .first<{ failures: number; window_start: number }>();
 
-  // Cửa sổ trượt đơn giản: hết cửa sổ thì đếm lại từ đầu.
+  // A plain sliding window: once the window lapses, counting restarts.
   const inWindow = row !== null && timestamp - row.window_start < WINDOW_SECONDS;
   const failures = inWindow ? row.failures + 1 : 1;
   const windowStart = inWindow ? row.window_start : timestamp;

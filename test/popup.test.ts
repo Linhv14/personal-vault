@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
 
 /**
- * Smoke test cho popup extension: chạy popup.html thật, với `chrome.*` và server
- * giả, rồi đi qua các luồng chính.
+ * Smoke test for the extension popup: the real popup.html, driven against
+ * stubbed `chrome.*` APIs and a fake server.
  *
- * Mục đích không phải kiểm tra từng nút, mà bắt những lỗi mà typecheck không
- * thấy được: thiếu id trong HTML, sai thứ tự màn hình, và — quan trọng nhất —
- * khoá hay plaintext bị ghi nhầm vào `storage.local` (vùng nằm trên đĩa).
+ * The point is not to exercise every button but to catch what typechecking
+ * cannot: missing ids in the HTML, screens wired in the wrong order, and above
+ * all a key or plaintext landing in `storage.local`, which is on disk.
  */
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -14,14 +14,11 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const EMAIL = "test@example.com";
-const PASSWORD = "mật khẩu chủ dài cho test";
+const PASSWORD = "a long master password for tests";
 const API_URL = "https://vault.test";
-const REGISTRATION_TOKEN = "token-test";
+const REGISTRATION_TOKEN = "test-registration-token";
 const TOTP_SECRET = "JBSWY3DPEHPK3PXP";
-
-// ---------------------------------------------------------------------------
-// chrome.* giả
-// ---------------------------------------------------------------------------
+const ITEM_PASSWORD = "a-very-secret-password-123";
 
 const localArea = new Map<string, unknown>();
 const sessionArea = new Map<string, unknown>();
@@ -51,21 +48,10 @@ const chromeMock = {
   runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
 };
 
-// ---------------------------------------------------------------------------
-// Server giả — giữ đúng hợp đồng của Worker, kể cả việc chỉ nhận ciphertext
-// ---------------------------------------------------------------------------
-
-interface StoredAccount {
-  kdf: unknown;
-  authKey: string;
-  wrappedVaultKey: unknown;
-}
-
 const server = {
-  account: null as StoredAccount | null,
+  account: null as Record<string, unknown> | null,
   items: new Map<string, { ciphertext: string; nonce: string; updatedAt: number }>(),
-  shares: new Map<string, unknown>(),
-  /** Mọi body đã nhận — dùng để khẳng định server không bao giờ thấy plaintext. */
+  /** Every request body seen, used to prove the server never gets plaintext. */
   received: [] as string[],
 };
 
@@ -85,28 +71,25 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   const now = Math.floor(Date.now() / 1000);
 
   if (url.pathname === "/api/auth/register") {
-    const headers = new Headers(init?.headers);
-    if (headers.get("X-Registration-Token") !== REGISTRATION_TOKEN) {
-      return json({ error: "Token đăng ký không đúng" }, 403);
+    if (new Headers(init?.headers).get("X-Registration-Token") !== REGISTRATION_TOKEN) {
+      return json({ code: "auth.bad_registration_token", error: "Invalid token" }, 403);
     }
-    server.account = {
-      kdf: body.kdf,
-      authKey: body.authKey,
-      wrappedVaultKey: body.wrappedVaultKey,
-    };
-    return json({ accountId: "acc-1", token: "token-phien", expiresAt: now + 3600 }, 201);
+    server.account = body;
+    return json({ accountId: "acc-1", token: "session-token", expiresAt: now + 3600 }, 201);
   }
 
   if (url.pathname === "/api/auth/prelogin") {
-    return json({ kdf: server.account?.kdf ?? { type: "pbkdf2-sha256", iterations: 600000, salt: "AAAA" } });
+    return json({
+      kdf: server.account?.kdf ?? { type: "pbkdf2-sha256", iterations: 600000, salt: "AAAA" },
+    });
   }
 
   if (url.pathname === "/api/auth/login") {
     if (!server.account || body.authKey !== server.account.authKey) {
-      return json({ error: "Email hoặc master password không đúng" }, 401);
+      return json({ code: "auth.invalid_credentials", error: "Bad credentials" }, 401);
     }
     return json({
-      token: "token-phien",
+      token: "session-token",
       expiresAt: now + 3600,
       wrappedVaultKey: server.account.wrappedVaultKey,
     });
@@ -117,13 +100,7 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   if (url.pathname === "/api/items" && method === "GET") {
     return json({
       serverTime: now,
-      items: [...server.items.entries()].map(([id, row]) => ({
-        id,
-        ciphertext: row.ciphertext,
-        nonce: row.nonce,
-        updatedAt: row.updatedAt,
-        deletedAt: null,
-      })),
+      items: [...server.items.entries()].map(([id, row]) => ({ id, ...row, deletedAt: null })),
     });
   }
 
@@ -134,19 +111,15 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   }
 
   if (url.pathname === "/api/shares" && method === "POST") {
-    const id = "share-1";
-    server.shares.set(id, body);
-    return json({ id, expiresAt: now + 86400, maxViews: body.maxViews }, 201);
+    return json({ id: "share-1", expiresAt: now + 86400, maxViews: body.maxViews }, 201);
   }
 
-  return json({ error: `Không có endpoint ${url.pathname}` }, 404);
+  return json({ code: "server.not_found", error: "No such endpoint" }, 404);
 });
-
-// ---------------------------------------------------------------------------
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
-  if (!node) throw new Error(`Thiếu #${id} trong popup.html`);
+  if (!node) throw new Error(`Missing #${id} in popup.html`);
   return node as T;
 }
 
@@ -161,23 +134,21 @@ function setField(form: HTMLFormElement, name: string, value: string): void {
   form.querySelector<HTMLInputElement>(`[name="${name}"]`)!.value = value;
 }
 
-/** Chờ cho tới khi điều kiện đúng — các luồng đều có await ở giữa. */
-async function waitFor(check: () => boolean, label: string, timeoutMs = 20_000): Promise<void> {
+async function waitFor(check: () => boolean, label: string, timeoutMs = 60_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (check()) return;
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  throw new Error(`Hết thời gian chờ: ${label} (màn hình đang hiện: ${visibleScreen()})`);
+  throw new Error(`Timed out waiting for ${label} (visible screen: ${visibleScreen()})`);
 }
 
-describe("popup extension", () => {
+describe("extension popup", () => {
   beforeAll(async () => {
     const html = readFileSync(
       path.resolve(import.meta.dirname, "../extension/popup/popup.html"),
       "utf8",
     );
-    // Bỏ thẻ script: ta import module TS trực tiếp để vitest transform được.
     document.body.innerHTML = html
       .replace(/[\s\S]*<body>/, "")
       .replace(/<\/body>[\s\S]*/, "")
@@ -189,20 +160,25 @@ describe("popup extension", () => {
     vi.stubGlobal("alert", () => {});
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
-      value: {
-        writeText: vi.fn(async () => {}),
-        readText: vi.fn(async () => ""),
-      },
+      value: { writeText: vi.fn(async () => {}), readText: vi.fn(async () => "") },
     });
 
     await import("../extension/popup/popup.js");
   });
 
-  it("chưa cấu hình thì hiện màn hình thiết lập", async () => {
-    await waitFor(() => visibleScreen() === "screen-setup", "màn hình thiết lập");
+  it("shows the setup screen when nothing is configured", async () => {
+    await waitFor(() => visibleScreen() === "screen-setup", "the setup screen");
   });
 
-  it("tạo vault xong thì vào được danh sách", async () => {
+  it("fills static text from the message catalogue", () => {
+    // A blank label means an element is missing its data-i18n key or the key is
+    // misspelled — invisible to the typechecker.
+    for (const node of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
+      expect(node.textContent?.trim(), node.dataset.i18n).not.toBe("");
+    }
+  });
+
+  it("creates a vault and lands on the list", async () => {
     const form = el<HTMLFormElement>("form-setup");
     setField(form, "apiUrl", API_URL);
     setField(form, "email", EMAIL);
@@ -212,105 +188,93 @@ describe("popup extension", () => {
 
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 
-    // Dẫn xuất khoá là 600.000 vòng PBKDF2, chạy hai lần — cho nó thời gian.
-    await waitFor(() => visibleScreen() === "screen-list", "màn hình danh sách", 60_000);
+    await waitFor(() => visibleScreen() === "screen-list", "the item list");
     expect(server.account).not.toBeNull();
   });
 
-  it("xin quyền đúng domain của server, không phải https://*/*", async () => {
-    // Nếu chỗ này xin sẵn mọi domain thì extension có quyền đọc được nhiều hơn
-    // mức cần thiết, dù nó không dùng tới.
-    expect(chromeMock.permissions.request).toHaveBeenCalledWith({
-      origins: [`${API_URL}/*`],
-    });
+  it("requests permission for the configured origin only", () => {
+    // Shipping `https://*/*` would grant far more reach than the extension needs.
+    expect(chromeMock.permissions.request).toHaveBeenCalledWith({ origins: [`${API_URL}/*`] });
   });
 
-  it("vault key nằm trong storage.session, KHÔNG nằm trong storage.local", () => {
-    // Bất biến quan trọng nhất của extension: storage.local nằm trên đĩa dạng rõ.
+  it("keeps the vault key in session storage, never in local storage", () => {
+    // The central invariant: storage.local is on disk in the clear.
     expect(sessionArea.get("vaultKeyRaw")).toBeTypeOf("string");
     expect(localArea.has("vaultKeyRaw")).toBe(false);
 
     const localDump = JSON.stringify(Object.fromEntries(localArea));
     expect(localDump).not.toContain(PASSWORD);
     expect(localDump).not.toContain(sessionArea.get("vaultKeyRaw"));
-    // Token phiên cũng là thứ truy cập được ciphertext, nên cũng chỉ ở session.
     expect(localArea.has("token")).toBe(false);
-    expect(sessionArea.get("token")).toBe("token-phien");
+    expect(sessionArea.get("token")).toBe("session-token");
   });
 
-  it("lưu item có TOTP, và server chỉ nhận ciphertext", async () => {
+  it("saves an item with a 2FA secret, sending only ciphertext", async () => {
     el("btn-add").dispatchEvent(new Event("click", { bubbles: true }));
-    await waitFor(() => visibleScreen() === "screen-edit", "màn hình sửa item");
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
 
     const form = el<HTMLFormElement>("form-edit");
     setField(form, "title", "GitHub");
     setField(form, "url", "github.com");
-    setField(form, "username", "nguoidung@example.com");
-    setField(form, "password", "mật-khẩu-bí-mật-123");
+    setField(form, "username", "user@example.com");
+    setField(form, "password", ITEM_PASSWORD);
     setField(form, "totp", TOTP_SECRET);
 
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    await waitFor(() => visibleScreen() === "screen-list", "quay về danh sách sau khi lưu");
+    await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
 
     expect(server.items.size).toBe(1);
 
-    // Không một chữ nào của plaintext được phép xuất hiện trong thứ đã gửi đi.
     const sent = server.received.join("\n");
     expect(sent).not.toContain("GitHub");
     expect(sent).not.toContain("github.com");
-    expect(sent).not.toContain("mật-khẩu-bí-mật-123");
+    expect(sent).not.toContain(ITEM_PASSWORD);
     expect(sent).not.toContain(TOTP_SECRET);
   });
 
-  it("item hiện trong mục khớp domain của tab đang mở", async () => {
-    // Tab giả đang ở https://github.com/settings, item có url github.com.
-    await waitFor(
-      () => !el("matching-section").hidden,
-      "mục gợi ý theo domain",
-    );
+  it("surfaces the item under the matching-domain heading", async () => {
+    await waitFor(() => !el("matching-section").hidden, "the domain match section");
     expect(el("matching-title").textContent).toContain("github.com");
     expect(el("matching-list").textContent).toContain("GitHub");
   });
 
-  it("mở item ra thì hiện mã TOTP 6 số", async () => {
-    const head = el("matching-list").querySelector<HTMLElement>(".item-head")!;
-    head.dispatchEvent(new Event("click", { bubbles: true }));
+  it("renders a live 2FA code that matches an independent computation", async () => {
+    el("matching-list")
+      .querySelector<HTMLElement>(".item-head")!
+      .dispatchEvent(new Event("click", { bubbles: true }));
 
     await waitFor(
       () => /\d{3} \d{3}/.test(el("matching-list").querySelector(".totp-code")?.textContent ?? ""),
-      "mã TOTP hiện ra",
+      "the 2FA code",
     );
 
-    const code = el("matching-list").querySelector(".totp-code")!.textContent!.replace(" ", "");
-    // So với mã tính độc lập từ cùng secret — nếu lệch thì UI đang dùng sai secret
-    // hoặc sai mốc thời gian.
+    const shown = el("matching-list").querySelector(".totp-code")!.textContent!.replace(" ", "");
     const { generateTotp } = await import("../src/core/totp.js");
-    expect(code).toBe(await generateTotp({ secret: TOTP_SECRET }));
+    expect(shown).toBe(await generateTotp({ secret: TOTP_SECRET }));
   });
 
-  it("tạo được link share, và khoá không đi lên server", async () => {
+  it("creates a share link without sending the key to the server", async () => {
     const shareButton = [...el("matching-list").querySelectorAll("button")].find(
-      (button) => button.textContent === "Chia sẻ",
+      (button) => button.textContent === "Share",
     )!;
     shareButton.dispatchEvent(new Event("click", { bubbles: true }));
-    await waitFor(() => visibleScreen() === "screen-share", "màn hình chia sẻ");
+    await waitFor(() => visibleScreen() === "screen-share", "the share screen");
 
     el<HTMLFormElement>("form-share").dispatchEvent(
       new Event("submit", { bubbles: true, cancelable: true }),
     );
-    await waitFor(() => !el("share-result").hidden, "link share được tạo");
+    await waitFor(() => !el("share-result").hidden, "the generated link");
 
     const url = el<HTMLTextAreaElement>("share-url").value;
     expect(url).toMatch(/^https:\/\/vault\.test\/s\/share-1#[A-Za-z0-9_-]+$/);
 
-    // Phần sau dấu # là khoá giải mã. Nó không được có trong bất cứ request nào.
     const fragment = url.split("#")[1]!;
     expect(server.received.join("\n")).not.toContain(fragment);
   });
 
-  it("khoá ngay thì xoá sạch storage.session", async () => {
+  it("clears session storage when locked, keeping the offline cache", async () => {
     el("btn-lock").dispatchEvent(new Event("click", { bubbles: true }));
-    await waitFor(() => sessionArea.size === 0, "session bị xoá sau khi khoá");
-    expect(localArea.has("items")).toBe(true); // cache ciphertext vẫn còn để dùng offline
+    await waitFor(() => sessionArea.size === 0, "session storage to be cleared");
+    expect(localArea.has("items")).toBe(true);
   });
 });

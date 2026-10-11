@@ -1,9 +1,9 @@
 /**
- * Popup của extension — toàn bộ UI của vault.
+ * The popup — the whole UI of the vault.
  *
- * Mọi thứ nằm trong popup chứ không chia việc với service worker, vì service
- * worker của MV3 bị kill sau ~30 giây không hoạt động: nhồi trạng thái vào đó chỉ
- * sinh ra những lỗi xuất hiện ngẫu nhiên. Service worker ở đây chỉ lo auto-lock.
+ * Everything lives here rather than being split with the service worker,
+ * because MV3 terminates that worker after ~30 seconds idle; keeping state
+ * there only produces bugs that appear at random.
  */
 
 import {
@@ -25,8 +25,24 @@ import {
   rateStrength,
   type GeneratedSecret,
 } from "../../src/core/generator.js";
-import { generateTotp, parseTotpInput, secondsRemaining, type TotpConfig } from "../../src/core/totp.js";
+import {
+  generateTotp,
+  parseTotpInput,
+  secondsRemaining,
+  type TotpConfig,
+} from "../../src/core/totp.js";
 import { buildShareUrl, createShare } from "../../src/core/share.js";
+import {
+  createTranslator,
+  describeError,
+  LOCALE_NAMES,
+  LOCALES,
+  resolveLocale,
+  type Locale,
+  type LocalePreference,
+  type MessageKey,
+  type Translate,
+} from "../../src/i18n/index.js";
 import * as api from "../lib/api.js";
 import {
   DEFAULT_AUTO_LOCK_MINUTES,
@@ -50,13 +66,9 @@ import {
   type VaultItem,
 } from "../lib/vault.js";
 
-// ---------------------------------------------------------------------------
-// Tiện ích DOM
-// ---------------------------------------------------------------------------
-
 const $ = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
-  if (!node) throw new Error(`Thiếu #${id}`);
+  if (!node) throw new Error(`Missing #${id}`);
   return node as T;
 };
 
@@ -67,10 +79,31 @@ function show(screen: Screen): void {
   for (const name of SCREENS) $(`screen-${name}`).hidden = name !== screen;
 }
 
+let locale: Locale = "en";
+let t: Translate = createTranslator("en");
+
+/** Fill every `data-i18n*` element. Runs at boot and whenever the locale changes. */
+function applyStaticText(): void {
+  for (const node of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
+    node.textContent = t(node.dataset.i18n as MessageKey);
+  }
+  for (const node of document.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]")) {
+    node.placeholder = t(node.dataset.i18nPlaceholder as MessageKey);
+  }
+  for (const node of document.querySelectorAll<HTMLElement>("[data-i18n-title]")) {
+    node.title = t(node.dataset.i18nTitle as MessageKey);
+  }
+  document.documentElement.lang = locale;
+}
+
 function setError(id: string, message: string | null): void {
   const node = $(id);
   node.textContent = message ?? "";
   node.hidden = !message;
+}
+
+function showError(id: string, error: unknown): void {
+  setError(id, describeError(error, t));
 }
 
 let toastTimer: number | undefined;
@@ -83,39 +116,33 @@ function toast(message: string): void {
 }
 
 /**
- * Copy kèm tự xoá clipboard sau 30 giây.
- *
- * Clipboard là bộ nhớ dùng chung của cả máy — mọi app đang chạy đọc được, và
- * nhiều trình quản lý clipboard còn lưu lịch sử xuống đĩa.
+ * Copy, then clear the clipboard after 30 seconds. The clipboard is shared with
+ * every running application, and several clipboard managers persist history to
+ * disk.
  */
-async function copy(value: string, label: string): Promise<void> {
+async function copy(value: string, what: string): Promise<void> {
   await navigator.clipboard.writeText(value);
-  toast(`Đã copy ${label} — clipboard tự xoá sau 30 giây`);
+  toast(t("common.copied", { what }));
   setTimeout(async () => {
     try {
-      // Chỉ xoá nếu clipboard vẫn đang chứa đúng thứ ta đặt vào; người dùng có
-      // thể đã copy việc khác và xoá đi là phá việc của họ.
+      // Only clear if it still holds what we put there; the user may have copied
+      // something else in the meantime.
       if ((await navigator.clipboard.readText()) === value) {
         await navigator.clipboard.writeText("");
       }
     } catch {
-      /* chưa cấp quyền đọc clipboard thì bỏ qua */
+      /* clipboard-read permission not granted */
     }
   }, 30_000);
 }
 
-// ---------------------------------------------------------------------------
-// Trạng thái phiên làm việc của popup
-// ---------------------------------------------------------------------------
-
 let vaultKey: CryptoKey | null = null;
+let vaultKeyRaw: Bytes | null = null;
 let items: VaultItem[] = [];
 let tabUrl: string | undefined;
 let clockSkew = 0;
-/** Giữ raw vault key để đổi master password mà không bắt nhập lại lần hai. */
-let vaultKeyRaw: Bytes | null = null;
 
-/** Đồng hồ đã bù lệch so với server — TOTP phải dùng mốc này, không dùng Date.now(). */
+/** Server-corrected clock. TOTP must use this, never `Date.now()` directly. */
 function nowMs(): number {
   return Date.now() + clockSkew * 1000;
 }
@@ -126,15 +153,14 @@ function clearTimers(): void {
   timers.clear();
 }
 
-// ---------------------------------------------------------------------------
-// Khởi động
-// ---------------------------------------------------------------------------
-
 async function boot(): Promise<void> {
+  const local = await getLocal();
+  locale = resolveLocale(local.locale);
+  t = createTranslator(locale);
+  applyStaticText();
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabUrl = tab?.url;
-
-  const local = await getLocal();
   clockSkew = local.clockSkew ?? 0;
 
   if (!local.apiUrl || !local.email) {
@@ -154,71 +180,67 @@ async function boot(): Promise<void> {
 
 async function enterVault(rawBase64: string): Promise<void> {
   vaultKey = await importKey(rawBase64);
-  items = await decryptAll(vaultKey);
+  items = await decryptAll(vaultKey, locale);
   renderList();
   show("list");
-
-  // Sync và đo lệch đồng hồ ở nền: vault phải dùng được ngay cả khi mất mạng.
   void backgroundSync();
 }
 
 async function backgroundSync(): Promise<void> {
   const status = $("sync-status");
-  status.textContent = "Đang đồng bộ…";
+  status.textContent = t("list.syncing");
   try {
     const changed = await sync();
     if (changed === null) {
-      status.textContent = "Offline — đang xem bản đã lưu";
+      status.textContent = t("list.offline");
     } else {
       if (changed > 0 && vaultKey) {
-        items = await decryptAll(vaultKey);
+        items = await decryptAll(vaultKey, locale);
         renderList();
       }
-      status.textContent = changed > 0 ? `Đã đồng bộ ${changed} thay đổi` : "Đã đồng bộ";
+      status.textContent =
+        changed > 0 ? t("list.synced_changes", { count: changed }) : t("list.synced");
     }
   } catch (error) {
-    status.textContent = error instanceof Error ? error.message : "Lỗi đồng bộ";
+    status.textContent = describeError(error, t);
   }
 
   const skew = await api.measureClockSkew();
-  if (skew !== null) {
-    clockSkew = skew;
-    await setLocal({ clockSkew: skew });
-    const warning = $("clock-warning");
-    // Lệch quá 10 giây là đã đáng cảnh báo: TOTP sẽ sai khi gần mốc đổi mã.
-    if (Math.abs(skew) > 10) {
-      warning.textContent = `Đồng hồ máy lệch ${skew > 0 ? "chậm" : "nhanh"} ${Math.abs(skew)} giây so với server. Mã 2FA vẫn đúng vì đã được bù, nhưng nên sửa lại đồng hồ hệ thống.`;
-      warning.hidden = false;
-    } else {
-      warning.hidden = true;
-    }
+  if (skew === null) return;
+
+  clockSkew = skew;
+  await setLocal({ clockSkew: skew });
+
+  const warning = $("clock-warning");
+  // Ten seconds is already worth flagging: codes start failing near a rollover.
+  if (Math.abs(skew) > 10) {
+    warning.textContent = t("list.clock_skew", {
+      direction: t(skew > 0 ? "list.clock_behind" : "list.clock_ahead"),
+      seconds: Math.abs(skew),
+    });
+    warning.hidden = false;
+  } else {
+    warning.hidden = true;
   }
 }
-
-// ---------------------------------------------------------------------------
-// Thiết lập và đăng nhập
-// ---------------------------------------------------------------------------
 
 let setupMode: "register" | "login" = "register";
 
 $("setup-switch-login").addEventListener("click", () => {
   setupMode = setupMode === "register" ? "login" : "register";
   const form = $<HTMLFormElement>("form-setup");
-  const tokenField = form.querySelector<HTMLInputElement>('[name="registrationToken"]')!;
-  const confirmField = form.querySelector<HTMLInputElement>('[name="confirm"]')!;
+  const hidden = setupMode === "login";
 
-  for (const [field, hidden] of [
-    [tokenField, setupMode === "login"],
-    [confirmField, setupMode === "login"],
-  ] as const) {
+  for (const name of ["registrationToken", "confirm"]) {
+    const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
     field.required = !hidden;
     field.closest("label")!.hidden = hidden;
   }
 
-  form.querySelector("button.primary")!.textContent =
-    setupMode === "login" ? "Đăng nhập" : "Tạo vault";
-  $("setup-switch-login").textContent =
-    setupMode === "login" ? "Tạo vault mới" : "Đã có account trên server này";
+  form.querySelector("button.primary")!.textContent = t(hidden ? "setup.sign_in" : "setup.create");
+  $("setup-switch-login").textContent = t(
+    hidden ? "setup.switch_to_register" : "setup.switch_to_login",
+  );
 });
 
 $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
@@ -231,24 +253,26 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
   const password = String(data.get("password"));
 
   if (setupMode === "register" && password !== String(data.get("confirm"))) {
-    setError("setup-error", "Hai lần nhập master password không giống nhau");
+    setError("setup-error", t("setup.password_mismatch"));
     return;
   }
 
-  // Xin quyền truy cập đúng domain của server, thay vì xin sẵn https://*/*.
+  // Ask for exactly this server's origin rather than shipping `https://*/*`.
   const granted = await chrome.permissions.request({ origins: [`${apiUrl}/*`] });
   if (!granted) {
-    setError("setup-error", "Cần cấp quyền truy cập server mới dùng được");
+    setError("setup-error", t("setup.permission_denied"));
     return;
   }
 
-  const button = (event.target as HTMLFormElement).querySelector("button.primary")!;
-  button.textContent = "Đang xử lý… (dẫn xuất khoá mất vài giây)";
-  (button as HTMLButtonElement).disabled = true;
+  const button = (event.target as HTMLFormElement).querySelector<HTMLButtonElement>(
+    "button.primary",
+  )!;
+  const label = button.textContent;
+  button.textContent = t("setup.working");
+  button.disabled = true;
 
   try {
     await setLocal({ apiUrl, email });
-
     if (setupMode === "register") {
       const { record } = await createAccount(email, password);
       const { token } = await api.register(email, record, String(data.get("registrationToken")));
@@ -258,10 +282,10 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
       await doLogin(email, password);
     }
   } catch (error) {
-    setError("setup-error", error instanceof Error ? error.message : String(error));
+    showError("setup-error", error);
   } finally {
-    button.textContent = setupMode === "login" ? "Đăng nhập" : "Tạo vault";
-    (button as HTMLButtonElement).disabled = false;
+    button.textContent = label;
+    button.disabled = false;
   }
 });
 
@@ -270,27 +294,29 @@ $<HTMLFormElement>("form-unlock").addEventListener("submit", async (event) => {
   setError("unlock-error", null);
 
   const password = String(new FormData(event.target as HTMLFormElement).get("password"));
-  const button = (event.target as HTMLFormElement).querySelector("button.primary")!;
-  button.textContent = "Đang mở…";
-  (button as HTMLButtonElement).disabled = true;
+  const button = (event.target as HTMLFormElement).querySelector<HTMLButtonElement>(
+    "button.primary",
+  )!;
+  button.textContent = t("unlock.working");
+  button.disabled = true;
 
   try {
     const { email } = await getLocal();
     await doLogin(email!, password);
   } catch (error) {
-    setError("unlock-error", error instanceof Error ? error.message : String(error));
+    showError("unlock-error", error);
   } finally {
-    button.textContent = "Mở";
-    (button as HTMLButtonElement).disabled = false;
+    button.textContent = t("unlock.submit");
+    button.disabled = false;
   }
 });
 
 /**
- * Mở vault, chạy được cả khi không có mạng.
+ * Unlock, working offline when needed.
  *
- * Khi online, lấy KDF params mới từ server (để đổi master password trên máy khác
- * vẫn mở được ở đây) rồi đăng nhập lấy token. Khi offline, dùng KDF params và
- * wrapped vault key đã cache — đủ để giải mã mọi thứ đã sync về.
+ * Online it refreshes the KDF params first, so a password changed on another
+ * machine still opens here. Offline it falls back to the cached params and
+ * wrapped key, which is enough to decrypt everything already synced.
  */
 async function doLogin(email: string, password: string): Promise<void> {
   const local = await getLocal();
@@ -308,11 +334,11 @@ async function doLogin(email: string, password: string): Promise<void> {
     wrapped = result.wrappedVaultKey;
     await setLocal({ kdf, wrappedVaultKey: wrapped });
   } catch (error) {
-    // Chỉ chấp nhận đi tiếp khi lỗi là mất mạng. Sai mật khẩu (401) phải báo ngay,
-    // không được âm thầm rơi về chế độ offline rồi thất bại với lý do khác.
+    // Only a network failure may fall through to the cache. A rejected password
+    // must surface now, not later disguised as something else.
     const offline = error instanceof api.ApiError && error.status === 0;
     if (!offline || !kdf || !wrapped) throw error;
-    toast("Không có mạng — mở bản đã lưu trên máy");
+    toast(t("unlock.offline"));
   }
 
   await finishUnlock(email, password, kdf!, wrapped!, token);
@@ -327,13 +353,7 @@ async function finishUnlock(
 ): Promise<void> {
   const masterKey = await deriveMasterKey(email, password, kdf);
   const wrappingKey = await deriveWrappingKey(masterKey);
-
-  let raw: Bytes;
-  try {
-    raw = await openSealed(wrappingKey, wrapped);
-  } catch {
-    throw new Error("Master password không đúng");
-  }
+  const raw = await openSealed(wrappingKey, wrapped);
 
   vaultKeyRaw = raw;
   await unlock(toBase64(raw), token);
@@ -341,22 +361,16 @@ async function finishUnlock(
 }
 
 $("unlock-reset").addEventListener("click", async () => {
-  if (!confirm("Xoá cấu hình và dữ liệu đã lưu trên máy này? Vault trên server không bị ảnh hưởng.")) {
-    return;
-  }
+  if (!confirm(t("unlock.reset_confirm"))) return;
   await chrome.storage.local.clear();
   await lock();
   location.reload();
 });
 
-// ---------------------------------------------------------------------------
-// Danh sách
-// ---------------------------------------------------------------------------
-
 $("search").addEventListener("input", () => renderList());
 $("btn-add").addEventListener("click", () => openEditor(null));
 $("btn-generator").addEventListener("click", () => openGenerator());
-$("btn-settings").addEventListener("click", () => openSettings());
+$("btn-settings").addEventListener("click", () => void openSettings());
 $("btn-lock").addEventListener("click", async () => {
   await lock();
   location.reload();
@@ -371,27 +385,26 @@ function renderList(): void {
   const matched = query ? [] : matchingItems(visible, tabUrl);
   const matchedIds = new Set(matched.map((item) => item.id));
 
-  const matchingSection = $("matching-section");
   if (matched.length > 0) {
-    const domain = registrableDomain(tabUrl ?? "");
-    $("matching-title").textContent = `Cho ${domain}`;
+    $("matching-title").textContent = t("list.matching_for", {
+      domain: registrableDomain(tabUrl ?? "") ?? "",
+    });
     renderInto($("matching-list"), matched);
-    matchingSection.hidden = false;
+    $("matching-section").hidden = false;
   } else {
-    matchingSection.hidden = true;
+    $("matching-section").hidden = true;
   }
 
   const rest = visible.filter((item) => !matchedIds.has(item.id));
   $("all-title").hidden = rest.length === 0;
-  $("all-title").textContent = query ? `Kết quả (${rest.length})` : "Tất cả";
+  $("all-title").textContent = query ? t("list.results", { count: rest.length }) : t("list.all");
   renderInto($("all-list"), rest);
 
   $("list-empty").hidden = items.length > 0;
 }
 
 function renderInto(container: HTMLElement, list: VaultItem[]): void {
-  container.replaceChildren();
-  for (const item of list) container.append(renderItem(item));
+  container.replaceChildren(...list.map(renderItem));
 }
 
 function renderItem(item: VaultItem): HTMLElement {
@@ -405,24 +418,20 @@ function renderItem(item: VaultItem): HTMLElement {
   name.className = "item-name";
   const title = document.createElement("div");
   title.className = "item-title";
-  // `textContent` ở mọi chỗ, không bao giờ `innerHTML`: nội dung item do người
-  // dùng nhập, và một ghi chú chứa <img onerror> không được chạy trong popup.
+  // textContent everywhere, never innerHTML: item fields are user input.
   title.textContent = item.title;
   const sub = document.createElement("div");
   sub.className = "item-sub";
   sub.textContent = [item.username, item.url].filter(Boolean).join(" · ");
   name.append(title, sub);
-
   head.append(name);
 
-  // Copy nhanh không cần mở item — đây là thao tác thường dùng nhất.
   if (item.password) {
     const quick = document.createElement("button");
-    quick.textContent = "Copy";
-    quick.title = "Copy mật khẩu";
+    quick.textContent = t("common.copy");
     quick.addEventListener("click", (event) => {
       event.stopPropagation();
-      void copy(item.password!, "mật khẩu");
+      void copy(item.password!, t("common.password").toLowerCase());
     });
     head.append(quick);
   }
@@ -442,21 +451,21 @@ function renderItem(item: VaultItem): HTMLElement {
 }
 
 function fillItemBody(body: HTMLElement, item: VaultItem): void {
-  if (item.username) body.append(valueRow("Tài khoản", item.username, false));
-  if (item.password) body.append(valueRow("Mật khẩu", item.password, true));
+  if (item.username) body.append(valueRow(t("common.username"), item.username, false));
+  if (item.password) body.append(valueRow(t("common.password"), item.password, true));
   if (item.totp) body.append(totpRow(item.totp));
-  if (item.url) body.append(valueRow("Địa chỉ", item.url, false));
-  if (item.note) body.append(valueRow("Ghi chú", item.note, false));
+  if (item.url) body.append(valueRow(t("common.url"), item.url, false));
+  if (item.note) body.append(valueRow(t("common.note"), item.note, false));
 
   const actions = document.createElement("div");
   actions.className = "item-actions";
 
   const edit = document.createElement("button");
-  edit.textContent = "Sửa";
+  edit.textContent = t("edit.edit_title");
   edit.addEventListener("click", () => openEditor(item));
 
   const share = document.createElement("button");
-  share.textContent = "Chia sẻ";
+  share.textContent = t("share.title");
   share.addEventListener("click", () => openShare(item));
 
   actions.append(edit, share);
@@ -473,34 +482,32 @@ function valueRow(label: string, value: string, secret: boolean): HTMLElement {
 
   const valueNode = document.createElement("span");
   valueNode.className = "v";
-  valueNode.textContent = secret ? "•".repeat(Math.min(value.length, 16)) : value;
+  const masked = "•".repeat(Math.min(value.length, 16));
+  valueNode.textContent = secret ? masked : value;
 
   row.append(key, valueNode);
 
   if (secret) {
     let revealed = false;
     const toggle = document.createElement("button");
-    toggle.textContent = "Hiện";
+    toggle.textContent = t("common.show");
     toggle.addEventListener("click", () => {
       revealed = !revealed;
-      valueNode.textContent = revealed ? value : "•".repeat(Math.min(value.length, 16));
-      toggle.textContent = revealed ? "Ẩn" : "Hiện";
+      valueNode.textContent = revealed ? value : masked;
+      toggle.textContent = t(revealed ? "common.hide" : "common.show");
     });
     row.append(toggle);
   }
 
   const copyButton = document.createElement("button");
-  copyButton.textContent = "Copy";
+  copyButton.textContent = t("common.copy");
   copyButton.addEventListener("click", () => void copy(value, label.toLowerCase()));
   row.append(copyButton);
 
   return row;
 }
 
-/**
- * Mã TOTP tự refresh. Không có network nào tham gia — tính tại chỗ từ secret đã
- * giải mã, đúng công thức RFC 6238 mà app 2FA trên điện thoại dùng.
- */
+/** Live 2FA code. No network involved — computed locally per RFC 6238. */
 function totpRow(config: TotpConfig): HTMLElement {
   const period = config.period || 30;
 
@@ -509,19 +516,19 @@ function totpRow(config: TotpConfig): HTMLElement {
 
   const key = document.createElement("span");
   key.className = "k";
-  key.textContent = "Mã 2FA";
+  key.textContent = t("common.totp");
 
   const container = document.createElement("div");
   container.className = "totp-row v";
 
-  const ring = createRing();
+  const ring = createRing(9, 22);
   const code = document.createElement("span");
   code.className = "totp-code";
   code.textContent = "······";
   container.append(ring.svg, code);
 
   const copyButton = document.createElement("button");
-  copyButton.textContent = "Copy";
+  copyButton.textContent = t("common.copy");
 
   let current = "";
   let lastCounter = -1;
@@ -531,20 +538,18 @@ function totpRow(config: TotpConfig): HTMLElement {
     ring.update(remaining / period);
     ring.svg.classList.toggle("urgent", remaining <= 5);
 
-    // Chỉ tính lại khi sang chu kỳ mới, không phải mỗi giây.
     const counter = Math.floor(nowMs() / 1000 / period);
-    if (counter !== lastCounter) {
-      lastCounter = counter;
-      try {
-        current = await generateTotp(config, nowMs());
-        code.textContent = current.replace(/(\d{3})(?=\d)/, "$1 ");
-      } catch {
-        code.textContent = "lỗi";
-      }
+    if (counter === lastCounter) return;
+    lastCounter = counter;
+    try {
+      current = await generateTotp(config, nowMs());
+      code.textContent = current.replace(/(\d{3})(?=\d)/, "$1 ");
+    } catch {
+      code.textContent = "—";
     }
   };
 
-  copyButton.addEventListener("click", () => current && void copy(current, "mã 2FA"));
+  copyButton.addEventListener("click", () => current && void copy(current, t("common.totp")));
 
   void tick();
   timers.add(setInterval(() => void tick(), 1000) as unknown as number);
@@ -553,21 +558,24 @@ function totpRow(config: TotpConfig): HTMLElement {
   return row;
 }
 
-function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
-  const radius = 9;
+function createRing(
+  radius: number,
+  size: number,
+): { svg: SVGSVGElement; update: (ratio: number) => void } {
   const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "ring");
-  svg.setAttribute("width", "22");
-  svg.setAttribute("height", "22");
-  svg.setAttribute("viewBox", "0 0 22 22");
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
 
   const make = (className: string): SVGCircleElement => {
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("class", className);
-    circle.setAttribute("cx", "11");
-    circle.setAttribute("cy", "11");
+    circle.setAttribute("cx", String(center));
+    circle.setAttribute("cy", String(center));
     circle.setAttribute("r", String(radius));
     return circle;
   };
@@ -583,10 +591,6 @@ function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Thêm / sửa item
-// ---------------------------------------------------------------------------
-
 let editing: VaultItem | null = null;
 
 function openEditor(item: VaultItem | null): void {
@@ -597,7 +601,7 @@ function openEditor(item: VaultItem | null): void {
 
   const form = $<HTMLFormElement>("form-edit");
   form.reset();
-  $("edit-title").textContent = item ? "Sửa item" : "Thêm item";
+  $("edit-title").textContent = t(item ? "edit.edit_title" : "edit.add_title");
   $("edit-delete").hidden = !item;
 
   const set = (name: string, value: string) => {
@@ -605,8 +609,8 @@ function openEditor(item: VaultItem | null): void {
   };
 
   set("title", item?.title ?? "");
-  // Gợi ý sẵn domain của tab đang mở khi thêm mới — đỡ phải gõ lại.
-  set("url", item?.url ?? (item ? "" : (tabUrl ? registrableDomain(tabUrl) ?? "" : "")));
+  // Prefill the current tab's domain for a new item.
+  set("url", item?.url ?? (item ? "" : tabUrl ? (registrableDomain(tabUrl) ?? "") : ""));
   set("username", item?.username ?? "");
   set("password", item?.password ?? "");
   set("totp", item?.totp?.secret ?? "");
@@ -621,60 +625,69 @@ $("edit-back").addEventListener("click", () => {
 });
 
 $("edit-reveal").addEventListener("click", () => {
-  const field = $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
+  const field =
+    $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
   field.type = field.type === "password" ? "text" : "password";
 });
 
 $("edit-generate").addEventListener("click", () => {
-  const field = $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
+  const field =
+    $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
   const generated = generatePassword({ length: 20 });
   field.value = generated.value;
   field.type = "text";
-  toast(`${generated.entropyBits} bit — ${rateStrength(generated.entropyBits)}`);
+  toast(formatEntropy(generated));
 });
 
 /**
- * Quét QR code 2FA từ ảnh chụp tab đang mở.
+ * Read a 2FA QR code from a screenshot of the open tab.
  *
- * Dùng `BarcodeDetector` có sẵn trong Chrome thay vì nhúng thư viện decode QR:
- * thư viện đó sẽ nằm trong đường đi của TOTP secret — nó thấy secret trước cả
- * bạn — nên đây là chỗ đáng tránh thêm dependency. Máy nào không hỗ trợ API này
- * thì vẫn dán tay được, đường đó luôn hoạt động.
+ * Uses Chrome's built-in `BarcodeDetector` rather than bundling a QR library:
+ * that library would sit in the path of the TOTP secret — it sees the secret
+ * before you do — so it is a bad place to add a dependency. Where the API is
+ * missing, pasting by hand still works and always will.
  */
 $("edit-scan").addEventListener("click", async () => {
   const hint = $("edit-totp-hint");
 
   if (!("BarcodeDetector" in self)) {
-    hint.textContent =
-      'Chrome trên máy này không có sẵn bộ giải mã QR. Hãy bấm "không quét được QR?" trên trang web để lấy chuỗi base32 rồi dán vào đây.';
+    hint.textContent = t("edit.scan_unsupported");
     return;
   }
 
-  hint.textContent = "Đang chụp tab và tìm QR…";
+  hint.textContent = t("edit.scanning");
   try {
     const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
     const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
 
-    const DetectorClass = (self as unknown as { BarcodeDetector: new (options: { formats: string[] }) => { detect(source: ImageBitmapSource): Promise<{ rawValue: string }[]> } }).BarcodeDetector;
-    const codes = await new DetectorClass({ formats: ["qr_code"] }).detect(bitmap);
+    const Detector = (
+      self as unknown as {
+        BarcodeDetector: new (options: { formats: string[] }) => {
+          detect(source: ImageBitmapSource): Promise<{ rawValue: string }[]>;
+        };
+      }
+    ).BarcodeDetector;
+    const codes = await new Detector({ formats: ["qr_code"] }).detect(bitmap);
 
     const otpauth = codes.find((code) => code.rawValue.toLowerCase().startsWith("otpauth://"));
     if (!otpauth) {
-      hint.textContent = codes.length
-        ? "Tìm thấy QR nhưng không phải QR 2FA."
-        : "Không thấy QR nào trong vùng đang hiển thị. Cuộn cho QR hiện rõ rồi thử lại.";
+      hint.textContent = t(codes.length ? "edit.scan_not_qr" : "edit.scan_none");
       return;
     }
 
     const form = $<HTMLFormElement>("form-edit");
     form.querySelector<HTMLInputElement>('[name="totp"]')!.value = otpauth.rawValue;
     const config = parseTotpInput(otpauth.rawValue);
-    if (config.issuer && !form.querySelector<HTMLInputElement>('[name="title"]')!.value) {
-      form.querySelector<HTMLInputElement>('[name="title"]')!.value = config.issuer;
-    }
-    hint.textContent = `Đã đọc QR${config.issuer ? ` của ${config.issuer}` : ""}. Mã thử: ${await generateTotp(config, nowMs())}`;
+
+    const titleField = form.querySelector<HTMLInputElement>('[name="title"]')!;
+    if (config.issuer && !titleField.value) titleField.value = config.issuer;
+
+    hint.textContent = t("edit.scan_ok", {
+      issuer: config.issuer ? t("edit.scan_ok_issuer", { issuer: config.issuer }) : "",
+      code: await generateTotp(config, nowMs()),
+    });
   } catch (error) {
-    hint.textContent = `Không chụp được tab: ${error instanceof Error ? error.message : String(error)}`;
+    hint.textContent = t("edit.scan_capture_failed", { reason: describeError(error, t) });
   }
 });
 
@@ -690,7 +703,7 @@ $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
     try {
       totp = parseTotpInput(totpRaw, String(data.get("username")) || undefined);
     } catch (error) {
-      setError("edit-error", `TOTP secret không đọc được: ${error instanceof Error ? error.message : ""}`);
+      setError("edit-error", t("edit.totp_parse_failed", { reason: describeError(error, t) }));
       return;
     }
   }
@@ -698,6 +711,7 @@ $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
   if (!vaultKey) return;
 
   try {
+    const wasEditing = editing !== null;
     await saveItem(vaultKey, {
       id: editing?.id ?? newItemId(),
       createdAt: editing?.createdAt,
@@ -708,33 +722,29 @@ $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
       note: String(data.get("note")).trim() || undefined,
       totp,
     });
-    items = await decryptAll(vaultKey);
+    items = await decryptAll(vaultKey, locale);
     renderList();
     show("list");
-    toast(editing ? "Đã lưu" : "Đã thêm item");
+    toast(t(wasEditing ? "edit.saved" : "edit.added"));
   } catch (error) {
-    setError("edit-error", error instanceof Error ? error.message : String(error));
+    showError("edit-error", error);
   }
 });
 
 $("edit-delete").addEventListener("click", async () => {
   if (!editing || !vaultKey) return;
-  if (!confirm(`Xoá "${editing.title}"? Không khôi phục được.`)) return;
+  if (!confirm(t("edit.delete_confirm", { title: editing.title }))) return;
 
   try {
     await removeItem(editing.id);
-    items = await decryptAll(vaultKey);
+    items = await decryptAll(vaultKey, locale);
     renderList();
     show("list");
-    toast("Đã xoá");
+    toast(t("edit.deleted"));
   } catch (error) {
-    setError("edit-error", error instanceof Error ? error.message : String(error));
+    showError("edit-error", error);
   }
 });
-
-// ---------------------------------------------------------------------------
-// Sinh mật khẩu
-// ---------------------------------------------------------------------------
 
 type GenMode = "password" | "passphrase" | "pin";
 let genMode: GenMode = "password";
@@ -778,7 +788,17 @@ for (const id of [
 }
 
 $("gen-again").addEventListener("click", () => regenerate());
-$("gen-copy").addEventListener("click", () => void copy($("gen-value").textContent ?? "", "mật khẩu"));
+$("gen-copy").addEventListener(
+  "click",
+  () => void copy($("gen-value").textContent ?? "", t("common.password").toLowerCase()),
+);
+
+function formatEntropy(result: GeneratedSecret): string {
+  return t("gen.entropy", {
+    bits: result.entropyBits,
+    strength: t(`strength.${rateStrength(result.entropyBits)}` as MessageKey),
+  });
+}
 
 function regenerate(): void {
   const checked = (id: string) => $<HTMLInputElement>(id).checked;
@@ -808,17 +828,13 @@ function regenerate(): void {
     }
   } catch (error) {
     $("gen-value").textContent = "—";
-    $("gen-entropy").textContent = error instanceof Error ? error.message : String(error);
+    $("gen-entropy").textContent = describeError(error, t);
     return;
   }
 
   $("gen-value").textContent = result.value;
-  $("gen-entropy").textContent = `${result.entropyBits} bit — ${rateStrength(result.entropyBits)}`;
+  $("gen-entropy").textContent = formatEntropy(result);
 }
-
-// ---------------------------------------------------------------------------
-// Chia sẻ
-// ---------------------------------------------------------------------------
 
 let sharing: VaultItem | null = null;
 
@@ -827,10 +843,11 @@ function openShare(item: VaultItem): void {
   sharing = item;
   setError("share-error", null);
   $("share-result").hidden = true;
-  $<HTMLFormElement>("form-share").hidden = false;
-  $("share-item").textContent = `Chia sẻ "${item.title}"`;
+  $("form-share").hidden = false;
+  $("share-item").textContent = t("share.sharing", { title: item.title });
 
-  const totpCheckbox = $<HTMLFormElement>("form-share").querySelector<HTMLInputElement>('[name="includeTotp"]')!;
+  const totpCheckbox =
+    $<HTMLFormElement>("form-share").querySelector<HTMLInputElement>('[name="includeTotp"]')!;
   totpCheckbox.closest("label")!.hidden = !item.totp;
   show("share");
 }
@@ -863,29 +880,27 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
       passphrase,
     );
 
-    const ttlSeconds = Number(data.get("ttl"));
-    const created = await api.createShareLink(sealed, ttlSeconds, maxViews);
-
+    const created = await api.createShareLink(sealed, Number(data.get("ttl")), maxViews);
     const { apiUrl } = await getLocal();
-    const url = buildShareUrl(apiUrl!, created.id, fragment);
 
-    $<HTMLTextAreaElement>("share-url").value = url;
-    $("share-note").textContent = `Xem được ${maxViews} lần, hết hạn ${new Date(created.expiresAt * 1000).toLocaleString("vi-VN")}.${passphrase ? " Đừng gửi mật khẩu phụ cùng kênh với link." : ""}`;
-    $<HTMLFormElement>("form-share").hidden = true;
+    $<HTMLTextAreaElement>("share-url").value = buildShareUrl(apiUrl!, created.id, fragment);
+    $("share-note").textContent =
+      t("share.result_note", {
+        views: maxViews,
+        expiry: new Date(created.expiresAt * 1000).toLocaleString(locale),
+      }) + (passphrase ? t("share.result_note_passphrase") : "");
+
+    $("form-share").hidden = true;
     $("share-result").hidden = false;
   } catch (error) {
-    setError("share-error", error instanceof Error ? error.message : String(error));
+    showError("share-error", error);
   }
 });
 
 $("share-copy").addEventListener("click", async () => {
-  // Link chứa khoá giải mã, nên clipboard cũng tự xoá như với mật khẩu.
-  await copy($<HTMLTextAreaElement>("share-url").value, "link");
+  // The link carries the decryption key, so it gets the same clipboard timeout.
+  await copy($<HTMLTextAreaElement>("share-url").value, t("share.link").toLowerCase());
 });
-
-// ---------------------------------------------------------------------------
-// Cài đặt
-// ---------------------------------------------------------------------------
 
 async function openSettings(): Promise<void> {
   clearTimers();
@@ -893,11 +908,27 @@ async function openSettings(): Promise<void> {
   $("form-change-password").hidden = true;
 
   const local = await getLocal();
+
   const slider = $<HTMLInputElement>("settings-lock");
   slider.value = String(local.autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES);
-  $("settings-lock-out").textContent = `${slider.value} phút`;
+  $("settings-lock-out").textContent = t("settings.minutes", { count: slider.value });
 
-  $("settings-info").textContent = `${local.email} · ${items.length} item · ${local.lastSync ? `đồng bộ lúc ${new Date(local.lastSync * 1000).toLocaleTimeString("vi-VN")}` : "chưa đồng bộ"}`;
+  const select = $<HTMLSelectElement>("settings-locale");
+  select.replaceChildren(
+    new Option(t("settings.language_auto"), "auto"),
+    ...LOCALES.map((code) => new Option(LOCALE_NAMES[code], code)),
+  );
+  select.value = local.locale ?? "auto";
+
+  $("settings-info").textContent = t("settings.info", {
+    email: local.email ?? "",
+    count: items.length,
+    sync: local.lastSync
+      ? t("settings.synced_at", {
+          time: new Date(local.lastSync * 1000).toLocaleTimeString(locale),
+        })
+      : t("settings.never_synced"),
+  });
 
   show("settings");
 }
@@ -909,9 +940,19 @@ $("settings-back").addEventListener("click", () => {
 
 $("settings-lock").addEventListener("input", async (event) => {
   const minutes = Number((event.target as HTMLInputElement).value);
-  $("settings-lock-out").textContent = `${minutes} phút`;
+  $("settings-lock-out").textContent = t("settings.minutes", { count: minutes });
   await setLocal({ autoLockMinutes: minutes });
   await touch();
+});
+
+$("settings-locale").addEventListener("change", async (event) => {
+  const preference = (event.target as HTMLSelectElement).value as LocalePreference;
+  await setLocal({ locale: preference });
+  locale = resolveLocale(preference);
+  t = createTranslator(locale);
+  applyStaticText();
+  if (vaultKey) items = await decryptAll(vaultKey, locale);
+  await openSettings();
 });
 
 $("settings-change-password").addEventListener("click", () => {
@@ -925,23 +966,23 @@ $<HTMLFormElement>("form-change-password").addEventListener("submit", async (eve
   const data = new FormData(event.target as HTMLFormElement);
   const next = String(data.get("next"));
   if (next !== String(data.get("confirm"))) {
-    setError("settings-error", "Hai lần nhập không giống nhau");
+    setError("settings-error", t("setup.password_mismatch"));
     return;
   }
   if (!vaultKeyRaw) {
-    setError("settings-error", "Hãy khoá rồi mở lại vault trước khi đổi master password");
+    setError("settings-error", t("settings.need_relock"));
     return;
   }
 
   const local = await getLocal();
 
-  // Xác minh mật khẩu hiện tại bằng chính wrapped vault key đang cache, không
-  // cần gọi server: nếu mở được thì đúng mật khẩu.
+  // Verify the current password against the cached wrapped key; no server call
+  // is needed, because unwrapping succeeding *is* the proof.
   try {
     const masterKey = await deriveMasterKey(local.email!, String(data.get("current")), local.kdf!);
     await openSealed(await deriveWrappingKey(masterKey), local.wrappedVaultKey!);
   } catch {
-    setError("settings-error", "Master password hiện tại không đúng");
+    setError("settings-error", t("settings.wrong_current"));
     return;
   }
 
@@ -949,19 +990,16 @@ $<HTMLFormElement>("form-change-password").addEventListener("submit", async (eve
     const record = await rewrapVaultKey(local.email!, next, vaultKeyRaw);
     await api.changePassword(record);
     await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
-    // Server đã thu hồi mọi session, kể cả của chính ta — buộc mở lại là đúng.
     await lock();
-    alert("Đã đổi master password. Hãy mở lại vault bằng mật khẩu mới.");
+    alert(t("settings.changed"));
     location.reload();
   } catch (error) {
-    setError("settings-error", error instanceof Error ? error.message : String(error));
+    showError("settings-error", error);
   }
 });
 
 $("settings-logout").addEventListener("click", async () => {
-  if (!confirm("Đăng xuất và xoá toàn bộ dữ liệu trên máy này? Vault trên server không bị ảnh hưởng.")) {
-    return;
-  }
+  if (!confirm(t("settings.logout_confirm"))) return;
   await api.logout();
   await chrome.storage.local.clear();
   await lock();

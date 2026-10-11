@@ -1,15 +1,12 @@
 /**
- * Test end-to-end chạy thật qua Worker + D1 local.
+ * End-to-end test against a real Worker and a local D1 database.
  *
- * Mặc định bị bỏ qua. Để chạy:
- *   npm run build:dev
- *   npx wrangler d1 migrations apply vault --local
- *   npx wrangler dev            (cửa sổ khác)
+ * Skipped by default. To run it:
+ *   npm run dev                 (in another terminal)
  *   VAULT_E2E=1 npx vitest run test/e2e.test.ts
  *
- * Mục đích không phải kiểm tra từng endpoint, mà kiểm tra bất biến quan trọng
- * nhất của cả hệ thống: đi hết một vòng đời thật mà server không bao giờ thấy
- * plaintext.
+ * The goal is not endpoint coverage but the system's central invariant: walk a
+ * full lifecycle and confirm the server never sees plaintext.
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
@@ -23,14 +20,15 @@ import {
 import { createShare, openShare } from "../src/core/share.js";
 import { generateTotp } from "../src/core/totp.js";
 import { generatePassword } from "../src/core/generator.js";
+import { expectCodeAsync } from "./helpers.js";
 
 const BASE = process.env.VAULT_E2E_URL ?? "http://127.0.0.1:8787";
 const REGISTRATION_TOKEN = process.env.VAULT_REGISTRATION_TOKEN ?? "token-dev-local";
-// Số vòng thấp để test nhanh; server chỉ ràng buộc tối thiểu 100.000.
+// The server only enforces a 100,000 minimum; keep tests quick.
 const ITERATIONS = 100_000;
 
 const email = `e2e-${Date.now()}@example.com`;
-const masterPassword = "mật khẩu chủ cho test e2e 2026";
+const masterPassword = "end to end test master password";
 
 const enabled = process.env.VAULT_E2E === "1";
 
@@ -47,7 +45,7 @@ async function api(
   return { status: response.status, body: text ? JSON.parse(text) : null };
 }
 
-describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
+describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
   let record: AccountCryptoRecord;
   let vaultKey: CryptoKey;
   let token: string;
@@ -58,15 +56,16 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
     vaultKey = created.vaultKey;
   });
 
-  it("từ chối đăng ký khi không có token đăng ký", async () => {
+  it("refuses registration without the token", async () => {
     const result = await api("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, ...record }),
     });
     expect(result.status).toBe(403);
+    expect(result.body.code).toBe("auth.bad_registration_token");
   });
 
-  it("đăng ký được với token đúng", async () => {
+  it("registers with the correct token", async () => {
     const result = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },
@@ -77,24 +76,24 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
     token = result.body.token;
   });
 
-  it("đăng ký lại cùng email bị từ chối", async () => {
+  it("rejects a duplicate email", async () => {
     const result = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },
       body: JSON.stringify({ email, ...record }),
     });
     expect(result.status).toBe(409);
+    expect(result.body.code).toBe("auth.email_taken");
   });
 
-  it("prelogin không tiết lộ email nào đã đăng ký", async () => {
-    // Đây là bất biến chống dò email: cả hai phản hồi phải trông giống nhau.
+  it("does not reveal which addresses are registered", async () => {
     const known = await api("/api/auth/prelogin", {
       method: "POST",
       body: JSON.stringify({ email }),
     });
     const unknown = await api("/api/auth/prelogin", {
       method: "POST",
-      body: JSON.stringify({ email: `không-tồn-tại-${Date.now()}@example.com` }),
+      body: JSON.stringify({ email: `missing-${Date.now()}@example.com` }),
     });
 
     expect(known.status).toBe(200);
@@ -103,7 +102,7 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
     expect(unknown.body.kdf.type).toBe(known.body.kdf.type);
   });
 
-  it("đăng nhập bằng master password đúng, và mở được vault key", async () => {
+  it("signs in and hands back a vault key only the client can open", async () => {
     const prelogin = await api("/api/auth/prelogin", {
       method: "POST",
       body: JSON.stringify({ email }),
@@ -117,9 +116,8 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
       method: "POST",
       body: JSON.stringify({ email, authKey: derived.authKey }),
     });
-
     expect(login.status).toBe(200);
-    // Server trả về wrapped vault key; chỉ client mở được nó.
+
     const reopened = await unlockVault(email, masterPassword, {
       kdf: prelogin.body.kdf,
       wrappedVaultKey: login.body.wrappedVaultKey,
@@ -128,32 +126,33 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
     token = login.body.token;
   });
 
-  it("master password sai bị từ chối", async () => {
-    const created = await createAccount(email, "sai bét", ITERATIONS);
+  it("rejects the wrong master password", async () => {
+    const created = await createAccount(email, "not the password", ITERATIONS);
     const result = await api("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, authKey: created.record.authKey }),
     });
     expect(result.status).toBe(401);
+    expect(result.body.code).toBe("auth.invalid_credentials");
   });
 
-  it("không có token thì không đọc được item", async () => {
+  it("requires a session to read items", async () => {
     expect((await api("/api/items")).status).toBe(401);
-    // Token giả phải là ASCII: header HTTP là ByteString, ký tự có dấu bị `fetch`
-    // chặn ngay ở client nên request không bao giờ tới Worker.
-    expect((await api("/api/items", { token: "khong-phai-token-that" })).status).toBe(401);
+    // A bogus token must be ASCII: HTTP headers are ByteStrings, so accented
+    // characters are rejected by fetch before the request is ever sent.
+    expect((await api("/api/items", { token: "not-a-real-token" })).status).toBe(401);
   });
 
   const itemId = crypto.randomUUID();
   const itemPlain = {
-    title: "Ngân hàng ACB",
-    url: "https://online.acb.com.vn",
-    username: "nguoidung@example.com",
+    title: "Example Bank",
+    url: "https://bank.example.com",
+    username: "customer@example.com",
     password: generatePassword({ length: 24 }).value,
     totp: { secret: "JBSWY3DPEHPK3PXP", algorithm: "SHA-1" as const, digits: 6, period: 30 },
   };
 
-  it("lưu và sync lại được item, server chỉ thấy ciphertext", async () => {
+  it("stores and syncs an item as ciphertext only", async () => {
     const sealed = await sealJson(vaultKey, itemPlain);
 
     const put = await api(`/api/items/${itemId}`, {
@@ -169,55 +168,55 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
     const row = list.body.items.find((i: any) => i.id === itemId);
     expect(row).toBeTruthy();
 
-    // Bất biến cốt lõi: không có chữ nào của plaintext xuất hiện trong phản hồi.
     const raw = JSON.stringify(list.body);
-    expect(raw).not.toContain("Ngân hàng ACB");
-    expect(raw).not.toContain("acb.com.vn");
+    expect(raw).not.toContain("Example Bank");
+    expect(raw).not.toContain("bank.example.com");
     expect(raw).not.toContain(itemPlain.password);
     expect(raw).not.toContain("JBSWY3DPEHPK3PXP");
 
-    // Nhưng client mở ra đúng nguyên bản.
     expect(await openJson(vaultKey, { ciphertext: row.ciphertext, nonce: row.nonce })).toEqual(
       itemPlain,
     );
   });
 
-  it("sync delta chỉ trả item thay đổi sau mốc `since`", async () => {
+  it("returns only items changed after the cursor", async () => {
     const list = await api("/api/items?since=0", { token });
     const after = await api(`/api/items?since=${list.body.serverTime}`, { token });
     expect(after.body.items).toHaveLength(0);
   });
 
-  it("xoá trả về tombstone chứ không mất dấu", async () => {
+  it("deletes with a tombstone rather than removing the row", async () => {
     const del = await api(`/api/items/${itemId}`, { method: "DELETE", token });
     expect(del.status).toBe(200);
 
     const list = await api("/api/items?since=0", { token });
     const row = list.body.items.find((i: any) => i.id === itemId);
-    // Thiết bị offline cần thấy tombstone này, nếu không nó sẽ đẩy item trở lại.
+    // An offline device needs this marker, or it would resurrect the item.
     expect(row.deletedAt).toBeGreaterThan(0);
     expect(row.ciphertext).toBeNull();
   });
 
-  it("item của người khác không ghi đè được", async () => {
-    const other = await createAccount(`khac-${Date.now()}@example.com`, "mật khẩu khác", ITERATIONS);
+  it("does not let one account overwrite another's item", async () => {
+    const otherEmail = `other-${Date.now()}@example.com`;
+    const other = await createAccount(otherEmail, "another master password", ITERATIONS);
     const registered = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },
-      body: JSON.stringify({ email: `khac-${Date.now()}@example.com`, ...other.record }),
+      body: JSON.stringify({ email: otherEmail, ...other.record }),
     });
 
-    const sealed = await sealJson(other.vaultKey, { title: "cố ghi đè" });
+    const sealed = await sealJson(other.vaultKey, { title: "attempted overwrite" });
     const put = await api(`/api/items/${itemId}`, {
       method: "PUT",
       token: registered.body.token,
       body: JSON.stringify(sealed),
     });
     expect(put.status).toBe(403);
+    expect(put.body.code).toBe("items.forbidden");
   });
 
-  describe("link share", () => {
-    it("người nhận giải mã được và tính ra mã TOTP đúng", async () => {
+  describe("share links", () => {
+    it("lets a recipient decrypt and compute the right 2FA code", async () => {
       const { sealed, fragment } = await createShare({
         title: itemPlain.title,
         username: itemPlain.username,
@@ -232,7 +231,7 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
       });
       expect(created.status).toBe(201);
 
-      // Người nhận không có token — đây là điểm chính của tính năng.
+      // No token here — that is the entire point of the feature.
       const fetched = await api(`/api/shares/${created.body.id}`);
       expect(fetched.status).toBe(200);
       expect(fetched.body.viewsLeft).toBe(1);
@@ -240,13 +239,12 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
       const payload = await openShare(fragment, fetched.body);
       expect(payload.password).toBe(itemPlain.password);
 
-      // Mã TOTP tính ở phía người nhận phải khớp mã tính từ secret gốc.
       const at = Date.now();
       expect(await generateTotp(payload.totp!, at)).toBe(await generateTotp(itemPlain.totp, at));
     });
 
-    it("hết lượt xem thì link chết", async () => {
-      const { sealed, fragment } = await createShare({ password: "chỉ xem một lần" });
+    it("kills the link once views run out", async () => {
+      const { sealed, fragment } = await createShare({ password: "single use" });
       const created = await api("/api/shares", {
         method: "POST",
         token,
@@ -255,13 +253,14 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
 
       const first = await api(`/api/shares/${created.body.id}`);
       expect(first.status).toBe(200);
-      expect((await openShare(fragment, first.body)).password).toBe("chỉ xem một lần");
+      expect((await openShare(fragment, first.body)).password).toBe("single use");
 
       const second = await api(`/api/shares/${created.body.id}`);
       expect(second.status).toBe(404);
+      expect(second.body.code).toBe("shares.gone");
     });
 
-    it("tạo link cần đăng nhập, đọc link thì không", async () => {
+    it("requires a session to create a link but not to read one", async () => {
       const { sealed } = await createShare({ password: "x" });
       const result = await api("/api/shares", {
         method: "POST",
@@ -270,7 +269,7 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
       expect(result.status).toBe(401);
     });
 
-    it("từ chối ttl và maxViews ngoài giới hạn", async () => {
+    it("rejects out-of-range ttl and view limits", async () => {
       const { sealed } = await createShare({ password: "x" });
       for (const body of [
         { ...sealed, ttlSeconds: 10, maxViews: 1 },
@@ -278,12 +277,17 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
         { ...sealed, ttlSeconds: 600, maxViews: 0 },
         { ...sealed, ttlSeconds: 600, maxViews: 1000 },
       ]) {
-        expect((await api("/api/shares", { method: "POST", token, body: JSON.stringify(body) })).status).toBe(400);
+        const result = await api("/api/shares", {
+          method: "POST",
+          token,
+          body: JSON.stringify(body),
+        });
+        expect(result.status).toBe(400);
       }
     });
 
-    it("link cần mật khẩu phụ: ciphertext tải về vẫn vô dụng nếu không có nó", async () => {
-      const { sealed, fragment } = await createShare({ password: "hai lớp" }, "cà phê sữa");
+    it("keeps a passphrase-protected payload useless without the passphrase", async () => {
+      const { sealed, fragment } = await createShare({ password: "two factors" }, "coffee");
       const created = await api("/api/shares", {
         method: "POST",
         token,
@@ -291,18 +295,18 @@ describe.skipIf(!enabled)("vòng đời thật qua Worker + D1", () => {
       });
 
       const fetched = await api(`/api/shares/${created.body.id}`);
-      await expect(openShare(fragment, fetched.body, "sai rồi")).rejects.toThrow(/không đúng/);
-      // Cùng ciphertext đó, đúng mật khẩu phụ thì mở được — không tốn lượt xem thêm.
-      expect((await openShare(fragment, fetched.body, "cà phê sữa")).password).toBe("hai lớp");
+      await expectCodeAsync(openShare(fragment, fetched.body, "tea"), "share.wrong_passphrase");
+      // Same ciphertext, right passphrase — and no extra view is consumed.
+      expect((await openShare(fragment, fetched.body, "coffee")).password).toBe("two factors");
     });
   });
 
-  it("logout làm token hết tác dụng", async () => {
+  it("invalidates the token on logout", async () => {
     expect((await api("/api/auth/logout", { method: "POST", token })).status).toBe(200);
     expect((await api("/api/items", { token })).status).toBe(401);
   });
 
-  it("/api/time trả mốc thời gian để đo lệch đồng hồ", async () => {
+  it("exposes server time for clock-drift detection", async () => {
     const result = await api("/api/time");
     expect(result.status).toBe(200);
     expect(Math.abs(result.body.serverTime - Math.floor(Date.now() / 1000))).toBeLessThan(60);

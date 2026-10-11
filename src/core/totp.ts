@@ -1,14 +1,15 @@
 /**
- * TOTP theo RFC 6238 (dựa trên HOTP, RFC 4226).
+ * TOTP per RFC 6238 (built on HOTP, RFC 4226).
  *
- * Toàn bộ phép tính chạy offline: mã chỉ phụ thuộc vào `secret` và thời gian
- * hiện tại. Server không bao giờ cần biết secret, và đó chính là lý do ta bỏ
- * được app 2FA trên điện thoại.
+ * Every computation here is offline: a code depends only on the secret and the
+ * current time. The server never needs to know the secret, and that is exactly
+ * why this replaces the authenticator app on your phone.
  */
 
 import { base32Decode, base32Encode, isValidBase32 } from "./base32.js";
 import { randomBytes } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
+import { VaultError } from "./errors.js";
 
 export type TotpAlgorithm = "SHA-1" | "SHA-256" | "SHA-512";
 
@@ -16,7 +17,7 @@ export interface TotpConfig {
   secret: string; // base32
   algorithm: TotpAlgorithm;
   digits: number;
-  period: number; // giây
+  period: number; // seconds
   issuer?: string;
   account?: string;
 }
@@ -28,9 +29,10 @@ export const TOTP_DEFAULTS = {
 };
 
 /**
- * Mặc định là SHA-1. Nghe như lỗi thời, nhưng RFC 6238 chốt vậy và gần như mọi
- * site đều dùng nó. SHA-1 chỉ yếu với tấn công va chạm, không yếu khi dùng trong
- * HMAC — nên vẫn an toàn ở đây. Đổi sang SHA-256 sẽ ra mã không khớp với site.
+ * Defaults to SHA-1. That sounds obsolete, but RFC 6238 specifies it and nearly
+ * every site uses it. SHA-1 is broken for collision resistance, not inside an
+ * HMAC — so it is still sound here. Switching to SHA-256 would produce codes the
+ * site rejects.
  */
 export async function generateTotp(
   config: Pick<TotpConfig, "secret"> & Partial<TotpConfig>,
@@ -41,7 +43,9 @@ export async function generateTotp(
   const period = config.period ?? TOTP_DEFAULTS.period;
 
   const key = base32Decode(config.secret);
-  if (key.length === 0) throw new Error("TOTP secret rỗng");
+  if (key.length === 0) {
+    throw new VaultError("totp.empty_secret", {}, "TOTP secret is empty");
+  }
 
   const counter = Math.floor(atMs / 1000 / period);
   return hotp(key, counter, algorithm, digits);
@@ -53,8 +57,9 @@ async function hotp(
   algorithm: TotpAlgorithm,
   digits: number,
 ): Promise<string> {
-  // Counter là số nguyên 64-bit big-endian. `counter` vượt quá 32 bit vào năm
-  // 6053 nên dùng BigInt cho chắc, tránh lỗi dịch bit của JS ở mốc 2^31.
+  // The counter is a 64-bit big-endian integer. It only exceeds 32 bits in the
+  // year 6053, but BigInt avoids JavaScript's bit-shift wraparound at 2^31
+  // regardless.
   const counterBytes = new Uint8Array(8);
   new DataView(counterBytes.buffer).setBigUint64(0, BigInt(counter), false);
 
@@ -67,11 +72,11 @@ async function hotp(
   );
   const mac = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, counterBytes));
 
-  // Dynamic truncation (RFC 4226 §5.3): 4 bit cuối của byte cuối cho biết đọc
-  // từ đâu. Lấy byte cuối theo độ dài thật của MAC để SHA-256/512 cũng đúng.
+  // Dynamic truncation (RFC 4226 §5.3): the low 4 bits of the last byte say
+  // where to read from. Index by actual MAC length so SHA-256/512 work too.
   const offset = mac[mac.length - 1]! & 0x0f;
   const binary =
-    ((mac[offset]! & 0x7f) << 24) | // bỏ bit dấu, tránh số âm
+    ((mac[offset]! & 0x7f) << 24) | // clear the sign bit to avoid a negative
     (mac[offset + 1]! << 16) |
     (mac[offset + 2]! << 8) |
     mac[offset + 3]!;
@@ -79,47 +84,47 @@ async function hotp(
   return (binary % 10 ** digits).toString().padStart(digits, "0");
 }
 
-/** Số giây còn lại trước khi mã đổi — dùng vẽ vòng đếm ngược. */
+/** Seconds until the code rolls over — drives the countdown ring. */
 export function secondsRemaining(period = TOTP_DEFAULTS.period, atMs = Date.now()): number {
   return period - (Math.floor(atMs / 1000) % period);
 }
 
 /**
- * Sinh secret mới. 20 byte = 160 bit, đúng độ dài khoá khuyến nghị của RFC 4226
- * cho HMAC-SHA1, và ra chuỗi base32 32 ký tự.
+ * Generate a fresh secret. 20 bytes = 160 bits, the key length RFC 4226
+ * recommends for HMAC-SHA1, which encodes to 32 base32 characters.
  */
 export function generateTotpSecret(bytes = 20): string {
   return base32Encode(randomBytes(bytes));
 }
 
 /**
- * Parse URI `otpauth://` trong QR code.
- * Dạng: otpauth://totp/Issuer:account@x.com?secret=BASE32&issuer=Issuer&digits=6
+ * Parse the `otpauth://` URI found in a QR code.
+ * Shape: otpauth://totp/Issuer:account@x.com?secret=BASE32&issuer=Issuer&digits=6
  */
 export function parseOtpauthUri(uri: string): TotpConfig {
   let url: URL;
   try {
     url = new URL(uri.trim());
   } catch {
-    throw new Error("URI không hợp lệ");
+    throw new VaultError("totp.invalid_uri", {}, `Not a valid URI: ${uri.slice(0, 40)}`);
   }
 
   if (url.protocol !== "otpauth:") {
-    throw new Error(`Chỉ hỗ trợ otpauth://, nhận được "${url.protocol}"`);
+    throw new VaultError("totp.invalid_uri", {}, `Expected otpauth:, got ${url.protocol}`);
   }
-  // `url.host` của otpauth://totp/... là "totp". HOTP (counter-based) cần lưu
-  // thêm counter và tự tăng, không dùng được chung đường với TOTP.
+  // `url.host` of otpauth://totp/... is "totp". HOTP is counter-based: it needs
+  // persisted state that increments, so it cannot share this code path.
   if (url.host.toLowerCase() !== "totp") {
-    throw new Error("Chỉ hỗ trợ TOTP, không hỗ trợ HOTP");
+    throw new VaultError("totp.not_totp", {}, `Unsupported otpauth type: ${url.host}`);
   }
 
   const secret = url.searchParams.get("secret");
   if (!secret || !isValidBase32(secret)) {
-    throw new Error("Thiếu hoặc sai tham số secret");
+    throw new VaultError("totp.missing_secret", {}, "Missing or malformed secret parameter");
   }
 
-  // Label là "Issuer:account", có thể đã URL-encode. Tham số `issuer` nếu có thì
-  // ưu tiên hơn phần issuer trong label, theo khuyến nghị của Google.
+  // The label is "Issuer:account" and may be percent-encoded. When present, the
+  // `issuer` parameter wins over the label prefix, as Google recommends.
   const label = decodeURIComponent(url.pathname.replace(/^\//, ""));
   const colon = label.indexOf(":");
   const labelIssuer = colon >= 0 ? label.slice(0, colon).trim() : undefined;
@@ -150,7 +155,11 @@ function normalizeAlgorithm(raw: string): TotpAlgorithm {
     case "SHA512":
       return "SHA-512";
     default:
-      throw new Error(`Thuật toán không hỗ trợ: ${raw}`);
+      throw new VaultError(
+        "totp.unsupported_algorithm",
+        { algorithm: raw },
+        `Unsupported algorithm: ${raw}`,
+      );
   }
 }
 
@@ -171,8 +180,9 @@ export function buildOtpauthUri(config: TotpConfig): string {
 }
 
 /**
- * Nhận vào thứ người dùng dán — URI otpauth hoặc chuỗi base32 trần — và trả về
- * config. Gom một chỗ để cả ba đường nhập (dán tay, quét QR, dán URI) đi chung.
+ * Accept whatever the user pasted — an otpauth URI or a bare base32 secret — and
+ * return a config. One funnel so all three entry paths (typing, QR scan, URI)
+ * behave identically.
  */
 export function parseTotpInput(input: string, fallbackAccount?: string): TotpConfig {
   const trimmed = input.trim();
@@ -180,7 +190,7 @@ export function parseTotpInput(input: string, fallbackAccount?: string): TotpCon
     return parseOtpauthUri(trimmed);
   }
   if (!isValidBase32(trimmed)) {
-    throw new Error("Không phải URI otpauth cũng không phải chuỗi base32 hợp lệ");
+    throw new VaultError("totp.unrecognized_input", {}, "Neither an otpauth URI nor base32");
   }
   return {
     secret: trimmed.replace(/[\s-]/g, "").toUpperCase(),

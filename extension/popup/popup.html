@@ -1,172 +1,278 @@
 <!doctype html>
-<html lang="vi">
+<html>
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="popup.css" />
     <title>Personal Vault</title>
   </head>
   <body>
-    <!-- Lần đầu: cấu hình server và tạo account -->
     <section id="screen-setup" hidden>
-      <h1>Thiết lập</h1>
-      <p class="hint">
-        Chạy một lần. Master password không được lưu ở đâu cả và không khôi phục
-        được — quên là mất toàn bộ vault.
-      </p>
+      <h1 data-i18n="setup.title"></h1>
+      <p class="hint" data-i18n="setup.hint"></p>
       <form id="form-setup">
-        <label>Địa chỉ server<input name="apiUrl" type="url" placeholder="https://personal-vault.ten-ban.workers.dev" required /></label>
-        <label>Email<input name="email" type="email" autocomplete="username" required /></label>
-        <label>Token đăng ký<input name="registrationToken" type="password" autocomplete="off" required /></label>
-        <label>Master password<input name="password" type="password" autocomplete="new-password" minlength="12" required /></label>
-        <label>Nhập lại<input name="confirm" type="password" autocomplete="new-password" required /></label>
-        <p class="hint" id="setup-strength"></p>
-        <button class="primary" type="submit">Tạo vault</button>
-        <button type="button" class="link" id="setup-switch-login">Đã có account trên server này</button>
+        <label
+          ><span data-i18n="setup.server"></span
+          ><input
+            name="apiUrl"
+            type="url"
+            placeholder="https://personal-vault.you.workers.dev"
+            required
+        /></label>
+        <label
+          ><span data-i18n="setup.email"></span
+          ><input name="email" type="email" autocomplete="username" required
+        /></label>
+        <label
+          ><span data-i18n="setup.registration_token"></span
+          ><input name="registrationToken" type="password" autocomplete="off" required
+        /></label>
+        <label
+          ><span data-i18n="setup.master_password"></span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            minlength="12"
+            required
+        /></label>
+        <label
+          ><span data-i18n="setup.confirm"></span
+          ><input name="confirm" type="password" autocomplete="new-password" required
+        /></label>
+        <button class="primary" type="submit" data-i18n="setup.create"></button>
+        <button
+          type="button"
+          class="link"
+          id="setup-switch-login"
+          data-i18n="setup.switch_to_login"
+        ></button>
       </form>
       <p class="error" id="setup-error" hidden></p>
     </section>
 
-    <!-- Mở vault -->
     <section id="screen-unlock" hidden>
-      <h1>Mở vault</h1>
+      <h1 data-i18n="unlock.title"></h1>
       <p class="hint" id="unlock-email"></p>
       <form id="form-unlock">
-        <label>Master password<input name="password" type="password" autocomplete="current-password" required autofocus /></label>
-        <button class="primary" type="submit">Mở</button>
+        <label
+          ><span data-i18n="setup.master_password"></span
+          ><input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            autofocus
+        /></label>
+        <button class="primary" type="submit" data-i18n="unlock.submit"></button>
       </form>
       <p class="error" id="unlock-error" hidden></p>
-      <button type="button" class="link" id="unlock-reset">Dùng server hoặc email khác</button>
+      <button type="button" class="link" id="unlock-reset" data-i18n="unlock.reset"></button>
     </section>
 
-    <!-- Danh sách -->
     <section id="screen-list" hidden>
       <header>
-        <input id="search" type="search" placeholder="Tìm…" autocomplete="off" />
-        <button id="btn-add" title="Thêm item">+</button>
-        <button id="btn-generator" title="Sinh mật khẩu">⚿</button>
-        <button id="btn-settings" title="Cài đặt">⚙</button>
+        <input id="search" type="search" autocomplete="off" data-i18n-placeholder="list.search" />
+        <button id="btn-add" data-i18n-title="list.add">+</button>
+        <button id="btn-generator" data-i18n-title="list.generator">⚿</button>
+        <button id="btn-settings" data-i18n-title="list.settings">⚙</button>
       </header>
       <p class="warn" id="clock-warning" hidden></p>
       <div id="matching-section" hidden>
         <h2 id="matching-title"></h2>
         <div id="matching-list"></div>
       </div>
-      <h2 id="all-title">Tất cả</h2>
+      <h2 id="all-title"></h2>
       <div id="all-list"></div>
-      <p class="hint" id="list-empty" hidden>Chưa có item nào. Bấm + để thêm.</p>
-      <footer><span id="sync-status"></span><button class="link" id="btn-lock">Khoá ngay</button></footer>
+      <p class="hint" id="list-empty" data-i18n="list.empty" hidden></p>
+      <footer>
+        <span id="sync-status"></span>
+        <button class="link" id="btn-lock" data-i18n="list.lock_now"></button>
+      </footer>
     </section>
 
-    <!-- Thêm / sửa -->
     <section id="screen-edit" hidden>
-      <header><button class="link" id="edit-back">← Quay lại</button><h1 id="edit-title">Item</h1></header>
+      <header>
+        <button class="link" id="edit-back" data-i18n="common.back"></button>
+        <h1 id="edit-title"></h1>
+      </header>
       <form id="form-edit">
-        <label>Tên<input name="title" required autocomplete="off" /></label>
-        <label>Địa chỉ web<input name="url" placeholder="example.com" autocomplete="off" /></label>
-        <label>Tên đăng nhập<input name="username" autocomplete="off" /></label>
+        <label
+          ><span data-i18n="edit.name"></span><input name="title" required autocomplete="off"
+        /></label>
+        <label
+          ><span data-i18n="common.url"></span
+          ><input name="url" placeholder="example.com" autocomplete="off"
+        /></label>
+        <label
+          ><span data-i18n="common.username"></span><input name="username" autocomplete="off"
+        /></label>
         <label>
-          Mật khẩu
+          <span data-i18n="common.password"></span>
           <span class="with-button">
             <input name="password" type="password" autocomplete="off" />
-            <button type="button" id="edit-reveal" title="Hiện/ẩn">👁</button>
-            <button type="button" id="edit-generate" title="Sinh mật khẩu mới">⟳</button>
+            <button type="button" id="edit-reveal" data-i18n-title="edit.reveal">👁</button>
+            <button type="button" id="edit-generate" data-i18n-title="edit.regenerate">⟳</button>
           </span>
         </label>
         <label>
-          TOTP secret (2FA)
+          <span data-i18n="edit.totp_secret"></span>
           <span class="with-button">
-            <input name="totp" placeholder="JBSWY3DPEHPK3PXP hoặc otpauth://…" autocomplete="off" />
-            <button type="button" id="edit-scan" title="Quét QR trên tab đang mở">⛶</button>
+            <input name="totp" autocomplete="off" data-i18n-placeholder="edit.totp_placeholder" />
+            <button type="button" id="edit-scan" data-i18n-title="edit.scan">⛶</button>
           </span>
         </label>
         <p class="hint" id="edit-totp-hint"></p>
-        <label>Ghi chú<textarea name="note" rows="3"></textarea></label>
-        <button class="primary" type="submit">Lưu</button>
-        <button type="button" class="danger link" id="edit-delete" hidden>Xoá item này</button>
+        <label
+          ><span data-i18n="common.note"></span><textarea name="note" rows="3"></textarea>
+        </label>
+        <button class="primary" type="submit" data-i18n="edit.save"></button>
+        <button
+          type="button"
+          class="danger link"
+          id="edit-delete"
+          data-i18n="edit.delete"
+          hidden
+        ></button>
       </form>
       <p class="error" id="edit-error" hidden></p>
     </section>
 
-    <!-- Sinh mật khẩu -->
     <section id="screen-generator" hidden>
-      <header><button class="link" id="gen-back">← Quay lại</button><h1>Sinh mật khẩu</h1></header>
+      <header>
+        <button class="link" id="gen-back" data-i18n="common.back"></button>
+        <h1 data-i18n="gen.title"></h1>
+      </header>
       <div class="gen-output">
         <code id="gen-value"></code>
-        <button id="gen-copy">Copy</button>
-        <button id="gen-again" title="Sinh lại">⟳</button>
+        <button id="gen-copy" data-i18n="common.copy"></button>
+        <button id="gen-again" data-i18n-title="gen.regenerate">⟳</button>
       </div>
       <p class="hint" id="gen-entropy"></p>
       <div class="tabs">
-        <button class="tab active" data-mode="password">Ngẫu nhiên</button>
-        <button class="tab" data-mode="passphrase">Passphrase</button>
-        <button class="tab" data-mode="pin">PIN</button>
+        <button class="tab active" data-mode="password" data-i18n="gen.mode_random"></button>
+        <button class="tab" data-mode="passphrase" data-i18n="gen.mode_passphrase"></button>
+        <button class="tab" data-mode="pin" data-i18n="gen.mode_pin"></button>
       </div>
       <div id="gen-options-password">
-        <label class="range">Độ dài <output id="gen-length-out">20</output><input id="gen-length" type="range" min="8" max="64" value="20" /></label>
-        <label class="check"><input id="gen-upper" type="checkbox" checked /> Chữ hoa</label>
-        <label class="check"><input id="gen-digits" type="checkbox" checked /> Số</label>
-        <label class="check"><input id="gen-symbols" type="checkbox" checked /> Ký tự đặc biệt</label>
-        <label class="check"><input id="gen-unambiguous" type="checkbox" /> Bỏ ký tự dễ đọc lẫn (0/O, 1/l)</label>
+        <label class="range"
+          ><span data-i18n="gen.length"></span><output id="gen-length-out"></output
+          ><input id="gen-length" type="range" min="8" max="64" value="20"
+        /></label>
+        <label class="check"
+          ><input id="gen-upper" type="checkbox" checked /> <span data-i18n="gen.uppercase"></span
+        ></label>
+        <label class="check"
+          ><input id="gen-digits" type="checkbox" checked /> <span data-i18n="gen.digits"></span
+        ></label>
+        <label class="check"
+          ><input id="gen-symbols" type="checkbox" checked /> <span data-i18n="gen.symbols"></span
+        ></label>
+        <label class="check"
+          ><input id="gen-unambiguous" type="checkbox" />
+          <span data-i18n="gen.exclude_ambiguous"></span
+        ></label>
       </div>
       <div id="gen-options-passphrase" hidden>
-        <label class="range">Số từ <output id="gen-words-out">8</output><input id="gen-words" type="range" min="4" max="12" value="8" /></label>
-        <label class="check"><input id="gen-capitalize" type="checkbox" /> Viết hoa đầu từ</label>
-        <label class="check"><input id="gen-append-digit" type="checkbox" /> Thêm một chữ số</label>
+        <label class="range"
+          ><span data-i18n="gen.words"></span><output id="gen-words-out"></output
+          ><input id="gen-words" type="range" min="4" max="12" value="8"
+        /></label>
+        <label class="check"
+          ><input id="gen-capitalize" type="checkbox" /> <span data-i18n="gen.capitalize"></span
+        ></label>
+        <label class="check"
+          ><input id="gen-append-digit" type="checkbox" /> <span data-i18n="gen.append_digit"></span
+        ></label>
       </div>
       <div id="gen-options-pin" hidden>
-        <label class="range">Số chữ số <output id="gen-pin-out">6</output><input id="gen-pin" type="range" min="4" max="12" value="6" /></label>
+        <label class="range"
+          ><span data-i18n="gen.pin_digits"></span><output id="gen-pin-out"></output
+          ><input id="gen-pin" type="range" min="4" max="12" value="6"
+        /></label>
       </div>
     </section>
 
-    <!-- Chia sẻ -->
     <section id="screen-share" hidden>
-      <header><button class="link" id="share-back">← Quay lại</button><h1>Chia sẻ</h1></header>
+      <header>
+        <button class="link" id="share-back" data-i18n="common.back"></button>
+        <h1 data-i18n="share.title"></h1>
+      </header>
       <p class="hint" id="share-item"></p>
       <form id="form-share">
-        <label>Hết hạn sau
+        <label>
+          <span data-i18n="share.expires_in"></span>
           <select name="ttl">
-            <option value="3600">1 giờ</option>
-            <option value="86400" selected>24 giờ</option>
-            <option value="604800">7 ngày</option>
+            <option value="3600" data-i18n="share.ttl_1h"></option>
+            <option value="86400" selected data-i18n="share.ttl_24h"></option>
+            <option value="604800" data-i18n="share.ttl_7d"></option>
           </select>
         </label>
-        <label>Số lần xem tối đa
+        <label>
+          <span data-i18n="share.max_views"></span>
           <select name="maxViews">
-            <option value="1" selected>1 lần</option>
-            <option value="3">3 lần</option>
-            <option value="10">10 lần</option>
+            <option value="1" selected data-i18n="share.views_1"></option>
+            <option value="3" data-i18n="share.views_3"></option>
+            <option value="10" data-i18n="share.views_10"></option>
           </select>
         </label>
-        <label class="check"><input type="checkbox" name="includeTotp" checked /> Kèm mã 2FA tự refresh</label>
-        <label>Mật khẩu phụ (tuỳ chọn)<input name="passphrase" type="text" autocomplete="off" placeholder="Báo riêng qua kênh khác" /></label>
-        <p class="hint">
-          Người gửi link qua Zalo/Messenger thì nền tảng đó đọc được cả link. Mật
-          khẩu phụ làm một kênh bị đọc vẫn không đủ để mở.
-        </p>
-        <button class="primary" type="submit">Tạo link</button>
+        <label class="check"
+          ><input type="checkbox" name="includeTotp" checked />
+          <span data-i18n="share.include_totp"></span
+        ></label>
+        <label
+          ><span data-i18n="share.passphrase"></span
+          ><input
+            name="passphrase"
+            type="text"
+            autocomplete="off"
+            data-i18n-placeholder="share.passphrase_placeholder"
+        /></label>
+        <p class="hint" data-i18n="share.channel_warning"></p>
+        <button class="primary" type="submit" data-i18n="share.create"></button>
       </form>
       <div id="share-result" hidden>
-        <label>Link<textarea id="share-url" rows="3" readonly></textarea></label>
-        <button class="primary" id="share-copy">Copy link</button>
+        <label
+          ><span data-i18n="share.link"></span
+          ><textarea id="share-url" rows="3" readonly></textarea>
+        </label>
+        <button class="primary" id="share-copy" data-i18n="share.copy_link"></button>
         <p class="warn" id="share-note"></p>
       </div>
       <p class="error" id="share-error" hidden></p>
     </section>
 
-    <!-- Cài đặt -->
     <section id="screen-settings" hidden>
-      <header><button class="link" id="settings-back">← Quay lại</button><h1>Cài đặt</h1></header>
-      <label class="range">Tự khoá sau <output id="settings-lock-out"></output><input id="settings-lock" type="range" min="1" max="120" /></label>
+      <header>
+        <button class="link" id="settings-back" data-i18n="common.back"></button>
+        <h1 data-i18n="settings.title"></h1>
+      </header>
+      <label class="range"
+        ><span data-i18n="settings.auto_lock"></span><output id="settings-lock-out"></output
+        ><input id="settings-lock" type="range" min="1" max="120"
+      /></label>
+      <label
+        ><span data-i18n="settings.language"></span
+        ><select id="settings-locale"></select
+      ></label>
       <p class="hint" id="settings-info"></p>
-      <button id="settings-change-password">Đổi master password</button>
+      <button id="settings-change-password" data-i18n="settings.change_password"></button>
       <form id="form-change-password" hidden>
-        <label>Master password hiện tại<input name="current" type="password" autocomplete="off" required /></label>
-        <label>Master password mới<input name="next" type="password" minlength="12" autocomplete="off" required /></label>
-        <label>Nhập lại<input name="confirm" type="password" autocomplete="off" required /></label>
-        <p class="hint">Mọi thiết bị khác sẽ phải nhập lại. Item không bị mã hoá lại.</p>
-        <button class="primary" type="submit">Đổi</button>
+        <label
+          ><span data-i18n="settings.current_password"></span
+          ><input name="current" type="password" autocomplete="off" required
+        /></label>
+        <label
+          ><span data-i18n="settings.new_password"></span
+          ><input name="next" type="password" minlength="12" autocomplete="off" required
+        /></label>
+        <label
+          ><span data-i18n="setup.confirm"></span
+          ><input name="confirm" type="password" autocomplete="off" required
+        /></label>
+        <p class="hint" data-i18n="settings.change_hint"></p>
+        <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
       </form>
-      <button class="danger" id="settings-logout">Đăng xuất và xoá dữ liệu trên máy này</button>
+      <button class="danger" id="settings-logout" data-i18n="settings.logout"></button>
       <p class="error" id="settings-error" hidden></p>
     </section>
 

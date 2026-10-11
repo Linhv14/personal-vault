@@ -1,17 +1,24 @@
 /**
- * Trang xem link share. Chạy hoàn toàn ở client.
+ * The share recipient page. Runs entirely in the recipient's browser.
  *
- * Hai quy tắc chi phối thứ tự mọi thao tác dưới đây:
+ * Two rules drive the order of everything below:
  *
- * 1. Khoá nằm trong `location.hash`, và fragment không bao giờ được gửi lên
- *    server. Không log nó, không đưa vào bất kỳ request nào.
- * 2. Mỗi lần GET /api/shares/:id là tiêu một lượt xem. Nên nếu link cần mật khẩu
- *    phụ thì phải hỏi TRƯỚC khi fetch — hỏi sau là đốt lượt xem của người dùng
- *    mỗi lần họ nhập sai.
+ * 1. The key lives in `location.hash`, and a fragment is never sent to a server.
+ *    Do not log it and never put it in a request.
+ * 2. Every GET of the share spends one view. So a link that needs a passphrase
+ *    must prompt *before* fetching, and retries must reuse the response already
+ *    in memory rather than asking again.
  */
 
 import { fragmentNeedsPassphrase, openShare, type SharePayload } from "../src/core/share.js";
 import { generateTotp, secondsRemaining, TOTP_DEFAULTS } from "../src/core/totp.js";
+import {
+  createTranslator,
+  describeError,
+  detectLocale,
+  type MessageKey,
+  type Translate,
+} from "../src/i18n/index.js";
 
 interface ShareResponse {
   ciphertext: string;
@@ -20,9 +27,12 @@ interface ShareResponse {
   viewsLeft: number;
 }
 
+const locale = detectLocale();
+const t: Translate = createTranslator(locale);
+
 const el = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
-  if (!node) throw new Error(`Thiếu phần tử #${id}`);
+  if (!node) throw new Error(`Missing #${id}`);
   return node as T;
 };
 
@@ -42,12 +52,27 @@ function fail(message: string): void {
   show("error");
 }
 
+function applyStaticText(): void {
+  for (const node of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
+    node.textContent = t(node.dataset.i18n as MessageKey);
+  }
+  for (const node of document.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]")) {
+    node.placeholder = t(node.dataset.i18nPlaceholder as MessageKey);
+  }
+  document.documentElement.lang = locale;
+  document.title = t("view.default_title");
+}
+
 const shareId = location.pathname.split("/").filter(Boolean).pop() ?? "";
 const fragment = location.hash;
 
+let cached: ShareResponse | null = null;
+
 async function main(): Promise<void> {
+  applyStaticText();
+
   if (!shareId || !fragment || fragment === "#") {
-    fail("Link thiếu khoá giải mã. Có thể nó đã bị cắt ngắn khi gửi — hãy nhờ người gửi gửi lại nguyên vẹn.");
+    fail(t("view.missing_key"));
     return;
   }
 
@@ -67,14 +92,12 @@ async function onPassphraseSubmit(event: SubmitEvent): Promise<void> {
   const errorNode = el("passphrase-error");
   errorNode.hidden = true;
 
-  // Chỉ fetch một lần rồi giữ lại phản hồi: nếu nhập sai mật khẩu phụ, ta thử lại
-  // trên ciphertext đã tải về chứ không gọi API lần nữa, nên không tốn lượt xem.
   if (!cached) {
     show("loading");
     try {
       cached = await fetchShare();
     } catch (error) {
-      fail(error instanceof Error ? error.message : String(error));
+      fail(describeError(error, t));
       return;
     }
   }
@@ -83,19 +106,18 @@ async function onPassphraseSubmit(event: SubmitEvent): Promise<void> {
     render(await openShare(fragment, cached, input.value));
   } catch (error) {
     show("passphrase");
-    errorNode.textContent = error instanceof Error ? error.message : String(error);
+    errorNode.textContent = describeError(error, t);
     errorNode.hidden = false;
     input.select();
   }
 }
 
-let cached: ShareResponse | null = null;
-
 async function fetchShare(): Promise<ShareResponse> {
   const response = await fetch(`/api/shares/${encodeURIComponent(shareId)}`);
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Server trả về lỗi ${response.status}`);
+    const body = (await response.json().catch(() => null)) as { code?: string } | null;
+    const key = body?.code ? (`error.${body.code}` as MessageKey) : "error.api.generic";
+    throw new Error(t(key, { status: response.status }));
   }
   return (await response.json()) as ShareResponse;
 }
@@ -106,32 +128,36 @@ async function load(): Promise<void> {
     cached = await fetchShare();
     render(await openShare(fragment, cached));
   } catch (error) {
-    fail(error instanceof Error ? error.message : String(error));
+    fail(describeError(error, t));
   }
 }
 
 function render(payload: SharePayload): void {
-  el("title").textContent = payload.title?.trim() || "Thông tin được chia sẻ";
+  el("title").textContent = payload.title?.trim() || t("view.default_title");
 
   const parts: string[] = [];
   if (payload.url) parts.push(payload.url);
   if (cached) {
-    const minutes = Math.max(0, Math.round((cached.expiresAt * 1000 - Date.now()) / 60000));
-    parts.push(minutes >= 60 ? `hết hạn sau ~${Math.round(minutes / 60)} giờ` : `hết hạn sau ~${minutes} phút`);
+    const minutes = Math.max(0, Math.round((cached.expiresAt * 1000 - Date.now()) / 60_000));
+    parts.push(
+      minutes >= 60
+        ? t("view.expires_hours", { count: Math.round(minutes / 60) })
+        : t("view.expires_minutes", { count: minutes }),
+    );
   }
   el("meta").textContent = parts.join(" · ");
 
   const fields = el("fields");
   fields.replaceChildren();
 
-  if (payload.username) fields.append(textField("Tên đăng nhập", payload.username));
-  if (payload.password) fields.append(textField("Mật khẩu", payload.password, true));
+  if (payload.username) fields.append(textField(t("common.username"), payload.username));
+  if (payload.password) fields.append(textField(t("common.password"), payload.password, true));
   if (payload.totp) fields.append(totpField(payload.totp));
   if (payload.note) fields.append(noteField(payload.note));
 
   el("warning").textContent = cached?.viewsLeft
-    ? `Link còn ${cached.viewsLeft} lượt xem. Đừng đóng tab trước khi lưu lại thông tin cần dùng.`
-    : "Đây là lượt xem cuối cùng — tải lại trang sẽ không mở được nữa. Hãy lưu lại ngay thông tin bạn cần.";
+    ? t("view.views_left", { count: cached.viewsLeft })
+    : t("view.last_view");
 
   show("content");
 }
@@ -153,45 +179,43 @@ function textField(label: string, value: string, secret = false): HTMLElement {
 
   const valueNode = document.createElement("div");
   valueNode.className = secret ? "value hidden" : "value";
-  // `textContent`, không bao giờ `innerHTML`: nội dung này do người gửi nhập và
-  // ta không muốn một ghi chú chứa <script> chạy được trên trang.
-  valueNode.textContent = secret ? "•".repeat(Math.min(value.length, 20)) : value;
+  const masked = "•".repeat(Math.min(value.length, 20));
+  // textContent, never innerHTML: this content comes from the sender.
+  valueNode.textContent = secret ? masked : value;
 
   row.append(valueNode);
 
   if (secret) {
     let revealed = false;
     const toggle = document.createElement("button");
-    toggle.textContent = "Hiện";
+    toggle.textContent = t("common.show");
     toggle.addEventListener("click", () => {
       revealed = !revealed;
-      valueNode.textContent = revealed ? value : "•".repeat(Math.min(value.length, 20));
+      valueNode.textContent = revealed ? value : masked;
       valueNode.className = revealed ? "value" : "value hidden";
-      toggle.textContent = revealed ? "Ẩn" : "Hiện";
+      toggle.textContent = t(revealed ? "common.hide" : "common.show");
     });
     row.append(toggle);
   }
 
-  row.append(copyButton(value));
+  row.append(copyButton(value).element);
   return wrap;
 }
 
 function noteField(value: string): HTMLElement {
-  const { wrap, row } = field("Ghi chú");
+  const { wrap, row } = field(t("common.note"));
   const valueNode = document.createElement("div");
   valueNode.className = "value note";
   valueNode.textContent = value;
-  row.append(valueNode, copyButton(value));
+  row.append(valueNode, copyButton(value).element);
   return wrap;
 }
 
-/**
- * Mã TOTP tự refresh. Không có network nào tham gia: mã được tính tại chỗ từ
- * secret vừa giải mã, đúng công thức RFC 6238 mà app 2FA trên điện thoại dùng.
- */
+/** Live 2FA code, computed locally per RFC 6238 — no network involved. */
 function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   const period = config.period || TOTP_DEFAULTS.period;
-  const { wrap, row } = field(`Mã 2FA${config.issuer ? ` · ${config.issuer}` : ""}`);
+  const label = t("view.totp_label", { issuer: config.issuer ? ` · ${config.issuer}` : "" });
+  const { wrap, row } = field(label);
 
   const container = document.createElement("div");
   container.className = "totp";
@@ -214,24 +238,20 @@ function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
     ring.update(remaining / period);
     ring.svg.classList.toggle("urgent", remaining <= 5);
 
-    // Chỉ tính lại khi sang chu kỳ mới, thay vì mỗi giây — tiết kiệm và tránh
-    // nhấp nháy số khi phép HMAC hoàn thành không đúng nhịp.
     const counter = Math.floor(Date.now() / 1000 / period);
-    if (counter !== lastCounter) {
-      lastCounter = counter;
-      try {
-        const code = await generateTotp(config);
-        codeNode.textContent = code.replace(/(\d{3})(?=\d)/, "$1 ");
-        copy.setValue(code);
-      } catch {
-        codeNode.textContent = "lỗi";
-      }
+    if (counter === lastCounter) return;
+    lastCounter = counter;
+    try {
+      const code = await generateTotp(config);
+      codeNode.textContent = code.replace(/(\d{3})(?=\d)/, "$1 ");
+      copy.setValue(code);
+    } catch {
+      codeNode.textContent = "—";
     }
   };
 
   void tick();
   const timer = setInterval(() => void tick(), 1000);
-  // Tab bị đóng thì dừng — và cũng để secret không bị giữ sống không cần thiết.
   addEventListener("pagehide", () => clearInterval(timer));
 
   return wrap;
@@ -256,10 +276,9 @@ function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
     return circle;
   };
 
-  const track = make("track");
   const progress = make("progress");
   progress.setAttribute("stroke-dasharray", String(circumference));
-  svg.append(track, progress);
+  svg.append(make("track"), progress);
 
   return {
     svg,
@@ -269,53 +288,49 @@ function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
 }
 
 /**
- * Copy kèm tự xoá clipboard sau 30 giây.
- *
- * Clipboard là bộ nhớ dùng chung của cả máy: mọi app đang chạy đọc được nó, và
- * nhiều app quản lý clipboard còn lưu lịch sử xuống đĩa.
+ * Copy, then clear the clipboard after 30 seconds. The clipboard is shared with
+ * every running application, and clipboard managers often persist history.
  */
-function copyButton(initial: string): HTMLButtonElement & {
+function copyButton(initial: string): {
   element: HTMLButtonElement;
   setValue: (value: string) => void;
 } {
   let value = initial;
   const button = document.createElement("button");
-  button.textContent = "Copy";
+  button.textContent = t("common.copy");
 
   button.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(value);
     } catch {
-      button.textContent = "Không copy được";
       return;
     }
     const copied = value;
-    button.textContent = "Đã copy";
+    button.textContent = "✓";
     button.classList.add("copied");
     setTimeout(() => {
-      button.textContent = "Copy";
+      button.textContent = t("common.copy");
       button.classList.remove("copied");
     }, 2000);
 
     setTimeout(async () => {
-      // Chỉ xoá nếu clipboard vẫn đang chứa đúng thứ ta đặt vào — nếu người dùng
-      // đã copy thứ khác thì xoá đi là phá việc của họ.
       try {
+        // Only clear what we put there; the user may have copied something else.
         if ((await navigator.clipboard.readText()) === copied) {
           await navigator.clipboard.writeText("");
         }
       } catch {
-        // Không đọc được clipboard (chưa cấp quyền) thì bỏ qua, không làm gì.
+        /* clipboard-read permission not granted */
       }
     }, 30_000);
   });
 
-  return Object.assign(button, {
+  return {
     element: button,
     setValue: (next: string) => {
       value = next;
     },
-  });
+  };
 }
 
 void main();

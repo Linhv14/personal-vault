@@ -1,12 +1,12 @@
 /**
- * Chuyển đổi byte <-> text. Chỉ dùng API có sẵn ở cả browser, Workers và Node,
- * để `src/core` chạy được ở ba môi trường mà không cần polyfill.
+ * Byte <-> text conversions. Uses only APIs available in browsers, Workers and
+ * Node, so `src/core` runs in all three without polyfills.
  */
 
 /**
- * TS 5.7 trở lên biến `Uint8Array` thành generic trên loại buffer, còn WebCrypto
- * chỉ nhận `ArrayBufferView<ArrayBuffer>`. Dùng alias này xuyên suốt để khỏi rải
- * `as any` ở mọi chỗ gọi `crypto.subtle`.
+ * TypeScript 5.7+ made `Uint8Array` generic over its buffer type, while WebCrypto
+ * only accepts `ArrayBufferView<ArrayBuffer>`. Using this alias throughout avoids
+ * sprinkling `as any` at every `crypto.subtle` call site.
  */
 export type Bytes = Uint8Array<ArrayBuffer>;
 
@@ -14,7 +14,7 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 export function utf8Encode(s: string): Bytes {
-  // Copy lại để buffer là ArrayBuffer thật, không phải ArrayBufferLike.
+  // Copy so the backing store is a real ArrayBuffer, not ArrayBufferLike.
   return new Uint8Array(textEncoder.encode(s));
 }
 
@@ -36,9 +36,9 @@ export function fromBase64(b64: string): Bytes {
 }
 
 /**
- * base64url (RFC 4648 §5) — dùng cho khoá nằm trong URL fragment của link share.
- * base64 thường có `+` và `/`, hai ký tự này bị mã hoá lại trong URL và sẽ làm
- * khoá sai khi người nhận đọc `location.hash`.
+ * base64url (RFC 4648 §5) — used for the key carried in a share link's URL
+ * fragment. Standard base64 contains `+` and `/`, which get percent-encoded in a
+ * URL and would corrupt the key by the time the recipient reads `location.hash`.
  */
 export function toBase64Url(bytes: Uint8Array): string {
   return toBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -55,7 +55,7 @@ export function toHex(bytes: Uint8Array): string {
 }
 
 export function fromHex(hex: string): Bytes {
-  if (hex.length % 2 !== 0) throw new Error("hex phải có số ký tự chẵn");
+  if (hex.length % 2 !== 0) throw new Error("Hex string must have an even length");
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) {
     out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
@@ -68,9 +68,11 @@ export function randomBytes(length: number): Bytes {
 }
 
 /**
- * So sánh hai mảng byte trong thời gian không phụ thuộc nội dung.
- * So sánh bằng `===` trên chuỗi sẽ dừng sớm ở byte đầu tiên khác nhau, và thời
- * gian dừng đó tiết lộ ta đã khớp được bao nhiêu byte — đủ để dò dần một token.
+ * Compare two byte arrays in time independent of their contents.
+ *
+ * A plain `===` on strings short-circuits at the first differing byte, and the
+ * time it takes to bail reveals how many bytes matched — enough to recover a
+ * token one byte at a time.
  */
 export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;

@@ -1,19 +1,20 @@
 /**
- * Mã hoá cho link share.
+ * Encryption for share links.
  *
- * Nguyên tắc: khoá nằm trong fragment của URL (`#...`), phần mà browser **không**
- * gửi lên server. Worker chỉ giữ ciphertext. Kể cả khi toàn bộ D1 bị lộ, không có
- * link thì không giải mã được gì.
+ * The rule: the key lives in the URL fragment (`#...`), the one part of a URL a
+ * browser never sends to the server. The Worker holds ciphertext only. Even a
+ * full dump of D1 decrypts to nothing without the links.
  *
- * Giới hạn còn lại: gửi link qua Zalo/Messenger thì nền tảng đó đọc được cả
- * fragment, vì với họ link chỉ là một đoạn text. Đó là lý do có tuỳ chọn mật khẩu
- * phụ bên dưới — báo nó cho người nhận qua kênh khác thì một kênh bị đọc vẫn
- * không đủ để mở.
+ * The remaining limitation: whatever channel carries the link — a chat app,
+ * email — can read the fragment too, because to them a link is just text. Hence
+ * the optional extra passphrase below: delivered over a different channel, one
+ * compromised channel is no longer enough.
  */
 
 import { fromBase64Url, randomBytes, toBase64Url, utf8Encode } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
 import { open, seal, type SealedData } from "./crypto.js";
+import { VaultError } from "./errors.js";
 import type { TotpConfig } from "./totp.js";
 
 export interface SharePayload {
@@ -27,19 +28,19 @@ export interface SharePayload {
 
 export interface CreatedShare {
   sealed: SealedData;
-  /** Chuỗi để đặt sau dấu `#` trong link. Không bao giờ gửi lên server. */
+  /** The string to place after `#` in the link. Never sent to a server. */
   fragment: string;
 }
 
-/** Hậu tố đánh dấu link cần mật khẩu phụ, để trang nhận biết mà hỏi trước. */
+/** Suffix marking a link that needs a passphrase, so the page can ask first. */
 const PASSPHRASE_MARKER = ".p";
 
 /**
- * Dẫn xuất khoá thật từ khoá trong link và mật khẩu phụ (nếu có).
+ * Derive the real key from the link key and the optional passphrase.
  *
- * Dùng HKDF với mật khẩu phụ làm salt: cần **cả hai** mới ra đúng khoá. Mật khẩu
- * phụ ở đây không cần mạnh như master password, vì khoá trong link đã mang 256
- * bit entropy — nó chỉ đóng vai trò yếu tố thứ hai, không phải nguồn entropy.
+ * HKDF with the passphrase as salt: both are required to reach the same key. The
+ * passphrase does not need to be strong — the link key already carries 256 bits
+ * of entropy — it is a second factor, not a source of entropy.
  */
 async function deriveShareKey(keyMaterial: Bytes, passphrase?: string): Promise<CryptoKey> {
   const hkdfKey = await crypto.subtle.importKey("raw", keyMaterial, "HKDF", false, ["deriveBits"]);
@@ -73,7 +74,7 @@ export async function createShare(
   };
 }
 
-/** Trang nhận link gọi hàm này để biết có cần hỏi mật khẩu phụ không. */
+/** The recipient page calls this to decide whether to prompt for a passphrase. */
 export function fragmentNeedsPassphrase(fragment: string): boolean {
   return stripHash(fragment).endsWith(PASSPHRASE_MARKER);
 }
@@ -88,30 +89,33 @@ export async function openShare(
   const keyPart = needsPassphrase ? raw.slice(0, -PASSPHRASE_MARKER.length) : raw;
 
   if (needsPassphrase && !passphrase) {
-    throw new Error("Link này cần mật khẩu phụ");
+    throw new VaultError("share.passphrase_required", {}, "Link requires a passphrase");
   }
 
   let keyMaterial: Bytes;
   try {
     keyMaterial = fromBase64Url(keyPart);
   } catch {
-    throw new Error("Khoá trong link không hợp lệ");
+    throw new VaultError("share.invalid_key", {}, "Fragment is not valid base64url");
   }
-  if (keyMaterial.length !== 32) throw new Error("Khoá trong link không hợp lệ");
+  if (keyMaterial.length !== 32) {
+    throw new VaultError("share.invalid_key", {}, `Key is ${keyMaterial.length} bytes, need 32`);
+  }
 
   const key = await deriveShareKey(keyMaterial, needsPassphrase ? passphrase : undefined);
 
-  let plaintext: Bytes;
   try {
-    plaintext = await open(key, sealed);
+    const plaintext = await open(key, sealed);
+    return JSON.parse(new TextDecoder().decode(plaintext)) as SharePayload;
   } catch {
-    // GCM tag không khớp. Với link cần mật khẩu phụ thì gần như luôn là nhập sai.
-    throw new Error(
-      needsPassphrase ? "Mật khẩu phụ không đúng" : "Không giải mã được — link có thể bị cắt ngắn",
+    // GCM tag mismatch. For a passphrase-protected link that is almost always a
+    // mistyped passphrase rather than a damaged link.
+    throw new VaultError(
+      needsPassphrase ? "share.wrong_passphrase" : "share.undecryptable",
+      {},
+      "AES-GCM authentication failed",
     );
   }
-
-  return JSON.parse(new TextDecoder().decode(plaintext)) as SharePayload;
 }
 
 function stripHash(fragment: string): string {

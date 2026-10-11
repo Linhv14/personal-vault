@@ -1,15 +1,16 @@
 /**
- * base32 theo RFC 4648 §6 — định dạng mà mọi site dùng để hiện TOTP secret
- * ("JBSWY3DPEHPK3PXP"). Không dùng base32hex, không dùng Crockford.
+ * base32 per RFC 4648 §6 — the encoding every site uses to show a TOTP secret
+ * ("JBSWY3DPEHPK3PXP"). Not base32hex, not Crockford.
  */
 
 import type { Bytes } from "./bytes.js";
+import { VaultError } from "./errors.js";
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 /**
- * Giải mã base32. Dễ tính với input người dùng dán vào: bỏ khoảng trắng và dấu
- * gạch (site hay hiện "jbsw y3dp ehpk"), chấp nhận chữ thường, bỏ padding `=`.
+ * Decode base32, being forgiving about what a human pastes in: strip spaces and
+ * dashes (sites often display "jbsw y3dp ehpk"), accept lowercase, drop padding.
  */
 export function base32Decode(input: string): Bytes {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
@@ -22,9 +23,14 @@ export function base32Decode(input: string): Bytes {
   for (const char of clean) {
     const value = ALPHABET.indexOf(char);
     if (value === -1) {
-      throw new Error(`Ký tự không hợp lệ trong base32: "${char}"`);
+      throw new VaultError(
+        "base32.invalid_character",
+        { char },
+        `Invalid base32 character: ${char}`,
+      );
     }
-    // Mỗi ký tự base32 mang đúng 5 bit. Dồn vào buffer rồi rút ra từng 8 bit.
+    // Each base32 character carries exactly 5 bits. Accumulate, then drain in
+    // 8-bit chunks.
     buffer = (buffer << 5) | value;
     bitsInBuffer += 5;
     if (bitsInBuffer >= 8) {
@@ -33,7 +39,7 @@ export function base32Decode(input: string): Bytes {
     }
   }
 
-  // Các bit lẻ còn lại là padding của ký tự cuối, bỏ đi — đúng theo RFC.
+  // Leftover bits are the final character's padding — discard them, per the RFC.
   return new Uint8Array(out);
 }
 
@@ -57,12 +63,12 @@ export function base32Encode(bytes: Uint8Array): string {
     out += ALPHABET[(buffer << (5 - bitsInBuffer)) & 0x1f];
   }
 
-  // Padding tới bội số của 8 ký tự.
+  // Pad to a multiple of 8 characters.
   while (out.length % 8 !== 0) out += "=";
   return out;
 }
 
-/** Kiểm tra một chuỗi có phải base32 hợp lệ — dùng để validate ô nhập TOTP. */
+/** Validate a string before treating it as a TOTP secret. */
 export function isValidBase32(input: string): boolean {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
   if (clean.length === 0) return false;

@@ -9,10 +9,11 @@ import {
 } from "../src/core/totp.js";
 import { base32Encode, isValidBase32 } from "../src/core/base32.js";
 import { utf8Encode } from "../src/core/bytes.js";
+import { expectCode, expectCodeAsync } from "./helpers.js";
 
 /**
- * Vector chuẩn RFC 6238 Appendix B. Seed là chuỗi ASCII "12345678901234567890"
- * lặp cho đủ độ dài khoá của từng thuật toán, và tất cả dùng digits = 8.
+ * RFC 6238 Appendix B. The seed is the ASCII string "12345678901234567890"
+ * repeated to each algorithm's key length, and all vectors use 8 digits.
  */
 const SEED_SHA1 = base32Encode(utf8Encode("12345678901234567890"));
 const SEED_SHA256 = base32Encode(utf8Encode("12345678901234567890123456789012"));
@@ -30,8 +31,8 @@ const RFC6238_VECTORS: Array<[number, string, string, string]> = [
   [20000000000, "65353130", "77737706", "47863826"],
 ];
 
-describe("generateTotp — vector chuẩn RFC 6238", () => {
-  it.each(RFC6238_VECTORS)("t=%i cho ra mã đúng ở cả ba thuật toán", async (t, s1, s256, s512) => {
+describe("generateTotp against the RFC 6238 vectors", () => {
+  it.each(RFC6238_VECTORS)("t=%i matches on all three algorithms", async (t, s1, s256, s512) => {
     const at = t * 1000;
     await expect(
       generateTotp({ secret: SEED_SHA1, algorithm: "SHA-1", digits: 8 }, at),
@@ -44,41 +45,39 @@ describe("generateTotp — vector chuẩn RFC 6238", () => {
     ).resolves.toBe(s512);
   });
 
-  it("t=20000000000 vượt mốc 32-bit mà vẫn đúng", async () => {
-    // counter = 20000000000/30 = 666_666_666, chưa vượt 2^31 nhưng vector này là
-    // chỗ duy nhất trong RFC kiểm tra counter lớn. Giữ riêng một test để nếu ai
-    // đổi BigInt về phép dịch bit thường thì nó hỏng ngay.
+  it("handles the large-counter vector", async () => {
+    // Kept as its own case so replacing BigInt with plain bit shifts fails here
+    // immediately rather than silently in the year 6053.
     await expect(
       generateTotp({ secret: SEED_SHA1, algorithm: "SHA-1", digits: 8 }, 20000000000 * 1000),
     ).resolves.toBe("65353130");
   });
 
-  it("mặc định là 6 số, SHA-1, chu kỳ 30 giây", async () => {
+  it("defaults to 6 digits, SHA-1 and a 30 second period", async () => {
     const code = await generateTotp({ secret: SEED_SHA1 }, 59 * 1000);
     expect(code).toHaveLength(6);
-    // 6 số cuối của vector 8 số cùng thời điểm.
-    expect(code).toBe("287082");
+    expect(code).toBe("287082"); // last 6 digits of the 8-digit vector
   });
 
-  it("mã không đổi trong cùng một cửa sổ 30 giây", async () => {
+  it("returns the same code throughout one window", async () => {
     const a = await generateTotp({ secret: SEED_SHA1 }, 30_000);
     const b = await generateTotp({ secret: SEED_SHA1 }, 59_999);
     expect(a).toBe(b);
   });
 
-  it("mã đổi khi sang cửa sổ kế tiếp", async () => {
+  it("changes code at the window boundary", async () => {
     const a = await generateTotp({ secret: SEED_SHA1 }, 59_999);
     const b = await generateTotp({ secret: SEED_SHA1 }, 60_000);
     expect(a).not.toBe(b);
   });
 
-  it("từ chối secret rỗng thay vì trả mã vô nghĩa", async () => {
-    await expect(generateTotp({ secret: "" })).rejects.toThrow(/rỗng/);
+  it("rejects an empty secret instead of returning a meaningless code", async () => {
+    await expectCodeAsync(generateTotp({ secret: "" }), "totp.empty_secret");
   });
 });
 
 describe("secondsRemaining", () => {
-  it("đếm ngược từ 30 về 1 trong một chu kỳ", () => {
+  it("counts down from 30 to 1 across a period", () => {
     expect(secondsRemaining(30, 0)).toBe(30);
     expect(secondsRemaining(30, 1_000)).toBe(29);
     expect(secondsRemaining(30, 29_000)).toBe(1);
@@ -87,54 +86,59 @@ describe("secondsRemaining", () => {
 });
 
 describe("parseOtpauthUri", () => {
-  it("đọc được URI Google Authenticator thông thường", () => {
+  it("reads a standard Google Authenticator URI", () => {
     const config = parseOtpauthUri(
-      "otpauth://totp/GitHub:ban%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=GitHub",
+      "otpauth://totp/GitHub:you%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=GitHub",
     );
     expect(config).toMatchObject({
       secret: "JBSWY3DPEHPK3PXP",
       issuer: "GitHub",
-      account: "ban@example.com",
+      account: "you@example.com",
       algorithm: "SHA-1",
       digits: 6,
       period: 30,
     });
   });
 
-  it("đọc được tham số không mặc định", () => {
+  it("reads non-default parameters", () => {
     const config = parseOtpauthUri(
       "otpauth://totp/Acme?secret=JBSWY3DPEHPK3PXP&algorithm=SHA256&digits=8&period=60",
     );
     expect(config).toMatchObject({ algorithm: "SHA-256", digits: 8, period: 60 });
   });
 
-  it("ưu tiên tham số issuer hơn phần issuer trong label", () => {
-    // Khi hai chỗ lệch nhau, Google khuyến nghị tin tham số issuer.
-    const config = parseOtpauthUri(
-      "otpauth://totp/Cu%C3%A3:a@b.com?secret=JBSWY3DPEHPK3PXP&issuer=M%E1%BB%9Bi",
-    );
-    expect(config.issuer).toBe("Mới");
+  it("prefers the issuer parameter over the label prefix", () => {
+    const config = parseOtpauthUri("otpauth://totp/Old:a@b.com?secret=JBSWY3DPEHPK3PXP&issuer=New");
+    expect(config.issuer).toBe("New");
     expect(config.account).toBe("a@b.com");
   });
 
-  it("bỏ qua digits/period vô lý và dùng mặc định", () => {
+  it("ignores nonsensical digits and period values", () => {
     const config = parseOtpauthUri(
       "otpauth://totp/Acme?secret=JBSWY3DPEHPK3PXP&digits=99&period=abc",
     );
     expect(config).toMatchObject({ digits: 6, period: 30 });
   });
 
-  it("từ chối HOTP, URI sai scheme, thiếu secret, secret rác", () => {
-    expect(() => parseOtpauthUri("otpauth://hotp/A?secret=JBSWY3DPEHPK3PXP&counter=1")).toThrow(
-      /không hỗ trợ HOTP/,
+  it("rejects HOTP, wrong schemes, missing and malformed secrets", () => {
+    expectCode(
+      () => parseOtpauthUri("otpauth://hotp/A?secret=JBSWY3DPEHPK3PXP&counter=1"),
+      "totp.not_totp",
     );
-    expect(() => parseOtpauthUri("https://totp/A?secret=JBSWY3DPEHPK3PXP")).toThrow(/otpauth/);
-    expect(() => parseOtpauthUri("otpauth://totp/A")).toThrow(/secret/);
-    expect(() => parseOtpauthUri("otpauth://totp/A?secret=has!bad@chars")).toThrow(/secret/);
-    expect(() => parseOtpauthUri("không phải uri")).toThrow(/không hợp lệ/);
+    expectCode(() => parseOtpauthUri("https://totp/A?secret=JBSWY3DPEHPK3PXP"), "totp.invalid_uri");
+    expectCode(() => parseOtpauthUri("otpauth://totp/A"), "totp.missing_secret");
+    expectCode(
+      () => parseOtpauthUri("otpauth://totp/A?secret=has!bad@chars"),
+      "totp.missing_secret",
+    );
+    expectCode(() => parseOtpauthUri("not a uri"), "totp.invalid_uri");
+    expectCode(
+      () => parseOtpauthUri("otpauth://totp/A?secret=JBSWY3DPEHPK3PXP&algorithm=MD5"),
+      "totp.unsupported_algorithm",
+    );
   });
 
-  it("round-trip với buildOtpauthUri", () => {
+  it("round-trips through buildOtpauthUri", () => {
     const original = {
       secret: "JBSWY3DPEHPK3PXP",
       algorithm: "SHA-256" as const,
@@ -148,7 +152,7 @@ describe("parseOtpauthUri", () => {
 });
 
 describe("parseTotpInput", () => {
-  it("nhận chuỗi base32 dán tay, kể cả có khoảng trắng", () => {
+  it("accepts a pasted base32 secret, spaces included", () => {
     expect(parseTotpInput("jbsw y3dp ehpk 3pxp", "me@x.com")).toMatchObject({
       secret: "JBSWY3DPEHPK3PXP",
       algorithm: "SHA-1",
@@ -158,22 +162,23 @@ describe("parseTotpInput", () => {
     });
   });
 
-  it("nhận URI otpauth và chuyển cho parser đầy đủ", () => {
+  it("delegates otpauth URIs to the full parser", () => {
     expect(parseTotpInput("otpauth://totp/A?secret=JBSWY3DPEHPK3PXP&digits=8").digits).toBe(8);
   });
 
-  it("báo lỗi rõ ràng khi dán sai thứ", () => {
-    expect(() => parseTotpInput("mật khẩu của tôi")).toThrow(/base32/);
+  it("reports unrecognized input clearly", () => {
+    // Note "my password" would NOT work here: strip the space and "mypassword"
+    // is entirely base32 letters, so it is a legitimate secret.
+    expectCode(() => parseTotpInput("p@ssw0rd!"), "totp.unrecognized_input");
   });
 });
 
 describe("generateTotpSecret", () => {
-  it("sinh secret 20 byte hợp lệ, mỗi lần một khác", async () => {
+  it("produces a distinct, valid 20-byte secret each time", async () => {
     const a = generateTotpSecret();
     const b = generateTotpSecret();
     expect(isValidBase32(a)).toBe(true);
     expect(a).not.toBe(b);
-    // Secret mới phải dùng được ngay để sinh mã.
     await expect(generateTotp({ secret: a })).resolves.toMatch(/^\d{6}$/);
   });
 });

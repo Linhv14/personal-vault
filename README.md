@@ -1,166 +1,141 @@
 # Personal Vault
 
-Password manager cá nhân: browser extension + Cloudflare Workers + D1.
-**Bạn tự deploy một bản trên account Cloudflare của chính bạn.**
+A password manager you deploy to your own Cloudflare account: a browser
+extension, a Worker, and a D1 database that holds nothing but ciphertext.
 
-Mục tiêu là bỏ hẳn việc phải mở app 2FA trên điện thoại mỗi lần đăng nhập — mã
-TOTP hiện ngay trong extension và tự refresh mỗi 30 giây.
+It exists to make reaching for the authenticator app on your phone unnecessary —
+2FA codes appear in the extension and refresh themselves.
 
-- **Mã hoá đầu-cuối.** Server chỉ lưu ciphertext và không có khoá để đọc.
-- **TOTP tự refresh**, tính offline theo RFC 6238. Không có network nào tham gia.
-- **Sinh mật khẩu** ngẫu nhiên / passphrase / PIN, kèm số bit entropy.
-- **Link chia sẻ tạm thời**, có hạn dùng và giới hạn lượt xem, kèm mã 2FA tự
-  refresh cho người nhận — họ không cần cài gì.
-- **Dùng được offline** từ bản đã sync về máy.
+- **End-to-end encrypted.** The server stores ciphertext and has no key.
+- **TOTP built in**, computed offline per RFC 6238 and verified against all 18
+  vectors in the specification.
+- **Password generation** — random, passphrase or PIN — reporting entropy in bits.
+- **Temporary share links** with an expiry and a view limit, carrying a live 2FA
+  code. The recipient installs nothing.
+- **Works offline** from the copy already synced to your machine.
+- **English and Vietnamese**, following the browser's language.
 
-Thiết kế đầy đủ, gồm lý do của từng quyết định:
-[`docs/plans/2026-10-11-personal-vault-design.md`](docs/plans/2026-10-11-personal-vault-design.md).
+Design and reasoning: [`docs/design.md`](docs/design.md).
+Threat model and what is out of reach: [`SECURITY.md`](SECURITY.md).
 
-## Tại sao phải tự deploy
+## Why you deploy it yourself
 
-Không có server chung, và đó là điểm chính chứ không phải sự bất tiện.
+There is no shared server, and that is the point rather than an inconvenience.
 
-Một password manager mà dữ liệu nằm trên hạ tầng của tác giả thì bạn phải tin
-tác giả — tin rằng họ không đổi code để gửi khoá về, tin rằng họ không bị hack,
-tin rằng họ còn duy trì dịch vụ sang năm. Tự deploy thì **tác giả không có quyền
-truy cập nào vào dữ liệu của bạn**, kể cả muốn cũng không.
+A password manager running on its author's infrastructure asks you to trust that
+author — to trust they will not change the code to phone keys home, that they
+will not be breached, that the service still exists next year. Running your own
+means **the author has no access to your data at all**, however much they might
+want it.
 
-Chi phí: nằm gọn trong bậc miễn phí của Cloudflare (Workers 100k request/ngày,
-D1 5GB). Dùng tên miền `*.workers.dev` thì không tốn đồng nào.
+It fits inside Cloudflare's free tier (Workers 100k requests/day, D1 5GB). On a
+`*.workers.dev` subdomain it costs nothing.
 
-## Mô hình tin cậy — đọc trước khi tin
+## Trust model in one diagram
 
 ```
 master password + email
    └─ PBKDF2-SHA256 600k ─→ master key
-         ├─ HKDF "auth" ─→ auth key          → gửi server (không giải mã được gì)
-         └─ HKDF "enc"  ─→ wrapping key      → KHÔNG BAO GIỜ rời máy
-                             └─ mở wrapped_vault_key → vault key → AES-256-GCM
+         ├─ HKDF "auth" ─→ auth key       → sent to the server, decrypts nothing
+         └─ HKDF "enc"  ─→ wrapping key   → NEVER leaves your machine
+                             └─ unwraps the vault key → AES-256-GCM per item
 ```
 
-Server **biết**: email, số lượng item, thời điểm sửa, thời điểm đăng nhập, IP.
-Server **không biết**: tên site, username, mật khẩu, TOTP secret, ghi chú.
+The server **does** learn: your email, how many items you have, when they
+changed, and when you signed in. It **never** learns site names, usernames,
+passwords, TOTP secrets or notes.
 
-Hai giới hạn cần biết rõ:
+Two limits stated plainly:
 
-1. **Quên master password là mất sạch.** Không có cơ chế khôi phục, và điều đó là
-   cố ý — có backdoor khôi phục nghĩa là có đường vào cho người khác.
-2. **Gửi link share qua Zalo/Messenger thì nền tảng đó đọc được cả link**, kể cả
-   phần khoá sau dấu `#`, vì với họ link chỉ là text. Server của bạn thì mù.
-   Dùng tuỳ chọn *mật khẩu phụ* và báo nó qua kênh khác để một kênh bị đọc vẫn
-   không đủ để mở.
+1. **Forget the master password and the vault is gone.** There is no recovery,
+   deliberately — a recovery backdoor is a backdoor.
+2. **Whatever app carries a share link can read all of it**, including the key
+   after the `#`, because to that app a link is just text. Your server stays
+   blind; the messenger does not. Use the optional extra passphrase, sent
+   through a different channel, when that matters.
 
-## Cài đặt
+## Install
 
-Cần Node 20+ và một account Cloudflare (bậc miễn phí là đủ).
+Requires Node 20+ and a Cloudflare account.
 
 ```bash
-git clone <repo> personal-vault
+git clone <this repo> personal-vault
 cd personal-vault
 npm install
-npm run deploy          # hoặc: npx cf deploy
+npm run deploy
 ```
 
-Lệnh đó làm mọi thứ, và chạy lại nhiều lần được:
+`npm run deploy` is idempotent and does the whole job:
 
-1. Mở browser cho bạn đăng nhập Cloudflare nếu chưa đăng nhập.
-2. Hỏi deploy vào account nào, nếu bạn có nhiều account.
-3. Tạo D1 database `vault` — hoặc dùng lại nếu đã có.
-4. Chạy migration.
-5. Sinh `REGISTRATION_TOKEN` và `EMAIL_PROBE_SECRET`, ghi token đăng ký vào
-   `.secrets.local.txt` (đã gitignore) thay vì in ra terminal.
-6. Build rồi deploy, in ra URL Worker của bạn.
+1. Opens a browser to sign in to Cloudflare if needed.
+2. Asks which account to use, if you have more than one.
+3. Creates the `vault` D1 database, or reuses it.
+4. Applies migrations.
+5. Generates `REGISTRATION_TOKEN` and `EMAIL_PROBE_SECRET`, writing the
+   registration token to `.secrets.local.txt` (gitignored) rather than printing
+   it to a terminal that gets scrolled back and screenshotted.
+6. Builds and deploys, printing your Worker URL.
 
-Sau đó cài extension:
+Then load the extension:
 
 ```bash
 npm run build
 ```
 
-Mở `chrome://extensions` → bật **Developer mode** → **Load unpacked** → chọn thư
-mục `dist/extension`.
+Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**
+and select `dist/extension`.
 
-Lần đầu mở popup, nhập: URL Worker ở bước trên, email của bạn, token đăng ký
-trong `.secrets.local.txt`, và master password.
+On first run the popup asks for your Worker URL, your email, the registration
+token from `.secrets.local.txt`, and a master password.
 
-> `REGISTRATION_TOKEN` là thứ chặn người lạ tạo account trên Worker của bạn.
-> Không có nó, URL Worker là một trang đăng ký công khai.
+> `REGISTRATION_TOKEN` is what stops strangers creating accounts on your Worker.
+> Without it, your URL is an open signup page.
 
-### Lệnh khác
-
-```bash
-npm run deploy    # deploy (chạy lại được, không tạo trùng tài nguyên)
-npm run dev       # Worker local + D1 local tại http://127.0.0.1:8787
-npm run status    # đang deploy ở account nào, dùng tài nguyên nào
-npm run logs      # log realtime của Worker
-```
-
-### Ghi chú về cấu hình
-
-`wrangler.toml` trong repo **cố tình không chứa `account_id` hay `database_id`** —
-đó là giá trị của riêng từng người. `cf deploy` điền chúng vào
-`.wrangler.local.toml` (đã gitignore) rồi chạy wrangler với file đó. Vì vậy chạy
-thẳng `npx wrangler deploy` sẽ không hoạt động; dùng `npm run deploy`.
-
-Cloudflare có nút ["Deploy to Cloudflare"](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
-tự provision tài nguyên cho người bấm, nhưng **tôi chưa kiểm chứng nó với
-placeholder `database_id` của repo này**, nên chưa đưa vào đây. Đường `cf deploy`
-đã chạy thật và được test.
-
-## Phát triển
+## Commands
 
 ```bash
-npm test              # 109 test: vector chuẩn RFC, crypto, generator, popup
-npm run typecheck     # hai project: browser và worker
-npm run build:dev     # build kèm sourcemap
-npm run dev           # Worker local
+npm run deploy      # deploy (safe to repeat)
+npm run dev         # Worker + local D1 at http://127.0.0.1:8787
+npm run preview     # the popup as a web page, for UI work
+npm run status      # which account and resources are in use
+npm run logs        # tail the Worker
+npm test
+npm run typecheck
+npm run format
 ```
 
-Test e2e chạy thật qua Worker + D1 local (mặc định bị bỏ qua):
+## Notes on the tooling
 
-```bash
-npm run dev           # cửa sổ khác; tự tạo .dev.vars với token "token-dev-local"
-VAULT_E2E=1 npx vitest run test/e2e.test.ts
-```
+`wrangler.toml` deliberately carries **no `account_id` or `database_id`** —
+those belong to whoever deploys. `npm run deploy` writes them into
+`.wrangler.local.toml` (gitignored) and runs Wrangler against that, so running
+`npx wrangler deploy` directly will not work.
 
-Tạo một link share thật để xem trang `/s/:id` trong browser:
+Cloudflare's own [`cf` CLI](https://developers.cloudflare.com/cf/) entered open
+beta in September 2026 and will eventually replace Wrangler. This project stays
+on Wrangler for now: `cf` is beta, uses a different configuration format, and
+does not provision a D1 database automatically either. The deploy script is
+intentionally _not_ exposed as a `cf` command so it cannot shadow the real one.
 
-```bash
-npx esbuild scripts/make-share-link.ts --bundle --platform=node --format=esm --outfile=dist/mk.mjs
-node dist/mk.mjs
-```
+## Things that look odd but are deliberate
 
-## Cấu trúc
+- **`src/core` has no dependencies.** Every library there would sit in the path
+  of your passwords.
+- **The extension has no content script**, so it never gains read or write
+  access to the pages you visit. The cost is no autofill — you copy from the
+  popup instead.
+- **`chrome.storage.local` holds only ciphertext and settings**; it is on disk
+  in the clear. The vault key lives in `chrome.storage.session`, which is not.
+- **Deleting an item writes a tombstone** rather than removing the row, or an
+  offline device would sync it back.
+- **TOTP uses HMAC-SHA1**, as RFC 6238 requires. SHA-256 would produce codes
+  that every site rejects.
+- **QR scanning uses Chrome's `BarcodeDetector`**, not a bundled library: that
+  library would see your 2FA secret before you do.
 
-```
-src/core/      Mật mã, TOTP, generator, share. Chỉ dùng WebCrypto, không
-               dependency — chạy được ở cả browser, Workers và Node.
-src/worker/    Worker trên Hono: auth, sync item, share link.
-extension/     Extension MV3. Popup chứa toàn bộ UI; service worker chỉ lo
-               auto-lock, vì MV3 kill nó sau ~30 giây không hoạt động.
-share/         Trang `/s/:id` cho người nhận link.
-scripts/cf.mjs CLI deploy.
-migrations/    Migration D1.
-```
+## License
 
-### Vài quyết định dễ bị sửa nhầm
-
-- `src/core` **không có dependency nào**. Mọi thư viện thêm vào đây đều nằm trong
-  đường đi của mật khẩu của bạn.
-- Extension **không có content script**, nên nó không có quyền đọc/ghi DOM của
-  mọi trang web. Đổi lại là không autofill — chỉ copy từ popup.
-- `chrome.storage.local` nằm **trên đĩa**: chỉ chứa ciphertext và cấu hình.
-  Vault key và session token chỉ ở `chrome.storage.session` (bộ nhớ).
-- Item xoá bằng tombstone (`deleted_at`), không DELETE thật — nếu không, thiết bị
-  đang offline sẽ sync item đã xoá trở lại.
-- TOTP dùng HMAC-**SHA1** theo đúng RFC 6238. Đổi sang SHA-256 sẽ ra mã không
-  khớp với site.
-- `cf.mjs` gọi thẳng `node node_modules/wrangler/bin/wrangler.js`, không qua
-  `npx` và không qua shell: trên Windows, `spawn` với `shell: true` vỡ khi đường
-  dẫn Node có dấu cách.
-
-## Giấy phép
-
-MIT. Không có bảo hành — đây là công cụ cá nhân, chưa qua kiểm toán bảo mật độc
-lập. Nếu bạn cần một password manager đã được kiểm toán, hãy dùng Bitwarden hoặc
-1Password.
+MIT, and no warranty. This is a personal tool that has not had an independent
+security audit. If you need an audited password manager, use Bitwarden or
+1Password. What this gives you instead is a codebase small enough to read in an
+afternoon and infrastructure nobody else controls.

@@ -1,19 +1,19 @@
 /**
- * Quản lý session. Dùng Bearer token trong header, không dùng cookie.
+ * Session handling. Bearer tokens in a header, never cookies.
  *
- * Lý do: extension gọi API từ origin `chrome-extension://...`, và không có cookie
- * nghĩa là không có bề mặt CSRF nào để lo — một trang web độc hại không thể bắt
- * browser gắn token của bạn vào request của nó.
+ * The extension calls the API from a `chrome-extension://` origin, and having no
+ * cookies means there is no CSRF surface to worry about — a malicious page
+ * cannot make the browser attach your token to its own request.
  */
 
 import { toBase64, toBase64Url, randomBytes, fromBase64 } from "../core/bytes.js";
 import type { Env, SessionContext } from "./types.js";
 
-const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 ngày
+const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 export async function hashToken(token: string): Promise<string> {
-  // Token là 32 byte ngẫu nhiên nên một vòng SHA-256 là đủ: không có từ điển nào
-  // dò được nó. Hash để nếu DB bị đọc thì token trong đó không dùng lại được.
+  // The token is 32 random bytes, so one SHA-256 round suffices: no dictionary
+  // can reach it. Hashing means a leaked database yields no reusable tokens.
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
   return toBase64(new Uint8Array(digest));
 }
@@ -50,9 +50,9 @@ export async function resolveSession(
     .bind(tokenHash, now)
     .first<{ account_id: string }>();
 
-  // Tra trực tiếp bằng hash làm khoá chính nên không cần so sánh timing-safe:
-  // SQLite không tiết lộ thông tin qua thời gian tra khoá chính, và kẻ tấn công
-  // cần đoán đúng toàn bộ 32 byte mới có một lượt tra khớp.
+  // Looked up by primary key on the hash, so no constant-time comparison is
+  // needed: SQLite leaks nothing useful through key lookup timing, and an
+  // attacker must guess all 32 bytes before a single lookup matches.
   return row ? { accountId: row.account_id, tokenHash } : null;
 }
 
@@ -60,7 +60,7 @@ export async function revokeSession(env: Env, tokenHash: string): Promise<void> 
   await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
 }
 
-/** Thu hồi mọi session của account — dùng khi đổi master password. */
+/** Revoke every session for an account — used when the master password changes. */
 export async function revokeAllSessions(env: Env, accountId: string): Promise<void> {
   await env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(accountId).run();
 }

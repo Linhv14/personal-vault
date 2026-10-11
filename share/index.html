@@ -1,14 +1,12 @@
 <!doctype html>
-<html lang="vi">
+<html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- Không cho công cụ tìm kiếm lập chỉ mục link share. -->
     <meta name="robots" content="noindex, nofollow, noarchive" />
-    <!-- Không gửi referrer: nếu người nhận bấm vào link trong phần ghi chú, URL
-         này (kèm fragment ở một số browser cũ) không được chuyển sang trang đó. -->
+    <!-- Keep the URL out of any onward request; it carries the decryption key. -->
     <meta name="referrer" content="no-referrer" />
-    <title>Thông tin được chia sẻ</title>
+    <title>Shared details</title>
     <style>
       :root {
         --bg: #0f1115;
@@ -30,7 +28,9 @@
           --accent: #1a6fe0;
         }
       }
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
         min-height: 100vh;
@@ -40,28 +40,60 @@
         padding: 24px;
         background: var(--bg);
         color: var(--text);
-        font: 15px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        font:
+          15px/1.5 -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          sans-serif;
       }
-      main { width: 100%; max-width: 440px; }
+      main {
+        width: 100%;
+        max-width: 440px;
+      }
       .card {
         background: var(--card);
         border: 1px solid var(--border);
         border-radius: 14px;
         padding: 20px;
       }
-      h1 { font-size: 18px; margin: 0 0 4px; }
-      .sub { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
-      .field { border-top: 1px solid var(--border); padding: 12px 0; }
-      .field:first-of-type { border-top: 0; }
-      .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-      .row { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0 0 18px;
+      }
+      .field {
+        border-top: 1px solid var(--border);
+        padding: 12px 0;
+      }
+      .field:first-of-type {
+        border-top: 0;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+      }
       .value {
         flex: 1;
         font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
         font-size: 15px;
         word-break: break-all;
       }
-      .value.hidden { letter-spacing: .18em; }
+      .value.hidden {
+        letter-spacing: 0.18em;
+      }
       button {
         background: transparent;
         color: var(--accent);
@@ -72,7 +104,9 @@
         cursor: pointer;
         white-space: nowrap;
       }
-      button:hover { border-color: var(--accent); }
+      button:hover {
+        border-color: var(--accent);
+      }
       button.primary {
         background: var(--accent);
         color: #fff;
@@ -91,25 +125,44 @@
         border-radius: 8px;
         font-size: 15px;
       }
-      .totp { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+      .totp {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 6px;
+      }
       .code {
         font-family: ui-monospace, Menlo, Consolas, monospace;
         font-size: 30px;
-        letter-spacing: .14em;
+        letter-spacing: 0.14em;
         font-variant-numeric: tabular-nums;
       }
-      .ring { flex-shrink: 0; }
-      .ring circle { fill: none; stroke-width: 3; }
-      .ring .track { stroke: var(--border); }
+      .ring {
+        flex-shrink: 0;
+      }
+      .ring circle {
+        fill: none;
+        stroke-width: 3;
+      }
+      .ring .track {
+        stroke: var(--border);
+      }
       .ring .progress {
         stroke: var(--accent);
         stroke-linecap: round;
         transform: rotate(-90deg);
         transform-origin: 50% 50%;
-        transition: stroke-dashoffset .95s linear;
+        transition: stroke-dashoffset 0.95s linear;
       }
-      .ring.urgent .progress { stroke: var(--danger); transition: none; }
-      .note { white-space: pre-wrap; word-break: break-word; font-family: inherit; }
+      .ring.urgent .progress {
+        stroke: var(--danger);
+        transition: none;
+      }
+      .note {
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: inherit;
+      }
       .warn {
         margin-top: 16px;
         padding: 10px 12px;
@@ -118,45 +171,48 @@
         border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
         font-size: 13px;
       }
-      .error { color: var(--danger); }
-      .copied { color: var(--ok); }
-      [hidden] { display: none !important; }
+      .error {
+        color: var(--danger);
+      }
+      .copied {
+        color: var(--ok);
+      }
+      [hidden] {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
     <main>
       <div class="card">
         <div id="state-loading">
-          <h1>Đang mở…</h1>
-          <p class="sub">Giải mã ngay trên máy bạn.</p>
+          <h1 data-i18n="view.loading"></h1>
+          <p class="sub" data-i18n="view.loading_hint"></p>
         </div>
 
         <div id="state-passphrase" hidden>
-          <h1>Cần mật khẩu phụ</h1>
-          <p class="sub">
-            Người gửi đã đặt thêm một mật khẩu và báo cho bạn qua kênh khác. Nội
-            dung chỉ được tải về sau khi bạn nhập — mỗi lần tải là một lượt xem.
-          </p>
+          <h1 data-i18n="view.passphrase_title"></h1>
+          <p class="sub" data-i18n="view.passphrase_hint"></p>
           <form id="passphrase-form">
             <input
               id="passphrase"
               type="password"
               autocomplete="off"
-              placeholder="Mật khẩu phụ"
               required
+              data-i18n-placeholder="view.passphrase_placeholder"
             />
-            <button class="primary" type="submit">Mở</button>
+            <button class="primary" type="submit" data-i18n="view.open"></button>
           </form>
           <p id="passphrase-error" class="error" hidden></p>
         </div>
 
         <div id="state-error" hidden>
-          <h1>Không mở được</h1>
+          <h1 data-i18n="view.failed_title"></h1>
           <p class="sub error" id="error-message"></p>
         </div>
 
         <div id="state-content" hidden>
-          <h1 id="title">Thông tin được chia sẻ</h1>
+          <h1 id="title"></h1>
           <p class="sub" id="meta"></p>
           <div id="fields"></div>
           <div class="warn" id="warning"></div>

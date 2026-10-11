@@ -1,19 +1,21 @@
 /**
- * Lớp mật mã của vault. Chỉ dùng WebCrypto, không dependency ngoài — một app giữ
- * toàn bộ mật khẩu thì mỗi thư viện bên thứ ba là một chỗ có thể bị cài mã độc.
+ * The vault's cryptography. WebCrypto only, no dependencies — in an app that
+ * holds every password you own, each third-party library is one more place
+ * malicious code could be planted.
  *
- * Luồng khoá (xem docs/plans/2026-10-11-personal-vault-design.md §2):
+ * Key flow (see docs/design.md §2):
  *
  *   master password + email
  *        -> PBKDF2-SHA256 600k  -> master key
- *        -> HKDF info="auth"    -> auth key        (gửi server)
- *        -> HKDF info="enc"     -> wrapping key    (không rời client)
- *                               -> mở wrapped_vault_key -> vault key
- *                               -> AES-256-GCM từng item
+ *        -> HKDF "auth"         -> auth key        (sent to the server)
+ *        -> HKDF "enc"          -> wrapping key    (NEVER leaves the client)
+ *                                -> unwraps wrapped_vault_key -> vault key
+ *                                -> AES-256-GCM per item
  */
 
 import { concat, fromBase64, randomBytes, toBase64, utf8Decode, utf8Encode } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
+import { VaultError } from "./errors.js";
 
 export type KdfType = "pbkdf2-sha256";
 
@@ -24,12 +26,13 @@ export interface KdfParams {
 }
 
 /**
- * 600.000 vòng là mặc định hiện tại của Bitwarden và mức OWASP khuyến nghị cho
- * PBKDF2-SHA256. Trên máy tính thường mất ~0,5–1 giây, chấp nhận được khi unlock.
+ * 600,000 iterations is Bitwarden's current default and the OWASP guidance for
+ * PBKDF2-SHA256. It costs roughly 0.5–1s on a typical machine, which is an
+ * acceptable price at unlock time.
  */
 export const DEFAULT_KDF_ITERATIONS = 600_000;
 
-/** AES-GCM yêu cầu nonce 96 bit; đây là độ dài duy nhất được khuyến nghị. */
+/** AES-GCM wants a 96-bit nonce; this is the only recommended length. */
 const NONCE_BYTES = 12;
 const KEY_BYTES = 32;
 
@@ -38,27 +41,26 @@ export interface SealedData {
   nonce: string; // base64
 }
 
-/** Những gì server lưu cho một account. Không có gì ở đây giải mã được vault. */
+/** Everything the server stores for an account. None of it can decrypt a vault. */
 export interface AccountCryptoRecord {
   kdf: KdfParams;
-  authKey: string; // base64 — server sẽ hash lại trước khi lưu
+  authKey: string; // base64 — the server hashes this before storing it
   wrappedVaultKey: SealedData;
 }
 
-// ---------------------------------------------------------------------------
-// Dẫn xuất khoá
-// ---------------------------------------------------------------------------
+// Key derivation
 
 /**
- * Dùng email làm salt thay vì một salt ngẫu nhiên lưu riêng.
+ * The email is used as salt rather than a random value stored server-side.
  *
- * Email không phải salt lý tưởng (không ngẫu nhiên), nhưng nó cho phép đăng nhập
- * trên máy mới chỉ với email + master password: client dẫn xuất được auth key
- * *trước khi* gọi server, nên server không cần tiết lộ salt cho người chưa xác
- * thực. Đây là đánh đổi mà Bitwarden và 1Password đều chọn.
+ * An email is not an ideal salt (it is not random), but it lets you sign in on a
+ * new machine with nothing but email and master password: the client can derive
+ * the auth key *before* contacting the server, so the server never has to hand a
+ * salt to an unauthenticated caller. Bitwarden and 1Password make the same
+ * trade.
  *
- * Salt ngẫu nhiên trong `params` vẫn được trộn thêm để hai account cùng email ở
- * hai lần đăng ký khác nhau không ra cùng khoá.
+ * A random salt from `params` is still mixed in, so registering the same email
+ * twice does not produce the same key.
  */
 export async function deriveMasterKey(
   email: string,
@@ -66,9 +68,11 @@ export async function deriveMasterKey(
   params: KdfParams,
 ): Promise<Bytes> {
   if (params.type !== "pbkdf2-sha256") {
-    throw new Error(`KDF không hỗ trợ: ${params.type}`);
+    throw new VaultError("crypto.unsupported_kdf", { kdf: params.type }, `Unknown KDF`);
   }
-  if (masterPassword.length === 0) throw new Error("Master password rỗng");
+  if (masterPassword.length === 0) {
+    throw new VaultError("crypto.empty_password", {}, "Master password is empty");
+  }
 
   const salt = concat(utf8Encode(normalizeEmail(email)), fromBase64(params.salt));
 
@@ -89,11 +93,11 @@ export async function deriveMasterKey(
 }
 
 /**
- * Tách master key thành hai khoá độc lập bằng HKDF.
+ * Split the master key into two independent keys with HKDF.
  *
- * Đây là lớp bảo vệ quan trọng nhất của thiết kế: server nhận `auth` để xác thực
- * bạn, nhưng từ `auth` không tính ngược ra được `enc`. Nếu dùng chung một khoá
- * cho cả hai việc, bất cứ ai đọc được request đăng nhập đều giải mã được vault.
+ * This is the most important protection in the design: the server gets `auth` to
+ * identify you, but `enc` cannot be computed from it. Share one key between both
+ * jobs and anyone who observes a login request can decrypt the whole vault.
  */
 async function hkdfExpand(masterKey: Bytes, info: "auth" | "enc"): Promise<Bytes> {
   const key = await crypto.subtle.importKey("raw", masterKey, "HKDF", false, ["deriveBits"]);
@@ -119,18 +123,16 @@ function normalizeEmail(email: string): string {
 }
 
 async function importAesKey(raw: Bytes): Promise<CryptoKey> {
-  // `extractable: false` — khoá không đọc ra được từ JS sau khi import, nên một
-  // lỗi XSS trong popup cũng không lấy được nguyên liệu khoá ra ngoài.
+  // `extractable: false` — once imported the key material cannot be read back
+  // from JavaScript, so even an XSS bug in the popup cannot exfiltrate it.
   return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
-// ---------------------------------------------------------------------------
-// Mã hoá đối xứng
-// ---------------------------------------------------------------------------
+// Symmetric encryption
 
 export async function seal(key: CryptoKey, plaintext: Bytes): Promise<SealedData> {
-  // Nonce mới cho mỗi lần mã hoá. Dùng lại nonce với cùng khoá trong AES-GCM làm
-  // sập hoàn toàn tính bảo mật — không chỉ lộ plaintext mà còn lộ khoá xác thực.
+  // A fresh nonce per encryption. Reusing a nonce with the same AES-GCM key is
+  // catastrophic: it leaks plaintext *and* the authentication key.
   const nonce = randomBytes(NONCE_BYTES);
   const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plaintext);
   return { ciphertext: toBase64(new Uint8Array(ciphertext)), nonce: toBase64(nonce) };
@@ -153,27 +155,28 @@ export async function openJson<T>(key: CryptoKey, sealed: SealedData): Promise<T
   return JSON.parse(utf8Decode(await open(key, sealed))) as T;
 }
 
-// ---------------------------------------------------------------------------
 // Vault key
-// ---------------------------------------------------------------------------
 
 /**
- * Vault key là khoá ngẫu nhiên thật sự, không dẫn xuất từ master password.
+ * The vault key is genuinely random, not derived from the master password.
  *
- * Nhờ vậy đổi master password chỉ cần bọc lại vault key bằng wrapping key mới —
- * không phải mã hoá lại toàn bộ item. Thiếu lớp này thì đổi master password trên
- * vault 500 item là 500 lượt ghi và một cơ hội mất dữ liệu giữa đường.
+ * That is what makes changing the master password cheap: re-wrap the vault key
+ * with the new wrapping key and no item is touched. Without this layer, changing
+ * the password on a 500-item vault means 500 writes and one chance to lose data
+ * halfway through.
  */
 export function createVaultKey(): Bytes {
   return randomBytes(KEY_BYTES);
 }
 
 export async function importVaultKey(raw: Bytes): Promise<CryptoKey> {
-  if (raw.length !== KEY_BYTES) throw new Error("Vault key phải dài 32 byte");
+  if (raw.length !== KEY_BYTES) {
+    throw new VaultError("crypto.bad_key_length", {}, `Vault key must be ${KEY_BYTES} bytes`);
+  }
   return importAesKey(raw);
 }
 
-/** Tạo bộ dữ liệu mật mã cho account mới. Trả cả vault key để dùng ngay. */
+/** Build the crypto material for a new account, returning a usable vault key. */
 export async function createAccount(
   email: string,
   masterPassword: string,
@@ -201,11 +204,11 @@ export async function createAccount(
 }
 
 /**
- * Mở vault từ master password + dữ liệu server trả về.
+ * Unlock a vault from the master password plus what the server returned.
  *
- * Nếu master password sai, `open()` sẽ ném lỗi vì GCM tag không khớp — đây là
- * cách ta biết mật khẩu sai mà không cần server xác nhận gì, và cũng là lý do
- * AES-GCM (có xác thực) được chọn thay vì AES-CBC (không có).
+ * A wrong password makes `open()` throw because the GCM tag does not verify —
+ * that is how we detect it without the server confirming anything, and why
+ * AES-GCM (authenticated) was chosen over AES-CBC (not).
  */
 export async function unlockVault(
   email: string,
@@ -222,7 +225,7 @@ export async function unlockVault(
   try {
     vaultKeyRaw = await open(wrappingKey, record.wrappedVaultKey);
   } catch {
-    throw new Error("Master password không đúng");
+    throw new VaultError("crypto.wrong_password", {}, "GCM tag mismatch unwrapping vault key");
   }
 
   return {
@@ -232,7 +235,7 @@ export async function unlockVault(
   };
 }
 
-/** Đổi master password: chỉ bọc lại vault key, không chạm vào item nào. */
+/** Change the master password: re-wrap the vault key, touch no items. */
 export async function rewrapVaultKey(
   email: string,
   newMasterPassword: string,
@@ -256,16 +259,15 @@ export async function rewrapVaultKey(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Phía server
-// ---------------------------------------------------------------------------
+// Server side
 
 /**
- * Hash auth key để lưu trong D1.
+ * Hash the auth key for storage in D1.
  *
- * Một vòng SHA-256 là đủ ở đây, khác với hash mật khẩu thông thường: auth key đã
- * là 32 byte entropy đều, ra từ 600.000 vòng PBKDF2. Không có từ điển nào dò
- * được nó, nên làm hash chậm chỉ tốn CPU của Worker mà không thêm an toàn.
+ * A single SHA-256 round is enough here, unlike for an ordinary password: the
+ * auth key is already 32 bytes of uniform entropy produced by 600,000 PBKDF2
+ * iterations. No dictionary can reach it, so a slow hash would only burn Worker
+ * CPU without adding security.
  */
 export async function hashAuthKey(authKeyBase64: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", fromBase64(authKeyBase64));

@@ -1,18 +1,31 @@
 /**
- * Gọi Worker. Mọi thứ đi qua đây đều đã mã hoá sẵn — hàm trong file này không
- * bao giờ nhìn thấy plaintext, và cũng không nhận khoá làm tham số.
+ * Worker client. Everything passing through here is already encrypted — no
+ * function in this file sees plaintext or takes a key.
  */
 
 import type { AccountCryptoRecord, KdfParams, SealedData } from "../../src/core/crypto.js";
 import { getLocal, getUnlocked, lock, setToken, type CachedItem } from "./storage.js";
 
+/**
+ * `status: 0` means the request never reached the server. The UI distinguishes
+ * it from a real failure because the vault still works offline from its cache.
+ */
 export class ApiError extends Error {
   constructor(
-    message: string,
+    /** i18n key, e.g. `error.api.offline` or `error.auth.invalid_credentials`. */
+    readonly messageKey: string,
     readonly status: number,
+    readonly params: Record<string, string | number> = {},
   ) {
-    super(message);
+    super(messageKey);
+    this.name = "ApiError";
   }
+}
+
+interface ServerError {
+  code?: string;
+  error?: string;
+  params?: Record<string, string | number>;
 }
 
 async function request<T>(
@@ -20,14 +33,14 @@ async function request<T>(
   init: RequestInit & { auth?: boolean; extraHeaders?: Record<string, string> } = {},
 ): Promise<T> {
   const { apiUrl } = await getLocal();
-  if (!apiUrl) throw new ApiError("Chưa cấu hình địa chỉ server", 0);
+  if (!apiUrl) throw new ApiError("error.api.no_server", 0);
 
   const headers = new Headers(init.extraHeaders);
   if (init.body) headers.set("Content-Type", "application/json");
 
   if (init.auth !== false) {
     const session = await getUnlocked();
-    if (!session?.token) throw new ApiError("Chưa đăng nhập", 401);
+    if (!session?.token) throw new ApiError("error.api.not_signed_in", 401);
     headers.set("Authorization", `Bearer ${session.token}`);
   }
 
@@ -35,24 +48,26 @@ async function request<T>(
   try {
     response = await fetch(`${apiUrl.replace(/\/$/, "")}${path}`, { ...init, headers });
   } catch {
-    // Phân biệt rõ lỗi mạng với lỗi server: vault vẫn dùng được offline từ cache,
-    // nên thông báo phải nói đúng điều đó thay vì làm người dùng tưởng mất dữ liệu.
-    throw new ApiError("Không kết nối được server. Dữ liệu đã lưu vẫn xem được.", 0);
+    throw new ApiError("error.api.offline", 0);
   }
 
   if (response.status === 401 && init.auth !== false) {
-    // Session hết hạn ở server: khoá lại để buộc nhập master password, chứ không
-    // im lặng thử lại bằng một token đã chết.
+    // The server dropped the session: lock so the user re-derives the key,
+    // rather than silently retrying with a dead token.
     await lock();
-    throw new ApiError("Session đã hết hạn, hãy mở lại vault", 401);
+    throw new ApiError("error.api.session_expired", 401);
   }
 
   const text = await response.text();
   const body = text ? (JSON.parse(text) as unknown) : null;
 
   if (!response.ok) {
-    const message = (body as { error?: string } | null)?.error ?? `Lỗi ${response.status}`;
-    throw new ApiError(message, response.status);
+    const { code, params } = (body ?? {}) as ServerError;
+    throw new ApiError(
+      code ? `error.${code}` : "error.api.generic",
+      response.status,
+      params ?? { status: response.status },
+    );
   }
   return body as T;
 }
@@ -93,10 +108,9 @@ export async function login(
 }
 
 export async function logout(): Promise<void> {
-  await request("/api/auth/logout", { method: "POST" }).catch(() => {
-    // Logout phía server thất bại cũng không sao: xoá khoá cục bộ mới là việc
-    // quan trọng, và session sẽ tự hết hạn.
-  });
+  // A failed server-side logout is not worth surfacing: clearing local keys is
+  // what matters, and the session expires on its own.
+  await request("/api/auth/logout", { method: "POST" }).catch(() => {});
 }
 
 export async function changePassword(record: AccountCryptoRecord): Promise<void> {
@@ -128,12 +142,6 @@ export async function createShareLink(
   });
 }
 
-/**
- * Đo lệch đồng hồ bằng header `Date` của chính server.
- *
- * TOTP sai nếu đồng hồ máy lệch quá nửa chu kỳ, và đó là lỗi gần như không thể
- * tự chẩn đoán: mã hiện ra trông hoàn toàn bình thường, site chỉ nói "sai mã".
- */
 export async function measureClockSkew(): Promise<number | null> {
   const { apiUrl } = await getLocal();
   if (!apiUrl) return null;

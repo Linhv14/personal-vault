@@ -1,12 +1,13 @@
 /**
- * Build trang share và extension.
+ * Builds the share page and the extension with esbuild.
  *
- * Dùng esbuild thay vì một bundler đầy đủ vì cả hai đầu ra đều là JS thuần không
- * framework — thêm Vite/webpack vào đây chỉ là thêm thứ phải bảo trì.
+ * esbuild rather than a full bundler because both outputs are plain
+ * framework-free JavaScript; Vite or webpack here would only add something else
+ * to maintain.
  */
 
 import { build } from "esbuild";
-import { cp, mkdir, rm, readdir } from "node:fs/promises";
+import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
@@ -21,7 +22,8 @@ const common = {
   bundle: true,
   format: "esm",
   target: "es2022",
-  // Sourcemap chỉ ở bản dev: bản production không nên kèm map trỏ về source.
+  // Source maps only in dev builds; a release should not ship a map pointing
+  // back at the source.
   sourcemap: dev ? "inline" : false,
   minify: !dev,
   logLevel: "info",
@@ -40,7 +42,7 @@ async function buildSharePage() {
 async function buildExtension() {
   const source = path.join(root, "extension");
   if (!existsSync(path.join(source, "manifest.json"))) {
-    console.log("Bỏ qua extension: chưa có extension/manifest.json");
+    console.log("Skipping the extension: no extension/manifest.json");
     return;
   }
 
@@ -55,12 +57,11 @@ async function buildExtension() {
     entryPoints,
     outdir: outExtension,
     outbase: source,
-    // Service worker của MV3 chạy ở module scope riêng; splitting sẽ sinh chunk
-    // chung mà manifest không khai báo được, nên tắt hẳn.
+    // An MV3 service worker runs in its own module scope; code splitting would
+    // emit shared chunks the manifest cannot declare.
     splitting: false,
   });
 
-  // Copy mọi tài sản tĩnh: manifest, HTML, CSS, icon.
   for (const entry of await readdir(source, { recursive: true, withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const relative = path.relative(source, path.join(entry.parentPath, entry.name));
@@ -71,8 +72,8 @@ async function buildExtension() {
   }
 }
 
-// `wrangler dev` giữ handle lên dist/public khi đang chạy, nên rmdir sẽ báo
-// EBUSY trên Windows. Trường hợp đó chỉ xoá nội dung bên trong, đủ để build lại.
+// `wrangler dev` holds a handle on dist/public while running, so rmdir reports
+// EBUSY on Windows. In that case clear the contents instead.
 try {
   await rm(path.join(root, "dist"), { recursive: true, force: true });
 } catch (error) {
@@ -84,6 +85,7 @@ try {
     }
   }
 }
+
 await buildSharePage();
 await buildExtension();
-console.log(dev ? "Build dev xong." : "Build xong.");
+console.log(dev ? "Dev build complete." : "Build complete.");

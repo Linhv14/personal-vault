@@ -1,10 +1,10 @@
 /**
- * Mô hình vault phía client: giải mã cache, sync delta, lưu, xoá, và tìm item
- * khớp domain của tab đang mở.
+ * Client-side vault model: decrypt the cache, sync deltas, save, delete, and
+ * find items matching the open tab.
  *
- * Việc khớp domain cố tình làm ở đây chứ không ở server. Nếu server query được
- * theo URL thì nó phải thấy URL dạng rõ — và danh sách toàn bộ site bạn có tài
- * khoản gần như có giá trị bằng chính mật khẩu.
+ * Domain matching happens here rather than on the server on purpose. For the
+ * server to query by URL it would have to store URLs in the clear, and the list
+ * of every site you hold an account on is nearly as sensitive as the passwords.
  */
 
 import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
@@ -29,11 +29,7 @@ export async function importKey(vaultKeyRaw: string): Promise<CryptoKey> {
   return importVaultKey(fromBase64(vaultKeyRaw));
 }
 
-/**
- * Giải mã toàn bộ cache. Một item lỗi không được làm sập cả danh sách — nếu
- * ciphertext hỏng, ta bỏ qua đúng item đó và vẫn hiện phần còn lại.
- */
-export async function decryptAll(key: CryptoKey): Promise<VaultItem[]> {
+export async function decryptAll(key: CryptoKey, locale = "en"): Promise<VaultItem[]> {
   const { items = [] } = await getLocal();
   const output: VaultItem[] = [];
 
@@ -46,20 +42,15 @@ export async function decryptAll(key: CryptoKey): Promise<VaultItem[]> {
       });
       output.push({ ...item, id: row.id, updatedAt: row.updatedAt });
     } catch {
-      console.warn("Không giải mã được item", row.id, "— bỏ qua");
+      // One corrupt item must not take down the whole list.
+      console.warn("Skipping item that failed to decrypt:", row.id);
     }
   }
 
-  return output.sort((a, b) => a.title.localeCompare(b.title, "vi"));
+  return output.sort((a, b) => a.title.localeCompare(b.title, locale));
 }
 
-/**
- * Sync delta. Trả về số item đã thay đổi, hoặc `null` nếu không có mạng.
- *
- * Mốc `since` dùng `serverTime` của lần trước, không dùng đồng hồ máy: nếu mỗi
- * thiết bị lấy mốc theo đồng hồ riêng, một máy chạy nhanh vài giây sẽ bỏ sót
- * đúng những item vừa sửa.
- */
+/** Returns the number of changed items, or `null` when offline. */
 export async function sync(): Promise<number | null> {
   const { lastSync = 0, items = [] } = await getLocal();
 
@@ -75,8 +66,8 @@ export async function sync(): Promise<number | null> {
     const merged = new Map(items.map((item) => [item.id, item]));
     for (const incoming of response.items) {
       const existing = merged.get(incoming.id);
-      // Last-write-wins theo đồng hồ server. Với vault cá nhân, hai thiết bị sửa
-      // cùng một item trong cùng một giây là trường hợp không đáng xử lý phức tạp.
+      // Last write wins on the server clock. Two devices editing the same item
+      // within the same second is not worth more machinery for a personal vault.
       if (!existing || incoming.updatedAt >= existing.updatedAt) {
         merged.set(incoming.id, incoming);
       }
@@ -84,6 +75,7 @@ export async function sync(): Promise<number | null> {
     await setLocal({ items: [...merged.values()] });
   }
 
+  // The cursor is the server's clock, never the local one.
   await setLocal({ lastSync: response.serverTime });
   return response.items.length;
 }
@@ -93,11 +85,7 @@ export async function saveItem(
   item: Omit<VaultItem, "createdAt" | "updatedAt"> & { createdAt?: number },
 ): Promise<VaultItem> {
   const now = Math.floor(Date.now() / 1000);
-  const payload: VaultItem = {
-    ...item,
-    createdAt: item.createdAt ?? now,
-    updatedAt: now,
-  };
+  const payload: VaultItem = { ...item, createdAt: item.createdAt ?? now, updatedAt: now };
 
   const sealed = await sealJson(key, payload);
   const { updatedAt } = await api.putItem(payload.id, sealed);
@@ -126,21 +114,18 @@ async function upsertCache(row: CachedItem): Promise<void> {
 }
 
 export function newItemId(): string {
-  // Client sinh id để tạo mới và sửa dùng chung một đường PUT — nhờ đó retry sau
-  // khi mất mạng không tạo ra bản trùng.
+  // The client mints ids so create and update share one PUT path, which makes a
+  // retry after a dropped connection idempotent instead of duplicating.
   return crypto.randomUUID();
 }
 
-// ---------------------------------------------------------------------------
-// Khớp domain
-// ---------------------------------------------------------------------------
-
 /**
- * Lấy phần domain đáng so sánh. Không dùng Public Suffix List (nó là một file
- * vài nghìn dòng phải cập nhật định kỳ), nên chấp nhận một hạn chế đã biết:
- * `a.github.io` và `b.github.io` bị coi là cùng domain. Với vault cá nhân thì
- * hậu quả chỉ là một gợi ý không liên quan nằm trong danh sách, không phải lỗ
- * bảo mật — ta chỉ gợi ý, không tự điền vào trang.
+ * The comparable part of a hostname.
+ *
+ * No Public Suffix List — that is a few thousand lines needing regular updates —
+ * so `a.github.io` and `b.github.io` are treated as one domain. The consequence
+ * is an irrelevant suggestion in a list, not a security hole: this only ranks
+ * suggestions, it never fills anything into a page.
  */
 export function registrableDomain(rawUrl: string): string | null {
   let hostname: string;
@@ -152,16 +137,16 @@ export function registrableDomain(rawUrl: string): string | null {
   const labels = hostname.replace(/^www\./, "").split(".");
   if (labels.length <= 2) return labels.join(".");
 
-  // Xử lý các đuôi hai tầng phổ biến ở Việt Nam: com.vn, edu.vn, co.uk...
+  // Common two-level suffixes: com.vn, co.uk, ac.jp...
   const twoPartTlds = new Set(["com", "net", "org", "edu", "gov", "co", "ac"]);
-  const [, secondLast, last] = [labels.at(-3), labels.at(-2), labels.at(-1)];
+  const secondLast = labels.at(-2);
+  const last = labels.at(-1);
   if (last && secondLast && last.length === 2 && twoPartTlds.has(secondLast)) {
     return labels.slice(-3).join(".");
   }
   return labels.slice(-2).join(".");
 }
 
-/** Item khớp tab hiện tại lên đầu danh sách. */
 export function matchingItems(items: VaultItem[], tabUrl: string | undefined): VaultItem[] {
   if (!tabUrl) return [];
   const target = registrableDomain(tabUrl);

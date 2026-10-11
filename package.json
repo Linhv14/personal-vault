@@ -9,10 +9,13 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
     "build": "node scripts/build.mjs",
     "build:dev": "node scripts/build.mjs --dev",
-    "deploy": "node scripts/cf.mjs deploy",
-    "dev": "node scripts/cf.mjs dev",
-    "status": "node scripts/cf.mjs status",
-    "logs": "node scripts/cf.mjs logs"
+    "deploy": "node scripts/vault.mjs deploy",
+    "dev": "node scripts/vault.mjs dev",
+    "status": "node scripts/vault.mjs status",
+    "logs": "node scripts/vault.mjs logs",
+    "preview": "node scripts/preview.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "hono": "^4.6.14"
@@ -23,11 +26,9 @@
     "@types/node": "^26.6.5",
     "esbuild": "^0.24.2",
     "happy-dom": "^20.14.6",
+    "prettier": "^3.9.10",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "wrangler": "^4.149.0"
-  },
-  "bin": {
-    "cf": "scripts/cf.mjs"
   }
 }

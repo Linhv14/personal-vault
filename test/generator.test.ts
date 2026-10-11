@@ -8,9 +8,10 @@ import {
   rateStrength,
 } from "../src/core/generator.js";
 import { EFF_SHORT_WORDLIST } from "../src/core/wordlist.js";
+import { expectCode } from "./helpers.js";
 
 describe("randomInt", () => {
-  it("luôn nằm trong [0, max)", () => {
+  it("always lands inside [0, max)", () => {
     for (const max of [2, 3, 10, 26, 95, 1296]) {
       for (let i = 0; i < 500; i++) {
         const n = randomInt(max);
@@ -20,20 +21,20 @@ describe("randomInt", () => {
     }
   });
 
-  it("max = 1 luôn trả 0 mà không treo", () => {
+  it("returns 0 for max = 1 without looping forever", () => {
     expect(randomInt(1)).toBe(0);
   });
 
-  it("từ chối max không hợp lệ", () => {
-    expect(() => randomInt(0)).toThrow(/nguyên dương/);
-    expect(() => randomInt(-5)).toThrow();
-    expect(() => randomInt(2.5)).toThrow();
+  it("rejects an invalid max", () => {
+    expectCode(() => randomInt(0), "generator.invalid_max");
+    expectCode(() => randomInt(-5), "generator.invalid_max");
+    expectCode(() => randomInt(2.5), "generator.invalid_max");
   });
 
-  it("phân phối không lệch rõ rệt với max không chia hết 2^32", () => {
-    // max = 3 là trường hợp kinh điển của modulo bias. Với 30.000 mẫu, mỗi giá
-    // trị nên chiếm ~33,3%; ngưỡng 2 điểm phần trăm rất rộng so với sai số
-    // thống kê, nên test này không bị đỏ ngẫu nhiên nhưng vẫn bắt được bias thật.
+  it("shows no measurable bias for a max that does not divide 2^32", () => {
+    // max = 3 is the classic modulo-bias case. With 30,000 samples each value
+    // should be near 33.3%; the 2-point threshold is far wider than statistical
+    // noise, so this does not flake but would still catch real bias.
     const counts = [0, 0, 0];
     const samples = 30_000;
     for (let i = 0; i < samples; i++) counts[randomInt(3)]! += 1;
@@ -44,7 +45,7 @@ describe("randomInt", () => {
 });
 
 describe("buildAlphabet", () => {
-  it("mặc định gồm cả bốn nhóm", () => {
+  it("includes all four sets by default", () => {
     const alphabet = buildAlphabet();
     expect(alphabet).toMatch(/[a-z]/);
     expect(alphabet).toMatch(/[A-Z]/);
@@ -52,50 +53,50 @@ describe("buildAlphabet", () => {
     expect(alphabet).toMatch(/[!@#]/);
   });
 
-  it("bỏ ký tự dễ đọc lẫn khi excludeAmbiguous", () => {
+  it("drops look-alike characters when asked", () => {
     const alphabet = buildAlphabet({ excludeAmbiguous: true });
     for (const char of ["0", "O", "o", "I", "l", "1"]) {
       expect(alphabet).not.toContain(char);
     }
   });
 
-  it("báo lỗi khi không chọn nhóm nào", () => {
-    expect(() =>
-      buildAlphabet({ lowercase: false, uppercase: false, digits: false, symbols: false }),
-    ).toThrow(/ít nhất một nhóm/);
+  it("fails when no set is selected", () => {
+    expectCode(
+      () => buildAlphabet({ lowercase: false, uppercase: false, digits: false, symbols: false }),
+      "generator.no_character_set",
+    );
   });
 });
 
 describe("generatePassword", () => {
-  it("đúng độ dài yêu cầu", () => {
+  it("honours the requested length", () => {
     for (const length of [8, 16, 20, 64, 256]) {
       expect(generatePassword({ length }).value).toHaveLength(length);
     }
   });
 
-  it("có ít nhất một ký tự từ mỗi nhóm đã chọn", () => {
-    // Chạy nhiều lần vì đây là ràng buộc xác suất; một lần may mắn không chứng
-    // minh được gì.
+  it("always includes at least one character from every selected set", () => {
+    // Repeated because this is a probabilistic property; one lucky run proves
+    // nothing.
     for (let i = 0; i < 200; i++) {
       const { value } = generatePassword({ length: 12 });
       expect(value).toMatch(/[a-z]/);
       expect(value).toMatch(/[A-Z]/);
       expect(value).toMatch(/[0-9]/);
-      expect(value).toMatch(/[!@#$%^&*()\-_=+\[\]{};:,.?]/);
+      expect(value).toMatch(/[!@#$%^&*()\-_=+[\]{};:,.?]/);
     }
   });
 
-  it("chỉ dùng nhóm được bật", () => {
+  it("uses only the enabled sets", () => {
     for (let i = 0; i < 100; i++) {
       const { value } = generatePassword({ length: 24, uppercase: false, symbols: false });
       expect(value).toMatch(/^[a-z0-9]+$/);
     }
   });
 
-  it("ký tự bắt buộc không bị dồn về đầu chuỗi", () => {
-    // Nếu quên trộn (shuffle), ký tự của các nhóm bắt buộc luôn nằm ở 4 vị trí
-    // đầu theo đúng thứ tự lowercase/uppercase/digit/symbol — một lỗi im lặng
-    // làm giảm entropy thật đi nhiều.
+  it("does not leave the mandatory characters bunched at the front", () => {
+    // Forgetting the shuffle would put one character per set in the first four
+    // positions in a fixed order — a silent loss of real entropy.
     let digitInFirstFour = 0;
     const runs = 400;
     for (let i = 0; i < runs; i++) {
@@ -104,45 +105,45 @@ describe("generatePassword", () => {
     expect(digitInFirstFour).toBeLessThan(runs * 0.9);
   });
 
-  it("mỗi lần sinh một mật khẩu khác nhau", () => {
+  it("never repeats a password", () => {
     const values = new Set(Array.from({ length: 200 }, () => generatePassword().value));
     expect(values.size).toBe(200);
   });
 
-  it("entropy khớp công thức length * log2(alphabet)", () => {
+  it("reports entropy as length * log2(alphabet)", () => {
     const alphabet = buildAlphabet();
     const { entropyBits } = generatePassword({ length: 20 });
     expect(entropyBits).toBeCloseTo(20 * Math.log2(alphabet.length), 1);
   });
 
-  it("từ chối độ dài không đủ cho các nhóm bắt buộc, và độ dài quá lớn", () => {
-    expect(() => generatePassword({ length: 3 })).toThrow(/tối thiểu/);
-    expect(() => generatePassword({ length: 257 })).toThrow(/tối đa/);
+  it("rejects lengths that are too short or too long", () => {
+    expectCode(() => generatePassword({ length: 3 }), "generator.length_too_short");
+    expectCode(() => generatePassword({ length: 257 }), "generator.length_too_long");
   });
 });
 
 describe("generatePassphrase", () => {
-  it("mặc định 8 từ nối bằng gạch ngang, từ nào cũng có trong wordlist", () => {
-    // 8 từ chứ không phải 5: wordlist ngắn chỉ cho 10,34 bit/từ, nên 5 từ ra
-    // 51,7 bit — chưa đủ chống brute-force offline.
+  it("defaults to 8 dash-separated words from the list", () => {
+    // 8, not 5: the short list carries 10.34 bits per word, so 5 words is only
+    // 51.7 bits — inside offline brute-force range.
     const { value } = generatePassphrase();
     const words = value.split("-");
     expect(words).toHaveLength(8);
     for (const word of words) expect(EFF_SHORT_WORDLIST).toContain(word);
   });
 
-  it("entropy tính từ độ dài wordlist thật", () => {
+  it("computes entropy from the real list length", () => {
     const { entropyBits } = generatePassphrase({ words: 6 });
     expect(entropyBits).toBeCloseTo(6 * Math.log2(1296), 1);
   });
 
-  it("wordlist EFF có đúng 1296 từ, không trùng lặp", () => {
-    // Trùng lặp sẽ làm entropy hiển thị cao hơn thực tế.
+  it("ships exactly 1296 unique words", () => {
+    // Duplicates would make the reported entropy higher than the truth.
     expect(EFF_SHORT_WORDLIST).toHaveLength(1296);
     expect(new Set(EFF_SHORT_WORDLIST).size).toBe(1296);
   });
 
-  it("capitalize và appendDigit hoạt động", () => {
+  it("supports capitalization and an appended digit", () => {
     const { value, entropyBits } = generatePassphrase({
       words: 4,
       capitalize: true,
@@ -156,43 +157,46 @@ describe("generatePassphrase", () => {
     expect(entropyBits).toBeCloseTo(4 * Math.log2(1296) + Math.log2(10), 1);
   });
 
-  it("dùng được wordlist tuỳ chọn", () => {
-    const { value, entropyBits } = generatePassphrase({ words: 3, wordlist: ["mèo", "chó"] });
-    expect(value.split("-").every((w) => ["mèo", "chó"].includes(w))).toBe(true);
+  it("accepts a custom word list", () => {
+    const { value, entropyBits } = generatePassphrase({ words: 3, wordlist: ["cat", "dog"] });
+    expect(value.split("-").every((w) => ["cat", "dog"].includes(w))).toBe(true);
     expect(entropyBits).toBe(3);
   });
 
-  it("từ chối tham số vô lý", () => {
-    expect(() => generatePassphrase({ words: 1 })).toThrow(/ít nhất 2 từ/);
-    expect(() => generatePassphrase({ words: 33 })).toThrow(/32 từ/);
-    expect(() => generatePassphrase({ wordlist: ["chỉ-một"] })).toThrow(/quá ngắn/);
+  it("rejects nonsensical options", () => {
+    expectCode(() => generatePassphrase({ words: 1 }), "generator.too_few_words");
+    expectCode(() => generatePassphrase({ words: 33 }), "generator.too_many_words");
+    expectCode(
+      () => generatePassphrase({ wordlist: ["only-one"] }),
+      "generator.wordlist_too_small",
+    );
   });
 });
 
 describe("generatePin", () => {
-  it("chỉ gồm chữ số, đúng độ dài", () => {
+  it("produces digits of the requested length", () => {
     const { value, entropyBits } = generatePin(6);
     expect(value).toMatch(/^\d{6}$/);
     expect(entropyBits).toBeCloseTo(6 * Math.log2(10), 1);
   });
 
-  it("từ chối độ dài ngoài khoảng cho phép", () => {
-    expect(() => generatePin(2)).toThrow(/từ 3 đến 32/);
-    expect(() => generatePin(33)).toThrow();
+  it("rejects lengths outside the allowed range", () => {
+    expectCode(() => generatePin(2), "generator.pin_length_out_of_range");
+    expectCode(() => generatePin(33), "generator.pin_length_out_of_range");
   });
 });
 
 describe("rateStrength", () => {
-  it("xếp hạng theo mốc entropy", () => {
-    expect(rateStrength(30)).toBe("rất yếu");
-    expect(rateStrength(50)).toBe("yếu");
-    expect(rateStrength(70)).toBe("khá");
-    expect(rateStrength(90)).toBe("mạnh");
-    expect(rateStrength(130)).toBe("rất mạnh");
+  it("bands by entropy", () => {
+    expect(rateStrength(30)).toBe("very_weak");
+    expect(rateStrength(50)).toBe("weak");
+    expect(rateStrength(70)).toBe("fair");
+    expect(rateStrength(90)).toBe("strong");
+    expect(rateStrength(130)).toBe("very_strong");
   });
 
-  it("mặc định của cả ba chế độ đều đạt mức mạnh trở lên", () => {
-    expect(rateStrength(generatePassword().entropyBits)).toMatch(/mạnh/);
-    expect(rateStrength(generatePassphrase().entropyBits)).toMatch(/mạnh/);
+  it("rates both defaults strong or better", () => {
+    expect(rateStrength(generatePassword().entropyBits)).toMatch(/strong/);
+    expect(rateStrength(generatePassphrase().entropyBits)).toMatch(/strong/);
   });
 });
