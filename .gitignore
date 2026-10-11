@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .wrangler/
+.wrangler.local.toml
+.cf-state.json
 .dev.vars
+.secrets.local.txt
 *.log
 .DS_Store

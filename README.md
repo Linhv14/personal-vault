@@ -1,6 +1,7 @@
 # Personal Vault
 
 Password manager cá nhân: browser extension + Cloudflare Workers + D1.
+**Bạn tự deploy một bản trên account Cloudflare của chính bạn.**
 
 Mục tiêu là bỏ hẳn việc phải mở app 2FA trên điện thoại mỗi lần đăng nhập — mã
 TOTP hiện ngay trong extension và tự refresh mỗi 30 giây.
@@ -14,6 +15,18 @@ TOTP hiện ngay trong extension và tự refresh mỗi 30 giây.
 
 Thiết kế đầy đủ, gồm lý do của từng quyết định:
 [`docs/plans/2026-10-11-personal-vault-design.md`](docs/plans/2026-10-11-personal-vault-design.md).
+
+## Tại sao phải tự deploy
+
+Không có server chung, và đó là điểm chính chứ không phải sự bất tiện.
+
+Một password manager mà dữ liệu nằm trên hạ tầng của tác giả thì bạn phải tin
+tác giả — tin rằng họ không đổi code để gửi khoá về, tin rằng họ không bị hack,
+tin rằng họ còn duy trì dịch vụ sang năm. Tự deploy thì **tác giả không có quyền
+truy cập nào vào dữ liệu của bạn**, kể cả muốn cũng không.
+
+Chi phí: nằm gọn trong bậc miễn phí của Cloudflare (Workers 100k request/ngày,
+D1 5GB). Dùng tên miền `*.workers.dev` thì không tốn đồng nào.
 
 ## Mô hình tin cậy — đọc trước khi tin
 
@@ -39,27 +52,26 @@ Hai giới hạn cần biết rõ:
 
 ## Cài đặt
 
-### 1. Triển khai Worker
+Cần Node 20+ và một account Cloudflare (bậc miễn phí là đủ).
 
 ```bash
+git clone <repo> personal-vault
+cd personal-vault
 npm install
-npx wrangler login                      # account Cloudflare của bạn
-
-npx wrangler d1 create vault            # chép database_id vào wrangler.toml
-npm run db:migrate                      # chạy migration trên D1 thật
-
-# Hai secret bắt buộc:
-npx wrangler secret put REGISTRATION_TOKEN   # chuỗi bí mật, chỉ bạn biết
-npx wrangler secret put EMAIL_PROBE_SECRET   # chuỗi ngẫu nhiên bất kỳ
-
-npm run build
-npm run deploy
+npm run deploy          # hoặc: npx cf deploy
 ```
 
-`REGISTRATION_TOKEN` là thứ chặn người lạ tạo account trên Worker của bạn. Không
-có nó, URL Worker là một trang đăng ký công khai.
+Lệnh đó làm mọi thứ, và chạy lại nhiều lần được:
 
-### 2. Cài extension
+1. Mở browser cho bạn đăng nhập Cloudflare nếu chưa đăng nhập.
+2. Hỏi deploy vào account nào, nếu bạn có nhiều account.
+3. Tạo D1 database `vault` — hoặc dùng lại nếu đã có.
+4. Chạy migration.
+5. Sinh `REGISTRATION_TOKEN` và `EMAIL_PROBE_SECRET`, ghi token đăng ký vào
+   `.secrets.local.txt` (đã gitignore) thay vì in ra terminal.
+6. Build rồi deploy, in ra URL Worker của bạn.
+
+Sau đó cài extension:
 
 ```bash
 npm run build
@@ -68,8 +80,32 @@ npm run build
 Mở `chrome://extensions` → bật **Developer mode** → **Load unpacked** → chọn thư
 mục `dist/extension`.
 
-Lần đầu mở popup, nhập: địa chỉ Worker, email, token đăng ký, master password.
-Extension sẽ xin quyền truy cập đúng domain Worker của bạn.
+Lần đầu mở popup, nhập: URL Worker ở bước trên, email của bạn, token đăng ký
+trong `.secrets.local.txt`, và master password.
+
+> `REGISTRATION_TOKEN` là thứ chặn người lạ tạo account trên Worker của bạn.
+> Không có nó, URL Worker là một trang đăng ký công khai.
+
+### Lệnh khác
+
+```bash
+npm run deploy    # deploy (chạy lại được, không tạo trùng tài nguyên)
+npm run dev       # Worker local + D1 local tại http://127.0.0.1:8787
+npm run status    # đang deploy ở account nào, dùng tài nguyên nào
+npm run logs      # log realtime của Worker
+```
+
+### Ghi chú về cấu hình
+
+`wrangler.toml` trong repo **cố tình không chứa `account_id` hay `database_id`** —
+đó là giá trị của riêng từng người. `cf deploy` điền chúng vào
+`.wrangler.local.toml` (đã gitignore) rồi chạy wrangler với file đó. Vì vậy chạy
+thẳng `npx wrangler deploy` sẽ không hoạt động; dùng `npm run deploy`.
+
+Cloudflare có nút ["Deploy to Cloudflare"](https://developers.cloudflare.com/workers/platform/deploy-buttons/)
+tự provision tài nguyên cho người bấm, nhưng **tôi chưa kiểm chứng nó với
+placeholder `database_id` của repo này**, nên chưa đưa vào đây. Đường `cf deploy`
+đã chạy thật và được test.
 
 ## Phát triển
 
@@ -77,15 +113,13 @@ Extension sẽ xin quyền truy cập đúng domain Worker của bạn.
 npm test              # 109 test: vector chuẩn RFC, crypto, generator, popup
 npm run typecheck     # hai project: browser và worker
 npm run build:dev     # build kèm sourcemap
-
-npx wrangler d1 migrations apply vault --local
-npm run dev           # Worker local tại http://127.0.0.1:8787
+npm run dev           # Worker local
 ```
 
 Test e2e chạy thật qua Worker + D1 local (mặc định bị bỏ qua):
 
 ```bash
-# cần .dev.vars với REGISTRATION_TOKEN="token-dev-local"
+npm run dev           # cửa sổ khác; tự tạo .dev.vars với token "token-dev-local"
 VAULT_E2E=1 npx vitest run test/e2e.test.ts
 ```
 
@@ -105,6 +139,7 @@ src/worker/    Worker trên Hono: auth, sync item, share link.
 extension/     Extension MV3. Popup chứa toàn bộ UI; service worker chỉ lo
                auto-lock, vì MV3 kill nó sau ~30 giây không hoạt động.
 share/         Trang `/s/:id` cho người nhận link.
+scripts/cf.mjs CLI deploy.
 migrations/    Migration D1.
 ```
 
@@ -120,8 +155,12 @@ migrations/    Migration D1.
   đang offline sẽ sync item đã xoá trở lại.
 - TOTP dùng HMAC-**SHA1** theo đúng RFC 6238. Đổi sang SHA-256 sẽ ra mã không
   khớp với site.
+- `cf.mjs` gọi thẳng `node node_modules/wrangler/bin/wrangler.js`, không qua
+  `npx` và không qua shell: trên Windows, `spawn` với `shell: true` vỡ khi đường
+  dẫn Node có dấu cách.
 
-## Chi phí
+## Giấy phép
 
-Nằm gọn trong bậc miễn phí của Cloudflare (Workers 100k request/ngày, D1 5GB).
-Chỉ tốn tiền domain, và dùng `*.workers.dev` thì không tốn gì.
+MIT. Không có bảo hành — đây là công cụ cá nhân, chưa qua kiểm toán bảo mật độc
+lập. Nếu bạn cần một password manager đã được kiểm toán, hãy dùng Bitwarden hoặc
+1Password.

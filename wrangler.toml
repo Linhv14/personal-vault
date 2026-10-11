@@ -2,6 +2,7 @@ name = "personal-vault"
 main = "src/worker/index.ts"
 compatibility_date = "2025-10-01"
 
+
 # Trang xem link share là tài sản tĩnh; Worker chỉ xử lý /api/* và /s/*.
 [assets]
 directory = "./dist/public"
@@ -10,8 +11,10 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "vault"
-# Thay bằng id thật sau khi chạy: npx wrangler d1 create vault
-database_id = "PLACEHOLDER_CHAY_WRANGLER_D1_CREATE"
+# `cf deploy` thay placeholder này bằng id database trong account CỦA BẠN,
+# rồi ghi ra .wrangler.local.toml (đã gitignore). File này giữ nguyên để repo
+# public không chứa id của riêng ai.
+database_id = "SET_BY_CF_DEPLOY"
 migrations_dir = "migrations"
 
 # Dọn link share đã hết hạn. Không có cron thì ciphertext hết hạn vẫn nằm trong
@@ -22,9 +25,10 @@ crons = ["17 * * * *"]
 [observability]
 enabled = true
 
-# Secrets (đặt bằng `npx wrangler secret put <TÊN>`, không ghi vào file này):
-#   REGISTRATION_TOKEN — chuỗi bí mật bắt buộc khi gọi /api/auth/register.
-#                        Không có nó thì bất cứ ai cũng tạo được account trên
-#                        Worker của bạn.
-#   EMAIL_PROBE_SECRET — khoá HMAC dùng sinh KDF params giả cho email không tồn
-#                        tại, để không ai dò được email nào đã đăng ký.
+# Secrets: `cf deploy` tự sinh và đặt giúp. Đặt tay thì dùng:
+#   npx wrangler secret put REGISTRATION_TOKEN -c .wrangler.local.toml
+#
+#   REGISTRATION_TOKEN — bắt buộc khi gọi /api/auth/register. Không có nó thì
+#                        bất cứ ai tìm thấy URL cũng tạo được account.
+#   EMAIL_PROBE_SECRET — khoá HMAC sinh KDF params giả cho email không tồn tại,
+#                        để không ai dò được email nào đã đăng ký.
