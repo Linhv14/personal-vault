@@ -71,7 +71,19 @@ async function buildExtension() {
   }
 }
 
-await rm(path.join(root, "dist"), { recursive: true, force: true });
+// `wrangler dev` giữ handle lên dist/public khi đang chạy, nên rmdir sẽ báo
+// EBUSY trên Windows. Trường hợp đó chỉ xoá nội dung bên trong, đủ để build lại.
+try {
+  await rm(path.join(root, "dist"), { recursive: true, force: true });
+} catch (error) {
+  if (error.code !== "EBUSY" && error.code !== "EPERM") throw error;
+  for (const dir of [outPublic, outExtension]) {
+    if (!existsSync(dir)) continue;
+    for (const entry of await readdir(dir)) {
+      await rm(path.join(dir, entry), { recursive: true, force: true });
+    }
+  }
+}
 await buildSharePage();
 await buildExtension();
 console.log(dev ? "Build dev xong." : "Build xong.");

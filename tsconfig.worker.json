@@ -1,0 +1,20 @@
+{
+  // Cấu hình cho Cloudflare Worker. Không có lib DOM ở đây — nếu một file worker
+  // vô tình dùng `document` hay `localStorage`, ta muốn biết ngay lúc typecheck
+  // chứ không phải lúc Worker chạy thật.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src/worker/**/*.ts", "src/core/**/*.ts"]
+}

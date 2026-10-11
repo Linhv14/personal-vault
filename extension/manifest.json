@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Personal Vault",
+  "version": "0.1.0",
+  "description": "Vault cá nhân mã hoá đầu-cuối: mật khẩu, mã 2FA tự refresh, và link chia sẻ tạm thời.",
+  "minimum_chrome_version": "116",
+
+  "permissions": ["storage", "alarms", "activeTab"],
+
+  "optional_host_permissions": ["https://*/*"],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Personal Vault"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src https:"
+  }
+}
