@@ -2,8 +2,8 @@
 
 Ngày: 2026-10-11
 Trạng thái: đã xác nhận, đang triển khai
-Chủ sở hữu: dự án cá nhân
-Deploy: Cloudflare account `ban@example.com`, qua `npx wrangler`
+Mô hình triển khai: mỗi người tự deploy một bản trên account Cloudflare của
+chính mình (`npm run deploy`). Không có server chung.
 
 ## 1. Mục tiêu
 
@@ -155,8 +155,13 @@ Ba quyết định schema đáng ghi lại:
 Nhập secret theo ba đường, tất cả đổ về cùng một parser:
 
 1. Dán chuỗi base32 thủ công (mọi site đều có link kiểu "không quét được QR?").
-2. Quét QR từ ảnh chụp tab: `chrome.tabs.captureVisibleTab()` + decode bằng jsQR
-   ngay trong extension, không gửi ảnh đi đâu. Chỉ cần quyền `activeTab`.
+2. Quét QR từ ảnh chụp tab: `chrome.tabs.captureVisibleTab()` + decode ngay trong
+   extension, không gửi ảnh đi đâu. Chỉ cần quyền `activeTab`.
+
+   Khi triển khai đã đổi từ nhúng `jsQR` sang `BarcodeDetector` có sẵn của
+   Chrome: thư viện decode nằm trong đường đi của TOTP secret — nó thấy secret
+   trước cả người dùng — nên đây là chỗ không đáng thêm dependency. Máy nào
+   không có API đó thì rơi về dán tay, đường luôn hoạt động.
 3. Dán URI `otpauth://totp/...`.
 
 Sinh mã theo RFC 6238, hoàn toàn offline:
