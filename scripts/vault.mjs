@@ -74,6 +74,30 @@ function wranglerCapture(args) {
   return { ok: result.status === 0, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
+/**
+ * Like wranglerInherit, but also returns what was printed. Used for `deploy`,
+ * whose output is the only place the Worker URL appears.
+ */
+function wranglerTee(args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [WRANGLER, ...args], {
+      cwd: root,
+      env: wranglerEnv(),
+      stdio: ["inherit", "pipe", "inherit"],
+    });
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+      process.stdout.write(chunk);
+    });
+    child.on("close", (code) =>
+      code === 0
+        ? resolve(output)
+        : reject(new Error(`wrangler ${args[0]} exited with code ${code}`)),
+    );
+  });
+}
+
 function wranglerInherit(args) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [WRANGLER, ...args], {
@@ -297,7 +321,16 @@ async function deploy() {
   buildAssets();
 
   style.step("Deploying the Worker");
-  await wranglerInherit(["deploy", "-c", configPath]);
+  const output = await wranglerTee(["deploy", "-c", configPath]);
+
+  // Remember the URL so the next build can bake it into the extension; without
+  // it every install starts by asking the user to retype their own server.
+  const url = output.match(/https:\/\/\S+\.workers\.dev/)?.[0];
+  if (url) {
+    writeState({ workerUrl: url });
+    buildAssets();
+    style.ok(`Extension rebuilt with ${url} baked in`);
+  }
 
   console.log("");
   style.ok("Done. Two steps left:");

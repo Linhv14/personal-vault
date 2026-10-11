@@ -66,6 +66,17 @@ import {
   type VaultItem,
 } from "../lib/vault.js";
 
+/**
+ * Replaced at build time with the Worker URL of the last deployment, so someone
+ * who clones, deploys and loads the extension never has to retype the address
+ * of their own server. Undefined in builds made before any deploy.
+ */
+declare const __VAULT_DEFAULT_SERVER__: string | undefined;
+
+function deployedServerUrl(): string {
+  return typeof __VAULT_DEFAULT_SERVER__ === "string" ? __VAULT_DEFAULT_SERVER__ : "";
+}
+
 const $ = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Missing #${id}`);
@@ -158,12 +169,16 @@ async function boot(): Promise<void> {
   locale = resolveLocale(local.locale);
   t = createTranslator(locale);
   applyStaticText();
+  setSetupMode("register");
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabUrl = tab?.url;
   clockSkew = local.clockSkew ?? 0;
 
   if (!local.apiUrl || !local.email) {
+    const serverField =
+      $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!;
+    serverField.value = local.apiUrl ?? deployedServerUrl();
     show("setup");
     return;
   }
@@ -226,22 +241,41 @@ async function backgroundSync(): Promise<void> {
 
 let setupMode: "register" | "login" = "register";
 
-$("setup-switch-login").addEventListener("click", () => {
-  setupMode = setupMode === "register" ? "login" : "register";
+/**
+ * Creating a vault and signing in on a second machine are presented as two
+ * visible choices rather than one form with a link underneath.
+ *
+ * Signing in needs no registration token — that token exists only to stop
+ * strangers creating accounts. Hiding the sign-in path behind a link led people
+ * setting up a new machine to believe they needed a token they do not have.
+ */
+function setSetupMode(mode: "register" | "login"): void {
+  setupMode = mode;
+  const registering = mode === "register";
   const form = $<HTMLFormElement>("form-setup");
-  const hidden = setupMode === "login";
 
   for (const name of ["registrationToken", "confirm"]) {
     const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
-    field.required = !hidden;
-    field.closest("label")!.hidden = hidden;
+    field.required = registering;
+    field.closest("label")!.hidden = !registering;
   }
 
-  form.querySelector("button.primary")!.textContent = t(hidden ? "setup.sign_in" : "setup.create");
-  $("setup-switch-login").textContent = t(
-    hidden ? "setup.switch_to_register" : "setup.switch_to_login",
+  const password = form.querySelector<HTMLInputElement>('[name="password"]')!;
+  password.autocomplete = registering ? "new-password" : "current-password";
+  // Only enforce a minimum when creating; an existing password is what it is.
+  password.minLength = registering ? 12 : 0;
+
+  form.querySelector("button.primary")!.textContent = t(
+    registering ? "setup.create" : "setup.sign_in",
   );
-});
+  $("setup-hint").textContent = t(registering ? "setup.hint_create" : "setup.hint_signin");
+  $("setup-mode-create").classList.toggle("active", registering);
+  $("setup-mode-signin").classList.toggle("active", !registering);
+  setError("setup-error", null);
+}
+
+$("setup-mode-create").addEventListener("click", () => setSetupMode("register"));
+$("setup-mode-signin").addEventListener("click", () => setSetupMode("login"));
 
 $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -760,10 +794,12 @@ $("gen-back").addEventListener("click", () => {
   show("list");
 });
 
-for (const tab of document.querySelectorAll<HTMLButtonElement>(".tab")) {
+// Scoped to the generator screen: the setup screen reuses the .tab style, and
+// an unscoped selector would wire its buttons to this handler as well.
+for (const tab of document.querySelectorAll<HTMLButtonElement>("#screen-generator .tab")) {
   tab.addEventListener("click", () => {
     genMode = tab.dataset.mode as GenMode;
-    for (const other of document.querySelectorAll(".tab")) {
+    for (const other of document.querySelectorAll("#screen-generator .tab")) {
       other.classList.toggle("active", other === tab);
     }
     for (const mode of ["password", "passphrase", "pin"] as const) {
@@ -951,6 +987,7 @@ $("settings-locale").addEventListener("change", async (event) => {
   locale = resolveLocale(preference);
   t = createTranslator(locale);
   applyStaticText();
+  setSetupMode(setupMode);
   if (vaultKey) items = await decryptAll(vaultKey, locale);
   await openSettings();
 });

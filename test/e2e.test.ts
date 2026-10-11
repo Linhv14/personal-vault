@@ -12,11 +12,17 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   createAccount,
+  deriveAuthKey,
+  deriveMasterKey,
+  deriveWrappingKey,
+  importVaultKey,
+  open,
   openJson,
   sealJson,
   unlockVault,
   type AccountCryptoRecord,
 } from "../src/core/crypto.js";
+import { toBase64 } from "../src/core/bytes.js";
 import { createShare, openShare } from "../src/core/share.js";
 import { generateTotp } from "../src/core/totp.js";
 import { generatePassword } from "../src/core/generator.js";
@@ -175,6 +181,35 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect(raw).not.toContain("JBSWY3DPEHPK3PXP");
 
     expect(await openJson(vaultKey, { ciphertext: row.ciphertext, nonce: row.nonce })).toEqual(
+      itemPlain,
+    );
+  });
+
+  it("recovers the whole vault on a new machine from email and password alone", async () => {
+    // The path that matters after losing a laptop. A fresh client holds nothing:
+    // no cached KDF parameters, no wrapped key, and no registration token — that
+    // token only ever gates account creation.
+    const prelogin = await api("/api/auth/prelogin", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+
+    const masterKey = await deriveMasterKey(email, masterPassword, prelogin.body.kdf);
+    const authKey = toBase64(await deriveAuthKey(masterKey));
+
+    const login = await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, authKey }),
+    });
+    expect(login.status).toBe(200);
+
+    const freshVaultKey = await importVaultKey(
+      await open(await deriveWrappingKey(masterKey), login.body.wrappedVaultKey),
+    );
+
+    const list = await api("/api/items?since=0", { token: login.body.token });
+    const row = list.body.items.find((i: any) => i.id === itemId);
+    expect(await openJson(freshVaultKey, { ciphertext: row.ciphertext, nonce: row.nonce })).toEqual(
       itemPlain,
     );
   });

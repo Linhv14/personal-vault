@@ -85,11 +85,34 @@ npm run build
 Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**
 and select `dist/extension`.
 
-On first run the popup asks for your Worker URL, your email, the registration
-token from `.secrets.local.txt`, and a master password.
+The popup opens on **New vault**. The server address is already filled in — the
+deploy records your Worker URL and the build bakes it into the extension — so
+you only supply your email, the registration token from `.secrets.local.txt`,
+and a master password.
 
 > `REGISTRATION_TOKEN` is what stops strangers creating accounts on your Worker.
 > Without it, your URL is an open signup page.
+
+## Setting up another machine
+
+Clone, `npm install`, `npm run build`, load `dist/extension`, then choose
+**Sign in** instead of New vault. You need three things:
+
+- the server address — already filled in if you deployed from this checkout,
+  otherwise copy it from `npm run status`
+- your email
+- your master password
+
+**No registration token.** It exists only to gate account creation, so a second
+machine never needs it. Everything else — items, 2FA secrets, notes — is pulled
+down encrypted and decrypted locally with the key your master password unwraps.
+
+Losing every device loses nothing: the vault lives in your D1 database, and
+email plus master password is enough to reach it again. Losing the master
+password loses everything, because nothing else can unwrap the vault key.
+
+`test/e2e.test.ts` covers exactly this path against a real Worker, starting from
+a client that holds no cached state.
 
 ## Commands
 

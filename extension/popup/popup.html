@@ -8,7 +8,11 @@
   <body>
     <section id="screen-setup" hidden>
       <h1 data-i18n="setup.title"></h1>
-      <p class="hint" data-i18n="setup.hint"></p>
+      <div class="tabs">
+        <button class="tab active" id="setup-mode-create" data-i18n="setup.mode_create"></button>
+        <button class="tab" id="setup-mode-signin" data-i18n="setup.mode_signin"></button>
+      </div>
+      <p class="hint" id="setup-hint"></p>
       <form id="form-setup">
         <label
           ><span data-i18n="setup.server"></span
@@ -40,12 +44,6 @@
           ><input name="confirm" type="password" autocomplete="new-password" required
         /></label>
         <button class="primary" type="submit" data-i18n="setup.create"></button>
-        <button
-          type="button"
-          class="link"
-          id="setup-switch-login"
-          data-i18n="setup.switch_to_login"
-        ></button>
       </form>
       <p class="error" id="setup-error" hidden></p>
     </section>

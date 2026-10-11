@@ -8,7 +8,7 @@
 
 import { build } from "esbuild";
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -18,7 +18,23 @@ const outExtension = path.join(root, "dist", "extension");
 const watch = process.argv.includes("--watch");
 const dev = watch || process.argv.includes("--dev");
 
+/**
+ * The Worker URL of the last deployment, baked into the extension so a fresh
+ * install does not ask the user to retype the address of their own server.
+ * Empty when the project has never been deployed from this checkout.
+ */
+function deployedServerUrl() {
+  const state = path.join(root, ".cf-state.json");
+  if (!existsSync(state)) return "";
+  try {
+    return JSON.parse(readFileSync(state, "utf8")).workerUrl ?? "";
+  } catch {
+    return "";
+  }
+}
+
 const common = {
+  define: { __VAULT_DEFAULT_SERVER__: JSON.stringify(deployedServerUrl()) },
   bundle: true,
   format: "esm",
   target: "es2022",

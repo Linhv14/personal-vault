@@ -12,11 +12,22 @@
 import { build } from "esbuild";
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile, cp } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, "dist", "preview");
 const port = Number(process.env.PORT ?? 8788);
+
+function deployedServerUrl() {
+  const state = path.join(root, ".cf-state.json");
+  if (!existsSync(state)) return "";
+  try {
+    return JSON.parse(readFileSync(state, "utf8")).workerUrl ?? "";
+  } catch {
+    return "";
+  }
+}
 
 await mkdir(out, { recursive: true });
 
@@ -28,6 +39,8 @@ await build({
   target: "es2022",
   sourcemap: "inline",
   logLevel: "info",
+  // Same substitution the shipped build makes, so the preview shows what ships.
+  define: { __VAULT_DEFAULT_SERVER__: JSON.stringify(deployedServerUrl()) },
 });
 
 const html = await readFile(path.join(root, "extension", "popup", "popup.html"), "utf8");

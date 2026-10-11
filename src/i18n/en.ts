@@ -83,7 +83,11 @@ export const en = {
 
   // --- Setup ---------------------------------------------------------------
   "setup.title": "Set up",
-  "setup.hint":
+  "setup.mode_create": "New vault",
+  "setup.mode_signin": "Sign in",
+  "setup.hint_signin":
+    "Setting up another machine. You need the same server address, email and master password — the registration token is only for creating a vault.",
+  "setup.hint_create":
     "One-time setup. Your master password is never stored anywhere and cannot be recovered — if you forget it, the vault is gone.",
   "setup.server": "Server address",
   "setup.email": "Email",
@@ -92,8 +96,6 @@ export const en = {
   "setup.confirm": "Confirm",
   "setup.create": "Create vault",
   "setup.sign_in": "Sign in",
-  "setup.switch_to_login": "I already have an account on this server",
-  "setup.switch_to_register": "Create a new vault",
   "setup.password_mismatch": "The two master passwords do not match",
   "setup.permission_denied": "Access to the server must be granted to continue",
   "setup.working": "Working… (deriving the key takes a few seconds)",

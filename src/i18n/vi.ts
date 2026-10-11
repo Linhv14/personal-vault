@@ -83,7 +83,11 @@ export const vi: Catalogue = {
 
   // --- Setup ---------------------------------------------------------------
   "setup.title": "Thiết lập",
-  "setup.hint":
+  "setup.mode_create": "Vault mới",
+  "setup.mode_signin": "Đăng nhập",
+  "setup.hint_signin":
+    "Thiết lập trên máy khác. Bạn cần đúng địa chỉ server, email và master password — token đăng ký chỉ dùng khi tạo vault.",
+  "setup.hint_create":
     "Chỉ làm một lần. Master password không được lưu ở đâu cả và không khôi phục được — quên là mất toàn bộ vault.",
   "setup.server": "Địa chỉ server",
   "setup.email": "Email",
@@ -92,8 +96,6 @@ export const vi: Catalogue = {
   "setup.confirm": "Nhập lại",
   "setup.create": "Tạo vault",
   "setup.sign_in": "Đăng nhập",
-  "setup.switch_to_login": "Đã có account trên server này",
-  "setup.switch_to_register": "Tạo vault mới",
   "setup.password_mismatch": "Hai lần nhập master password không giống nhau",
   "setup.permission_denied": "Cần cấp quyền truy cập server mới dùng được",
   "setup.working": "Đang xử lý… (dẫn xuất khoá mất vài giây)",
