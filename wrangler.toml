@@ -1,0 +1,30 @@
+name = "personal-vault"
+main = "src/worker/index.ts"
+compatibility_date = "2025-10-01"
+
+# Trang xem link share là tài sản tĩnh; Worker chỉ xử lý /api/* và /s/*.
+[assets]
+directory = "./dist/public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vault"
+# Thay bằng id thật sau khi chạy: npx wrangler d1 create vault
+database_id = "PLACEHOLDER_CHAY_WRANGLER_D1_CREATE"
+migrations_dir = "migrations"
+
+# Dọn link share đã hết hạn. Không có cron thì ciphertext hết hạn vẫn nằm trong
+# D1 mãi — vẫn không giải mã được, nhưng giữ dữ liệu không cần thiết là rủi ro.
+[triggers]
+crons = ["17 * * * *"]
+
+[observability]
+enabled = true
+
+# Secrets (đặt bằng `npx wrangler secret put <TÊN>`, không ghi vào file này):
+#   REGISTRATION_TOKEN — chuỗi bí mật bắt buộc khi gọi /api/auth/register.
+#                        Không có nó thì bất cứ ai cũng tạo được account trên
+#                        Worker của bạn.
+#   EMAIL_PROBE_SECRET — khoá HMAC dùng sinh KDF params giả cho email không tồn
+#                        tại, để không ai dò được email nào đã đăng ký.
