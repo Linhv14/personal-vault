@@ -72,19 +72,28 @@ async function buildExtension() {
   }
 }
 
-// `wrangler dev` holds a handle on dist/public while running, so rmdir reports
-// EBUSY on Windows. In that case clear the contents instead.
-try {
-  await rm(path.join(root, "dist"), { recursive: true, force: true });
-} catch (error) {
-  if (error.code !== "EBUSY" && error.code !== "EPERM") throw error;
-  for (const dir of [outPublic, outExtension]) {
-    if (!existsSync(dir)) continue;
+/**
+ * Clean only this script's own outputs, never all of dist/: other tooling
+ * (scripts/preview.mjs) writes siblings there, and wiping them makes a running
+ * preview server start returning 404 the moment someone runs a build.
+ *
+ * `wrangler dev` keeps a handle on dist/public while running, which makes rmdir
+ * fail with EBUSY on Windows; in that case clear the contents instead.
+ */
+async function clean(dir) {
+  if (!existsSync(dir)) return;
+  try {
+    await rm(dir, { recursive: true, force: true });
+  } catch (error) {
+    if (error.code !== "EBUSY" && error.code !== "EPERM") throw error;
     for (const entry of await readdir(dir)) {
       await rm(path.join(dir, entry), { recursive: true, force: true });
     }
   }
 }
+
+await clean(outPublic);
+await clean(outExtension);
 
 await buildSharePage();
 await buildExtension();

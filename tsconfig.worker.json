@@ -1,7 +1,7 @@
 {
-  // Cấu hình cho Cloudflare Worker. Không có lib DOM ở đây — nếu một file worker
-  // vô tình dùng `document` hay `localStorage`, ta muốn biết ngay lúc typecheck
-  // chứ không phải lúc Worker chạy thật.
+  // Cloudflare Worker project. No DOM lib on purpose: if a Worker file reaches
+  // for `document` or `localStorage`, that should fail at typecheck rather than
+  // at runtime.
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
