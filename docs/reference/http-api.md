@@ -196,6 +196,18 @@ value, ciphertext at most 64 KiB.
 
 Writing to a deleted item's id restores it.
 
+### `POST /api/items/batch`
+
+Create up to 100 new items in one request, for imports. Body:
+`{ "items": [{ "id": uuid, "ciphertext": string, "nonce": string }] }`.
+
+Returns `{ "updatedAt": number, "created": string[] }`. An id that already
+exists, in this account or another, is left untouched and is missing from
+`created`. Errors: `400 items.invalid_id`, `400 items.invalid_payload` (empty,
+more than 100, or a malformed item), `403 items.quota_exceeded` when the batch
+would take the account past its item limit. The whole batch counts as one
+write for rate limiting.
+
 ### `DELETE /api/items/:id`
 
 Replaces the item with a tombstone. Returns `{ "id": string, "deletedAt": number }`,

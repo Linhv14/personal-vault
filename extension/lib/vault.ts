@@ -131,6 +131,58 @@ export async function saveItem(
   return { ...payload, updatedAt };
 }
 
+export type ItemDraft = Omit<VaultItem, "id" | "createdAt" | "updatedAt"> & { createdAt?: number };
+
+const IMPORT_BATCH_SIZE = 100;
+
+export function duplicateKey(item: Pick<VaultItem, "title" | "url" | "username" | "password">) {
+  const site = (item.url && registrableDomain(item.url)) || item.title.trim().toLowerCase();
+  return [site, item.username ?? "", item.password ?? ""].join("\n");
+}
+
+export async function importItems(
+  key: CryptoKey,
+  drafts: ItemDraft[],
+  onProgress: (saved: number) => void = () => {},
+): Promise<number> {
+  const now = Math.floor(Date.now() / 1000);
+  let saved = 0;
+  for (let start = 0; start < drafts.length; start += IMPORT_BATCH_SIZE) {
+    const chunk = drafts.slice(start, start + IMPORT_BATCH_SIZE).map((draft) => ({
+      ...draft,
+      id: newItemId(),
+      createdAt: draft.createdAt ?? now,
+      updatedAt: now,
+    }));
+    const sealed = await Promise.all(
+      chunk.map(async (item) => ({
+        id: item.id,
+        ...(await sealJson(key, item, itemAssociatedData(item.id))),
+      })),
+    );
+    const { updatedAt, created } = await api.createItems(sealed);
+    const createdIds = new Set(created);
+    const { items = [] } = await getLocal();
+    await setLocal({
+      items: [
+        ...items,
+        ...sealed
+          .filter(({ id }) => createdIds.has(id))
+          .map(({ id, ciphertext, nonce }) => ({
+            id,
+            ciphertext,
+            nonce,
+            updatedAt,
+            deletedAt: null,
+          })),
+      ],
+    });
+    saved += createdIds.size;
+    onProgress(saved);
+  }
+  return saved;
+}
+
 export async function removeItem(id: string): Promise<void> {
   const { deletedAt } = await api.deleteItem(id);
   await upsertCache({ id, ciphertext: null, nonce: null, updatedAt: deletedAt, deletedAt });

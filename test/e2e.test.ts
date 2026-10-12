@@ -252,6 +252,54 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect(put.body.code).toBe("items.forbidden");
   });
 
+  describe("batch import", () => {
+    async function sealedBatch(count: number) {
+      return Promise.all(
+        Array.from({ length: count }, async (_, index) => ({
+          id: crypto.randomUUID(),
+          ...(await sealJson(vaultKey, { title: `imported ${index}` })),
+        })),
+      );
+    }
+
+    it("creates new items in one request and never overwrites existing ones", async () => {
+      const batch = await sealedBatch(3);
+      const first = await api("/api/items/batch", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ items: batch }),
+      });
+      expect(first.status).toBe(200);
+      expect(first.body.created.sort()).toEqual(batch.map((item) => item.id).sort());
+
+      const again = await api("/api/items/batch", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ items: [{ ...batch[0], ciphertext: batch[1]!.ciphertext }] }),
+      });
+      expect(again.body.created).toEqual([]);
+
+      const list = await api("/api/items?since=0", { token });
+      const stored = list.body.items.find((row: any) => row.id === batch[0]!.id);
+      expect(stored.ciphertext).toBe(batch[0]!.ciphertext);
+    });
+
+    it("rejects empty, oversized and malformed batches", async () => {
+      for (const items of [
+        [],
+        await sealedBatch(101),
+        [{ id: "not-a-uuid", ciphertext: "AA==", nonce: "AA==" }],
+      ]) {
+        const result = await api("/api/items/batch", {
+          method: "POST",
+          token,
+          body: JSON.stringify({ items }),
+        });
+        expect(result.status).toBe(400);
+      }
+    });
+  });
+
   describe("share links", () => {
     it("lets a recipient decrypt and compute the right 2FA code", async () => {
       const { sealed, fragment } = await createShare({

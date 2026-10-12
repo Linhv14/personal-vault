@@ -7,6 +7,7 @@ const items = new Hono<AppBindings>();
 
 const MAX_ITEM_BYTES = 64 * 1024;
 const MAX_ITEMS_PER_ACCOUNT = 5_000;
+const MAX_BATCH_ITEMS = 100;
 const UPDATED_AT_RESOLUTION_SECONDS = 1;
 
 function now(): number {
@@ -93,6 +94,51 @@ items.put("/:id", async (c) => {
 
   if (!result.meta.changes) return c.json(apiError("items.forbidden"), 403);
   return c.json({ id, updatedAt });
+});
+
+items.post("/batch", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { items?: unknown } | null;
+  const batch = Array.isArray(body?.items) ? body.items : null;
+  if (!batch || batch.length === 0 || batch.length > MAX_BATCH_ITEMS) {
+    return c.json(apiError("items.invalid_payload"), 400);
+  }
+  const rows = batch.map((entry: unknown) => (entry ?? {}) as Record<string, unknown>);
+  if (rows.some(({ id }) => typeof id !== "string" || !isUuid(id))) {
+    return c.json(apiError("items.invalid_id"), 400);
+  }
+  if (
+    rows.some(
+      ({ ciphertext, nonce }) => !isBase64(ciphertext, MAX_ITEM_BYTES) || !isBase64(nonce, 12),
+    )
+  ) {
+    return c.json(apiError("items.invalid_payload"), 400);
+  }
+
+  const { accountId } = c.get("session");
+  const live = await c.env.DB.prepare(
+    "SELECT count(*) AS live FROM items WHERE account_id = ? AND deleted_at IS NULL",
+  )
+    .bind(accountId)
+    .first<{ live: number }>();
+  if ((live?.live ?? 0) + rows.length > MAX_ITEMS_PER_ACCOUNT) {
+    return c.json(apiError("items.quota_exceeded"), 403);
+  }
+
+  const updatedAt = now();
+  const results = await c.env.DB.batch(
+    rows.map(({ id, ciphertext, nonce }) =>
+      c.env.DB.prepare(
+        `INSERT INTO items (id, account_id, ciphertext, nonce, updated_at, deleted_at)
+         VALUES (?, ?, ?, ?, ?, NULL)
+         ON CONFLICT(id) DO NOTHING`,
+      ).bind(id, accountId, ciphertext, nonce, updatedAt),
+    ),
+  );
+
+  return c.json({
+    updatedAt,
+    created: rows.filter((_, index) => (results[index]?.meta.changes ?? 0) > 0).map(({ id }) => id),
+  });
 });
 
 items.delete("/:id", async (c) => {

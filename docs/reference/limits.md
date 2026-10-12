@@ -13,7 +13,7 @@ are approximate by design. Exceeding one returns `429` with
 | --------------------- | ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
 | Anonymous requests    | 30 / minute | Client IP | `register`, `verify-email`, `prelogin`, `login`, `GET /api/shares/:id`, `POST /api/shares/:id/code`, `POST /api/shares/:id/open` | `wrangler.toml` |
 | Registration requests | 10 / minute | Client IP | `register`, `verify-email`                                                                                                       | `wrangler.toml` |
-| Account writes        | 60 / minute | Account   | `PUT` and `DELETE /api/items/:id`, `POST /api/shares`, `DELETE /api/shares/:id`                                                  | `wrangler.toml` |
+| Account writes        | 60 / minute | Account   | `PUT` and `DELETE /api/items/:id`, `POST /api/items/batch`, `POST /api/shares`, `DELETE /api/shares/:id`                         | `wrangler.toml` |
 
 ## Abuse limits
 
@@ -31,6 +31,7 @@ Exact, stored in D1.
 | Value                           | Limit                           | Defined in                    |
 | ------------------------------- | ------------------------------- | ----------------------------- |
 | Item ciphertext                 | 64 KiB decoded                  | `src/worker/routes/items.ts`  |
+| Items per import batch          | 100                             | `src/worker/routes/items.ts`  |
 | Share ciphertext                | 16 KiB decoded                  | `src/worker/routes/shares.ts` |
 | AES-GCM nonce                   | 12 bytes                        | `src/core/crypto.ts`          |
 | KDF iterations accepted         | 100,000 – 5,000,000             | `src/worker/routes/auth.ts`   |

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>1PW</title>
+    <link rel="icon" href="../icons/icon-32.png" />
+    <link rel="stylesheet" href="import.css" />
+  </head>
+  <body>
+    <main>
+      <header class="brand">
+        <img src="../icons/icon-48.png" width="28" height="28" alt="" />
+        <span class="wordmark"><span class="wordmark-accent">1</span>PW</span>
+      </header>
+
+      <h1 data-i18n="import.title"></h1>
+      <p class="lead" data-i18n="import.lead"></p>
+
+      <section id="state-locked" class="card" hidden>
+        <p data-i18n="import.locked"></p>
+      </section>
+
+      <section id="state-pick" class="card" hidden>
+        <ol class="steps">
+          <li data-i18n="import.step_export"></li>
+          <li data-i18n="import.step_format"></li>
+          <li data-i18n="import.step_choose"></li>
+        </ol>
+        <label class="button primary file">
+          <span data-i18n="import.choose_file"></span>
+          <input id="file" type="file" accept=".zip,.json,.csv" />
+        </label>
+        <p class="error" id="error" role="alert" hidden></p>
+      </section>
+
+      <section id="state-review" class="card" hidden>
+        <h2 id="review-title"></h2>
+        <ul class="summary" id="review-skipped"></ul>
+        <div class="actions">
+          <button class="button primary" id="confirm"></button>
+          <button class="button" id="cancel" data-i18n="import.choose_other"></button>
+        </div>
+      </section>
+
+      <section id="state-progress" class="card" hidden>
+        <h2 id="progress-title"></h2>
+        <progress id="progress" max="1" value="0"></progress>
+      </section>
+
+      <section id="state-done" class="card" hidden>
+        <h2 id="done-title"></h2>
+        <p class="warning" data-i18n="import.delete_file"></p>
+      </section>
+    </main>
+    <script type="module" src="import.js"></script>
+  </body>
+</html>

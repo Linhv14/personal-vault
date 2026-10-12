@@ -239,13 +239,15 @@ input:not([type="checkbox"], [type="radio"], [type="range"]):focus,
 textarea:focus,
 select:focus,
 .field-with-actions:focus-within,
-.chip-input:focus-within {
+.chip-input:focus-within,
+.search:focus-within {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-halo);
 }
 .field-with-actions input:focus,
-.chip-input input:focus {
+.chip-input input:focus,
+.search input:focus {
   border-color: transparent;
   box-shadow: none;
 }
@@ -469,6 +471,7 @@ button.primary.danger-fill:hover:not(:disabled) {
   gap: 6px;
   margin-right: 4px;
   padding: 0 10px;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--muted);

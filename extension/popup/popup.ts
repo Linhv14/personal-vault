@@ -1513,6 +1513,10 @@ $<HTMLFormElement>("form-delete-account").addEventListener("submit", async (even
   }
 });
 
+$("settings-import").addEventListener("click", () => {
+  void chrome.tabs.create({ url: chrome.runtime.getURL("import/import.html") });
+});
+
 $("settings-privacy").addEventListener("click", async () => {
   const { apiUrl } = await getLocal();
   if (apiUrl) await chrome.tabs.create({ url: `${apiUrl}/privacy` });

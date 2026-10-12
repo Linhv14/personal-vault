@@ -105,6 +105,7 @@ async function buildExtension() {
     "background.ts",
     "offscreen/offscreen.ts",
     "content/content.ts",
+    "import/import.ts",
   ]
     .map((file) => path.join(source, file))
     .filter((file) => existsSync(file));

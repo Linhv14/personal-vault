@@ -185,6 +185,12 @@ export async function putItem(id: string, sealed: SealedData): Promise<{ updated
   return request(`/api/items/${id}`, { method: "PUT", body: JSON.stringify(sealed) });
 }
 
+export async function createItems(
+  items: (SealedData & { id: string })[],
+): Promise<{ updatedAt: number; created: string[] }> {
+  return request("/api/items/batch", { method: "POST", body: JSON.stringify({ items }) });
+}
+
 export async function deleteItem(id: string): Promise<{ deletedAt: number }> {
   return request(`/api/items/${id}`, { method: "DELETE" });
 }

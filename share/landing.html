@@ -224,7 +224,8 @@
         margin-bottom: 10px;
         padding-left: 28px;
       }
-      .checks li::before {
+      .checks li::before,
+      .checks li::after {
         content: "";
         position: absolute;
         left: 0;
@@ -232,8 +233,13 @@
         width: 18px;
         height: 18px;
         border-radius: 50%;
-        background: var(--accent-soft)
-          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-9'/%3E%3C/svg%3E")
+      }
+      .checks li::before {
+        background: var(--accent-soft);
+      }
+      .checks li::after {
+        background: var(--accent);
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-9'/%3E%3C/svg%3E")
           center / 12px no-repeat;
       }
       .steps {
@@ -283,7 +289,7 @@
       .note {
         margin: 24px 0 0;
         padding: 14px 16px;
-        border-left: 3px solid var(--warn);
+        border-radius: var(--radius);
         background: var(--warn-soft);
         font-size: 15px;
       }

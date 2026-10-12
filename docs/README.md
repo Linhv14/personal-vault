@@ -15,6 +15,7 @@ it teaches, instructs, describes or explains.
 | Page                                                                     | Goal                                                           |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | [Add another device](how-to/add-another-device.md)                       | Use the same vault on a second computer or browser profile     |
+| [Import from Proton Pass](how-to/import-from-proton-pass.md)             | Bring existing logins, notes and 2FA secrets into 1PW          |
 | [Run a shared server](how-to/run-a-shared-server.md)                     | Let other people sign up, with email verification and a domain |
 | [Back up and restore](how-to/back-up-and-restore.md)                     | Survive a lost database, a bad deploy or a lost secret         |
 | [Rotate secrets](how-to/rotate-secrets.md)                               | Replace a leaked token or API key without locking anyone out   |

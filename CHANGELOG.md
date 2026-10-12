@@ -10,6 +10,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Import from Proton Pass (JSON, CSV or the export archive) from Settings,
+  with a summary before anything is saved and duplicates skipped.
+- `POST /api/items/batch` creates up to 100 items in one request.
 - Landing page at `/` and `/vi`, with a downloadable beta of the extension
   built for the server it is served from.
 
@@ -46,6 +49,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- The search field showed its focus ring around the input only, leaving the
+  icon outside.
 - The privacy policy said the server never sends email and that Cloudflare
   was the only third party; sign-up codes go out through Resend. The policy
   is rewritten with a data inventory, providers, retention and rights.
