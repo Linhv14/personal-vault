@@ -132,11 +132,7 @@ export const vi: Catalogue = {
   "list.all": "Tất cả",
   "list.results": "Kết quả ({count})",
   "list.empty": "Chưa có gì. Bấm + để thêm.",
-  "list.syncing": "Đang đồng bộ…",
-  "list.synced": "Đã đồng bộ",
-  "list.synced_changes": "Đã đồng bộ {count} thay đổi",
   "list.offline": "Offline · đang xem bản đã lưu",
-  "list.sync_error": "Lỗi đồng bộ",
   "list.clock_skew":
     "Đồng hồ máy {direction} {seconds} giây. Mã 2FA vẫn đúng, nhưng nên chỉnh lại giờ.",
   "list.clock_behind": "chậm",

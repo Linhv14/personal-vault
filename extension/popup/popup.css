@@ -618,11 +618,49 @@ button.primary.danger-fill {
   margin: 0;
 }
 
-footer {
-  margin-top: 12px;
-  text-align: center;
-  font-size: 11.5px;
+.sync-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+  background: var(--accent-soft);
+}
+.sync-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--accent);
+  animation: sync-slide 1s ease-in-out infinite;
+}
+@keyframes sync-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+.sync-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface);
   color: var(--muted);
+  font-size: 12.5px;
+}
+.sync-notice.failed {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+}
+.sync-notice .icon {
+  width: 16px;
+  height: 16px;
 }
 
 .field-with-actions {

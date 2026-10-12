@@ -222,24 +222,34 @@ $("autofill-promo-close").addEventListener("click", async () => {
   await setLocal({ autofillPromoDismissed: true });
 });
 
+const SYNC_BAR_DELAY_MS = 300;
+
+function showSyncProblem(kind: "offline" | "failed" | null, message = ""): void {
+  const notice = $("sync-notice");
+  notice.hidden = kind === null;
+  notice.classList.toggle("failed", kind === "failed");
+  notice.replaceChildren(icon(kind === "failed" ? "alert" : "cloud-off"), message);
+}
+
 async function backgroundSync(): Promise<void> {
-  const status = $("sync-status");
-  status.textContent = t("list.syncing");
+  const bar = setTimeout(() => ($("sync-bar").hidden = false), SYNC_BAR_DELAY_MS);
   try {
     const synced = await sync();
     if (synced === null) {
-      status.textContent = t("list.offline");
+      showSyncProblem("offline", t("list.offline"));
     } else {
+      showSyncProblem(null);
       const changed = synced + (vaultKey ? await migrateUnboundItems(vaultKey) : 0);
       if (changed > 0 && vaultKey) {
         items = await decryptAll(vaultKey, locale);
         renderList();
       }
-      status.textContent =
-        changed > 0 ? t("list.synced_changes", { count: changed }) : t("list.synced");
     }
   } catch (error) {
-    status.textContent = describeError(error, t);
+    showSyncProblem("failed", describeError(error, t));
+  } finally {
+    clearTimeout(bar);
+    $("sync-bar").hidden = true;
   }
 
   const skew = await api.measureClockSkew();

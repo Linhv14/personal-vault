@@ -19,6 +19,8 @@ const ICONS = {
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13 7 4 4"/>',
   back: '<path d="m15 6-6 6 6 6"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
+  "cloud-off":
+    '<path d="M7 18h10a4 4 0 0 0 1.2-7.8A6 6 0 0 0 7.1 8.6 4.7 4.7 0 0 0 7 18z"/><path d="M3 3l18 18"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   "link-off":
     '<path d="M9 15l6-6"/><path d="M11 6l1.5-1.5a4.2 4.2 0 0 1 6 6L17 12M13 18l-1.5 1.5a4.2 4.2 0 0 1-6-6L7 12"/><path d="M3 3l18 18"/>',

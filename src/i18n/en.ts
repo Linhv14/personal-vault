@@ -132,11 +132,7 @@ export const en = {
   "list.all": "All",
   "list.results": "Results ({count})",
   "list.empty": "Nothing here yet. Press + to add one.",
-  "list.syncing": "Syncing…",
-  "list.synced": "Synced",
-  "list.synced_changes": "Synced {count} changes",
   "list.offline": "Offline · showing the saved copy",
-  "list.sync_error": "Sync failed",
   "list.clock_skew":
     "This clock is {seconds}s {direction}. 2FA codes still work, but fix the system time.",
   "list.clock_behind": "behind",
