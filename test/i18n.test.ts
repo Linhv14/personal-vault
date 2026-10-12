@@ -73,7 +73,7 @@ describe("message catalogues", () => {
 describe("createTranslator", () => {
   it("substitutes placeholders", () => {
     const t = createTranslator("en");
-    expect(t("gen.entropy", { bits: 82.7, strength: "strong" })).toBe("82.7 bits — strong");
+    expect(t("gen.entropy", { bits: 82.7, strength: "strong" })).toBe("82.7 bits · strong");
   });
 
   it("leaves an unknown placeholder visible rather than blanking it", () => {

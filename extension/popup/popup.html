@@ -6,15 +6,27 @@
     <title>Personal Vault</title>
   </head>
   <body>
-    <section id="screen-setup" hidden>
-      <h1 data-i18n="setup.title"></h1>
-      <div class="tabs">
+    <section id="screen-setup" class="screen" hidden>
+      <div class="brand">
+        <span class="brand-mark"><i data-icon="shield"></i></span>
+        <h1>Personal Vault</h1>
+        <p class="tagline" data-i18n="setup.tagline"></p>
+      </div>
+      <div class="segmented">
         <button class="tab active" id="setup-mode-create" data-i18n="setup.mode_create"></button>
         <button class="tab" id="setup-mode-signin" data-i18n="setup.mode_signin"></button>
       </div>
-      <p class="hint" id="setup-hint"></p>
-      <form id="form-setup">
-        <label
+      <form id="form-setup" class="stack">
+        <div class="server-summary" id="setup-server-summary" hidden>
+          <span id="setup-server-host"></span>
+          <button
+            type="button"
+            class="link"
+            id="setup-server-change"
+            data-i18n="setup.server_change"
+          ></button>
+        </div>
+        <label id="setup-server-field"
           ><span data-i18n="setup.server"></span
           ><input
             name="apiUrl"
@@ -43,57 +55,74 @@
           ><span data-i18n="setup.confirm"></span
           ><input name="confirm" type="password" autocomplete="new-password" required
         /></label>
+        <p class="hint" id="setup-hint"></p>
         <button class="primary" type="submit" data-i18n="setup.create"></button>
       </form>
       <p class="error" id="setup-error" hidden></p>
     </section>
 
-    <section id="screen-unlock" hidden>
-      <h1 data-i18n="unlock.title"></h1>
-      <p class="hint" id="unlock-email"></p>
-      <form id="form-unlock">
-        <label
-          ><span data-i18n="setup.master_password"></span
-          ><input
-            name="password"
-            type="password"
-            autocomplete="current-password"
-            required
-            autofocus
-        /></label>
+    <section id="screen-unlock" class="screen" hidden>
+      <div class="brand">
+        <span class="brand-mark"><i data-icon="lock"></i></span>
+        <h1 data-i18n="unlock.title"></h1>
+        <p class="tagline" id="unlock-email"></p>
+      </div>
+      <form id="form-unlock" class="stack">
+        <input
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          data-i18n-placeholder="setup.master_password"
+          required
+          autofocus
+        />
         <button class="primary" type="submit" data-i18n="unlock.submit"></button>
       </form>
       <p class="error" id="unlock-error" hidden></p>
-      <button type="button" class="link" id="unlock-reset" data-i18n="unlock.reset"></button>
+      <button type="button" class="link quiet" id="unlock-reset" data-i18n="unlock.reset"></button>
     </section>
 
-    <section id="screen-list" hidden>
-      <header>
-        <input id="search" type="search" autocomplete="off" data-i18n-placeholder="list.search" />
-        <button id="btn-add" data-i18n-title="list.add">+</button>
-        <button id="btn-generator" data-i18n-title="list.generator">⚿</button>
-        <button id="btn-settings" data-i18n-title="list.settings">⚙</button>
+    <section id="screen-list" class="screen" hidden>
+      <header class="toolbar">
+        <label class="search">
+          <i data-icon="search"></i>
+          <input id="search" type="search" autocomplete="off" data-i18n-placeholder="list.search" />
+        </label>
+        <button class="icon-button" id="btn-add" data-i18n-title="list.add">
+          <i data-icon="plus"></i>
+        </button>
+        <button class="icon-button" id="btn-generator" data-i18n-title="list.generator">
+          <i data-icon="dice"></i>
+        </button>
+        <button class="icon-button" id="btn-settings" data-i18n-title="list.settings">
+          <i data-icon="sliders"></i>
+        </button>
+        <button class="icon-button" id="btn-lock" data-i18n-title="list.lock_now">
+          <i data-icon="lock"></i>
+        </button>
       </header>
       <p class="warn" id="clock-warning" hidden></p>
       <div id="matching-section" hidden>
         <h2 id="matching-title"></h2>
-        <div id="matching-list"></div>
+        <div class="list" id="matching-list"></div>
       </div>
       <h2 id="all-title"></h2>
-      <div id="all-list"></div>
-      <p class="hint" id="list-empty" data-i18n="list.empty" hidden></p>
-      <footer>
-        <span id="sync-status"></span>
-        <button class="link" id="btn-lock" data-i18n="list.lock_now"></button>
-      </footer>
+      <div class="list" id="all-list"></div>
+      <div class="empty" id="list-empty" hidden>
+        <span class="brand-mark"><i data-icon="shield"></i></span>
+        <p data-i18n="list.empty"></p>
+      </div>
+      <footer><span id="sync-status"></span></footer>
     </section>
 
-    <section id="screen-edit" hidden>
-      <header>
-        <button class="link" id="edit-back" data-i18n="common.back"></button>
+    <section id="screen-edit" class="screen" hidden>
+      <header class="title-bar">
+        <button class="icon-button" id="edit-back" data-i18n-title="common.back">
+          <i data-icon="back"></i>
+        </button>
         <h1 id="edit-title"></h1>
       </header>
-      <form id="form-edit">
+      <form id="form-edit" class="stack">
         <label
           ><span data-i18n="edit.name"></span><input name="title" required autocomplete="off"
         /></label>
@@ -106,27 +135,43 @@
         /></label>
         <label>
           <span data-i18n="common.password"></span>
-          <span class="with-button">
+          <span class="field-with-actions">
             <input name="password" type="password" autocomplete="off" />
-            <button type="button" id="edit-reveal" data-i18n-title="edit.reveal">👁</button>
-            <button type="button" id="edit-generate" data-i18n-title="edit.regenerate">⟳</button>
+            <button
+              type="button"
+              class="icon-button"
+              id="edit-reveal"
+              data-i18n-title="edit.reveal"
+            >
+              <i data-icon="eye"></i>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              id="edit-generate"
+              data-i18n-title="edit.regenerate"
+            >
+              <i data-icon="refresh"></i>
+            </button>
           </span>
         </label>
         <label>
           <span data-i18n="edit.totp_secret"></span>
-          <span class="with-button">
+          <span class="field-with-actions">
             <input name="totp" autocomplete="off" data-i18n-placeholder="edit.totp_placeholder" />
-            <button type="button" id="edit-scan" data-i18n-title="edit.scan">⛶</button>
+            <button type="button" class="icon-button" id="edit-scan" data-i18n-title="edit.scan">
+              <i data-icon="scan"></i>
+            </button>
           </span>
         </label>
         <p class="hint" id="edit-totp-hint"></p>
         <label
-          ><span data-i18n="common.note"></span><textarea name="note" rows="3"></textarea>
+          ><span data-i18n="common.note"></span><textarea name="note" rows="2"></textarea>
         </label>
         <button class="primary" type="submit" data-i18n="edit.save"></button>
         <button
           type="button"
-          class="danger link"
+          class="link danger"
           id="edit-delete"
           data-i18n="edit.delete"
           hidden
@@ -135,88 +180,107 @@
       <p class="error" id="edit-error" hidden></p>
     </section>
 
-    <section id="screen-generator" hidden>
-      <header>
-        <button class="link" id="gen-back" data-i18n="common.back"></button>
+    <section id="screen-generator" class="screen" hidden>
+      <header class="title-bar">
+        <button class="icon-button" id="gen-back" data-i18n-title="common.back">
+          <i data-icon="back"></i>
+        </button>
         <h1 data-i18n="gen.title"></h1>
       </header>
       <div class="gen-output">
         <code id="gen-value"></code>
-        <button id="gen-copy" data-i18n="common.copy"></button>
-        <button id="gen-again" data-i18n-title="gen.regenerate">⟳</button>
+        <div class="gen-footer">
+          <span class="meter"><span id="gen-meter"></span></span>
+          <span id="gen-entropy"></span>
+          <button class="icon-button" id="gen-again" data-i18n-title="gen.regenerate">
+            <i data-icon="refresh"></i>
+          </button>
+          <button class="icon-button" id="gen-copy" data-i18n-title="common.copy">
+            <i data-icon="copy"></i>
+          </button>
+        </div>
       </div>
-      <p class="hint" id="gen-entropy"></p>
-      <div class="tabs">
+      <div class="segmented">
         <button class="tab active" data-mode="password" data-i18n="gen.mode_random"></button>
         <button class="tab" data-mode="passphrase" data-i18n="gen.mode_passphrase"></button>
         <button class="tab" data-mode="pin" data-i18n="gen.mode_pin"></button>
       </div>
-      <div id="gen-options-password">
+      <div class="options" id="gen-options-password">
         <label class="range"
-          ><span data-i18n="gen.length"></span><output id="gen-length-out"></output
-          ><input id="gen-length" type="range" min="8" max="64" value="20"
+          ><span data-i18n="gen.length"></span
+          ><input id="gen-length" type="range" min="8" max="64" value="20" /><output
+            id="gen-length-out"
+          ></output
+        ></label>
+        <label class="check"
+          ><span data-i18n="gen.uppercase"></span><input id="gen-upper" type="checkbox" checked
         /></label>
         <label class="check"
-          ><input id="gen-upper" type="checkbox" checked /> <span data-i18n="gen.uppercase"></span
-        ></label>
+          ><span data-i18n="gen.digits"></span><input id="gen-digits" type="checkbox" checked
+        /></label>
         <label class="check"
-          ><input id="gen-digits" type="checkbox" checked /> <span data-i18n="gen.digits"></span
-        ></label>
+          ><span data-i18n="gen.symbols"></span><input id="gen-symbols" type="checkbox" checked
+        /></label>
         <label class="check"
-          ><input id="gen-symbols" type="checkbox" checked /> <span data-i18n="gen.symbols"></span
-        ></label>
-        <label class="check"
-          ><input id="gen-unambiguous" type="checkbox" />
-          <span data-i18n="gen.exclude_ambiguous"></span
-        ></label>
+          ><span data-i18n="gen.exclude_ambiguous"></span
+          ><input id="gen-unambiguous" type="checkbox"
+        /></label>
       </div>
-      <div id="gen-options-passphrase" hidden>
+      <div class="options" id="gen-options-passphrase" hidden>
         <label class="range"
-          ><span data-i18n="gen.words"></span><output id="gen-words-out"></output
-          ><input id="gen-words" type="range" min="4" max="12" value="8"
+          ><span data-i18n="gen.words"></span
+          ><input id="gen-words" type="range" min="4" max="12" value="8" /><output
+            id="gen-words-out"
+          ></output
+        ></label>
+        <label class="check"
+          ><span data-i18n="gen.capitalize"></span><input id="gen-capitalize" type="checkbox"
         /></label>
         <label class="check"
-          ><input id="gen-capitalize" type="checkbox" /> <span data-i18n="gen.capitalize"></span
-        ></label>
-        <label class="check"
-          ><input id="gen-append-digit" type="checkbox" /> <span data-i18n="gen.append_digit"></span
-        ></label>
+          ><span data-i18n="gen.append_digit"></span><input id="gen-append-digit" type="checkbox"
+        /></label>
       </div>
-      <div id="gen-options-pin" hidden>
+      <div class="options" id="gen-options-pin" hidden>
         <label class="range"
-          ><span data-i18n="gen.pin_digits"></span><output id="gen-pin-out"></output
-          ><input id="gen-pin" type="range" min="4" max="12" value="6"
-        /></label>
+          ><span data-i18n="gen.pin_digits"></span
+          ><input id="gen-pin" type="range" min="4" max="12" value="6" /><output
+            id="gen-pin-out"
+          ></output
+        ></label>
       </div>
     </section>
 
-    <section id="screen-share" hidden>
-      <header>
-        <button class="link" id="share-back" data-i18n="common.back"></button>
+    <section id="screen-share" class="screen" hidden>
+      <header class="title-bar">
+        <button class="icon-button" id="share-back" data-i18n-title="common.back">
+          <i data-icon="back"></i>
+        </button>
         <h1 data-i18n="share.title"></h1>
+        <span class="subtitle" id="share-item"></span>
       </header>
-      <p class="hint" id="share-item"></p>
-      <form id="form-share">
-        <label>
-          <span data-i18n="share.expires_in"></span>
-          <select name="ttl">
-            <option value="3600" data-i18n="share.ttl_1h"></option>
-            <option value="86400" selected data-i18n="share.ttl_24h"></option>
-            <option value="604800" data-i18n="share.ttl_7d"></option>
-          </select>
-        </label>
-        <label>
-          <span data-i18n="share.max_views"></span>
-          <select name="maxViews">
-            <option value="1" selected data-i18n="share.views_1"></option>
-            <option value="3" data-i18n="share.views_3"></option>
-            <option value="10" data-i18n="share.views_10"></option>
-          </select>
-        </label>
+      <form id="form-share" class="stack">
+        <div class="row-2">
+          <label>
+            <span data-i18n="share.expires_in"></span>
+            <select name="ttl">
+              <option value="3600" data-i18n="share.ttl_1h"></option>
+              <option value="86400" selected data-i18n="share.ttl_24h"></option>
+              <option value="604800" data-i18n="share.ttl_7d"></option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="share.max_views"></span>
+            <select name="maxViews">
+              <option value="1" selected data-i18n="share.views_1"></option>
+              <option value="3" data-i18n="share.views_3"></option>
+              <option value="10" data-i18n="share.views_10"></option>
+            </select>
+          </label>
+        </div>
         <label class="check"
-          ><input type="checkbox" name="includeTotp" checked />
-          <span data-i18n="share.include_totp"></span
-        ></label>
+          ><span data-i18n="share.include_totp"></span
+          ><input type="checkbox" name="includeTotp" checked
+        /></label>
         <label
           ><span data-i18n="share.passphrase"></span
           ><input
@@ -225,52 +289,70 @@
             autocomplete="off"
             data-i18n-placeholder="share.passphrase_placeholder"
         /></label>
-        <p class="hint" data-i18n="share.channel_warning"></p>
         <button class="primary" type="submit" data-i18n="share.create"></button>
       </form>
-      <div id="share-result" hidden>
-        <label
-          ><span data-i18n="share.link"></span
-          ><textarea id="share-url" rows="3" readonly></textarea>
-        </label>
+      <div id="share-result" class="stack" hidden>
+        <textarea id="share-url" rows="3" readonly></textarea>
         <button class="primary" id="share-copy" data-i18n="share.copy_link"></button>
-        <p class="warn" id="share-note"></p>
+        <p class="hint" id="share-note"></p>
       </div>
       <p class="error" id="share-error" hidden></p>
     </section>
 
-    <section id="screen-settings" hidden>
-      <header>
-        <button class="link" id="settings-back" data-i18n="common.back"></button>
+    <section id="screen-settings" class="screen" hidden>
+      <header class="title-bar">
+        <button class="icon-button" id="settings-back" data-i18n-title="common.back">
+          <i data-icon="back"></i>
+        </button>
         <h1 data-i18n="settings.title"></h1>
       </header>
-      <label class="range"
-        ><span data-i18n="settings.auto_lock"></span><output id="settings-lock-out"></output
-        ><input id="settings-lock" type="range" min="1" max="120"
-      /></label>
-      <label
-        ><span data-i18n="settings.language"></span
-        ><select id="settings-locale"></select
-      ></label>
-      <p class="hint" id="settings-info"></p>
-      <button id="settings-change-password" data-i18n="settings.change_password"></button>
-      <form id="form-change-password" hidden>
-        <label
-          ><span data-i18n="settings.current_password"></span
-          ><input name="current" type="password" autocomplete="off" required
-        /></label>
-        <label
-          ><span data-i18n="settings.new_password"></span
-          ><input name="next" type="password" minlength="12" autocomplete="off" required
-        /></label>
-        <label
-          ><span data-i18n="setup.confirm"></span
-          ><input name="confirm" type="password" autocomplete="off" required
-        /></label>
-        <p class="hint" data-i18n="settings.change_hint"></p>
-        <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
-      </form>
-      <button class="danger" id="settings-logout" data-i18n="settings.logout"></button>
+      <div class="group">
+        <label class="range"
+          ><span data-i18n="settings.auto_lock"></span
+          ><input id="settings-lock" type="range" min="1" max="120" /><output
+            id="settings-lock-out"
+          ></output
+        ></label>
+        <label class="check"
+          ><span data-i18n="settings.language"></span
+          ><select id="settings-locale"></select
+        ></label>
+      </div>
+      <div class="group">
+        <button
+          class="row-button"
+          id="settings-change-password"
+          data-i18n="settings.change_password"
+        ></button>
+        <form id="form-change-password" class="stack" hidden>
+          <input
+            name="current"
+            type="password"
+            autocomplete="off"
+            data-i18n-placeholder="settings.current_password"
+            required
+          />
+          <input
+            name="next"
+            type="password"
+            minlength="12"
+            autocomplete="off"
+            data-i18n-placeholder="settings.new_password"
+            required
+          />
+          <input
+            name="confirm"
+            type="password"
+            autocomplete="off"
+            data-i18n-placeholder="setup.confirm"
+            required
+          />
+          <p class="hint" data-i18n="settings.change_hint"></p>
+          <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
+        </form>
+        <button class="row-button danger" id="settings-logout" data-i18n="settings.logout"></button>
+      </div>
+      <p class="hint center" id="settings-info"></p>
       <p class="error" id="settings-error" hidden></p>
     </section>
 

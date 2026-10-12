@@ -47,6 +47,7 @@ import {
 } from "../../src/i18n/index.js";
 import * as api from "../lib/api.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
+import { hydrateIcons, icon, iconButton } from "./icons.js";
 import {
   DEFAULT_AUTO_LOCK_MINUTES,
   getLocal,
@@ -107,6 +108,7 @@ function applyStaticText(): void {
   }
   for (const node of document.querySelectorAll<HTMLElement>("[data-i18n-title]")) {
     node.title = t(node.dataset.i18nTitle as MessageKey);
+    node.setAttribute("aria-label", node.title);
   }
   document.documentElement.lang = locale;
 }
@@ -158,6 +160,8 @@ function clearTimers(): void {
   timers.clear();
 }
 
+hydrateIcons(document);
+
 async function boot(): Promise<void> {
   const local = await getLocal();
   locale = resolveLocale(local.locale);
@@ -173,6 +177,7 @@ async function boot(): Promise<void> {
     const serverField =
       $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!;
     serverField.value = local.apiUrl ?? deployedServerUrl();
+    showServerSummary(serverField.value);
     show("setup");
     return;
   }
@@ -235,6 +240,24 @@ async function backgroundSync(): Promise<void> {
   }
 }
 
+function showServerSummary(url: string): void {
+  let host = "";
+  try {
+    host = url ? new URL(url).host : "";
+  } catch {
+    host = "";
+  }
+  $("setup-server-host").textContent = host;
+  $("setup-server-summary").hidden = !host;
+  $("setup-server-field").hidden = Boolean(host);
+}
+
+$("setup-server-change").addEventListener("click", () => {
+  $("setup-server-summary").hidden = true;
+  $("setup-server-field").hidden = false;
+  $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!.focus();
+});
+
 let setupMode: "register" | "login" = "register";
 
 /**
@@ -264,7 +287,8 @@ function setSetupMode(mode: "register" | "login"): void {
   form.querySelector("button.primary")!.textContent = t(
     registering ? "setup.create" : "setup.sign_in",
   );
-  $("setup-hint").textContent = t(registering ? "setup.hint_create" : "setup.hint_signin");
+  $("setup-hint").textContent = t("setup.hint_create");
+  $("setup-hint").hidden = !registering;
   $("setup-mode-create").classList.toggle("active", registering);
   $("setup-mode-signin").classList.toggle("active", !registering);
   setError("setup-error", null);
@@ -426,7 +450,7 @@ function renderList(): void {
   }
 
   const rest = visible.filter((item) => !matchedIds.has(item.id));
-  $("all-title").hidden = rest.length === 0;
+  $("all-title").hidden = rest.length === 0 || (!query && matched.length === 0);
   $("all-title").textContent = query ? t("list.results", { count: rest.length }) : t("list.all");
   renderInto($("all-list"), rest);
 
@@ -435,6 +459,18 @@ function renderList(): void {
 
 function renderInto(container: HTMLElement, list: VaultItem[]): void {
   container.replaceChildren(...list.map(renderItem));
+}
+
+const AVATAR_HUES = [210, 260, 330, 20, 150, 190, 40, 290];
+
+function avatar(title: string): HTMLElement {
+  const node = document.createElement("span");
+  node.className = "avatar";
+  const letter = [...title.trim()][0]?.toUpperCase() ?? "?";
+  const hash = [...title].reduce((sum, char) => sum + char.codePointAt(0)!, 0);
+  node.style.background = `hsl(${AVATAR_HUES[hash % AVATAR_HUES.length]} 55% 48%)`;
+  node.textContent = letter;
+  return node;
 }
 
 function renderItem(item: VaultItem): HTMLElement {
@@ -452,18 +488,16 @@ function renderItem(item: VaultItem): HTMLElement {
   title.textContent = item.title;
   const sub = document.createElement("div");
   sub.className = "item-sub";
-  sub.textContent = [item.username, item.url].filter(Boolean).join(" · ");
+  sub.textContent = item.username || (item.url ? (registrableDomain(item.url) ?? item.url) : "");
   name.append(title, sub);
-  head.append(name);
+  head.append(avatar(item.title), name);
 
   if (item.password) {
-    const quick = document.createElement("button");
-    quick.textContent = t("common.copy");
-    quick.addEventListener("click", (event) => {
-      event.stopPropagation();
-      void copy(item.password!, t("common.password").toLowerCase());
-    });
-    head.append(quick);
+    head.append(
+      iconButton("copy", t("common.copy"), () =>
+        copy(item.password!, t("common.password").toLowerCase()),
+      ),
+    );
   }
 
   const body = document.createElement("div");
@@ -472,12 +506,21 @@ function renderItem(item: VaultItem): HTMLElement {
 
   head.addEventListener("click", () => {
     body.hidden = !body.hidden;
+    wrap.classList.toggle("open", !body.hidden);
     if (!body.hidden && body.childElementCount === 0) fillItemBody(body, item);
     void touch();
   });
 
   wrap.append(head, body);
   return wrap;
+}
+
+function actionButton(name: "pencil" | "share", label: string, onClick: () => void) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.append(icon(name), label);
+  button.addEventListener("click", onClick);
+  return button;
 }
 
 function fillItemBody(body: HTMLElement, item: VaultItem): void {
@@ -489,51 +532,45 @@ function fillItemBody(body: HTMLElement, item: VaultItem): void {
 
   const actions = document.createElement("div");
   actions.className = "item-actions";
-
-  const edit = document.createElement("button");
-  edit.textContent = t("edit.edit_title");
-  edit.addEventListener("click", () => openEditor(item));
-
-  const share = document.createElement("button");
-  share.textContent = t("share.title");
-  share.addEventListener("click", () => openShare(item));
-
-  actions.append(edit, share);
+  actions.append(
+    actionButton("pencil", t("edit.edit_title"), () => openEditor(item)),
+    actionButton("share", t("share.title"), () => openShare(item)),
+  );
   body.append(actions);
+}
+
+function fieldBlock(label: string, valueNode: HTMLElement): HTMLElement {
+  const field = document.createElement("div");
+  field.className = "field";
+  const key = document.createElement("span");
+  key.className = "k";
+  key.textContent = label;
+  field.append(key, valueNode);
+  return field;
 }
 
 function valueRow(label: string, value: string, secret: boolean): HTMLElement {
   const row = document.createElement("div");
   row.className = "item-row";
 
-  const key = document.createElement("span");
-  key.className = "k";
-  key.textContent = label;
-
   const valueNode = document.createElement("span");
-  valueNode.className = "v";
-  const masked = "•".repeat(Math.min(value.length, 16));
+  valueNode.className = secret ? "v mono" : "v";
+  const masked = "•".repeat(Math.min(value.length, 12));
   valueNode.textContent = secret ? masked : value;
-
-  row.append(key, valueNode);
+  row.append(fieldBlock(label, valueNode));
 
   if (secret) {
     let revealed = false;
-    const toggle = document.createElement("button");
-    toggle.textContent = t("common.show");
-    toggle.addEventListener("click", () => {
+    const toggle = iconButton("eye", t("common.show"), () => {
       revealed = !revealed;
       valueNode.textContent = revealed ? value : masked;
-      toggle.textContent = t(revealed ? "common.hide" : "common.show");
+      toggle.replaceChildren(icon(revealed ? "eye-off" : "eye"));
+      toggle.title = t(revealed ? "common.hide" : "common.show");
     });
     row.append(toggle);
   }
 
-  const copyButton = document.createElement("button");
-  copyButton.textContent = t("common.copy");
-  copyButton.addEventListener("click", () => void copy(value, label.toLowerCase()));
-  row.append(copyButton);
-
+  row.append(iconButton("copy", t("common.copy"), () => copy(value, label.toLowerCase())));
   return row;
 }
 
@@ -544,21 +581,14 @@ function totpRow(config: TotpConfig): HTMLElement {
   const row = document.createElement("div");
   row.className = "item-row";
 
-  const key = document.createElement("span");
-  key.className = "k";
-  key.textContent = t("common.totp");
-
   const container = document.createElement("div");
-  container.className = "totp-row v";
+  container.className = "totp-row";
 
   const ring = createRing(9, 22);
   const code = document.createElement("span");
   code.className = "totp-code";
   code.textContent = "······";
   container.append(ring.svg, code);
-
-  const copyButton = document.createElement("button");
-  copyButton.textContent = t("common.copy");
 
   let current = "";
   let lastCounter = -1;
@@ -579,12 +609,13 @@ function totpRow(config: TotpConfig): HTMLElement {
     }
   };
 
-  copyButton.addEventListener("click", () => current && void copy(current, t("common.totp")));
-
   void tick();
   timers.add(setInterval(() => void tick(), 1000) as unknown as number);
 
-  row.append(key, container, copyButton);
+  row.append(
+    fieldBlock(t("common.totp"), container),
+    iconButton("copy", t("common.copy"), () => current && void copy(current, t("common.totp"))),
+  );
   return row;
 }
 
@@ -645,6 +676,8 @@ function openEditor(item: VaultItem | null): void {
   set("password", item?.password ?? "");
   set("totp", item?.totp ? totpFieldValue(item.totp) : "");
   set("note", item?.note ?? "");
+  form.querySelector<HTMLInputElement>('[name="password"]')!.type = "password";
+  $("edit-reveal").replaceChildren(icon("eye"));
 
   show("edit");
 }
@@ -666,6 +699,7 @@ $("edit-reveal").addEventListener("click", () => {
   const field =
     $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
   field.type = field.type === "password" ? "text" : "password";
+  $("edit-reveal").replaceChildren(icon(field.type === "password" ? "eye" : "eye-off"));
 });
 
 $("edit-generate").addEventListener("click", () => {
@@ -873,7 +907,12 @@ function regenerate(): void {
   }
 
   $("gen-value").textContent = result.value;
-  $("gen-entropy").textContent = formatEntropy(result);
+  const strength = rateStrength(result.entropyBits);
+  $("gen-entropy").textContent = t(`strength.${strength}` as MessageKey);
+  $("gen-entropy").title = formatEntropy(result);
+  const meter = $("gen-meter");
+  meter.dataset.strength = strength;
+  meter.style.width = `${Math.min(100, (result.entropyBits / 128) * 100)}%`;
 }
 
 let sharing: VaultItem | null = null;
@@ -884,7 +923,7 @@ function openShare(item: VaultItem): void {
   setError("share-error", null);
   $("share-result").hidden = true;
   $("form-share").hidden = false;
-  $("share-item").textContent = t("share.sharing", { title: item.title });
+  $("share-item").textContent = item.title;
 
   const totpCheckbox =
     $<HTMLFormElement>("form-share").querySelector<HTMLInputElement>('[name="includeTotp"]')!;
