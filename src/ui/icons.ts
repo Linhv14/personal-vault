@@ -17,6 +17,7 @@ const ICONS = {
   share: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13 7 4 4"/>',
   back: '<path d="m15 6-6 6 6 6"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
   "cloud-off":
     '<path d="M7 18h10a4 4 0 0 0 1.2-7.8A6 6 0 0 0 7.1 8.6 4.7 4.7 0 0 0 7 18z"/><path d="M3 3l18 18"/>',

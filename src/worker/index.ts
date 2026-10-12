@@ -45,6 +45,7 @@ app.use("/api/auth/register", limitByClientIp);
 app.use("/api/auth/prelogin", limitByClientIp);
 app.use("/api/auth/login", limitByClientIp);
 app.on("GET", "/api/shares/*", limitByClientIp);
+app.on("POST", ["/api/shares/:id/code", "/api/shares/:id/open"], limitByClientIp);
 
 const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
   const session = await resolveSession(c.env, c.req.header("Authorization"));
@@ -78,6 +79,9 @@ app.use("/api/items/*", limitWritesByAccount);
 app.use("/api/shares", async (c, next) =>
   c.req.method === "POST" ? limitWritesByAccount(c, next) : next(),
 );
+app.use("/api/shares/status", requireAuth);
+app.on("DELETE", "/api/shares/*", requireAuth);
+app.on("DELETE", "/api/shares/*", limitWritesByAccount);
 
 app.get("/api/config", (c) =>
   c.json({
@@ -130,9 +134,10 @@ export default {
         Math.floor(now / 86_400),
       ),
       env.DB.prepare("DELETE FROM email_verifications WHERE expires_at <= ?").bind(now),
+      env.DB.prepare("DELETE FROM share_codes WHERE expires_at <= ?").bind(now),
     ]);
     console.log(
-      "Cleaned up shares/sessions/login_attempts/registration_counts/email_verifications:",
+      "Cleaned up shares/sessions/login_attempts/registration_counts/email_verifications/share_codes:",
       results.map((r) => r.meta.changes).join("/"),
     );
   },

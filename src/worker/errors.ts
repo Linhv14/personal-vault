@@ -35,6 +35,11 @@ export type ApiErrorCode =
   | "shares.invalid_ttl"
   | "shares.invalid_max_views"
   | "shares.gone"
+  | "shares.invalid_recipients"
+  | "shares.email_unavailable"
+  | "shares.email_required"
+  | "shares.invalid_code"
+  | "shares.code_expired"
   | "server.rate_limited"
   | "server.not_found"
   | "server.error";
@@ -64,6 +69,12 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "shares.invalid_ttl": "ttlSeconds must be between 60 and 604800",
   "shares.invalid_max_views": "maxViews is out of range",
   "shares.gone": "This link does not exist, has expired, or is out of views",
+  "shares.invalid_recipients": "Recipients must be up to 10 valid email addresses",
+  "shares.email_unavailable":
+    "This server cannot send email, so links cannot be limited to addresses",
+  "shares.email_required": "This link only opens for specific email addresses",
+  "shares.invalid_code": "That code is not correct",
+  "shares.code_expired": "The code expired; request a new one",
   "server.rate_limited": "Too many requests, slow down",
   "server.not_found": "No such endpoint",
   "server.error": "Server error",

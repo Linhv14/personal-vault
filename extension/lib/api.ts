@@ -189,14 +189,52 @@ export async function deleteItem(id: string): Promise<{ deletedAt: number }> {
   return request(`/api/items/${id}`, { method: "DELETE" });
 }
 
+export interface ShareOptions {
+  ttlSeconds: number;
+  maxViews: number;
+  recipients: string[];
+}
+
+export interface CreatedShareLink {
+  id: string;
+  expiresAt: number;
+  revokeToken: string;
+}
+
 export async function createShareLink(
   sealed: SealedData,
-  ttlSeconds: number,
-  maxViews: number,
-): Promise<{ id: string; expiresAt: number }> {
+  { ttlSeconds, maxViews, recipients }: ShareOptions,
+): Promise<CreatedShareLink> {
   return request("/api/shares", {
     method: "POST",
-    body: JSON.stringify({ ...sealed, ttlSeconds, maxViews }),
+    body: JSON.stringify({
+      ...sealed,
+      ttlSeconds,
+      maxViews,
+      ...(recipients.length > 0 && { recipients }),
+    }),
+  });
+}
+
+export type ShareStatus =
+  | { id: string; active: false }
+  | { id: string; active: true; expiresAt: number; viewsLeft: number };
+
+export async function shareStatuses(
+  shares: { id: string; revokeToken: string }[],
+): Promise<ShareStatus[]> {
+  if (shares.length === 0) return [];
+  const result = await request<{ shares: ShareStatus[] }>("/api/shares/status", {
+    method: "POST",
+    body: JSON.stringify({ shares }),
+  });
+  return result.shares;
+}
+
+export async function revokeShareLink(id: string, revokeToken: string): Promise<void> {
+  await request(`/api/shares/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    extraHeaders: { "X-Revoke-Token": revokeToken },
   });
 }
 

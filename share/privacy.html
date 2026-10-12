@@ -107,9 +107,12 @@
           </li>
           <li><strong>Sign-in sessions</strong>, stored as hashes, expiring after 30 days.</li>
           <li>
-            <strong>Share links</strong> you create: encrypted contents, expiry and view count. They
-            are deleted within an hour of expiring or running out of views. The decryption key is in
-            the link itself and never reaches the server.
+            <strong>Share links</strong> you create: encrypted contents, expiry, view count and a
+            hash of the token that lets you revoke the link. If you limit a link to email addresses,
+            those addresses are stored as keyed hashes, and a recipient who asks for a code receives
+            an email at the address they typed. Links, codes and recipients are deleted within an
+            hour of the link expiring, running out of views or being revoked. The decryption key is
+            in the link itself and never reaches the server.
           </li>
           <li>
             <strong>Abuse counters</strong>: failed sign-ins per email (deleted after 24 hours) and
@@ -177,9 +180,12 @@
           <li><strong>Thời điểm</strong> tạo tài khoản, sửa item, đăng nhập, và số lượng item.</li>
           <li><strong>Phiên đăng nhập</strong>, lưu dạng băm, hết hạn sau 30 ngày.</li>
           <li>
-            <strong>Link chia sẻ</strong> bạn tạo: nội dung đã mã hoá, thời hạn và số lượt xem. Bị
-            xoá trong vòng một giờ sau khi hết hạn hoặc hết lượt. Khoá giải mã nằm trong chính đường
-            link và không bao giờ tới server.
+            <strong>Link chia sẻ</strong> bạn tạo: nội dung đã mã hoá, thời hạn, số lượt xem và bản
+            băm của mã cho phép bạn thu hồi link. Nếu bạn giới hạn link theo email, các email đó
+            được lưu dạng băm có khoá, và người nhận khi xin mã sẽ nhận email tại địa chỉ họ nhập.
+            Link, mã và danh sách người nhận bị xoá trong vòng một giờ sau khi link hết hạn, hết
+            lượt hoặc bị thu hồi. Khoá giải mã nằm trong chính đường link và không bao giờ tới
+            server.
           </li>
           <li>
             <strong>Bộ đếm chống lạm dụng</strong>: số lần đăng nhập sai theo email (xoá sau 24 giờ)

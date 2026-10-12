@@ -647,6 +647,30 @@ button.primary.danger-fill:hover:not(:disabled) {
   transform: rotate(45deg);
 }
 
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px 10px 8px;
+  border-radius: var(--radius);
+}
+.link-row + .link-row {
+  border-top: 1px solid var(--border);
+}
+.link-row .item-sub {
+  white-space: normal;
+}
+button.secondary.danger {
+  color: var(--danger);
+}
+button.secondary.danger:hover {
+  background: var(--danger-soft);
+}
+label small.hint {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
 .empty {
   display: flex;
   flex-direction: column;

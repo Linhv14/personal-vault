@@ -363,6 +363,68 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect(unlocked.authKey).toBe(record.authKey);
   });
 
+  describe("share controls", () => {
+    async function createLink(extra: Record<string, unknown> = {}) {
+      const { sealed } = await createShare({ password: "controlled" });
+      return api("/api/shares", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ ...sealed, ttlSeconds: 600, maxViews: 5, ...extra }),
+      });
+    }
+
+    it("revokes a link only with its revoke token", async () => {
+      const created = await createLink();
+      expect(created.status).toBe(201);
+      const { id, revokeToken } = created.body;
+
+      const before = await api("/api/shares/status", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ shares: [{ id, revokeToken }] }),
+      });
+      expect(before.body.shares[0]).toMatchObject({ id, active: true, viewsLeft: 5 });
+
+      const wrong = await api(`/api/shares/${id}`, {
+        method: "DELETE",
+        token,
+        headers: { "X-Revoke-Token": "not-the-token" },
+      });
+      expect(wrong.status).toBe(404);
+
+      const revoked = await api(`/api/shares/${id}`, {
+        method: "DELETE",
+        token,
+        headers: { "X-Revoke-Token": revokeToken },
+      });
+      expect(revoked.status).toBe(200);
+      expect((await api(`/api/shares/${id}`)).status).toBe(404);
+
+      const after = await api("/api/shares/status", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ shares: [{ id, revokeToken }] }),
+      });
+      expect(after.body.shares[0]).toEqual({ id, active: false });
+    });
+
+    it("accepts up to 30 days and refuses longer", async () => {
+      expect((await createLink({ ttlSeconds: 30 * 86_400 })).status).toBe(201);
+      expect((await createLink({ ttlSeconds: 31 * 86_400 })).status).toBe(400);
+    });
+
+    it("refuses to restrict a link to addresses when the server cannot send email", async () => {
+      const config = await api("/api/config");
+      const result = await createLink({ recipients: ["friend@example.com"] });
+      if (config.body.emailVerification) {
+        expect(result.status).toBe(201);
+      } else {
+        expect(result.status).toBe(400);
+        expect(result.body.code).toBe("shares.email_unavailable");
+      }
+    });
+  });
+
   it("invalidates the token on logout", async () => {
     expect((await api("/api/auth/logout", { method: "POST", token })).status).toBe(200);
     expect((await api("/api/items", { token })).status).toBe(401);

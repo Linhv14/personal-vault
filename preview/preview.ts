@@ -131,8 +131,18 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (url.pathname.startsWith("/api/items/")) {
     return json({ id: url.pathname.split("/").pop(), updatedAt: now });
   }
+  if (url.pathname === "/api/config") {
+    return json({ registration: "open", emailVerification: true });
+  }
   if (url.pathname === "/api/shares") {
-    return json({ id: "preview-share-id", expiresAt: now + 86_400, maxViews: 1 }, 201);
+    const id = `preview-${Math.random().toString(36).slice(2, 8)}`;
+    return json({ id, expiresAt: now + 86_400, maxViews: 1, revokeToken: `revoke-${id}` }, 201);
+  }
+  if (url.pathname === "/api/shares/status") {
+    const { shares } = JSON.parse(String(init?.body ?? "{}")) as { shares: { id: string }[] };
+    return json({
+      shares: shares.map(({ id }) => ({ id, active: true, expiresAt: now + 86_400, viewsLeft: 1 })),
+    });
   }
   return json({ code: "server.not_found", error: "No such endpoint" }, 404);
 }) as typeof fetch;

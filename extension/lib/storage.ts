@@ -32,6 +32,7 @@ export interface LocalState {
   lastSync?: number;
   unboundItemsMigrated?: boolean;
   autofillPromoDismissed?: boolean;
+  sharedLinks?: SealedData;
   autoLockMinutes?: number;
   /** Offset of this machine's clock against the server, in seconds. */
   clockSkew?: number;

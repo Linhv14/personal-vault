@@ -335,6 +335,16 @@
             <label class="tab"
               ><input type="radio" name="ttl" value="604800" /><span data-i18n="share.ttl_7d"></span
             ></label>
+            <label class="tab"
+              ><input type="radio" name="ttl" value="1209600" /><span
+                data-i18n="share.ttl_14d"
+              ></span
+            ></label>
+            <label class="tab"
+              ><input type="radio" name="ttl" value="2592000" /><span
+                data-i18n="share.ttl_30d"
+              ></span
+            ></label>
           </div>
         </fieldset>
         <fieldset class="choice-group">
@@ -357,6 +367,31 @@
             ></label>
           </div>
         </fieldset>
+        <fieldset class="choice-group" id="share-access-group">
+          <legend data-i18n="share.access"></legend>
+          <div class="segmented">
+            <label class="tab"
+              ><input type="radio" name="access" value="anyone" checked /><span
+                data-i18n="share.access_anyone"
+              ></span
+            ></label>
+            <label class="tab"
+              ><input type="radio" name="access" value="emails" /><span
+                data-i18n="share.access_emails"
+              ></span
+            ></label>
+          </div>
+        </fieldset>
+        <label id="share-recipients-field" hidden
+          ><span data-i18n="share.recipients_label"></span
+          ><textarea
+            name="recipients"
+            rows="2"
+            autocomplete="off"
+            data-i18n-placeholder="share.recipients_placeholder"
+          ></textarea
+          ><small class="hint" data-i18n="share.recipients_hint"></small
+        ></label>
         <label class="check"
           ><span data-i18n="share.include_totp"></span
           ><input type="checkbox" name="includeTotp" checked
@@ -367,8 +402,11 @@
             name="passphrase"
             type="text"
             autocomplete="off"
-            data-i18n-placeholder="share.passphrase_placeholder"
-        /></label>
+            data-i18n-placeholder="share.passphrase_placeholder" /><small
+            class="hint"
+            data-i18n="share.passphrase_hint"
+          ></small
+        ></label>
         <button class="primary" type="submit" data-i18n="share.create"></button>
       </form>
       <div id="share-result" class="stack" hidden>
@@ -376,6 +414,7 @@
           <span class="brand-mark"><i data-icon="check"></i></span>
           <h2 data-i18n="share.ready"></h2>
           <p class="hint" id="share-note"></p>
+          <p class="hint" id="share-recipients-note" hidden></p>
         </div>
         <textarea id="share-url" class="link-box" rows="3" readonly></textarea>
         <button class="primary" id="share-copy" data-i18n="share.copy_link"></button>
@@ -385,8 +424,30 @@
           data-i18n="share.result_note_passphrase"
           hidden
         ></p>
+        <button
+          type="button"
+          class="link quiet"
+          id="share-manage"
+          data-i18n="share.manage"
+        ></button>
       </div>
       <p class="error" id="share-error" hidden></p>
+    </section>
+
+    <section id="screen-links" class="screen" hidden>
+      <header class="title-bar">
+        <button class="icon-button" id="links-back" data-i18n-title="common.back">
+          <i data-icon="back"></i>
+        </button>
+        <h1 data-i18n="links.title"></h1>
+      </header>
+      <div class="list" id="links-list"></div>
+      <div class="empty" id="links-empty" hidden>
+        <span data-logo="44"></span>
+        <p data-i18n="links.empty"></p>
+      </div>
+      <p class="hint center" data-i18n="links.only_this_device"></p>
+      <p class="error" id="links-error" hidden></p>
     </section>
 
     <section id="screen-settings" class="screen" hidden>
@@ -443,6 +504,7 @@
           <p class="hint" data-i18n="settings.change_hint"></p>
           <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
         </form>
+        <button class="row-button" id="settings-links" data-i18n="settings.shared_links"></button>
         <button class="row-button" id="settings-privacy" data-i18n="settings.privacy"></button>
         <button class="row-button danger" id="settings-logout" data-i18n="settings.logout"></button>
         <button

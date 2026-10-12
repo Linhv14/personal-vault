@@ -43,6 +43,7 @@ const el = <T extends HTMLElement>(id: string): T => {
 const states = {
   loading: el("state-loading"),
   passphrase: el("state-passphrase"),
+  email: el("state-email"),
   error: el("state-error"),
   content: el("state-content"),
 };
@@ -81,6 +82,9 @@ const shareId = location.pathname.split("/").filter(Boolean).pop() ?? "";
 const fragment = location.hash;
 
 let cached: ShareResponse | null = null;
+let passphrase: string | undefined;
+
+class EmailRequired extends Error {}
 
 async function main(): Promise<void> {
   hydrateIcons(document);
@@ -92,61 +96,176 @@ async function main(): Promise<void> {
     return;
   }
 
+  el<HTMLFormElement>("passphrase-form").addEventListener("submit", onPassphraseSubmit);
+  el<HTMLFormElement>("email-form").addEventListener("submit", onEmailSubmit);
+  el<HTMLFormElement>("code-form").addEventListener("submit", onCodeSubmit);
+  el("code-resend").addEventListener("click", () => void requestCode());
+  el("code-change-email").addEventListener("click", showEmailForm);
+
   if (fragmentNeedsPassphrase(fragment)) {
     show("passphrase");
     el("passphrase").focus();
-    el<HTMLFormElement>("passphrase-form").addEventListener("submit", onPassphraseSubmit);
     return;
   }
-
-  await load();
+  await reveal();
 }
 
-async function onPassphraseSubmit(event: SubmitEvent): Promise<void> {
-  event.preventDefault();
-  const input = el<HTMLInputElement>("passphrase");
-  const errorNode = el("passphrase-error");
-  errorNode.hidden = true;
-
+async function reveal(): Promise<void> {
   if (!cached) {
     show("loading");
     try {
       cached = await fetchShare();
     } catch (error) {
+      if (error instanceof EmailRequired) {
+        showEmailForm();
+        return;
+      }
       failWith(error);
       return;
     }
   }
 
   try {
-    render(await openShare(fragment, cached, input.value));
+    render(await openShare(fragment, cached, passphrase));
   } catch (error) {
+    if (!fragmentNeedsPassphrase(fragment)) {
+      failWith(error);
+      return;
+    }
     show("passphrase");
+    const errorNode = el("passphrase-error");
     errorNode.textContent = describeError(error, t);
     errorNode.hidden = false;
-    input.select();
+    el<HTMLInputElement>("passphrase").select();
   }
+}
+
+async function onPassphraseSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  el("passphrase-error").hidden = true;
+  passphrase = el<HTMLInputElement>("passphrase").value;
+  await reveal();
+}
+
+async function shareRequest(path: string, init?: RequestInit): Promise<Response> {
+  const response = await fetch(`/api/shares/${encodeURIComponent(shareId)}${path}`, init);
+  if (response.ok) return response;
+  const body = (await response.json().catch(() => null)) as { code?: string } | null;
+  if (body?.code === "shares.gone") throw new ShareGone();
+  if (body?.code === "shares.email_required") throw new EmailRequired();
+  const key = body?.code ? (`error.${body.code}` as MessageKey) : "error.api.generic";
+  throw new Error(t(key, { status: response.status }));
 }
 
 async function fetchShare(): Promise<ShareResponse> {
-  const response = await fetch(`/api/shares/${encodeURIComponent(shareId)}`);
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { code?: string } | null;
-    if (body?.code === "shares.gone") throw new ShareGone();
-    const key = body?.code ? (`error.${body.code}` as MessageKey) : "error.api.generic";
-    throw new Error(t(key, { status: response.status }));
-  }
-  return (await response.json()) as ShareResponse;
+  return (await (await shareRequest("")).json()) as ShareResponse;
 }
 
-async function load(): Promise<void> {
-  show("loading");
+function postJson(body: unknown): RequestInit {
+  return {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+}
+
+const RESEND_COOLDOWN_SECONDS = 60;
+let recipientEmail = "";
+let resendTimer: number | undefined;
+
+function showEmailError(error: unknown): void {
+  const node = el("email-error");
+  node.textContent = describeError(error, t);
+  node.hidden = false;
+}
+
+function showEmailForm(): void {
+  clearInterval(resendTimer);
+  el("email-error").hidden = true;
+  el("email-form").hidden = false;
+  el("code-form").hidden = true;
+  show("email");
+  el("recipient-email").focus();
+}
+
+function startResendCountdown(): void {
+  const button = el<HTMLButtonElement>("code-resend");
+  let seconds = RESEND_COOLDOWN_SECONDS;
+  const paint = () => {
+    button.disabled = seconds > 0;
+    button.textContent = seconds > 0 ? t("view.resend_in", { seconds }) : t("view.resend");
+  };
+  paint();
+  clearInterval(resendTimer);
+  resendTimer = setInterval(() => {
+    seconds--;
+    paint();
+    if (seconds <= 0) clearInterval(resendTimer);
+  }, 1000) as unknown as number;
+}
+
+async function requestCode(): Promise<void> {
+  el("email-error").hidden = true;
   try {
-    cached = await fetchShare();
-    render(await openShare(fragment, cached));
+    await shareRequest("/code", postJson({ email: recipientEmail, locale }));
   } catch (error) {
-    failWith(error);
+    showEmailError(error);
+    return;
   }
+  el("code-sent").textContent = t("view.code_sent", { email: recipientEmail });
+  el("email-form").hidden = true;
+  el("code-form").hidden = false;
+  startResendCountdown();
+  el("recipient-code").focus();
+}
+
+async function onEmailSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  recipientEmail = el<HTMLInputElement>("recipient-email").value.trim().toLowerCase();
+  await requestCode();
+}
+
+async function onCodeSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  el("email-error").hidden = true;
+  const code = el<HTMLInputElement>("recipient-code").value.trim();
+  try {
+    const response = await shareRequest("/open", postJson({ email: recipientEmail, code }));
+    cached = (await response.json()) as ShareResponse;
+  } catch (error) {
+    if (error instanceof ShareGone) {
+      failWith(error);
+      return;
+    }
+    showEmailError(error);
+    el<HTMLInputElement>("recipient-code").select();
+    return;
+  }
+  clearInterval(resendTimer);
+  if (fragmentNeedsPassphrase(fragment) && passphrase === undefined) {
+    show("passphrase");
+    return;
+  }
+  await reveal();
+}
+
+function websiteLink(raw: string | undefined): HTMLElement | null {
+  if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  const anchor = document.createElement("a");
+  anchor.href = url.href;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.textContent = url.host;
+  const node = chip("link", "");
+  node.replaceChildren(icon("link"), anchor);
+  return node;
 }
 
 function chip(name: IconName, text: string): HTMLElement {
@@ -163,7 +282,8 @@ function render(payload: SharePayload): void {
   el("avatar").textContent = [...title][0]?.toUpperCase() ?? "?";
 
   const chips: HTMLElement[] = [];
-  if (payload.url) chips.push(chip("link", payload.url));
+  const site = websiteLink(payload.url);
+  if (site) chips.push(site);
   if (cached) {
     const minutes = Math.max(0, Math.round((cached.expiresAt * 1000 - Date.now()) / 60_000));
     chips.push(
@@ -180,7 +300,7 @@ function render(payload: SharePayload): void {
   const fields = el("fields");
   fields.replaceChildren();
   if (payload.username) fields.append(textField(t("common.username"), payload.username));
-  if (payload.password) fields.append(textField(t("common.password"), payload.password, true));
+  if (payload.password) fields.append(passwordField(payload.password));
   if (payload.totp) fields.append(totpField(payload.totp));
   if (payload.note) fields.append(noteField(payload.note));
 
@@ -219,31 +339,28 @@ function iconButton(name: IconName, label: string, onClick: () => void): HTMLBut
   return button;
 }
 
-function textField(label: string, value: string, secret = false): HTMLElement {
+function textField(label: string, value: string): HTMLElement {
   const { wrap, body } = field(label);
-
   const valueNode = document.createElement("div");
-  const masked = "•".repeat(Math.min(value.length, 12));
-  const paint = (revealed: boolean) => {
-    valueNode.className =
-      secret && !revealed ? "value mono masked" : secret ? "value mono" : "value";
-    valueNode.textContent = secret && !revealed ? masked : value;
-  };
-  paint(false);
+  valueNode.className = "value";
+  valueNode.textContent = value;
   body.append(valueNode);
-
-  if (secret) {
-    let revealed = false;
-    const toggle = iconButton("eye", t("common.show"), () => {
-      revealed = !revealed;
-      paint(revealed);
-      toggle.replaceChildren(icon(revealed ? "eye-off" : "eye"));
-      toggle.title = t(revealed ? "common.hide" : "common.show");
-    });
-    wrap.append(toggle);
-  }
-
   wrap.append(copyButton(value).element);
+  return wrap;
+}
+
+const PASSWORD_MASK = "•".repeat(12);
+
+function passwordField(password: string): HTMLElement {
+  const { wrap, body } = field(t("common.password"));
+  const valueNode = document.createElement("div");
+  valueNode.className = "value mono masked";
+  valueNode.textContent = PASSWORD_MASK;
+  const caption = document.createElement("span");
+  caption.className = "caption";
+  caption.textContent = t("view.password_copy_only");
+  body.append(valueNode, caption);
+  wrap.append(copyButton(password).element);
   return wrap;
 }
 
@@ -260,8 +377,7 @@ function noteField(value: string): HTMLElement {
 /** Live 2FA code, computed locally per RFC 6238 — no network involved. */
 function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   const period = config.period || TOTP_DEFAULTS.period;
-  const label = t("view.totp_label", { issuer: config.issuer ? ` · ${config.issuer}` : "" });
-  const { wrap, body } = field(label);
+  const { wrap, body } = field(t("view.totp_label"));
 
   const container = document.createElement("div");
   container.className = "totp";
@@ -270,7 +386,10 @@ function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   codeNode.textContent = "··· ···";
   const ring = createRing();
   container.append(ring.svg, codeNode);
-  body.append(container);
+  const caption = document.createElement("span");
+  caption.className = "caption";
+  caption.textContent = t("view.totp_caption", { seconds: period });
+  body.append(container, caption);
 
   const copy = copyButton("");
   wrap.append(copy.element);
@@ -333,6 +452,16 @@ function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
  * Copy, then clear the clipboard after 30 seconds. The clipboard is shared with
  * every running application, and clipboard managers often persist history.
  */
+let toastTimer: number | undefined;
+
+function showToast(message: string): void {
+  const toast = el("toast");
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (toast.hidden = true), 2200) as unknown as number;
+}
+
 function copyButton(initial: string): {
   element: HTMLButtonElement;
   setValue: (value: string) => void;
@@ -345,6 +474,7 @@ function copyButton(initial: string): {
       return;
     }
     const copied = value;
+    showToast(t("view.copied"));
     button.replaceChildren(icon("check"));
     button.classList.add("done");
     setTimeout(() => {

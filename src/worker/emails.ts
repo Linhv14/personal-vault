@@ -46,6 +46,14 @@ const STRINGS = {
       ignore:
         "If it wasn't you, ignore this email. Your vault is still locked with your master password, which only you know.",
     },
+    share: {
+      subject: (code: string) => `${code} is your code to view a shared ${APP_NAME} item`,
+      preheader: (code: string) => `Your code is ${code}. It expires in 10 minutes.`,
+      heading: "Your code to view the shared item",
+      intro: `Someone shared login details with you through ${APP_NAME}. Enter this code on the share page to see them.`,
+      expiry: "The code expires in 10 minutes and works once.",
+      ignore: "Didn't open a shared link? Ignore this email.",
+    },
     footer: `An automatic message from ${APP_NAME}. Replies are not read.`,
     privacy: "Privacy",
   },
@@ -67,6 +75,14 @@ const STRINGS = {
       next: `Nếu là bạn, hãy mở ${APP_NAME} và chọn "Đăng nhập vault có sẵn".`,
       ignore:
         "Nếu không phải bạn, cứ bỏ qua thư này. Vault của bạn vẫn được khoá bằng master password mà chỉ bạn biết.",
+    },
+    share: {
+      subject: (code: string) => `${code} là mã để xem thông tin được chia sẻ qua ${APP_NAME}`,
+      preheader: (code: string) => `Mã của bạn là ${code}, hết hạn sau 10 phút.`,
+      heading: "Mã để xem thông tin được chia sẻ",
+      intro: `Có người đã chia sẻ thông tin đăng nhập với bạn qua ${APP_NAME}. Nhập mã này trên trang chia sẻ để xem.`,
+      expiry: "Mã hết hạn sau 10 phút và chỉ dùng được một lần.",
+      ignore: "Bạn không mở link chia sẻ nào? Hãy bỏ qua thư này.",
     },
     footer: `Thư tự động từ ${APP_NAME}. Thư trả lời sẽ không được đọc.`,
     privacy: "Quyền riêng tư",
@@ -165,6 +181,31 @@ export function existingAccountEmail(context: EmailContext): RenderedEmail {
       preheader: strings.preheader,
       heading: strings.heading,
       body: paragraph(strings.intro) + paragraph(strings.next) + paragraph(strings.ignore, "small"),
+    }),
+  };
+}
+
+export function shareAccessEmail(context: EmailContext, code: string): RenderedEmail {
+  const strings = STRINGS[context.locale].share;
+  const subject = strings.subject(code);
+  return {
+    subject,
+    text: plainText(context, [
+      strings.heading,
+      strings.intro,
+      `    ${code}`,
+      strings.expiry,
+      strings.ignore,
+    ]),
+    html: layout(context, {
+      subject,
+      preheader: strings.preheader(code),
+      heading: strings.heading,
+      body:
+        paragraph(strings.intro) +
+        codeBlock(code) +
+        paragraph(strings.expiry, "muted") +
+        paragraph(strings.ignore, "small"),
     }),
   };
 }

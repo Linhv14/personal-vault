@@ -209,6 +209,26 @@ server stays blind; the messenger does not. 1Password has the same constraint.
 Mitigations: short TTL and a single view by default, plus an optional extra
 passphrase mixed into the key through HKDF and delivered separately.
 
+### Controls on a share
+
+- **One answer for every dead link.** Missing, expired and exhausted shares all
+  return `shares.gone`, so the API never confirms an id once existed.
+- **A view is claimed in one statement.** `UPDATE … WHERE view_count <
+max_views RETURNING …`; reading first and writing after would let two people
+  open a single-view link at the same moment.
+- **Revoking without an owner.** Creating a share returns a random revoke
+  token; the server keeps only its hash, so `shares` still has no account
+  column. The extension keeps its list of links (title, expiry, revoke token)
+  sealed with the vault key in `storage.local`, which means the list lives on
+  the device that created the links.
+- **Restricting to email addresses.** The server stores keyed hashes of the
+  allowed addresses. A restricted share answers a plain `GET` with
+  `shares.email_required` without spending a view; the recipient asks for a
+  code (`POST /:id/code`) and opens the share with it (`POST /:id/open`), which
+  is when the view is spent. Requesting a code returns the same `{ ok: true }`
+  whether or not the address is allowed, cooling down, or the mail failed, so
+  the recipient list cannot be probed one guess at a time.
+
 ## 8. Suggesting logins on websites
 
 Off by default. Turning it on in Settings requests `https://*/*` and

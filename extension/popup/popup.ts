@@ -53,6 +53,13 @@ import {
   isAutofillEnabled,
 } from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
+import {
+  forgetSharedLink,
+  loadSharedLinks,
+  rememberSharedLink,
+  saveSharedLinks,
+  type SharedLink,
+} from "../lib/shared-links.js";
 import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
 import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
@@ -99,7 +106,16 @@ const $ = <T extends HTMLElement>(id: string): T => {
   return node as T;
 };
 
-const SCREENS = ["setup", "unlock", "list", "edit", "generator", "share", "settings"] as const;
+const SCREENS = [
+  "setup",
+  "unlock",
+  "list",
+  "edit",
+  "generator",
+  "share",
+  "links",
+  "settings",
+] as const;
 type Screen = (typeof SCREENS)[number];
 
 function show(screen: Screen): void {
@@ -689,7 +705,7 @@ function fillItemBody(body: HTMLElement, item: VaultItem): void {
   actions.className = "item-actions";
   actions.append(
     actionButton("pencil", t("edit.edit_title"), () => openEditor(item)),
-    actionButton("share", t("share.title"), () => openShare(item)),
+    actionButton("share", t("share.title"), () => void openShare(item)),
   );
   body.append(actions);
 }
@@ -1097,18 +1113,55 @@ function regenerate(): void {
 
 let sharing: VaultItem | null = null;
 
-function openShare(item: VaultItem): void {
+function shareForm(): HTMLFormElement {
+  return $<HTMLFormElement>("form-share");
+}
+
+function showRecipientsField(): void {
+  const access = new FormData(shareForm()).get("access");
+  $("share-recipients-field").hidden = access !== "emails";
+}
+
+async function openShare(item: VaultItem): Promise<void> {
   clearTimers();
   sharing = item;
   setError("share-error", null);
+  const form = shareForm();
+  form.reset();
   $("share-result").hidden = true;
-  $("form-share").hidden = false;
+  form.hidden = false;
   $("share-item").textContent = item.title;
+  form.querySelector<HTMLInputElement>('[name="includeTotp"]')!.closest("label")!.hidden =
+    !item.totp;
 
-  const totpCheckbox =
-    $<HTMLFormElement>("form-share").querySelector<HTMLInputElement>('[name="includeTotp"]')!;
-  totpCheckbox.closest("label")!.hidden = !item.totp;
+  const { apiUrl } = await getLocal();
+  const config = await api.serverConfig(apiUrl ?? "");
+  $("share-access-group").hidden = !config.emailVerification;
+  showRecipientsField();
   show("share");
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_SHARE_RECIPIENTS = 10;
+
+function parseRecipients(raw: string): string[] | null {
+  const emails = [
+    ...new Set(
+      raw
+        .split(/[\s,;]+/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  const valid =
+    emails.length > 0 &&
+    emails.length <= MAX_SHARE_RECIPIENTS &&
+    emails.every((email) => EMAIL_PATTERN.test(email));
+  return valid ? emails : null;
+}
+
+for (const radio of shareForm().querySelectorAll<HTMLInputElement>('[name="access"]')) {
+  radio.addEventListener("change", showRecipientsField);
 }
 
 $("share-back").addEventListener("click", () => {
@@ -1125,6 +1178,13 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
   const includeTotp = data.get("includeTotp") === "on";
   const passphrase = String(data.get("passphrase")).trim() || undefined;
   const maxViews = Number(data.get("maxViews"));
+  const ttlSeconds = Number(data.get("ttl"));
+  const recipients =
+    data.get("access") === "emails" ? parseRecipients(String(data.get("recipients") ?? "")) : [];
+  if (!recipients) {
+    setError("share-error", t("error.shares.invalid_recipients"));
+    return;
+  }
 
   try {
     const { sealed, fragment } = await createShare(
@@ -1139,10 +1199,25 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
       passphrase,
     );
 
-    const created = await api.createShareLink(sealed, Number(data.get("ttl")), maxViews);
+    const created = await api.createShareLink(sealed, { ttlSeconds, maxViews, recipients });
     const { apiUrl } = await getLocal();
+    const url = buildShareUrl(apiUrl!, created.id, fragment);
+    if (vaultKey) {
+      await rememberSharedLink(vaultKey, {
+        id: created.id,
+        url,
+        itemId: sharing.id,
+        title: sharing.title,
+        createdAt: Math.floor(Date.now() / 1000),
+        expiresAt: created.expiresAt,
+        maxViews,
+        recipients,
+        hasPassphrase: Boolean(passphrase),
+        revokeToken: created.revokeToken,
+      });
+    }
 
-    $<HTMLTextAreaElement>("share-url").value = buildShareUrl(apiUrl!, created.id, fragment);
+    $<HTMLTextAreaElement>("share-url").value = url;
     $("share-note").textContent = t("share.result_note", {
       views: maxViews,
       expiry: new Date(created.expiresAt * 1000).toLocaleString(locale, {
@@ -1151,6 +1226,10 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
       }),
     });
     $("share-passphrase-note").hidden = !passphrase;
+    $("share-recipients-note").hidden = recipients.length === 0;
+    $("share-recipients-note").textContent = t("share.result_note_recipients", {
+      emails: recipients.join(", "),
+    });
 
     $("form-share").hidden = true;
     $("share-result").hidden = false;
@@ -1323,3 +1402,95 @@ $("settings-logout").addEventListener("click", async () => {
 });
 
 void boot();
+
+function formatExpiry(epochSeconds: number): string {
+  return new Date(epochSeconds * 1000).toLocaleString(locale, {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+function sharedLinkRow(link: SharedLink, viewsLeft: number, expiresAt: number): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "link-row";
+
+  const text = document.createElement("div");
+  text.className = "item-name";
+  const title = document.createElement("div");
+  title.className = "item-title";
+  title.textContent = link.title;
+  const sub = document.createElement("div");
+  sub.className = "item-sub";
+  sub.textContent = [
+    t("links.status", { views: viewsLeft, expiry: formatExpiry(expiresAt) }),
+    link.recipients.length > 0 ? t("links.restricted", { count: link.recipients.length }) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  text.append(title, sub);
+
+  const revoke = document.createElement("button");
+  revoke.type = "button";
+  revoke.className = "secondary danger";
+  revoke.textContent = t("links.revoke");
+  revoke.addEventListener("click", async () => {
+    if (!vaultKey || !confirm(t("links.revoke_confirm", { title: link.title }))) return;
+    setError("links-error", null);
+    try {
+      await api.revokeShareLink(link.id, link.revokeToken);
+      await forgetSharedLink(vaultKey, link.id);
+      row.remove();
+      $("links-empty").hidden = $("links-list").childElementCount > 0;
+      toast(t("links.revoked"));
+    } catch (error) {
+      showError("links-error", error);
+    }
+  });
+
+  row.append(
+    avatar(link.title),
+    text,
+    iconButton("copy", t("links.copy"), () => copy(link.url, t("share.link").toLowerCase())),
+    revoke,
+  );
+  return row;
+}
+
+async function openLinks(): Promise<void> {
+  clearTimers();
+  setError("links-error", null);
+  $("links-list").replaceChildren();
+  $("links-empty").hidden = true;
+  show("links");
+  if (!vaultKey) return;
+
+  try {
+    const links = await loadSharedLinks(vaultKey);
+    const statuses = new Map(
+      (await api.shareStatuses(links.map(({ id, revokeToken }) => ({ id, revokeToken })))).map(
+        (status) => [status.id, status],
+      ),
+    );
+    const active = links.filter((link) => statuses.get(link.id)?.active);
+    if (active.length !== links.length) await saveSharedLinks(vaultKey, active);
+
+    $("links-list").replaceChildren(
+      ...active.map((link) => {
+        const status = statuses.get(link.id);
+        return status?.active
+          ? sharedLinkRow(link, status.viewsLeft, status.expiresAt)
+          : sharedLinkRow(link, 0, link.expiresAt);
+      }),
+    );
+    $("links-empty").hidden = active.length > 0;
+  } catch (error) {
+    showError("links-error", error);
+  }
+}
+
+$("share-manage").addEventListener("click", () => void openLinks());
+$("settings-links").addEventListener("click", () => void openLinks());
+$("links-back").addEventListener("click", () => {
+  renderList();
+  show("list");
+});

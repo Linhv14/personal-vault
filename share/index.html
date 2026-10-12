@@ -186,6 +186,64 @@
         color: var(--accent-text);
         font-weight: 600;
       }
+      .eyebrow {
+        margin: 0 0 2px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .chip a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .chip a:hover {
+        text-decoration: underline;
+      }
+      .caption {
+        display: block;
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .code-input {
+        text-align: center;
+        font:
+          600 22px/1 ui-monospace,
+          "SF Mono",
+          Menlo,
+          Consolas,
+          monospace;
+        letter-spacing: 0.4em;
+      }
+      .code-links {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+      }
+      button.link {
+        padding: 4px 2px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      button.link:disabled {
+        color: var(--muted);
+        cursor: default;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: var(--text);
+        color: var(--bg);
+        font-size: 13px;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+      }
       .error {
         margin: 4px 0 0;
         color: var(--danger);
@@ -371,6 +429,46 @@
           </form>
         </div>
 
+        <div class="state" id="state-email" hidden>
+          <span class="state-mark"><i data-icon="mail"></i></span>
+          <h1 data-i18n="view.email_title"></h1>
+          <p class="sub" data-i18n="view.email_hint"></p>
+          <form id="email-form">
+            <input
+              id="recipient-email"
+              type="email"
+              autocomplete="email"
+              required
+              data-i18n-placeholder="view.email_placeholder"
+            />
+            <button class="primary" type="submit" data-i18n="view.send_code"></button>
+          </form>
+          <form id="code-form" hidden>
+            <p class="sub" id="code-sent"></p>
+            <input
+              id="recipient-code"
+              class="code-input"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="\d{6}"
+              placeholder="000000"
+              required
+            />
+            <button class="primary" type="submit" data-i18n="view.open"></button>
+            <div class="code-links">
+              <button type="button" class="link" id="code-resend"></button>
+              <button
+                type="button"
+                class="link"
+                id="code-change-email"
+                data-i18n="view.change_email"
+              ></button>
+            </div>
+          </form>
+          <p id="email-error" class="error" hidden></p>
+        </div>
+
         <div class="state" id="state-error" hidden>
           <span class="state-mark muted" id="error-mark"></span>
           <h1 id="error-title"></h1>
@@ -381,6 +479,7 @@
           <div class="head">
             <span class="avatar" id="avatar"></span>
             <div class="head-text">
+              <p class="eyebrow" data-i18n="view.shared_with_you"></p>
               <h1 id="title"></h1>
               <div class="chips" id="meta"></div>
             </div>
@@ -389,6 +488,7 @@
           <p class="notice" id="warning"></p>
         </div>
       </div>
+      <div class="toast" id="toast" role="status" hidden></div>
       <footer>
         <span data-i18n="view.footer"></span> ·
         <a href="/privacy" data-i18n="view.privacy"></a>

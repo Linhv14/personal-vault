@@ -6,6 +6,7 @@ import { apiError } from "../errors.js";
 import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
 import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
 import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
+import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
@@ -20,14 +21,6 @@ const LOCK_SECONDS = 15 * 60;
 
 function now(): number {
   return Math.floor(Date.now() / 1000);
-}
-
-function normalizeEmail(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const email = value.trim().toLowerCase();
-  // Only a sanity check: here an email is an account identifier and the KDF
-  // salt, not an address anything is delivered to.
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : null;
 }
 
 interface SealedBody {
