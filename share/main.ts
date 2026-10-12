@@ -360,10 +360,7 @@ function passwordField(password: string): HTMLElement {
   const valueNode = document.createElement("div");
   valueNode.className = "value mono masked";
   valueNode.textContent = PASSWORD_MASK;
-  const caption = document.createElement("span");
-  caption.className = "caption";
-  caption.textContent = t("view.password_copy_only");
-  body.append(valueNode, caption);
+  body.append(valueNode);
   wrap.append(copyButton(password).element);
   return wrap;
 }
@@ -390,10 +387,7 @@ function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   codeNode.textContent = "··· ···";
   const ring = createRing();
   container.append(ring.svg, codeNode);
-  const caption = document.createElement("span");
-  caption.className = "caption";
-  caption.textContent = t("view.totp_caption", { seconds: period });
-  body.append(container, caption);
+  body.append(container);
 
   const copy = copyButton("");
   wrap.append(copy.element);
@@ -477,7 +471,6 @@ function copyButton(initial: string): {
     } catch {
       return;
     }
-    const copied = value;
     showToast(t("view.copied"));
     button.replaceChildren(icon("check"));
     button.classList.add("done");
@@ -485,17 +478,6 @@ function copyButton(initial: string): {
       button.replaceChildren(icon("copy"));
       button.classList.remove("done");
     }, 1500);
-
-    setTimeout(async () => {
-      try {
-        // Only clear what we put there; the user may have copied something else.
-        if ((await navigator.clipboard.readText()) === copied) {
-          await navigator.clipboard.writeText("");
-        }
-      } catch {
-        /* clipboard-read permission not granted */
-      }
-    }, 30_000);
   });
 
   return {

@@ -21,6 +21,10 @@ version may change the API or storage format; such releases list the steps in
   bottom; unlock and setup stay as short as their content.
 - The share page shows expiry, and the last-view warning, in a banner at the
   top of the card.
+- Share page text cut to what the reader needs: one short line per state,
+  no captions under fields, and "password" instead of "passphrase".
+- The share page no longer claims to clear the clipboard after 30 seconds; a
+  web page cannot do that reliably without a permission prompt.
 - The share page lists the website as its first field, a full link with a
   copy button, instead of a small domain chip under the title.
 - A share opens once or until it expires, replacing 1, 3 or 10 views. The API
