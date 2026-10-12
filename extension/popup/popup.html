@@ -3,14 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="popup.css" />
-    <title>1pw</title>
+    <title>1PW</title>
   </head>
   <body>
     <section id="screen-setup" class="screen" hidden>
       <div id="setup-choice">
         <div class="brand">
-          <span class="brand-mark"><i data-icon="shield"></i></span>
-          <h1 data-app-name></h1>
+          <h1 class="lockup"><span data-logo="44"></span><span data-wordmark></span></h1>
           <p class="tagline" data-i18n="setup.tagline"></p>
         </div>
         <div class="choices">
@@ -107,8 +106,7 @@
 
     <section id="screen-unlock" class="screen" hidden>
       <div class="brand">
-        <span class="brand-mark"><i data-icon="lock"></i></span>
-        <h1 data-i18n="unlock.title"></h1>
+        <h1 class="lockup"><span data-logo="40"></span><span data-wordmark></span></h1>
         <p class="tagline" id="unlock-email"></p>
       </div>
       <form id="form-unlock" class="stack">
@@ -128,18 +126,19 @@
 
     <section id="screen-list" class="screen" hidden>
       <header class="toolbar">
+        <span class="toolbar-logo" title="1PW"><span data-logo="26"></span></span>
         <label class="search">
           <i data-icon="search"></i>
           <input id="search" type="search" autocomplete="off" data-i18n-placeholder="list.search" />
         </label>
-        <button class="icon-button" id="btn-add" data-i18n-title="list.add">
+        <button class="icon-button accent" id="btn-add" data-i18n-title="list.add">
           <i data-icon="plus"></i>
         </button>
         <button class="icon-button" id="btn-generator" data-i18n-title="list.generator">
-          <i data-icon="dice"></i>
+          <i data-icon="wand"></i>
         </button>
         <button class="icon-button" id="btn-settings" data-i18n-title="list.settings">
-          <i data-icon="sliders"></i>
+          <i data-icon="gear"></i>
         </button>
         <button class="icon-button" id="btn-lock" data-i18n-title="list.lock_now">
           <i data-icon="lock"></i>
@@ -149,7 +148,7 @@
       <p class="sync-notice" id="sync-notice" hidden></p>
       <p class="warn" id="clock-warning" hidden></p>
       <div class="promo" id="autofill-promo" hidden>
-        <span class="brand-mark"><i data-icon="shield"></i></span>
+        <span data-logo="24"></span>
         <span class="promo-text" data-i18n="list.autofill_promo"></span>
         <button class="link" id="autofill-promo-enable" data-i18n="list.autofill_enable"></button>
         <button class="icon-button" id="autofill-promo-close" data-i18n-title="common.close">
@@ -163,7 +162,7 @@
       <h2 id="all-title"></h2>
       <div class="list" id="all-list"></div>
       <div class="empty" id="list-empty" hidden>
-        <span class="brand-mark"><i data-icon="shield"></i></span>
+        <span data-logo="44"></span>
         <p data-i18n="list.empty"></p>
       </div>
     </section>
@@ -458,6 +457,7 @@
         </form>
       </div>
       <p class="hint center" id="settings-info"></p>
+      <p class="about" id="settings-about"></p>
       <p class="error" id="settings-error" hidden></p>
     </section>
 

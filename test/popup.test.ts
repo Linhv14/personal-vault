@@ -54,7 +54,11 @@ const chromeMock = {
     unregisterContentScripts: vi.fn(async () => {}),
   },
   alarms: { create: vi.fn(async () => {}), onAlarm: { addListener: vi.fn() } },
-  runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
+  runtime: {
+    onInstalled: { addListener: vi.fn() },
+    onStartup: { addListener: vi.fn() },
+    getManifest: () => ({ version: "0.0.0-test" }),
+  },
 };
 
 const server = {

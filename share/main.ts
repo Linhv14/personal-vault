@@ -19,8 +19,8 @@ import {
   type MessageKey,
   type Translate,
 } from "../src/i18n/index.js";
-import { APP_NAME } from "../src/core/brand.js";
 import { hydrateIcons, icon, type IconName } from "../src/ui/icons.js";
+import { hydrateBrand } from "../src/ui/logo.js";
 
 interface ShareResponse {
   ciphertext: string;
@@ -70,9 +70,6 @@ function applyStaticText(): void {
   for (const node of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
     node.textContent = t(node.dataset.i18n as MessageKey);
   }
-  for (const node of document.querySelectorAll<HTMLElement>("[data-app-name]")) {
-    node.textContent = APP_NAME;
-  }
   for (const node of document.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]")) {
     node.placeholder = t(node.dataset.i18nPlaceholder as MessageKey);
   }
@@ -87,6 +84,7 @@ let cached: ShareResponse | null = null;
 
 async function main(): Promise<void> {
   hydrateIcons(document);
+  hydrateBrand(document);
   applyStaticText();
 
   if (!shareId || !fragment || fragment === "#") {

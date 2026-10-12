@@ -83,7 +83,8 @@ describe("createTranslator", () => {
 
   it("returns a different language for a different locale", () => {
     expect(createTranslator("en")("common.copy")).not.toBe(createTranslator("vi")("list.lock_now"));
-    expect(createTranslator("vi")("unlock.title")).toBe("Mở vault");
+    expect(createTranslator("en")("unlock.submit")).toBe("Unlock");
+    expect(createTranslator("vi")("unlock.submit")).toBe("Mở");
   });
 });
 

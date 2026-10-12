@@ -114,7 +114,6 @@ export const vi: Catalogue = {
   "setup.working": "Đang tạo khoá…",
 
   // --- Unlock --------------------------------------------------------------
-  "unlock.title": "Mở vault",
   "unlock.submit": "Mở",
   "unlock.working": "Đang mở…",
   "unlock.reset": "Dùng tài khoản khác",

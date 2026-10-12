@@ -1,0 +1,42 @@
+:root,
+:host {
+  color-scheme: light dark;
+  --bg: #faf9f6;
+  --card: #ffffff;
+  --surface: #f0eee9;
+  --surface-hover: #e7e4dd;
+  --border: #e0dcd4;
+  --text: #1c1b19;
+  --muted: #6b675f;
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-text: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --focus-ring: color-mix(in srgb, var(--accent) 45%, transparent);
+  --danger: #dc2626;
+  --danger-soft: color-mix(in srgb, var(--danger) 10%, transparent);
+  --ok: #15803d;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root,
+  :host {
+    --bg: #111312;
+    --card: #171a19;
+    --surface: #1d201f;
+    --surface-hover: #262a28;
+    --border: #2c302e;
+    --text: #ecebe6;
+    --muted: #9b978f;
+    --accent: #3ccfbe;
+    --accent-hover: #5eead4;
+    --accent-text: #042f2e;
+    --danger: #f87171;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --warn-soft: color-mix(in srgb, #fbbf24 12%, transparent);
+  }
+}

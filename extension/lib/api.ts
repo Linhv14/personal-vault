@@ -136,9 +136,14 @@ export interface ServerConfig {
   emailVerification: boolean;
 }
 
+const SERVER_CONFIG_TIMEOUT_MS = 3000;
+
 export async function serverConfig(apiUrl: string): Promise<ServerConfig> {
+  if (!apiUrl) return { registrationOpen: false, emailVerification: false };
   try {
-    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/config`);
+    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/config`, {
+      signal: AbortSignal.timeout(SERVER_CONFIG_TIMEOUT_MS),
+    });
     const body = (await response.json()) as { registration?: string; emailVerification?: boolean };
     return {
       registrationOpen: body.registration === "open",

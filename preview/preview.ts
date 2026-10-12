@@ -101,7 +101,11 @@ Object.assign(globalThis, {
       async unregisterContentScripts() {},
     },
     alarms: { async create() {}, onAlarm: { addListener() {} } },
-    runtime: { onInstalled: { addListener() {} }, onStartup: { addListener() {} } },
+    runtime: {
+      onInstalled: { addListener() {} },
+      onStartup: { addListener() {} },
+      getManifest: () => ({ version: "preview" }),
+    },
   },
 });
 

@@ -115,7 +115,6 @@ export const en = {
   "setup.working": "Deriving keys…",
 
   // --- Unlock --------------------------------------------------------------
-  "unlock.title": "Unlock vault",
   "unlock.submit": "Unlock",
   "unlock.working": "Unlocking…",
   "unlock.reset": "Use another account",

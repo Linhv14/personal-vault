@@ -56,7 +56,8 @@ function html(text: string, code?: string): string {
   const codeBlock = code
     ? `<p style="margin:0 0 20px;font:600 30px/1 ui-monospace,Menlo,monospace;letter-spacing:6px">${code}</p>`
     : "";
-  return `<div style="font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#15181d;max-width:480px">${codeBlock}${paragraphs}</div>`;
+  const wordmark = `<p style="margin:0 0 28px;font:750 22px/1 -apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:-0.03em"><span style="color:#0f766e">${escape(APP_NAME.slice(0, 1))}</span>${escape(APP_NAME.slice(1))}</p>`;
+  return `<div style="font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#15181d;max-width:480px">${wordmark}${codeBlock}${paragraphs}</div>`;
 }
 
 export type IssueResult = "sent" | "cooldown" | "failed";

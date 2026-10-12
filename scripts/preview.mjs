@@ -10,6 +10,7 @@
  */
 
 import { build } from "esbuild";
+import { injectTokens } from "./tokens.mjs";
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile, cp } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -41,11 +42,13 @@ await build({
   logLevel: "info",
   // Same substitution the shipped build makes, so the preview shows what ships.
   define: { __VAULT_DEFAULT_SERVER__: JSON.stringify(deployedServerUrl()) },
+  loader: { ".css": "text" },
 });
 
 const html = await readFile(path.join(root, "extension", "popup", "popup.html"), "utf8");
 await writeFile(path.join(out, "index.html"), html.replace("popup.js", "preview.js"));
-await cp(path.join(root, "extension", "popup", "popup.css"), path.join(out, "popup.css"));
+const css = path.join(root, "extension", "popup", "popup.css");
+await writeFile(path.join(out, "popup.css"), await injectTokens(await readFile(css, "utf8"), css));
 
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css" };
 

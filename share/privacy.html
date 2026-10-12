@@ -4,26 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
-    <title>Privacy · 1pw</title>
+    <title>Privacy · 1PW</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style>
-      :root {
-        --bg: #f5f6f8;
-        --card: #ffffff;
-        --border: #e5e7eb;
-        --text: #15181d;
-        --muted: #6b7380;
-        --accent: #2563eb;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #0e1014;
-          --card: #15181e;
-          --border: #262b34;
-          --text: #eceef2;
-          --muted: #8b93a1;
-          --accent: #7aa7ff;
-        }
-      }
+      /* @tokens */
       body {
         margin: 0;
         background: var(--bg);
@@ -68,6 +52,20 @@
       ul {
         padding-left: 20px;
       }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .wordmark {
+        font-size: 22px;
+        font-weight: 750;
+        letter-spacing: -0.03em;
+      }
+      .wordmark-accent {
+        color: var(--accent);
+      }
       nav {
         margin-bottom: 20px;
         color: var(--muted);
@@ -77,14 +75,18 @@
   </head>
   <body>
     <main>
+      <header class="brand">
+        <img src="/favicon.svg" width="32" height="32" alt="" />
+        <span class="wordmark"><span class="wordmark-accent">1</span>PW</span>
+      </header>
       <nav><a href="#en">English</a> · <a href="#vi">Tiếng Việt</a></nav>
 
       <article id="en">
         <h1>Privacy policy</h1>
-        <p class="muted">1pw · effective 12 October 2026</p>
+        <p class="muted">1PW · effective 12 October 2026</p>
 
         <p>
-          1pw is end-to-end encrypted. Your passwords, usernames, 2FA secrets, notes and the names
+          1PW is end-to-end encrypted. Your passwords, usernames, 2FA secrets, notes and the names
           of the sites you use are encrypted on your device with a key derived from your master
           password. The server, and whoever runs it, cannot read them.
         </p>
@@ -154,10 +156,10 @@
 
       <article id="vi" lang="vi">
         <h1>Chính sách quyền riêng tư</h1>
-        <p class="muted">1pw · hiệu lực từ 12/10/2026</p>
+        <p class="muted">1PW · hiệu lực từ 12/10/2026</p>
 
         <p>
-          1pw mã hoá đầu-cuối. Mật khẩu, tên đăng nhập, secret 2FA, ghi chú và tên các trang web bạn
+          1PW mã hoá đầu-cuối. Mật khẩu, tên đăng nhập, secret 2FA, ghi chú và tên các trang web bạn
           dùng đều được mã hoá ngay trên máy bạn bằng khoá sinh ra từ master password. Server, và
           người vận hành server, không đọc được chúng.
         </p>

@@ -6,8 +6,8 @@ import type {
   PendingPrompt,
   Suggestion,
 } from "../lib/autofill-protocol.js";
-import { APP_NAME } from "../../src/core/brand.js";
 import { icon } from "../../src/ui/icons.js";
+import { logo, wordmark } from "../../src/ui/logo.js";
 import { CONTENT_STYLES } from "./styles.js";
 
 const USERNAME_HINT = /user|email|login|account|phone|mobile|identifier/i;
@@ -26,7 +26,7 @@ style.textContent = CONTENT_STYLES;
 const trigger = document.createElement("button");
 trigger.className = "trigger";
 trigger.type = "button";
-trigger.append(icon("shield"));
+trigger.append(logo(24));
 trigger.hidden = true;
 const menu = document.createElement("div");
 menu.className = "menu";
@@ -167,7 +167,7 @@ function avatar(title: string): HTMLElement {
   return node;
 }
 
-function badge(name: "lock" | "dice"): HTMLElement {
+function badge(name: "lock" | "wand"): HTMLElement {
   const node = document.createElement("span");
   node.className = "badge";
   node.append(icon(name));
@@ -200,7 +200,7 @@ async function openMenu(): Promise<void> {
 
   const heading = document.createElement("div");
   heading.className = "heading";
-  heading.append(icon("shield"), APP_NAME);
+  heading.append(logo(16), wordmark());
   menu.append(heading);
 
   if (!response.ok) {
@@ -222,7 +222,7 @@ async function openMenu(): Promise<void> {
     }
     if (wantsNewPassword(password)) {
       menu.append(
-        menuRow(t("autofill.generate"), t("autofill.generate_hint"), badge("dice"), () =>
+        menuRow(t("autofill.generate"), t("autofill.generate_hint"), badge("wand"), () =>
           fillGenerated(password),
         ),
       );
@@ -263,7 +263,7 @@ function showBanner(prompt: PendingPrompt): void {
     if (!event.isTrusted) return;
     const response = await send({ type: "autofill:save" });
     if (response.ok && "saved" in response && response.saved) {
-      banner.replaceChildren(icon("shield"), t("autofill.saved"));
+      banner.replaceChildren(logo(24), t("autofill.saved"));
       setTimeout(() => (banner.hidden = true), 2000);
     } else if (response.ok && "locked" in response && response.locked) {
       detail.textContent = t("autofill.unlock_to_save");
@@ -283,7 +283,7 @@ function showBanner(prompt: PendingPrompt): void {
   const actions = document.createElement("div");
   actions.className = "actions";
   actions.append(dismiss, save);
-  banner.append(icon("shield"), text, actions);
+  banner.append(logo(28), text, actions);
   banner.hidden = false;
 }
 

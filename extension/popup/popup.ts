@@ -50,6 +50,7 @@ import { disableAutofill, enableAutofill, isAutofillEnabled } from "../lib/autof
 import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
+import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
 import {
   DEFAULT_AUTO_LOCK_MINUTES,
   getLocal,
@@ -166,6 +167,7 @@ function clearTimers(): void {
 }
 
 hydrateIcons(document);
+hydrateBrand(document);
 
 async function boot(): Promise<void> {
   const local = await getLocal();
@@ -183,6 +185,7 @@ async function boot(): Promise<void> {
       $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!;
     serverField.value = local.apiUrl ?? deployedServerUrl();
     showServerSummary(serverField.value);
+    void serverConfigFor(serverField.value);
     show("setup");
     return;
   }
@@ -352,30 +355,38 @@ function serverFieldValue(): string {
     .value.trim();
 }
 
-async function refreshRegistrationMode(): Promise<void> {
-  const url = serverFieldValue();
-  const config = url
-    ? await api.serverConfig(url)
-    : { registrationOpen: false, emailVerification: false };
-  registrationOpen = config.registrationOpen;
-  verificationRequired = config.emailVerification;
-  setSetupMode(setupMode);
+let serverConfigRequest: { url: string; config: Promise<api.ServerConfig> } | null = null;
+
+function serverConfigFor(url: string): Promise<api.ServerConfig> {
+  if (serverConfigRequest?.url !== url) {
+    serverConfigRequest = { url, config: api.serverConfig(url) };
+  }
+  return serverConfigRequest.config;
 }
 
-function showSetupForm(mode: "register" | "login"): void {
+async function applyServerConfig(): Promise<void> {
+  const config = await serverConfigFor(serverFieldValue());
+  registrationOpen = config.registrationOpen;
+  verificationRequired = config.emailVerification;
+}
+
+async function showSetupForm(mode: "register" | "login"): Promise<void> {
+  await applyServerConfig();
   setSetupMode(mode);
   $("setup-choice").hidden = true;
   $("setup-form-wrap").hidden = false;
   $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="email"]')!.focus();
-  if (mode === "register") void refreshRegistrationMode();
 }
 
 $<HTMLFormElement>("form-setup")
   .querySelector<HTMLInputElement>('[name="apiUrl"]')!
-  .addEventListener("change", () => void refreshRegistrationMode());
+  .addEventListener("change", async () => {
+    await applyServerConfig();
+    setSetupMode(setupMode);
+  });
 
-$("setup-mode-create").addEventListener("click", () => showSetupForm("register"));
-$("setup-mode-signin").addEventListener("click", () => showSetupForm("login"));
+$("setup-mode-create").addEventListener("click", () => void showSetupForm("register"));
+$("setup-mode-signin").addEventListener("click", () => void showSetupForm("login"));
 $("setup-back").addEventListener("click", () => {
   $("setup-form-wrap").hidden = true;
   $("setup-choice").hidden = false;
@@ -626,6 +637,7 @@ function renderItem(item: VaultItem): HTMLElement {
 function actionButton(name: "pencil" | "share", label: string, onClick: () => void) {
   const button = document.createElement("button");
   button.type = "button";
+  button.className = "secondary";
   button.append(icon(name), label);
   button.addEventListener("click", onClick);
   return button;
@@ -1136,6 +1148,11 @@ async function openSettings(): Promise<void> {
   select.value = local.locale ?? "auto";
   $<HTMLInputElement>("settings-autofill").checked = await isAutofillEnabled();
 
+  $("settings-about").replaceChildren(
+    logo(16),
+    wordmark(),
+    ` · v${chrome.runtime.getManifest().version}`,
+  );
   $("settings-info").textContent = t("settings.info", {
     email: local.email ?? "",
     count: items.length,

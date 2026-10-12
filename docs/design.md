@@ -235,6 +235,19 @@ Submitting a form with a password stores it in `chrome.storage.session` for
 five minutes, keyed by tab, and the page (or the next one, after navigation)
 offers to save or update it. Locking the vault clears it.
 
+## Brand and theme
+
+- The name lives in `src/core/brand.ts` (`APP_NAME`) and the logo in
+  `src/ui/logo.ts`; the favicon and extension icons are rendered from that SVG.
+  Each inline logo gets its own gradient id: a shared id resolves to the first
+  copy in the document, and when that copy sits in a hidden screen every other
+  logo loses its fill.
+- Colors live only in `src/ui/tokens.css`. The build injects it wherever a
+  stylesheet carries the `/* @tokens */` marker (popup, share page, privacy
+  page) and bundles it into the page script's shadow root, so a palette change
+  is one edit. The accent is a deep teal on warm off-white neutrals, lightened
+  for dark mode, where a fully saturated accent vibrates.
+
 ## 9. Known traps
 
 - **MV3 kills the service worker after ~30s idle.** A vault key held in a plain

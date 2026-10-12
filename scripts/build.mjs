@@ -7,7 +7,8 @@
  */
 
 import { build } from "esbuild";
-import { cp, mkdir, readdir, rm } from "node:fs/promises";
+import { hasTokensMarker, injectTokens } from "./tokens.mjs";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -43,7 +44,26 @@ const common = {
   sourcemap: dev ? "inline" : false,
   minify: !dev,
   logLevel: "info",
+  loader: { ".css": "text" },
 };
+
+async function logoSvg() {
+  const { outputFiles } = await build({
+    entryPoints: [path.join(root, "src", "ui", "logo.ts")],
+    bundle: true,
+    format: "esm",
+    write: false,
+    logLevel: "silent",
+  });
+  const source = Buffer.from(outputFiles[0].text).toString("base64");
+  const { LOGO_SVG } = await import(`data:text/javascript;base64,${source}`);
+  return LOGO_SVG;
+}
+
+async function copyPage(from, to) {
+  const text = await readFile(from, "utf8");
+  await writeFile(to, hasTokensMarker(text) ? await injectTokens(text, from) : text);
+}
 
 async function buildSharePage() {
   await mkdir(outPublic, { recursive: true });
@@ -52,9 +72,10 @@ async function buildSharePage() {
     entryPoints: [path.join(root, "share", "main.ts")],
     outfile: path.join(outPublic, "share.js"),
   });
-  await cp(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
+  await copyPage(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
   await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
-  await cp(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
+  await copyPage(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
+  await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
 }
 
 async function buildExtension() {
@@ -91,7 +112,11 @@ async function buildExtension() {
     if (relative.endsWith(".ts")) continue;
     const target = path.join(outExtension, relative);
     await mkdir(path.dirname(target), { recursive: true });
-    await cp(path.join(source, relative), target);
+    if (/\.(css|html)$/.test(relative)) {
+      await copyPage(path.join(source, relative), target);
+    } else {
+      await cp(path.join(source, relative), target);
+    }
   }
 }
 
