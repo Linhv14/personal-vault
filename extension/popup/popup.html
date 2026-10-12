@@ -176,6 +176,7 @@
       <div class="empty" id="list-empty" hidden>
         <span data-logo="44"></span>
         <p data-i18n="list.empty"></p>
+        <button type="button" class="secondary" id="list-import" data-i18n="list.import"></button>
       </div>
     </section>
 
@@ -495,6 +496,7 @@
           ><span class="info-value" id="settings-last-sync"></span>
         </div>
       </div>
+      <h2 data-i18n="settings.section_preferences"></h2>
       <div class="group">
         <label class="range"
           ><span data-i18n="settings.auto_lock"></span
@@ -510,6 +512,16 @@
           ><span data-i18n="settings.autofill"></span><input id="settings-autofill" type="checkbox"
         /></label>
       </div>
+      <h2 data-i18n="settings.section_data"></h2>
+      <div class="group">
+        <button class="row-button nav" id="settings-import" data-i18n="settings.import"></button>
+        <button
+          class="row-button nav"
+          id="settings-links"
+          data-i18n="settings.shared_links"
+        ></button>
+      </div>
+      <h2 data-i18n="settings.section_security"></h2>
       <div class="group">
         <button
           class="row-button"
@@ -542,9 +554,8 @@
           <p class="hint" data-i18n="settings.change_hint"></p>
           <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
         </form>
-        <button class="row-button" id="settings-links" data-i18n="settings.shared_links"></button>
-        <button class="row-button" id="settings-import" data-i18n="settings.import"></button>
-        <button class="row-button" id="settings-privacy" data-i18n="settings.privacy"></button>
+      </div>
+      <div class="group">
         <button class="row-button danger" id="settings-logout" data-i18n="settings.logout"></button>
         <button
           class="row-button danger"
@@ -567,7 +578,15 @@
           ></button>
         </form>
       </div>
-      <p class="about screen-footer" id="settings-about"></p>
+      <p class="about screen-footer">
+        <span class="about-version" id="settings-about"></span> ·
+        <button
+          type="button"
+          class="link quiet-inline"
+          id="settings-privacy"
+          data-i18n="settings.privacy"
+        ></button>
+      </p>
       <p class="error" id="settings-error" hidden></p>
     </section>
 

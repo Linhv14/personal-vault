@@ -10,8 +10,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
-- Import from Proton Pass (JSON, CSV or the export archive) from Settings,
-  with a summary before anything is saved and duplicates skipped.
+- Import from Proton Pass (JSON, CSV or the export archive) from Settings →
+  Data, or from an empty vault, with a summary before anything is saved and
+  duplicates skipped.
+- Settings are grouped into Preferences, Data and Security, with sign-out and
+  account deletion kept apart and the privacy policy in the footer.
 - `POST /api/items/batch` creates up to 100 items in one request.
 - Landing page at `/` and `/vi`, with a downloadable beta of the extension
   built for the server it is served from.

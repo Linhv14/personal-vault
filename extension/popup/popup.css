@@ -1154,3 +1154,23 @@ input.link-box {
 .link-row .item-sub {
   white-space: normal;
 }
+
+.row-button.nav::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: var(--chevron) center / contain no-repeat;
+  transform: rotate(-90deg);
+  opacity: 0.8;
+}
+.about-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+button.link.quiet-inline {
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}

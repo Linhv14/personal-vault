@@ -16,7 +16,8 @@ is in the trash. CSV is fine if you only use the standard fields.
 ## Import into 1PW
 
 1. Unlock 1PW.
-2. Open **Settings → Import from Proton Pass**. A page opens in a new tab;
+2. Open **Settings → Data → Import passwords**, or press **Import from
+   Proton Pass** on an empty vault. A page opens in a new tab;
    browsers close the popup when a file picker opens, so the import runs there.
 3. Choose the exported file (`.zip`, `.json` or `.csv`).
 4. Review the summary and press **Import**.
