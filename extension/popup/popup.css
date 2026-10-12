@@ -1098,6 +1098,10 @@ select {
   cursor: not-allowed;
 }
 
+body[data-screen="unlock"],
+body[data-screen="setup"] {
+  height: auto;
+}
 .screen {
   flex: 1 0 auto;
   display: flex;

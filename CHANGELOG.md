@@ -17,7 +17,8 @@ version may change the API or storage format; such releases list the steps in
   expiry and views.
 - "Link ready" and "Shared links" are reduced to one summary line per link,
   with copy and revoke as icons.
-- The popup has a fixed height, so footers stay at the bottom of every screen.
+- The popup keeps one height across the vault screens, so footers stay at the
+  bottom; unlock and setup stay as short as their content.
 - The share page shows expiry, and the last-view warning, in a banner at the
   top of the card.
 - A share opens once or until it expires, replacing 1, 3 or 10 views. The API

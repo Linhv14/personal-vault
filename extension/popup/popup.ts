@@ -122,6 +122,7 @@ type Screen = (typeof SCREENS)[number];
 
 function show(screen: Screen): void {
   for (const name of SCREENS) $(`screen-${name}`).hidden = name !== screen;
+  document.body.dataset.screen = screen;
 }
 
 let locale: Locale = "en";
