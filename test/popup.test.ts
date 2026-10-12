@@ -34,6 +34,7 @@ function area(store: Map<string, unknown>) {
       for (const [key, value] of Object.entries(patch)) store.set(key, value);
     }),
     clear: vi.fn(async () => store.clear()),
+    remove: vi.fn(async (key: string) => void store.delete(key)),
   };
 }
 

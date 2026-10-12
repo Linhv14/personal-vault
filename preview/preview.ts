@@ -67,6 +67,9 @@ function area(store: Map<string, unknown>) {
     async clear() {
       store.clear();
     },
+    async remove(key: string) {
+      store.delete(key);
+    },
   };
 }
 

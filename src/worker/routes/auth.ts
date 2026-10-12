@@ -160,7 +160,12 @@ auth.post("/verify-email", async (c) => {
   const existing = await c.env.DB.prepare("SELECT 1 FROM accounts WHERE email = ?")
     .bind(email)
     .first();
-  const result = await issueCode(c.env, mailer, email, locale, existing !== null, now());
+  const result = await issueCode(
+    c.env,
+    mailer,
+    { email, locale, siteUrl: new URL(c.req.url).origin, alreadyRegistered: existing !== null },
+    now(),
+  );
   if (result === "cooldown") {
     return c.json(apiError("auth.code_cooldown", { seconds: RESEND_COOLDOWN_SECONDS }), 429);
   }

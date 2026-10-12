@@ -109,6 +109,7 @@ export const vi: Catalogue = {
   "setup.send_code": "Gửi mã xác minh",
   "setup.code_sent": "Đã gửi mã 6 số tới {email}. Kiểm tra cả thư rác.",
   "setup.code_resend": "Gửi lại mã",
+  "setup.code_change_email": "Dùng email khác",
   "setup.code_resent": "Đã gửi lại mã",
   "setup.password_mismatch": "Hai lần nhập master password không giống nhau",
   "setup.working": "Đang tạo khoá…",

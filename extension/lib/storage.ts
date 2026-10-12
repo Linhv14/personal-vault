@@ -46,6 +46,35 @@ interface SessionState {
 
 export const DEFAULT_AUTO_LOCK_MINUTES = 15;
 
+export interface PendingSignup {
+  apiUrl: string;
+  email: string;
+  registrationToken: string;
+  sentAt: number;
+}
+
+const PENDING_SIGNUP_KEY = "pendingSignup";
+const PENDING_SIGNUP_TTL_MS = 15 * 60_000;
+
+export async function savePendingSignup(signup: PendingSignup): Promise<void> {
+  await chrome.storage.session.set({ [PENDING_SIGNUP_KEY]: signup });
+}
+
+export async function loadPendingSignup(): Promise<PendingSignup | null> {
+  const signup = (await chrome.storage.session.get(PENDING_SIGNUP_KEY))[PENDING_SIGNUP_KEY] as
+    PendingSignup | undefined;
+  if (!signup) return null;
+  if (Date.now() - signup.sentAt > PENDING_SIGNUP_TTL_MS) {
+    await clearPendingSignup();
+    return null;
+  }
+  return signup;
+}
+
+export async function clearPendingSignup(): Promise<void> {
+  await chrome.storage.session.remove(PENDING_SIGNUP_KEY);
+}
+
 export async function getLocal(): Promise<LocalState> {
   return (await chrome.storage.local.get(null)) as LocalState;
 }

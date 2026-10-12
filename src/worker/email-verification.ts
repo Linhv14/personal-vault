@@ -1,6 +1,6 @@
 import { toBase64, timingSafeEqual, utf8Encode } from "../core/bytes.js";
-import { APP_NAME } from "../core/brand.js";
 import { randomInt } from "../core/generator.js";
+import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
 import { createMailer, type Mailer } from "./mailer.js";
 import type { Env } from "./types.js";
 
@@ -28,46 +28,19 @@ async function codeHash(env: Env, email: string, code: string): Promise<string> 
   return toBase64(new Uint8Array(mac));
 }
 
-type Locale = "en" | "vi";
-
-const COPY = {
-  en: {
-    codeSubject: (code: string) => `${code} is your ${APP_NAME} code`,
-    codeBody: (code: string) =>
-      `Your ${APP_NAME} verification code is ${code}.\n\nIt expires in 15 minutes. If you did not try to create a vault, you can ignore this email.`,
-    existingSubject: "Someone tried to sign up with your email",
-    existingBody: `Someone, possibly you, just tried to create a ${APP_NAME} account with this email address, but it already has one.\n\nIf it was you, choose "Sign in to your vault" instead. If not, you can ignore this email: your vault is unaffected.`,
-  },
-  vi: {
-    codeSubject: (code: string) => `${code} là mã ${APP_NAME} của bạn`,
-    codeBody: (code: string) =>
-      `Mã xác minh ${APP_NAME} của bạn là ${code}.\n\nMã hết hạn sau 15 phút. Nếu bạn không tạo vault, hãy bỏ qua thư này.`,
-    existingSubject: "Có người thử đăng ký bằng email của bạn",
-    existingBody: `Ai đó, có thể là bạn, vừa thử tạo tài khoản ${APP_NAME} bằng địa chỉ email này, nhưng email đã có tài khoản.\n\nNếu là bạn, hãy chọn "Đăng nhập vault có sẵn". Nếu không, bạn có thể bỏ qua thư này: vault của bạn không bị ảnh hưởng.`,
-  },
-} as const;
-
-function html(text: string, code?: string): string {
-  const escape = (value: string) => value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`);
-  const paragraphs = text
-    .split("\n\n")
-    .map((paragraph) => `<p style="margin:0 0 16px">${escape(paragraph)}</p>`)
-    .join("");
-  const codeBlock = code
-    ? `<p style="margin:0 0 20px;font:600 30px/1 ui-monospace,Menlo,monospace;letter-spacing:6px">${code}</p>`
-    : "";
-  const wordmark = `<p style="margin:0 0 28px;font:750 22px/1 -apple-system,Segoe UI,Roboto,sans-serif;letter-spacing:-0.03em"><span style="color:#0f766e">${escape(APP_NAME.slice(0, 1))}</span>${escape(APP_NAME.slice(1))}</p>`;
-  return `<div style="font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#15181d;max-width:480px">${wordmark}${codeBlock}${paragraphs}</div>`;
-}
-
 export type IssueResult = "sent" | "cooldown" | "failed";
+
+export interface CodeRequest {
+  email: string;
+  locale: EmailLocale;
+  siteUrl: string;
+  alreadyRegistered: boolean;
+}
 
 export async function issueCode(
   env: Env,
   mailer: Mailer,
-  email: string,
-  locale: Locale,
-  alreadyRegistered: boolean,
+  { email, locale, siteUrl, alreadyRegistered }: CodeRequest,
   timestamp: number,
 ): Promise<IssueResult> {
   const previous = await env.DB.prepare("SELECT sent_at FROM email_verifications WHERE email = ?")
@@ -88,16 +61,11 @@ export async function issueCode(
     .bind(email, await codeHash(env, email, code), timestamp + CODE_TTL_SECONDS, timestamp)
     .run();
 
-  const copy = COPY[locale];
-  const subject = alreadyRegistered ? copy.existingSubject : copy.codeSubject(code);
-  const text = alreadyRegistered ? copy.existingBody : copy.codeBody(code);
+  const message = alreadyRegistered
+    ? existingAccountEmail({ locale, siteUrl })
+    : verificationCodeEmail({ locale, siteUrl }, code);
   try {
-    await mailer.send({
-      to: email,
-      subject,
-      text,
-      html: html(text, alreadyRegistered ? undefined : code),
-    });
+    await mailer.send({ to: email, ...message });
     return "sent";
   } catch (error) {
     console.error("Verification email failed:", error);

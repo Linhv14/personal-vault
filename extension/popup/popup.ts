@@ -52,10 +52,13 @@ import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
 import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
 import {
+  clearPendingSignup,
   DEFAULT_AUTO_LOCK_MINUTES,
   getLocal,
   getUnlocked,
+  loadPendingSignup,
   lock,
+  savePendingSignup,
   setLocal,
   touch,
   unlock,
@@ -174,7 +177,6 @@ async function boot(): Promise<void> {
   locale = resolveLocale(local.locale);
   t = createTranslator(locale);
   applyStaticText();
-  setSetupMode("register");
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabUrl = tab?.url;
@@ -184,9 +186,17 @@ async function boot(): Promise<void> {
     const serverField =
       $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!;
     serverField.value = local.apiUrl ?? deployedServerUrl();
+    const signup = await loadPendingSignup();
+    if (signup) {
+      serverField.value = signup.apiUrl;
+      setupField("email").value = signup.email;
+      setupField("registrationToken").value = signup.registrationToken;
+      codeSentTo = signup.email;
+    }
     showServerSummary(serverField.value);
     void serverConfigFor(serverField.value);
     show("setup");
+    if (signup) await showSetupForm("register");
     return;
   }
 
@@ -301,20 +311,23 @@ let registrationOpen = false;
 let verificationRequired = false;
 let codeSentTo: string | null = null;
 
+function setupField(name: string): HTMLInputElement {
+  return $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+}
+
+function showSetupField(name: string, visible: boolean): void {
+  const field = setupField(name);
+  field.required = visible;
+  field.closest("label")!.hidden = !visible;
+}
+
+function awaitingCode(): boolean {
+  return setupMode === "register" && verificationRequired && codeSentTo !== null;
+}
+
 function setupButtonLabel(): string {
   if (setupMode === "login") return t("setup.sign_in");
   return verificationRequired && !codeSentTo ? t("setup.send_code") : t("setup.create");
-}
-
-function showCodeStep(email: string | null): void {
-  codeSentTo = email;
-  const form = $<HTMLFormElement>("form-setup");
-  const code = form.querySelector<HTMLInputElement>('[name="verificationCode"]')!;
-  code.required = Boolean(email);
-  $("setup-code-field").hidden = !email;
-  $("setup-code-hint").textContent = email ? t("setup.code_sent", { email }) : "";
-  form.querySelector("button.primary")!.textContent = setupButtonLabel();
-  if (email) code.focus();
 }
 
 /**
@@ -325,28 +338,36 @@ function showCodeStep(email: string | null): void {
  * strangers creating accounts. Hiding the sign-in path behind a link led people
  * setting up a new machine to believe they needed a token they do not have.
  */
-function setSetupMode(mode: "register" | "login"): void {
-  setupMode = mode;
-  const registering = mode === "register";
-  const form = $<HTMLFormElement>("form-setup");
+function renderSetupForm(): void {
+  const registering = setupMode === "register";
+  const codeStep = awaitingCode();
+  const askPassword = !registering || !verificationRequired || codeStep;
 
-  for (const name of ["registrationToken", "confirm"]) {
-    const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
-    const needed = registering && !(name === "registrationToken" && registrationOpen);
-    field.required = needed;
-    field.closest("label")!.hidden = !needed;
-  }
+  $("setup-server").hidden = codeStep;
+  showSetupField("email", !codeStep);
+  showSetupField("registrationToken", registering && !registrationOpen && !codeStep);
+  showSetupField("password", askPassword);
+  showSetupField("confirm", askPassword && registering);
 
-  const password = form.querySelector<HTMLInputElement>('[name="password"]')!;
+  $("setup-code-field").hidden = !codeStep;
+  setupField("verificationCode").required = codeStep;
+  $("setup-code-hint").textContent = codeStep ? t("setup.code_sent", { email: codeSentTo! }) : "";
+
+  const password = setupField("password");
   password.autocomplete = registering ? "new-password" : "current-password";
-  // Only enforce a minimum when creating; an existing password is what it is.
   password.minLength = registering ? 12 : 0;
 
-  form.querySelector("button.primary")!.textContent = setupButtonLabel();
   $("setup-hint").textContent = t("setup.hint_create");
-  $("setup-hint").hidden = !registering;
+  $("setup-hint").hidden = !(registering && askPassword);
   $("setup-form-title").textContent = t(registering ? "setup.mode_create" : "setup.mode_signin");
-  setError("setup-error", null);
+  $<HTMLFormElement>("form-setup").querySelector("button.primary")!.textContent =
+    setupButtonLabel();
+}
+
+async function leaveCodeStep(): Promise<void> {
+  codeSentTo = null;
+  await clearPendingSignup();
+  renderSetupForm();
 }
 
 function serverFieldValue(): string {
@@ -372,24 +393,32 @@ async function applyServerConfig(): Promise<void> {
 
 async function showSetupForm(mode: "register" | "login"): Promise<void> {
   await applyServerConfig();
-  setSetupMode(mode);
+  setupMode = mode;
+  renderSetupForm();
+  setError("setup-error", null);
   $("setup-choice").hidden = true;
   $("setup-form-wrap").hidden = false;
-  $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="email"]')!.focus();
+  setupField(awaitingCode() ? "verificationCode" : "email").focus();
 }
 
 $<HTMLFormElement>("form-setup")
   .querySelector<HTMLInputElement>('[name="apiUrl"]')!
   .addEventListener("change", async () => {
     await applyServerConfig();
-    setSetupMode(setupMode);
+    renderSetupForm();
   });
 
 $("setup-mode-create").addEventListener("click", () => void showSetupForm("register"));
 $("setup-mode-signin").addEventListener("click", () => void showSetupForm("login"));
-$("setup-back").addEventListener("click", () => {
+$("setup-back").addEventListener("click", async () => {
+  await leaveCodeStep();
   $("setup-form-wrap").hidden = true;
   $("setup-choice").hidden = false;
+});
+
+$("setup-code-change-email").addEventListener("click", async () => {
+  await leaveCodeStep();
+  setupField("email").focus();
 });
 
 $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
@@ -413,9 +442,13 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
   button.disabled = true;
 
   try {
-    if (setupMode === "register" && verificationRequired && codeSentTo !== email) {
+    if (setupMode === "register" && verificationRequired && !codeSentTo) {
       await api.requestVerificationCode(apiUrl, email, locale);
-      showCodeStep(email);
+      const registrationToken = String(data.get("registrationToken") ?? "");
+      await savePendingSignup({ apiUrl, email, registrationToken, sentAt: Date.now() });
+      codeSentTo = email;
+      renderSetupForm();
+      setupField("verificationCode").focus();
       return;
     }
     await setLocal({ apiUrl, email });
@@ -428,6 +461,7 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
         verificationRequired ? String(data.get("verificationCode")).trim() : undefined,
       );
       await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
+      await clearPendingSignup();
       await finishUnlock(email, password, record.kdf, record.wrappedVaultKey, token);
     } else {
       await doLogin(email, password);
@@ -443,24 +477,19 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
 
 $("setup-code-resend").addEventListener("click", async () => {
   setError("setup-error", null);
-  const email = $<HTMLFormElement>("form-setup")
-    .querySelector<HTMLInputElement>('[name="email"]')!
-    .value.trim()
-    .toLowerCase();
+  const signup = await loadPendingSignup();
+  if (!signup) {
+    await leaveCodeStep();
+    return;
+  }
   try {
-    await api.requestVerificationCode(serverFieldValue().replace(/\/$/, ""), email, locale);
-    showCodeStep(email);
+    await api.requestVerificationCode(signup.apiUrl, signup.email, locale);
+    await savePendingSignup({ ...signup, sentAt: Date.now() });
     toast(t("setup.code_resent"));
   } catch (error) {
     showError("setup-error", error);
   }
 });
-
-$<HTMLFormElement>("form-setup")
-  .querySelector<HTMLInputElement>('[name="email"]')!
-  .addEventListener("input", () => {
-    if (codeSentTo) showCodeStep(null);
-  });
 
 $<HTMLFormElement>("form-unlock").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1184,7 +1213,7 @@ $("settings-locale").addEventListener("change", async (event) => {
   locale = resolveLocale(preference);
   t = createTranslator(locale);
   applyStaticText();
-  setSetupMode(setupMode);
+  renderSetupForm();
   if (vaultKey) items = await decryptAll(vaultKey, locale);
   await openSettings();
 });

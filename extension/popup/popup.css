@@ -365,8 +365,10 @@ button.primary.danger-fill:hover:not(:disabled) {
   text-align: center;
   background: var(--bg);
 }
-.code-step .link {
-  align-self: center;
+.code-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
 }
 
 .choices {

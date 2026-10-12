@@ -110,6 +110,7 @@ export const en = {
   "setup.send_code": "Send verification code",
   "setup.code_sent": "We sent a 6-digit code to {email}. Check your spam folder too.",
   "setup.code_resend": "Resend code",
+  "setup.code_change_email": "Use a different email",
   "setup.code_resent": "Code sent again",
   "setup.password_mismatch": "The two master passwords do not match",
   "setup.working": "Deriving keys…",
