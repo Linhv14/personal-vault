@@ -21,6 +21,8 @@ version may change the API or storage format; such releases list the steps in
   bottom; unlock and setup stay as short as their content.
 - The share page shows expiry, and the last-view warning, in a banner at the
   top of the card.
+- The share page lists the website as its first field, a full link with a
+  copy button, instead of a small domain chip under the title.
 - A share opens once or until it expires, replacing 1, 3 or 10 views. The API
   accepts `maxViews: null` for no view limit.
 - A link for several recipients cannot be one-time: the first recipient would

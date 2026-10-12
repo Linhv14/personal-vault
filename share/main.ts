@@ -249,30 +249,30 @@ async function onCodeSubmit(event: SubmitEvent): Promise<void> {
   await reveal();
 }
 
-function websiteLink(raw: string | undefined): HTMLElement | null {
-  if (!raw) return null;
-  let url: URL;
+function websiteUrl(raw: string): URL | null {
   try {
-    url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`);
+    const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`);
+    return url.protocol === "https:" || url.protocol === "http:" ? url : null;
   } catch {
     return null;
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+}
+
+function websiteField(raw: string): HTMLElement {
+  const url = websiteUrl(raw);
+  if (!url) return textField(t("common.url"), raw);
+  const { wrap, body } = field(t("common.url"));
+  const valueNode = document.createElement("div");
+  valueNode.className = "value";
   const anchor = document.createElement("a");
   anchor.href = url.href;
   anchor.target = "_blank";
   anchor.rel = "noopener noreferrer";
-  anchor.textContent = url.host;
-  const node = chip("link", "");
-  node.replaceChildren(icon("link"), anchor);
-  return node;
-}
-
-function chip(name: IconName, text: string): HTMLElement {
-  const node = document.createElement("span");
-  node.className = "chip";
-  node.append(icon(name), text);
-  return node;
+  anchor.textContent = url.href.replace(/\/$/, "");
+  valueNode.append(anchor);
+  body.append(valueNode);
+  wrap.append(copyButton(anchor.textContent).element);
+  return wrap;
 }
 
 function render(payload: SharePayload): void {
@@ -280,13 +280,9 @@ function render(payload: SharePayload): void {
   el("title").textContent = title;
   el("avatar").textContent = [...title][0]?.toUpperCase() ?? "?";
 
-  const chips: HTMLElement[] = [];
-  const site = websiteLink(payload.url);
-  if (site) chips.push(site);
-  el("meta").replaceChildren(...chips);
-
   const fields = el("fields");
   fields.replaceChildren();
+  if (payload.url) fields.append(websiteField(payload.url));
   if (payload.username) fields.append(textField(t("common.username"), payload.username));
   if (payload.password) fields.append(passwordField(payload.password));
   if (payload.totp) fields.append(totpField(payload.totp));
