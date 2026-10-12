@@ -1,6 +1,11 @@
 import { AUTOFILL_ORIGINS, AUTOFILL_SCRIPT_ID } from "./autofill-protocol.js";
 
+export function autofillSupported(): boolean {
+  return typeof chrome.scripting?.registerContentScripts === "function";
+}
+
 async function isRegistered(): Promise<boolean> {
+  if (!autofillSupported()) return false;
   const registered = await chrome.scripting.getRegisteredContentScripts({
     ids: [AUTOFILL_SCRIPT_ID],
   });
@@ -16,7 +21,7 @@ export function revokesAutofill(permissions: chrome.permissions.Permissions): bo
 }
 
 export async function registerAutofillScript(): Promise<void> {
-  if (await isRegistered()) return;
+  if (!autofillSupported() || (await isRegistered())) return;
   await chrome.scripting.registerContentScripts([
     {
       id: AUTOFILL_SCRIPT_ID,
@@ -36,6 +41,7 @@ export async function unregisterAutofillScript(): Promise<void> {
 }
 
 export async function isAutofillEnabled(): Promise<boolean> {
+  if (!autofillSupported()) return false;
   const [registered, granted] = await Promise.all([
     isRegistered(),
     chrome.permissions.contains({ origins: AUTOFILL_ORIGINS }),
@@ -44,6 +50,7 @@ export async function isAutofillEnabled(): Promise<boolean> {
 }
 
 export async function enableAutofill(): Promise<boolean> {
+  if (!autofillSupported()) return false;
   const granted = await chrome.permissions.request({ origins: AUTOFILL_ORIGINS });
   if (granted) await registerAutofillScript();
   return granted;

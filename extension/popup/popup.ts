@@ -46,7 +46,12 @@ import {
   type Translate,
 } from "../../src/i18n/index.js";
 import * as api from "../lib/api.js";
-import { disableAutofill, enableAutofill, isAutofillEnabled } from "../lib/autofill-permission.js";
+import {
+  autofillSupported,
+  disableAutofill,
+  enableAutofill,
+  isAutofillEnabled,
+} from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
@@ -222,7 +227,8 @@ async function enterVault(rawBase64: string): Promise<void> {
 
 async function refreshAutofillPromo(): Promise<void> {
   const { autofillPromoDismissed } = await getLocal();
-  $("autofill-promo").hidden = Boolean(autofillPromoDismissed) || (await isAutofillEnabled());
+  $("autofill-promo").hidden =
+    !autofillSupported() || Boolean(autofillPromoDismissed) || (await isAutofillEnabled());
 }
 
 async function turnOnAutofill(): Promise<boolean> {
@@ -1175,6 +1181,7 @@ async function openSettings(): Promise<void> {
     ...LOCALES.map((code) => new Option(LOCALE_NAMES[code], code)),
   );
   select.value = local.locale ?? "auto";
+  $("settings-autofill").closest("label")!.hidden = !autofillSupported();
   $<HTMLInputElement>("settings-autofill").checked = await isAutofillEnabled();
 
   $("settings-about").replaceChildren(

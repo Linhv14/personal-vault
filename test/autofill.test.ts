@@ -246,3 +246,13 @@ describe("capture and save", () => {
     expect(puts).toHaveLength(0);
   });
 });
+
+describe("without the scripting API", () => {
+  it("reports autofill as unavailable instead of throwing", async () => {
+    const { autofillSupported, isAutofillEnabled, enableAutofill } =
+      await import("../extension/lib/autofill-permission.js");
+    expect(autofillSupported()).toBe(false);
+    await expect(isAutofillEnabled()).resolves.toBe(false);
+    await expect(enableAutofill()).resolves.toBe(false);
+  });
+});
