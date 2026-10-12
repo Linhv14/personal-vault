@@ -54,15 +54,10 @@ describe("existingAccountEmail", () => {
 });
 
 describe("email footer", () => {
-  it("says why the reader got the email, naming their address", () => {
+  it("is one line: copyright, the site and the privacy policy", () => {
     const email = verificationCodeEmail(context, "042917");
-    expect(email.html).toContain("a sign-up code was requested for me@example.com");
-    expect(email.text).toContain("a sign-up code was requested for me@example.com");
+    expect(email.html).toContain(`© ${new Date().getUTCFullYear()} 1PW`);
     expect(email.html).toContain('href="https://1pw.online"');
-  });
-
-  it("escapes the recipient address", () => {
-    const email = existingAccountEmail({ ...context, recipient: '"><img src=x>@example.com' });
-    expect(email.html).not.toContain("<img src=x>");
+    expect(email.text).toContain("© ");
   });
 });

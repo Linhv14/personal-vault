@@ -67,7 +67,7 @@ export async function sendShareCode(
   try {
     await mailer.send({
       to: email,
-      ...shareAccessEmail({ locale, siteUrl, recipient: email }, code),
+      ...shareAccessEmail({ locale, siteUrl }, code),
     });
   } catch (error) {
     console.error("Share access email failed:", error);

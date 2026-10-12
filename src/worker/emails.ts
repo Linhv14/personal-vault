@@ -21,7 +21,6 @@ const LOGO: InlineImage = {
 interface EmailContext {
   locale: EmailLocale;
   siteUrl: string;
-  recipient: string;
 }
 
 const COLORS = {
@@ -46,8 +45,6 @@ const STRINGS = {
       intro: `Use this code to finish creating your ${APP_NAME} vault.`,
       expiry: "It expires in 15 minutes.",
       ignore: "If you didn't request this, you can ignore this email.",
-      reason: (to: string) =>
-        `You received this email because a sign-up code was requested for ${to}.`,
     },
     existing: {
       subject: `Your email already has a ${APP_NAME} account`,
@@ -57,8 +54,6 @@ const STRINGS = {
       next: `If this was you, open ${APP_NAME} and choose "Sign in to your vault".`,
       ignore:
         "If it wasn't you, you can ignore this email. Your vault is still protected by your master password.",
-      reason: (to: string) =>
-        `You received this email because someone tried to create an account with ${to}.`,
     },
     share: {
       subject: (code: string) => `${code} is your code to view a shared ${APP_NAME} login`,
@@ -67,10 +62,7 @@ const STRINGS = {
       intro: `Someone shared a login with you through ${APP_NAME}. Enter this code on the page you opened.`,
       expiry: "It expires in 10 minutes.",
       ignore: "If you didn't request this, you can ignore this email.",
-      reason: (to: string) =>
-        `You received this email because a code to view a shared login was requested for ${to}.`,
     },
-    tagline: `${APP_NAME} · Passwords and 2FA codes, end-to-end encrypted`,
     privacy: "Privacy policy",
   },
   vi: {
@@ -81,7 +73,6 @@ const STRINGS = {
       intro: `Dùng mã này để hoàn tất tạo vault ${APP_NAME}.`,
       expiry: "Mã hết hạn sau 15 phút.",
       ignore: "Nếu bạn không yêu cầu mã này, hãy bỏ qua email.",
-      reason: (to: string) => `Bạn nhận được email này vì có yêu cầu mã đăng ký cho ${to}.`,
     },
     existing: {
       subject: `Email của bạn đã có tài khoản ${APP_NAME}`,
@@ -91,7 +82,6 @@ const STRINGS = {
       next: `Nếu là bạn, hãy mở ${APP_NAME} và chọn "Đăng nhập vault có sẵn".`,
       ignore:
         "Nếu không phải bạn, hãy bỏ qua email này. Vault của bạn vẫn được bảo vệ bằng master password.",
-      reason: (to: string) => `Bạn nhận được email này vì có người thử tạo tài khoản bằng ${to}.`,
     },
     share: {
       subject: (code: string) => `${code} là mã để xem tài khoản được chia sẻ qua ${APP_NAME}`,
@@ -100,10 +90,7 @@ const STRINGS = {
       intro: `Có người đã chia sẻ một tài khoản với bạn qua ${APP_NAME}. Nhập mã này trên trang bạn đang mở.`,
       expiry: "Mã hết hạn sau 10 phút.",
       ignore: "Nếu bạn không yêu cầu mã này, hãy bỏ qua email.",
-      reason: (to: string) =>
-        `Bạn nhận được email này vì có yêu cầu mã xem tài khoản được chia sẻ cho ${to}.`,
     },
-    tagline: `${APP_NAME} · Mật khẩu và mã 2FA, mã hoá đầu-cuối`,
     privacy: "Chính sách quyền riêng tư",
   },
 } as const;
@@ -127,7 +114,7 @@ function codeBlock(code: string): string {
 
 function layout(
   context: EmailContext,
-  email: { subject: string; preheader: string; heading: string; body: string; reason: string },
+  email: { subject: string; preheader: string; heading: string; body: string },
 ): string {
   const strings = STRINGS[context.locale];
   const privacyUrl = `${context.siteUrl}/privacy`;
@@ -150,11 +137,7 @@ function layout(
 <h1 style="margin:0 0 12px;font:650 22px/1.3 ${FONT};color:${COLORS.text}">${escape(email.heading)}</h1>
 ${email.body}
 </td></tr>
-<tr><td style="padding:28px 4px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-top:20px;border-top:1px solid ${COLORS.border};font:400 12px/1.6 ${FONT};color:${COLORS.muted}">
-<p style="margin:0 0 10px">${escape(email.reason)}</p>
-<p style="margin:0 0 10px"><a href="${escape(context.siteUrl)}" style="color:${COLORS.muted};text-decoration:underline">${escape(siteHost(context.siteUrl))}</a> &nbsp;·&nbsp; <a href="${escape(privacyUrl)}" style="color:${COLORS.muted};text-decoration:underline">${escape(strings.privacy)}</a></p>
-<p style="margin:0">${escape(strings.tagline)}</p>
-</td></tr></table></td></tr>
+<tr><td style="padding:24px 4px 0;font:400 12px/1.6 ${FONT};color:${COLORS.muted}">© ${new Date().getUTCFullYear()} ${escape(APP_NAME)} &nbsp;·&nbsp; <a href="${escape(context.siteUrl)}" style="color:${COLORS.muted}">${escape(siteHost(context.siteUrl))}</a> &nbsp;·&nbsp; <a href="${escape(privacyUrl)}" style="color:${COLORS.muted}">${escape(strings.privacy)}</a></td></tr>
 </table>
 </td></tr>
 </table>
@@ -170,34 +153,33 @@ function siteHost(siteUrl: string): string {
   }
 }
 
-function plainText(context: EmailContext, blocks: string[], reason: string): string {
+function plainText(context: EmailContext, blocks: string[]): string {
   const strings = STRINGS[context.locale];
   return [
     ...blocks,
     "—",
-    reason,
+    `© ${new Date().getUTCFullYear()} ${APP_NAME} · ${siteHost(context.siteUrl)}`,
     `${strings.privacy}: ${context.siteUrl}/privacy`,
-    strings.tagline,
   ].join("\n\n");
 }
 
 export function verificationCodeEmail(context: EmailContext, code: string): RenderedEmail {
   const strings = STRINGS[context.locale].code;
-  const reason = strings.reason(context.recipient);
   const subject = strings.subject(code);
   return {
     subject,
-    text: plainText(
-      context,
-      [strings.heading, strings.intro, `    ${code}`, strings.expiry, strings.ignore],
-      reason,
-    ),
+    text: plainText(context, [
+      strings.heading,
+      strings.intro,
+      `    ${code}`,
+      strings.expiry,
+      strings.ignore,
+    ]),
     inlineImages: [LOGO],
     html: layout(context, {
       subject,
       preheader: strings.preheader(code),
       heading: strings.heading,
-      reason,
       body:
         paragraph(strings.intro) +
         codeBlock(code) +
@@ -209,20 +191,14 @@ export function verificationCodeEmail(context: EmailContext, code: string): Rend
 
 export function existingAccountEmail(context: EmailContext): RenderedEmail {
   const strings = STRINGS[context.locale].existing;
-  const reason = strings.reason(context.recipient);
   return {
     subject: strings.subject,
-    text: plainText(
-      context,
-      [strings.heading, strings.intro, strings.next, strings.ignore],
-      reason,
-    ),
+    text: plainText(context, [strings.heading, strings.intro, strings.next, strings.ignore]),
     inlineImages: [LOGO],
     html: layout(context, {
       subject: strings.subject,
       preheader: strings.preheader,
       heading: strings.heading,
-      reason,
       body: paragraph(strings.intro) + paragraph(strings.next) + paragraph(strings.ignore, "small"),
     }),
   };
@@ -230,21 +206,21 @@ export function existingAccountEmail(context: EmailContext): RenderedEmail {
 
 export function shareAccessEmail(context: EmailContext, code: string): RenderedEmail {
   const strings = STRINGS[context.locale].share;
-  const reason = strings.reason(context.recipient);
   const subject = strings.subject(code);
   return {
     subject,
-    text: plainText(
-      context,
-      [strings.heading, strings.intro, `    ${code}`, strings.expiry, strings.ignore],
-      reason,
-    ),
+    text: plainText(context, [
+      strings.heading,
+      strings.intro,
+      `    ${code}`,
+      strings.expiry,
+      strings.ignore,
+    ]),
     inlineImages: [LOGO],
     html: layout(context, {
       subject,
       preheader: strings.preheader(code),
       heading: strings.heading,
-      reason,
       body:
         paragraph(strings.intro) +
         codeBlock(code) +

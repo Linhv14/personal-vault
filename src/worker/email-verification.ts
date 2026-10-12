@@ -49,8 +49,8 @@ export async function issueCode(
     .run();
 
   const message = alreadyRegistered
-    ? existingAccountEmail({ locale, siteUrl, recipient: email })
-    : verificationCodeEmail({ locale, siteUrl, recipient: email }, code);
+    ? existingAccountEmail({ locale, siteUrl })
+    : verificationCodeEmail({ locale, siteUrl }, code);
   try {
     await mailer.send({ to: email, ...message });
     return "sent";
