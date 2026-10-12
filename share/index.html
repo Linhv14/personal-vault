@@ -4,141 +4,314 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow, noarchive" />
-    <!-- Keep the URL out of any onward request; it carries the decryption key. -->
     <meta name="referrer" content="no-referrer" />
-    <title>Shared details</title>
+    <title>Personal Vault</title>
     <style>
       :root {
-        --bg: #0f1115;
-        --card: #181b22;
-        --border: #2a2f3a;
-        --text: #e7e9ee;
-        --muted: #9aa3b2;
-        --accent: #6aa9ff;
-        --danger: #ff6b6b;
-        --ok: #4ade80;
+        --bg: #f5f6f8;
+        --card: #ffffff;
+        --surface: #f4f5f7;
+        --surface-hover: #eceef2;
+        --border: #e5e7eb;
+        --text: #15181d;
+        --muted: #6b7380;
+        --accent: #2563eb;
+        --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+        --ok: #16a34a;
+        --warn: #b45309;
+        --warn-soft: #fef3c7;
+        --danger: #dc2626;
+        --radius: 14px;
       }
-      @media (prefers-color-scheme: light) {
+      @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #f5f6f8;
-          --card: #ffffff;
-          --border: #e1e4ea;
-          --text: #1a1d23;
-          --muted: #5b6472;
-          --accent: #1a6fe0;
+          --bg: #0e1014;
+          --card: #15181e;
+          --surface: #1c2027;
+          --surface-hover: #232832;
+          --border: #262b34;
+          --text: #eceef2;
+          --muted: #8b93a1;
+          --accent: #7aa7ff;
+          --ok: #4ade80;
+          --warn: #fbbf24;
+          --warn-soft: color-mix(in srgb, #fbbf24 12%, transparent);
+          --danger: #ff7a7a;
         }
       }
+
       * {
         box-sizing: border-box;
+      }
+      [hidden] {
+        display: none !important;
       }
       body {
         margin: 0;
         min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
         background: var(--bg);
         color: var(--text);
         font:
           15px/1.5 -apple-system,
+          BlinkMacSystemFont,
           "Segoe UI",
           Roboto,
-          "Helvetica Neue",
           sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
       main {
-        width: 100%;
-        max-width: 440px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 40px 16px 24px;
       }
-      .card {
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 20px;
-      }
-      h1 {
-        font-size: 18px;
-        margin: 0 0 4px;
-      }
-      .sub {
-        color: var(--muted);
-        font-size: 13px;
-        margin: 0 0 18px;
-      }
-      .field {
-        border-top: 1px solid var(--border);
-        padding: 12px 0;
-      }
-      .field:first-of-type {
-        border-top: 0;
-      }
-      .label {
-        color: var(--muted);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      .row {
+      .brand {
         display: flex;
         align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .brand .icon {
+        color: var(--accent);
+      }
+      .card {
+        width: 100%;
+        max-width: 460px;
+        padding: 28px;
+        border-radius: 20px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        box-shadow:
+          0 1px 2px rgb(0 0 0 / 0.04),
+          0 12px 32px rgb(0 0 0 / 0.06);
+      }
+      footer a {
+        color: inherit;
+      }
+      footer {
+        margin-top: auto;
+        padding-top: 24px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .icon {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex-shrink: 0;
+      }
+
+      .state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 6px;
+      }
+      .state-mark {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        margin-bottom: 8px;
+        border-radius: 16px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .state-mark .icon {
+        width: 26px;
+        height: 26px;
+      }
+      .state-mark.muted {
+        background: var(--surface);
+        color: var(--muted);
+      }
+      h1 {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 650;
+        letter-spacing: -0.01em;
+      }
+      .sub {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        margin-bottom: 10px;
+        border-radius: 50%;
+        border: 3px solid var(--surface);
+        border-top-color: var(--accent);
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
         gap: 10px;
-        margin-top: 4px;
+        width: 100%;
+        margin-top: 18px;
       }
-      .value {
-        flex: 1;
-        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-        font-size: 15px;
-        word-break: break-all;
+      input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
       }
-      .value.hidden {
-        letter-spacing: 0.18em;
+      input:focus {
+        outline: none;
+        border-color: var(--accent);
       }
       button {
-        background: transparent;
-        color: var(--accent);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 5px 10px;
-        font-size: 13px;
+        font: inherit;
         cursor: pointer;
-        white-space: nowrap;
-      }
-      button:hover {
-        border-color: var(--accent);
+        border: none;
+        background: none;
+        color: inherit;
       }
       button.primary {
+        padding: 12px;
+        border-radius: 12px;
         background: var(--accent);
         color: #fff;
-        border-color: var(--accent);
-        width: 100%;
-        padding: 10px;
-        font-size: 15px;
+        font-weight: 600;
       }
-      input[type="password"] {
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        background: var(--bg);
+      .error {
+        margin: 4px 0 0;
+        color: var(--danger);
+        font-size: 13px;
+      }
+
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+      .avatar {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 20px;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
+      .head-text {
+        min-width: 0;
+      }
+      .head-text h1 {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .chip .icon {
+        width: 13px;
+        height: 13px;
+      }
+
+      .fields {
+        border-radius: var(--radius);
+        background: var(--surface);
+        overflow: hidden;
+      }
+      .field {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 8px 10px 14px;
+      }
+      .field + .field {
+        border-top: 1px solid var(--border);
+      }
+      .field-body {
+        flex: 1;
+        min-width: 0;
+      }
+      .label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .value {
+        overflow-wrap: anywhere;
+      }
+      .value.mono {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 14px;
+        letter-spacing: 0.02em;
+      }
+      .value.masked {
+        letter-spacing: 0.15em;
+      }
+      .value.note {
+        white-space: pre-wrap;
+      }
+      .icon-button {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .icon-button:hover {
+        background: var(--surface-hover);
         color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: 15px;
+      }
+      .icon-button.done {
+        color: var(--ok);
       }
       .totp {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-top: 6px;
+        gap: 10px;
+        margin-top: 2px;
       }
       .code {
-        font-family: ui-monospace, Menlo, Consolas, monospace;
-        font-size: 30px;
-        letter-spacing: 0.14em;
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 26px;
+        letter-spacing: 0.08em;
         font-variant-numeric: tabular-nums;
-      }
-      .ring {
-        flex-shrink: 0;
       }
       .ring circle {
         fill: none;
@@ -158,39 +331,40 @@
         stroke: var(--danger);
         transition: none;
       }
-      .note {
-        white-space: pre-wrap;
-        word-break: break-word;
-        font-family: inherit;
-      }
-      .warn {
+
+      .notice {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
         margin-top: 16px;
-        padding: 10px 12px;
-        border-radius: 8px;
-        background: color-mix(in srgb, var(--danger) 12%, transparent);
-        border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+        color: var(--muted);
         font-size: 13px;
       }
-      .error {
-        color: var(--danger);
+      .notice.last {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: var(--warn-soft);
+        color: var(--warn);
       }
-      .copied {
-        color: var(--ok);
-      }
-      [hidden] {
-        display: none !important;
+      .notice .icon {
+        width: 16px;
+        height: 16px;
+        margin-top: 2px;
       }
     </style>
   </head>
   <body>
     <main>
+      <div class="brand"><i data-icon="shield"></i>Personal Vault</div>
       <div class="card">
-        <div id="state-loading">
+        <div class="state" id="state-loading">
+          <div class="spinner"></div>
           <h1 data-i18n="view.loading"></h1>
           <p class="sub" data-i18n="view.loading_hint"></p>
         </div>
 
-        <div id="state-passphrase" hidden>
+        <div class="state" id="state-passphrase" hidden>
+          <span class="state-mark"><i data-icon="lock"></i></span>
           <h1 data-i18n="view.passphrase_title"></h1>
           <p class="sub" data-i18n="view.passphrase_hint"></p>
           <form id="passphrase-form">
@@ -199,25 +373,36 @@
               type="password"
               autocomplete="off"
               required
+              autofocus
               data-i18n-placeholder="view.passphrase_placeholder"
             />
             <button class="primary" type="submit" data-i18n="view.open"></button>
+            <p id="passphrase-error" class="error" hidden></p>
           </form>
-          <p id="passphrase-error" class="error" hidden></p>
         </div>
 
-        <div id="state-error" hidden>
-          <h1 data-i18n="view.failed_title"></h1>
-          <p class="sub error" id="error-message"></p>
+        <div class="state" id="state-error" hidden>
+          <span class="state-mark muted" id="error-mark"></span>
+          <h1 id="error-title"></h1>
+          <p class="sub" id="error-message"></p>
         </div>
 
         <div id="state-content" hidden>
-          <h1 id="title"></h1>
-          <p class="sub" id="meta"></p>
-          <div id="fields"></div>
-          <div class="warn" id="warning"></div>
+          <div class="head">
+            <span class="avatar" id="avatar"></span>
+            <div class="head-text">
+              <h1 id="title"></h1>
+              <div class="chips" id="meta"></div>
+            </div>
+          </div>
+          <div class="fields" id="fields"></div>
+          <p class="notice" id="warning"></p>
         </div>
       </div>
+      <footer>
+        <span data-i18n="view.footer"></span> ·
+        <a href="/privacy" data-i18n="view.privacy"></a>
+      </footer>
     </main>
     <script type="module" src="/share.js"></script>
   </body>

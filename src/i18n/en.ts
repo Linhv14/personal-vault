@@ -182,7 +182,7 @@ export const en = {
   "share.ttl_24h": "24 hours",
   "share.ttl_7d": "7 days",
   "share.max_views": "Views",
-  "share.views_1": "once",
+  "share.views_1": "Once",
   "share.views_3": "3 times",
   "share.views_10": "10 times",
   "share.include_totp": "Include 2FA code",
@@ -190,9 +190,10 @@ export const en = {
   "share.passphrase_placeholder": "Send it through another channel",
   "share.create": "Create link",
   "share.link": "Link",
+  "share.ready": "Your link is ready",
   "share.copy_link": "Copy link",
-  "share.result_note": "{views} view(s), expires {expiry}.",
-  "share.result_note_passphrase": " Send the passphrase separately.",
+  "share.result_note": "{views} view(s) · expires {expiry}",
+  "share.result_note_passphrase": "Send the passphrase through a different channel.",
 
   // --- Settings ------------------------------------------------------------
   "settings.title": "Settings",
@@ -211,6 +212,7 @@ export const en = {
   "settings.changed": "Master password changed. Unlock the vault again with the new one.",
   "settings.wrong_current": "That is not the current master password",
   "settings.need_relock": "Lock and unlock the vault before changing the master password",
+  "settings.privacy": "Privacy policy",
   "settings.logout": "Sign out of this device",
   "settings.delete_account": "Delete account",
   "settings.delete_hint": "Erases this vault and every item on the server. This cannot be undone.",
@@ -242,22 +244,25 @@ export const en = {
   "autofill.save_failed": "Couldn't save. Check your connection and try again.",
   "autofill.unlock_to_save": "Unlock the vault, then press Save again",
   "view.loading": "Opening…",
-  "view.loading_hint": "Decryption happens on your machine.",
-  "view.passphrase_title": "Passphrase required",
-  "view.passphrase_hint":
-    "The sender set an extra passphrase and shared it with you another way. Nothing is downloaded until you enter it — each download costs one view.",
+  "view.loading_hint": "Decrypted right here on your device.",
+  "view.passphrase_title": "Enter the passphrase",
+  "view.passphrase_hint": "The sender gave you this passphrase through another channel.",
   "view.passphrase_placeholder": "Passphrase",
   "view.open": "Open",
   "view.failed_title": "Could not open",
   "view.default_title": "Shared details",
   "view.missing_key":
-    "The link is missing its decryption key. It was probably truncated in transit — ask the sender to resend it whole.",
-  "view.expires_hours": "expires in ~{count}h",
-  "view.expires_minutes": "expires in ~{count} min",
-  "view.views_left":
-    "{count} view(s) left on this link. Save what you need before closing the tab.",
-  "view.last_view":
-    "This is the last view — reloading will not work. Save what you need right now.",
+    "The decryption key was cut off the end of the link. Ask the sender to resend it whole.",
+  "view.expires_hours": "Expires in ~{count}h",
+  "view.expires_minutes": "Expires in ~{count} min",
+  "view.views_left": "{count} view(s) left. Save what you need before closing the tab.",
+  "view.last_view": "This was the last view. Reloading won't work, so save what you need now.",
+  "view.gone_title": "This link is no longer available",
+  "view.gone_hint":
+    "It has expired, run out of views, or never existed. Ask the sender for a new link.",
+  "view.missing_title": "This link is incomplete",
+  "view.footer": "End-to-end encrypted with Personal Vault",
+  "view.privacy": "Privacy",
   "view.totp_label": "2FA code{issuer}",
 } as const;
 

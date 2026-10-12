@@ -7,3 +7,4 @@ dist/
 .secrets.local.txt
 *.log
 .DS_Store
+backups/

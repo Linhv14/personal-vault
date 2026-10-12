@@ -18,7 +18,14 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline/promises";
 import path from "node:path";
@@ -413,7 +420,24 @@ async function logs() {
   await wranglerInherit(["tail", "-c", GENERATED]);
 }
 
-const COMMANDS = { deploy, dev, status, logs };
+async function backup() {
+  if (!existsSync(GENERATED)) throw new Error("Never deployed. Run: npm run deploy");
+  const directory = path.join(root, "backups");
+  mkdirSync(directory, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const output = path.join(directory, `vault-${stamp}.sql`);
+
+  style.step("Exporting the remote D1 database");
+  await wranglerInherit(["d1", "export", DB_NAME, "--remote", "--output", output, "-c", GENERATED]);
+  chmodSync(output, 0o600);
+  style.ok(`Saved ${path.relative(root, output)}`);
+  style.info("It holds ciphertext only, but keep it with AT_REST_SECRET somewhere offline:");
+  style.info(
+    "restoring it is useless without that secret, and the pair is what an attacker wants.",
+  );
+}
+
+const COMMANDS = { deploy, dev, status, logs, backup };
 
 const command = process.argv[2];
 if (!command || !(command in COMMANDS)) {
@@ -426,6 +450,7 @@ if (!command || !(command in COMMANDS)) {
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787
   status   Show the account and resources in use
   logs     Tail the Worker logs
+  backup   Export the remote D1 database to backups/ (ciphertext only)
 `);
   process.exit(command ? 1 : 0);
 }

@@ -1,0 +1,62 @@
+# Publishing to the Chrome Web Store
+
+Everything the developer dashboard asks for, ready to paste. Build the upload
+with `npm run package`, which writes `dist/personal-vault-extension-<version>.zip`
+with your deployed server URL baked in.
+
+## Store listing
+
+**Name:** Personal Vault
+
+**Summary (≤132 characters):**
+End-to-end encrypted password manager with built-in 2FA codes, autofill and self-destructing share links.
+
+**Description:**
+
+> Personal Vault keeps your passwords and 2FA codes encrypted on your device.
+> The server only ever stores ciphertext: nobody, including whoever runs it, can
+> read your vault.
+>
+> - Passwords and notes, end-to-end encrypted with AES-256-GCM
+> - 2FA codes generated right in the extension, no phone needed
+> - Suggests and fills logins on websites, and offers to save new ones (optional)
+> - Strong password, passphrase and PIN generator
+> - Share a login through a link that expires after a set time or number of views
+> - Works offline from the copy on your device; syncs across your computers
+> - Open source: https://github.com/Linhv14/personal-vault
+
+**Category:** Productivity · **Language:** English, Vietnamese
+
+**Icon:** `extension/icons/icon-128.png`. Screenshots (1280×800) of the popup
+list, an item with its 2FA code, the autofill menu on a login page and the share
+page are required; take them from `npm run preview` and a real login page.
+
+## Privacy practices
+
+**Single purpose:** Store, generate and fill the user's own passwords and 2FA
+codes, end-to-end encrypted.
+
+**Permission justifications:**
+
+| Permission                                       | Justification                                                                                                                      |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                                        | Keeps the encrypted vault on the device for offline use, and the unlocked key in session memory only.                              |
+| `alarms`                                         | Locks the vault after the chosen idle time and clears copied secrets from the clipboard after 30 seconds.                          |
+| `activeTab`                                      | Reads the address of the current tab to list matching logins, and captures it when the user asks to scan a 2FA QR code.            |
+| `offscreen`                                      | Clears the clipboard after 30 seconds even when the popup has closed.                                                              |
+| `clipboardWrite`                                 | Writes the empty value that clears a copied password from the clipboard.                                                           |
+| `scripting`                                      | Registers the autofill script only after the user turns on "Suggest logins on websites".                                           |
+| Optional host access `https://*/*`, `http://*/*` | Requested only when the user turns on autofill, to show the fill icon in login forms and offer to save new logins. Off by default. |
+
+**Remote code:** No. All code ships in the package.
+
+**Data usage disclosures:**
+
+- Collected: **Authentication information** (email as account name; passwords
+  are stored only end-to-end encrypted) and **Website content** (login forms are
+  read on the device when autofill is on; only logins the user saves leave the
+  device, encrypted).
+- Not sold, not used for anything unrelated to the single purpose, not used for
+  creditworthiness or lending.
+
+**Privacy policy URL:** `https://<your-worker>.workers.dev/privacy`

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Privacy · Personal Vault</title>
+    <style>
+      :root {
+        --bg: #f5f6f8;
+        --card: #ffffff;
+        --border: #e5e7eb;
+        --text: #15181d;
+        --muted: #6b7380;
+        --accent: #2563eb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0e1014;
+          --card: #15181e;
+          --border: #262b34;
+          --text: #eceef2;
+          --muted: #8b93a1;
+          --accent: #7aa7ff;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 16px 60px;
+      }
+      article {
+        padding: 28px;
+        margin-bottom: 20px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: var(--card);
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 24px;
+      }
+      h2 {
+        margin: 28px 0 8px;
+        font-size: 16px;
+      }
+      p,
+      li {
+        color: var(--text);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      ul {
+        padding-left: 20px;
+      }
+      nav {
+        margin-bottom: 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav><a href="#en">English</a> · <a href="#vi">Tiếng Việt</a></nav>
+
+      <article id="en">
+        <h1>Privacy policy</h1>
+        <p class="muted">Personal Vault · effective 12 October 2026</p>
+
+        <p>
+          Personal Vault is end-to-end encrypted. Your passwords, usernames, 2FA secrets, notes and
+          the names of the sites you use are encrypted on your device with a key derived from your
+          master password. The server, and whoever runs it, cannot read them.
+        </p>
+
+        <h2>What the server stores</h2>
+        <ul>
+          <li>
+            <strong>Your email address</strong>, used only as your account name. We never send email
+            to it.
+          </li>
+          <li>
+            <strong>Encrypted data</strong>: your vault items, a keyed hash of your login key and
+            your encrypted vault key. None of it can be decrypted without your master password.
+          </li>
+          <li>
+            <strong>Timestamps</strong> of account creation, item changes and sign-ins, and how many
+            items you have.
+          </li>
+          <li><strong>Sign-in sessions</strong>, stored as hashes, expiring after 30 days.</li>
+          <li>
+            <strong>Share links</strong> you create: encrypted contents, expiry and view count. They
+            are deleted within an hour of expiring or running out of views. The decryption key is in
+            the link itself and never reaches the server.
+          </li>
+          <li>
+            <strong>Abuse counters</strong>: failed sign-ins per email (deleted after 24 hours) and
+            new accounts per network, stored as a keyed hash of the IP address, not the address
+            itself (deleted daily).
+          </li>
+        </ul>
+
+        <h2>What we do not do</h2>
+        <ul>
+          <li>No analytics, advertising, tracking cookies or sale of data.</li>
+          <li>No third parties other than Cloudflare, which hosts the service.</li>
+        </ul>
+
+        <h2>Cloudflare</h2>
+        <p>
+          The service runs on Cloudflare Workers and D1. Cloudflare processes each request,
+          including your IP address, and keeps short-lived request logs and up to 30 days of
+          database history for recovery, under
+          <a href="https://www.cloudflare.com/privacypolicy/">its own privacy policy</a>.
+        </p>
+
+        <h2>The browser extension</h2>
+        <p>
+          The extension stores your encrypted vault on your device and keeps the unlocked key in
+          memory only. If you turn on "Suggest logins on websites", it reads login forms on the
+          pages you visit to offer and save logins. It does this on your device; only items you
+          choose to save are sent to the server, encrypted.
+        </p>
+
+        <h2>Deleting your data</h2>
+        <p>
+          Settings → Delete account removes your account, every item and every session immediately.
+          Encrypted copies may remain in database history for up to 30 days before they expire.
+          Share links you created expire on their own.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions or requests:
+          <a href="https://github.com/Linhv14/personal-vault/issues">open an issue</a>.
+        </p>
+      </article>
+
+      <article id="vi" lang="vi">
+        <h1>Chính sách quyền riêng tư</h1>
+        <p class="muted">Personal Vault · hiệu lực từ 12/10/2026</p>
+
+        <p>
+          Personal Vault mã hoá đầu-cuối. Mật khẩu, tên đăng nhập, secret 2FA, ghi chú và tên các
+          trang web bạn dùng đều được mã hoá ngay trên máy bạn bằng khoá sinh ra từ master password.
+          Server, và người vận hành server, không đọc được chúng.
+        </p>
+
+        <h2>Server lưu những gì</h2>
+        <ul>
+          <li>
+            <strong>Email của bạn</strong>, chỉ dùng làm tên tài khoản. Chúng tôi không bao giờ gửi
+            email tới địa chỉ này.
+          </li>
+          <li>
+            <strong>Dữ liệu đã mã hoá</strong>: các item trong vault, bản băm có khoá của khoá đăng
+            nhập, và khoá vault đã mã hoá. Không giải mã được nếu không có master password.
+          </li>
+          <li><strong>Thời điểm</strong> tạo tài khoản, sửa item, đăng nhập, và số lượng item.</li>
+          <li><strong>Phiên đăng nhập</strong>, lưu dạng băm, hết hạn sau 30 ngày.</li>
+          <li>
+            <strong>Link chia sẻ</strong> bạn tạo: nội dung đã mã hoá, thời hạn và số lượt xem. Bị
+            xoá trong vòng một giờ sau khi hết hạn hoặc hết lượt. Khoá giải mã nằm trong chính đường
+            link và không bao giờ tới server.
+          </li>
+          <li>
+            <strong>Bộ đếm chống lạm dụng</strong>: số lần đăng nhập sai theo email (xoá sau 24 giờ)
+            và số tài khoản mới theo mạng, lưu dạng băm có khoá của địa chỉ IP chứ không lưu IP (xoá
+            hằng ngày).
+          </li>
+        </ul>
+
+        <h2>Những gì chúng tôi không làm</h2>
+        <ul>
+          <li>Không analytics, quảng cáo, cookie theo dõi, không bán dữ liệu.</li>
+          <li>Không bên thứ ba nào ngoài Cloudflare, nơi chạy dịch vụ.</li>
+        </ul>
+
+        <h2>Cloudflare</h2>
+        <p>
+          Dịch vụ chạy trên Cloudflare Workers và D1. Cloudflare xử lý mọi request, kể cả địa chỉ
+          IP, và giữ log request ngắn hạn cùng tối đa 30 ngày lịch sử database để khôi phục, theo
+          <a href="https://www.cloudflare.com/privacypolicy/">chính sách của Cloudflare</a>.
+        </p>
+
+        <h2>Extension trình duyệt</h2>
+        <p>
+          Extension lưu vault đã mã hoá trên máy bạn và chỉ giữ khoá đã mở trong bộ nhớ. Nếu bạn bật
+          "Gợi ý tự điền trên trang web", extension đọc các form đăng nhập trên trang bạn mở để gợi
+          ý và lưu tài khoản. Việc này diễn ra trên máy bạn; chỉ những item bạn chọn lưu mới được
+          gửi lên server, ở dạng mã hoá.
+        </p>
+
+        <h2>Xoá dữ liệu</h2>
+        <p>
+          Cài đặt → Xoá tài khoản sẽ xoá ngay tài khoản, mọi item và mọi phiên đăng nhập. Bản sao đã
+          mã hoá có thể còn trong lịch sử database tối đa 30 ngày trước khi hết hạn. Link chia sẻ
+          bạn đã tạo sẽ tự hết hạn.
+        </p>
+
+        <h2>Liên hệ</h2>
+        <p>
+          Câu hỏi hoặc yêu cầu:
+          <a href="https://github.com/Linhv14/personal-vault/issues">tạo issue trên GitHub</a>.
+        </p>
+      </article>
+    </main>
+  </body>
+</html>

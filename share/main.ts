@@ -19,6 +19,7 @@ import {
   type MessageKey,
   type Translate,
 } from "../src/i18n/index.js";
+import { hydrateIcons, icon, type IconName } from "../src/ui/icons.js";
 
 interface ShareResponse {
   ciphertext: string;
@@ -26,6 +27,8 @@ interface ShareResponse {
   expiresAt: number;
   viewsLeft: number;
 }
+
+class ShareGone extends Error {}
 
 const locale = detectLocale();
 const t: Translate = createTranslator(locale);
@@ -47,9 +50,19 @@ function show(name: keyof typeof states): void {
   for (const [key, node] of Object.entries(states)) node.hidden = key !== name;
 }
 
-function fail(message: string): void {
+function fail(mark: IconName, title: MessageKey, message: string): void {
+  el("error-mark").replaceChildren(icon(mark));
+  el("error-title").textContent = t(title);
   el("error-message").textContent = message;
   show("error");
+}
+
+function failWith(error: unknown): void {
+  if (error instanceof ShareGone) {
+    fail("clock", "view.gone_title", t("view.gone_hint"));
+  } else {
+    fail("alert", "view.failed_title", describeError(error, t));
+  }
 }
 
 function applyStaticText(): void {
@@ -69,10 +82,11 @@ const fragment = location.hash;
 let cached: ShareResponse | null = null;
 
 async function main(): Promise<void> {
+  hydrateIcons(document);
   applyStaticText();
 
   if (!shareId || !fragment || fragment === "#") {
-    fail(t("view.missing_key"));
+    fail("link-off", "view.missing_title", t("view.missing_key"));
     return;
   }
 
@@ -97,7 +111,7 @@ async function onPassphraseSubmit(event: SubmitEvent): Promise<void> {
     try {
       cached = await fetchShare();
     } catch (error) {
-      fail(describeError(error, t));
+      failWith(error);
       return;
     }
   }
@@ -116,6 +130,7 @@ async function fetchShare(): Promise<ShareResponse> {
   const response = await fetch(`/api/shares/${encodeURIComponent(shareId)}`);
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { code?: string } | null;
+    if (body?.code === "shares.gone") throw new ShareGone();
     const key = body?.code ? (`error.${body.code}` as MessageKey) : "error.api.generic";
     throw new Error(t(key, { status: response.status }));
   }
@@ -128,87 +143,115 @@ async function load(): Promise<void> {
     cached = await fetchShare();
     render(await openShare(fragment, cached));
   } catch (error) {
-    fail(describeError(error, t));
+    failWith(error);
   }
+}
+
+function chip(name: IconName, text: string): HTMLElement {
+  const node = document.createElement("span");
+  node.className = "chip";
+  node.append(icon(name), text);
+  return node;
 }
 
 function render(payload: SharePayload): void {
   history.replaceState(null, "", location.pathname);
-  el("title").textContent = payload.title?.trim() || t("view.default_title");
+  const title = payload.title?.trim() || t("view.default_title");
+  el("title").textContent = title;
+  el("avatar").textContent = [...title][0]?.toUpperCase() ?? "?";
 
-  const parts: string[] = [];
-  if (payload.url) parts.push(payload.url);
+  const chips: HTMLElement[] = [];
+  if (payload.url) chips.push(chip("link", payload.url));
   if (cached) {
     const minutes = Math.max(0, Math.round((cached.expiresAt * 1000 - Date.now()) / 60_000));
-    parts.push(
-      minutes >= 60
-        ? t("view.expires_hours", { count: Math.round(minutes / 60) })
-        : t("view.expires_minutes", { count: minutes }),
+    chips.push(
+      chip(
+        "clock",
+        minutes >= 60
+          ? t("view.expires_hours", { count: Math.round(minutes / 60) })
+          : t("view.expires_minutes", { count: minutes }),
+      ),
     );
   }
-  el("meta").textContent = parts.join(" · ");
+  el("meta").replaceChildren(...chips);
 
   const fields = el("fields");
   fields.replaceChildren();
-
   if (payload.username) fields.append(textField(t("common.username"), payload.username));
   if (payload.password) fields.append(textField(t("common.password"), payload.password, true));
   if (payload.totp) fields.append(totpField(payload.totp));
   if (payload.note) fields.append(noteField(payload.note));
 
-  el("warning").textContent = cached?.viewsLeft
-    ? t("view.views_left", { count: cached.viewsLeft })
-    : t("view.last_view");
+  const lastView = !cached?.viewsLeft;
+  const warning = el("warning");
+  warning.className = lastView ? "notice last" : "notice";
+  warning.replaceChildren(
+    icon(lastView ? "alert" : "eye"),
+    lastView ? t("view.last_view") : t("view.views_left", { count: cached?.viewsLeft ?? 0 }),
+  );
 
   show("content");
 }
 
-function field(label: string): { wrap: HTMLElement; row: HTMLElement } {
+function field(label: string): { wrap: HTMLElement; body: HTMLElement } {
   const wrap = document.createElement("div");
   wrap.className = "field";
+  const body = document.createElement("div");
+  body.className = "field-body";
   const labelNode = document.createElement("div");
   labelNode.className = "label";
   labelNode.textContent = label;
-  const row = document.createElement("div");
-  row.className = "row";
-  wrap.append(labelNode, row);
-  return { wrap, row };
+  body.append(labelNode);
+  wrap.append(body);
+  return { wrap, body };
+}
+
+function iconButton(name: IconName, label: string, onClick: () => void): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "icon-button";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.append(icon(name));
+  button.addEventListener("click", onClick);
+  return button;
 }
 
 function textField(label: string, value: string, secret = false): HTMLElement {
-  const { wrap, row } = field(label);
+  const { wrap, body } = field(label);
 
   const valueNode = document.createElement("div");
-  valueNode.className = secret ? "value hidden" : "value";
-  const masked = "•".repeat(Math.min(value.length, 20));
-  // textContent, never innerHTML: this content comes from the sender.
-  valueNode.textContent = secret ? masked : value;
-
-  row.append(valueNode);
+  const masked = "•".repeat(Math.min(value.length, 12));
+  const paint = (revealed: boolean) => {
+    valueNode.className =
+      secret && !revealed ? "value mono masked" : secret ? "value mono" : "value";
+    valueNode.textContent = secret && !revealed ? masked : value;
+  };
+  paint(false);
+  body.append(valueNode);
 
   if (secret) {
     let revealed = false;
-    const toggle = document.createElement("button");
-    toggle.textContent = t("common.show");
-    toggle.addEventListener("click", () => {
+    const toggle = iconButton("eye", t("common.show"), () => {
       revealed = !revealed;
-      valueNode.textContent = revealed ? value : masked;
-      valueNode.className = revealed ? "value" : "value hidden";
-      toggle.textContent = t(revealed ? "common.hide" : "common.show");
+      paint(revealed);
+      toggle.replaceChildren(icon(revealed ? "eye-off" : "eye"));
+      toggle.title = t(revealed ? "common.hide" : "common.show");
     });
-    row.append(toggle);
+    wrap.append(toggle);
   }
 
-  row.append(copyButton(value).element);
+  wrap.append(copyButton(value).element);
   return wrap;
 }
 
 function noteField(value: string): HTMLElement {
-  const { wrap, row } = field(t("common.note"));
+  const { wrap, body } = field(t("common.note"));
   const valueNode = document.createElement("div");
   valueNode.className = "value note";
   valueNode.textContent = value;
-  row.append(valueNode, copyButton(value).element);
+  body.append(valueNode);
+  wrap.append(copyButton(value).element);
   return wrap;
 }
 
@@ -216,24 +259,21 @@ function noteField(value: string): HTMLElement {
 function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   const period = config.period || TOTP_DEFAULTS.period;
   const label = t("view.totp_label", { issuer: config.issuer ? ` · ${config.issuer}` : "" });
-  const { wrap, row } = field(label);
+  const { wrap, body } = field(label);
 
   const container = document.createElement("div");
   container.className = "totp";
-
   const codeNode = document.createElement("div");
   codeNode.className = "code";
-  codeNode.textContent = "······";
-
+  codeNode.textContent = "··· ···";
   const ring = createRing();
   container.append(ring.svg, codeNode);
-  row.append(container);
+  body.append(container);
 
   const copy = copyButton("");
-  row.append(copy.element);
+  wrap.append(copy.element);
 
   let lastCounter = -1;
-
   const tick = async (): Promise<void> => {
     const remaining = secondsRemaining(period);
     ring.update(remaining / period);
@@ -254,25 +294,24 @@ function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   void tick();
   const timer = setInterval(() => void tick(), 1000);
   addEventListener("pagehide", () => clearInterval(timer));
-
   return wrap;
 }
 
 function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
-  const radius = 11;
+  const radius = 9;
   const circumference = 2 * Math.PI * radius;
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "ring");
-  svg.setAttribute("width", "28");
-  svg.setAttribute("height", "28");
-  svg.setAttribute("viewBox", "0 0 28 28");
+  svg.setAttribute("width", "24");
+  svg.setAttribute("height", "24");
+  svg.setAttribute("viewBox", "0 0 24 24");
 
   const make = (className: string): SVGCircleElement => {
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("class", className);
-    circle.setAttribute("cx", "14");
-    circle.setAttribute("cy", "14");
+    circle.setAttribute("cx", "12");
+    circle.setAttribute("cy", "12");
     circle.setAttribute("r", String(radius));
     return circle;
   };
@@ -297,22 +336,19 @@ function copyButton(initial: string): {
   setValue: (value: string) => void;
 } {
   let value = initial;
-  const button = document.createElement("button");
-  button.textContent = t("common.copy");
-
-  button.addEventListener("click", async () => {
+  const button = iconButton("copy", t("common.copy"), async () => {
     try {
       await navigator.clipboard.writeText(value);
     } catch {
       return;
     }
     const copied = value;
-    button.textContent = "✓";
-    button.classList.add("copied");
+    button.replaceChildren(icon("check"));
+    button.classList.add("done");
     setTimeout(() => {
-      button.textContent = t("common.copy");
-      button.classList.remove("copied");
-    }, 2000);
+      button.replaceChildren(icon("copy"));
+      button.classList.remove("done");
+    }, 1500);
 
     setTimeout(async () => {
       try {

@@ -15,7 +15,9 @@
     "logs": "node scripts/vault.mjs logs",
     "preview": "node scripts/preview.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "backup": "node scripts/vault.mjs backup",
+    "package": "node scripts/package.mjs"
   },
   "dependencies": {
     "hono": "^4.6.14"

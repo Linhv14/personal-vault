@@ -6,7 +6,7 @@ import type {
   PendingPrompt,
   Suggestion,
 } from "../lib/autofill-protocol.js";
-import { icon } from "../popup/icons.js";
+import { icon } from "../../src/ui/icons.js";
 import { CONTENT_STYLES } from "./styles.js";
 
 const USERNAME_HINT = /user|email|login|account|phone|mobile|identifier/i;

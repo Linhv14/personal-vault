@@ -442,13 +442,47 @@ button.primary.danger-fill {
   color: var(--muted);
 }
 .item-body {
-  padding: 2px 8px 8px 50px;
+  padding: 0 8px 10px 50px;
 }
 .item-row {
   display: flex;
   align-items: center;
   gap: 2px;
-  min-height: 34px;
+  min-height: 38px;
+  margin: 0 -8px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.item-row:hover {
+  background: var(--surface-hover);
+}
+.item-row > .icon-button:last-child {
+  opacity: 0;
+}
+.item-row:hover > .icon-button:last-child {
+  opacity: 1;
+}
+.totp-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.item.open .item-head .totp-chip {
+  display: none;
+}
+.totp-chip:hover {
+  background: var(--accent-soft);
+}
+.totp-chip .totp-row {
+  gap: 5px;
+}
+.totp-chip .totp-code {
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
 }
 .item-row .field {
   flex: 1;
@@ -643,10 +677,65 @@ footer {
   flex-direction: column;
 }
 
-.row-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.choice-group {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.choice-group legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.choice-group .segmented {
+  margin: 0;
+}
+.segmented label.tab {
+  display: block;
+  text-align: center;
+  cursor: pointer;
+}
+.segmented label.tab input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.segmented label.tab:has(input:checked) {
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+}
+.segmented label.tab:has(input:focus-visible) {
+  outline: 1px solid var(--accent);
+}
+
+.result-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 6px;
+  text-align: center;
+}
+.result-head h2 {
+  margin: 6px 0 0;
+  font-size: 15px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.result-head .brand-mark {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.link-box {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  resize: none;
+  color: var(--muted);
 }
 
 .group {

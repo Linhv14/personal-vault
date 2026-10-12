@@ -139,6 +139,22 @@ The choice is remembered for later deploys. With registration open:
   register an address they do not own, and registering a taken address tells
   them it exists. Add email verification before relying on addresses.
 
+## Backups
+
+- `npm run backup` exports the production database to `backups/` (gitignored,
+  mode 600). It holds ciphertext only, but it is useless without
+  `AT_REST_SECRET`, so store the two together, offline.
+- Cloudflare D1 also keeps 30 days of point-in-time history:
+  `npx wrangler d1 time-travel restore vault --timestamp=<ISO time> -c .wrangler.local.toml`.
+
+## Publishing
+
+- `npm run package` builds `dist/personal-vault-extension-<version>.zip` with
+  your server URL baked in.
+- [docs/chrome-web-store.md](docs/chrome-web-store.md) has the listing text,
+  permission justifications and privacy answers the dashboard asks for.
+- The privacy policy is served at `https://<your-worker>/privacy`.
+
 ## Upgrading from 0.1.x
 
 0.2.0 changes the API and the at-rest format, so do these in order:

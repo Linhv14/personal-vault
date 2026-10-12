@@ -294,24 +294,42 @@
         <span class="subtitle" id="share-item"></span>
       </header>
       <form id="form-share" class="stack">
-        <div class="row-2">
-          <label>
-            <span data-i18n="share.expires_in"></span>
-            <select name="ttl">
-              <option value="3600" data-i18n="share.ttl_1h"></option>
-              <option value="86400" selected data-i18n="share.ttl_24h"></option>
-              <option value="604800" data-i18n="share.ttl_7d"></option>
-            </select>
-          </label>
-          <label>
-            <span data-i18n="share.max_views"></span>
-            <select name="maxViews">
-              <option value="1" selected data-i18n="share.views_1"></option>
-              <option value="3" data-i18n="share.views_3"></option>
-              <option value="10" data-i18n="share.views_10"></option>
-            </select>
-          </label>
-        </div>
+        <fieldset class="choice-group">
+          <legend data-i18n="share.expires_in"></legend>
+          <div class="segmented">
+            <label class="tab"
+              ><input type="radio" name="ttl" value="3600" /><span data-i18n="share.ttl_1h"></span
+            ></label>
+            <label class="tab"
+              ><input type="radio" name="ttl" value="86400" checked /><span
+                data-i18n="share.ttl_24h"
+              ></span
+            ></label>
+            <label class="tab"
+              ><input type="radio" name="ttl" value="604800" /><span data-i18n="share.ttl_7d"></span
+            ></label>
+          </div>
+        </fieldset>
+        <fieldset class="choice-group">
+          <legend data-i18n="share.max_views"></legend>
+          <div class="segmented">
+            <label class="tab"
+              ><input type="radio" name="maxViews" value="1" checked /><span
+                data-i18n="share.views_1"
+              ></span
+            ></label>
+            <label class="tab"
+              ><input type="radio" name="maxViews" value="3" /><span
+                data-i18n="share.views_3"
+              ></span
+            ></label>
+            <label class="tab"
+              ><input type="radio" name="maxViews" value="10" /><span
+                data-i18n="share.views_10"
+              ></span
+            ></label>
+          </div>
+        </fieldset>
         <label class="check"
           ><span data-i18n="share.include_totp"></span
           ><input type="checkbox" name="includeTotp" checked
@@ -327,9 +345,19 @@
         <button class="primary" type="submit" data-i18n="share.create"></button>
       </form>
       <div id="share-result" class="stack" hidden>
-        <textarea id="share-url" rows="3" readonly></textarea>
+        <div class="result-head">
+          <span class="brand-mark"><i data-icon="check"></i></span>
+          <h2 data-i18n="share.ready"></h2>
+          <p class="hint" id="share-note"></p>
+        </div>
+        <textarea id="share-url" class="link-box" rows="3" readonly></textarea>
         <button class="primary" id="share-copy" data-i18n="share.copy_link"></button>
-        <p class="hint" id="share-note"></p>
+        <p
+          class="hint center"
+          id="share-passphrase-note"
+          data-i18n="share.result_note_passphrase"
+          hidden
+        ></p>
       </div>
       <p class="error" id="share-error" hidden></p>
     </section>
@@ -388,6 +416,7 @@
           <p class="hint" data-i18n="settings.change_hint"></p>
           <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
         </form>
+        <button class="row-button" id="settings-privacy" data-i18n="settings.privacy"></button>
         <button class="row-button danger" id="settings-logout" data-i18n="settings.logout"></button>
         <button
           class="row-button danger"

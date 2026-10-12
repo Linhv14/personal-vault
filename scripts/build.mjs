@@ -54,6 +54,7 @@ async function buildSharePage() {
   });
   await cp(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
   await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
+  await cp(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
 }
 
 async function buildExtension() {

@@ -48,7 +48,7 @@ import {
 import * as api from "../lib/api.js";
 import { disableAutofill, enableAutofill, isAutofillEnabled } from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
-import { hydrateIcons, icon, iconButton } from "./icons.js";
+import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
 import {
   DEFAULT_AUTO_LOCK_MINUTES,
   getLocal,
@@ -542,6 +542,7 @@ function renderItem(item: VaultItem): HTMLElement {
   name.append(title, sub);
   head.append(avatar(item.title), name);
 
+  if (item.totp) head.append(totpChip(item.totp));
   if (item.password) {
     head.append(
       iconButton("copy", t("common.copy"), () =>
@@ -599,15 +600,21 @@ function fieldBlock(label: string, valueNode: HTMLElement): HTMLElement {
   return field;
 }
 
-function valueRow(label: string, value: string, secret: boolean): HTMLElement {
+function copyableRow(label: string, valueNode: HTMLElement, onCopy: () => void): HTMLElement {
   const row = document.createElement("div");
   row.className = "item-row";
+  row.title = t("common.copy");
+  row.append(fieldBlock(label, valueNode));
+  row.addEventListener("click", onCopy);
+  return row;
+}
 
+function valueRow(label: string, value: string, secret: boolean): HTMLElement {
   const valueNode = document.createElement("span");
   valueNode.className = secret ? "v mono" : "v";
   const masked = "•".repeat(Math.min(value.length, 12));
   valueNode.textContent = secret ? masked : value;
-  row.append(fieldBlock(label, valueNode));
+  const row = copyableRow(label, valueNode, () => copy(value, label.toLowerCase()));
 
   if (secret) {
     let revealed = false;
@@ -625,24 +632,22 @@ function valueRow(label: string, value: string, secret: boolean): HTMLElement {
 }
 
 /** Live 2FA code. No network involved — computed locally per RFC 6238. */
-function totpRow(config: TotpConfig): HTMLElement {
+function liveTotp(
+  config: TotpConfig,
+  ringRadius: number,
+  ringSize: number,
+): { node: HTMLElement; current: () => string } {
   const period = config.period || 30;
-
-  const row = document.createElement("div");
-  row.className = "item-row";
-
-  const container = document.createElement("div");
+  const container = document.createElement("span");
   container.className = "totp-row";
-
-  const ring = createRing(9, 22);
+  const ring = createRing(ringRadius, ringSize);
   const code = document.createElement("span");
   code.className = "totp-code";
-  code.textContent = "······";
+  code.textContent = "··· ···";
   container.append(ring.svg, code);
 
   let current = "";
   let lastCounter = -1;
-
   const tick = async (): Promise<void> => {
     const remaining = secondsRemaining(period, nowMs());
     ring.update(remaining / period);
@@ -661,11 +666,32 @@ function totpRow(config: TotpConfig): HTMLElement {
 
   void tick();
   timers.add(setInterval(() => void tick(), 1000) as unknown as number);
+  return { node: container, current: () => current };
+}
 
-  row.append(
-    fieldBlock(t("common.totp"), container),
-    iconButton("copy", t("common.copy"), () => current && void copy(current, t("common.totp"))),
-  );
+function copyTotp(current: string): void {
+  if (current) void copy(current, t("common.totp"));
+}
+
+function totpChip(config: TotpConfig): HTMLElement {
+  const live = liveTotp(config, 6, 14);
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "totp-chip";
+  chip.title = t("common.totp");
+  chip.append(live.node);
+  chip.addEventListener("click", (event) => {
+    event.stopPropagation();
+    copyTotp(live.current());
+  });
+  return chip;
+}
+
+function totpRow(config: TotpConfig): HTMLElement {
+  const live = liveTotp(config, 9, 22);
+  const onCopy = () => copyTotp(live.current());
+  const row = copyableRow(t("common.totp"), live.node, onCopy);
+  row.append(iconButton("copy", t("common.copy"), onCopy));
   return row;
 }
 
@@ -1013,11 +1039,14 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
     const { apiUrl } = await getLocal();
 
     $<HTMLTextAreaElement>("share-url").value = buildShareUrl(apiUrl!, created.id, fragment);
-    $("share-note").textContent =
-      t("share.result_note", {
-        views: maxViews,
-        expiry: new Date(created.expiresAt * 1000).toLocaleString(locale),
-      }) + (passphrase ? t("share.result_note_passphrase") : "");
+    $("share-note").textContent = t("share.result_note", {
+      views: maxViews,
+      expiry: new Date(created.expiresAt * 1000).toLocaleString(locale, {
+        dateStyle: "short",
+        timeStyle: "short",
+      }),
+    });
+    $("share-passphrase-note").hidden = !passphrase;
 
     $("form-share").hidden = true;
     $("share-result").hidden = false;
@@ -1168,6 +1197,11 @@ $<HTMLFormElement>("form-delete-account").addEventListener("submit", async (even
   } catch (error) {
     showError("settings-error", error);
   }
+});
+
+$("settings-privacy").addEventListener("click", async () => {
+  const { apiUrl } = await getLocal();
+  if (apiUrl) await chrome.tabs.create({ url: `${apiUrl}/privacy` });
 });
 
 $("settings-logout").addEventListener("click", async () => {
