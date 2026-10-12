@@ -76,12 +76,13 @@ export async function register(
   email: string,
   record: AccountCryptoRecord,
   registrationToken: string,
+  verificationCode?: string,
 ): Promise<{ accountId: string; token: string }> {
   const result = await request<{ accountId: string; token: string }>("/api/auth/register", {
     method: "POST",
     auth: false,
     extraHeaders: { "X-Registration-Token": registrationToken },
-    body: JSON.stringify({ email, ...record }),
+    body: JSON.stringify({ email, ...record, verificationCode }),
   });
   await setToken(result.token);
   return result;
@@ -130,13 +131,42 @@ export async function deleteAccount(currentAuthKey: string): Promise<void> {
   });
 }
 
-export async function registrationIsOpen(apiUrl: string): Promise<boolean> {
+export interface ServerConfig {
+  registrationOpen: boolean;
+  emailVerification: boolean;
+}
+
+export async function serverConfig(apiUrl: string): Promise<ServerConfig> {
   try {
     const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/config`);
-    const { registration } = (await response.json()) as { registration?: string };
-    return registration === "open";
+    const body = (await response.json()) as { registration?: string; emailVerification?: boolean };
+    return {
+      registrationOpen: body.registration === "open",
+      emailVerification: body.emailVerification === true,
+    };
   } catch {
-    return false;
+    return { registrationOpen: false, emailVerification: false };
+  }
+}
+
+export async function requestVerificationCode(
+  apiUrl: string,
+  email: string,
+  locale: string,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/auth/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, locale }),
+    });
+  } catch {
+    throw new ApiError("error.api.offline", 0);
+  }
+  if (!response.ok) {
+    const { code, params } = ((await response.json().catch(() => null)) ?? {}) as ServerError;
+    throw new ApiError(code ? `error.${code}` : "error.api.generic", response.status, params ?? {});
   }
 }
 

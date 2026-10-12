@@ -234,6 +234,22 @@ async function ensureDatabase() {
  * id — this is a public template and those values belong to each operator. The
  * generated file is gitignored.
  */
+function flagValue(name) {
+  const flags = process.argv.slice(3);
+  const index = flags.indexOf(name);
+  return index >= 0 ? flags[index + 1] : undefined;
+}
+
+function hostingOptions() {
+  const domain = flagValue("--domain");
+  const emailFrom = flagValue("--email-from");
+  if (domain !== undefined) writeState({ customDomain: domain === "none" ? undefined : domain });
+  if (emailFrom !== undefined)
+    writeState({ emailFrom: emailFrom === "none" ? undefined : emailFrom });
+  const { customDomain, emailFrom: from } = readState();
+  return { customDomain, emailFrom: from };
+}
+
 function registrationMode() {
   const flags = process.argv.slice(3);
   if (flags.includes("--open-registration")) writeState({ registrationMode: "open" });
@@ -247,9 +263,21 @@ function writeGeneratedConfig(accountId, databaseId) {
     throw new Error(`wrangler.toml is missing the ${DATABASE_ID_SENTINEL} placeholder`);
   }
 
+  const { customDomain, emailFrom } = hostingOptions();
+  const topLevel = [
+    customDomain ? `routes = [{ pattern = "${customDomain}", custom_domain = true }]` : "",
+    emailFrom ? `send_email = [{ name = "EMAIL" }]` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
   const generated = template
     .replace(DATABASE_ID_SENTINEL, databaseId)
-    .replace(/^REGISTRATION_MODE = .*$/m, `REGISTRATION_MODE = "${registrationMode()}"`)
+    .replace(
+      /^REGISTRATION_MODE = .*$/m,
+      `REGISTRATION_MODE = "${registrationMode()}"` +
+        (emailFrom ? `\nEMAIL_FROM = "${emailFrom}"` : ""),
+    )
+    .replace(/^main = .*$/m, (line) => (topLevel ? `${line}\n${topLevel}` : line))
     .replace(
       /^compatibility_date = .*$/m,
       (line) =>
@@ -354,7 +382,10 @@ async function deploy() {
 
   // Remember the URL so the next build can bake it into the extension; without
   // it every install starts by asking the user to retype their own server.
-  const url = output.match(/https:\/\/\S+\.workers\.dev/)?.[0];
+  const { customDomain } = hostingOptions();
+  const url = customDomain
+    ? `https://${customDomain}`
+    : output.match(/https:\/\/\S+\.workers\.dev/)?.[0];
   if (url) {
     writeState({ workerUrl: url });
     buildAssets();
@@ -447,6 +478,8 @@ if (!command || !(command in COMMANDS)) {
            own Cloudflare account. Safe to run repeatedly.
            --open-registration   let anyone create an account (shared server)
            --token-registration  require REGISTRATION_TOKEN again (default)
+           --domain <host>       serve on a custom domain in this account ("none" to drop)
+           --email-from <addr>   send sign-up codes from this address ("none" to drop)
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787
   status   Show the account and resources in use
   logs     Tail the Worker logs

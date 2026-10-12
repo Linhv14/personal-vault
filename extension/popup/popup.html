@@ -82,6 +82,23 @@
             ><input name="confirm" type="password" autocomplete="new-password" required
           /></label>
           <p class="hint" id="setup-hint"></p>
+          <div class="code-step" id="setup-code-field" hidden>
+            <p class="hint" id="setup-code-hint"></p>
+            <input
+              name="verificationCode"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="\d{6}"
+              placeholder="000000"
+            />
+            <button
+              type="button"
+              class="link"
+              id="setup-code-resend"
+              data-i18n="setup.code_resend"
+            ></button>
+          </div>
           <button class="primary" type="submit" data-i18n="setup.create"></button>
         </form>
         <p class="error" id="setup-error" hidden></p>

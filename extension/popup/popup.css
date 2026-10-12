@@ -284,6 +284,25 @@ button.primary.danger-fill {
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
 }
 
+.code-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+.code-step input {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 20px;
+  letter-spacing: 0.4em;
+  text-align: center;
+  background: var(--bg);
+}
+.code-step .link {
+  align-self: center;
+}
+
 .choices {
   display: flex;
   flex-direction: column;

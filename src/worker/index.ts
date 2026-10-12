@@ -5,6 +5,7 @@ import { apiError } from "./errors.js";
 import auth from "./routes/auth.js";
 import items from "./routes/items.js";
 import shares from "./routes/shares.js";
+import { emailVerificationEnabled } from "./email-verification.js";
 import { clientIp, isOpenRegistration } from "./request.js";
 import { resolveSession } from "./session.js";
 import type { AppBindings, Env } from "./types.js";
@@ -37,6 +38,8 @@ const limitRegistrationsByIp: MiddlewareHandler<AppBindings> = async (c, next) =
 };
 
 app.use("/api/auth/register", limitRegistrationsByIp);
+app.use("/api/auth/verify-email", limitRegistrationsByIp);
+app.use("/api/auth/verify-email", limitByClientIp);
 
 app.use("/api/auth/register", limitByClientIp);
 app.use("/api/auth/prelogin", limitByClientIp);
@@ -77,7 +80,10 @@ app.use("/api/shares", async (c, next) =>
 );
 
 app.get("/api/config", (c) =>
-  c.json({ registration: isOpenRegistration(c.env) ? "open" : "token" }),
+  c.json({
+    registration: isOpenRegistration(c.env) ? "open" : "token",
+    emailVerification: emailVerificationEnabled(c.env),
+  }),
 );
 
 app.route("/api/auth", auth);
@@ -123,9 +129,10 @@ export default {
       env.DB.prepare("DELETE FROM registration_counts WHERE day < ?").bind(
         Math.floor(now / 86_400),
       ),
+      env.DB.prepare("DELETE FROM email_verifications WHERE expires_at <= ?").bind(now),
     ]);
     console.log(
-      "Cleaned up shares/sessions/login_attempts/registration_counts:",
+      "Cleaned up shares/sessions/login_attempts/registration_counts/email_verifications:",
       results.map((r) => r.meta.changes).join("/"),
     );
   },

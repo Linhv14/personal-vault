@@ -3,6 +3,13 @@ import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
 import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
 import { apiError } from "../errors.js";
+import {
+  consumeCode,
+  emailVerificationEnabled,
+  isCode,
+  issueCode,
+  RESEND_COOLDOWN_SECONDS,
+} from "../email-verification.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
@@ -83,7 +90,13 @@ auth.post("/register", async (c) => {
     return c.json(apiError("auth.invalid_body"), 400);
   }
 
-  const { email: rawEmail, kdf, authKey, wrappedVaultKey } = body as Record<string, unknown>;
+  const {
+    email: rawEmail,
+    kdf,
+    authKey,
+    wrappedVaultKey,
+    verificationCode,
+  } = body as Record<string, unknown>;
   const email = normalizeEmail(rawEmail);
   if (!email) return c.json(apiError("auth.invalid_email"), 400);
   if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
@@ -93,6 +106,12 @@ auth.post("/register", async (c) => {
   }
 
   const timestamp = now();
+  if (emailVerificationEnabled(c.env)) {
+    if (!isCode(verificationCode)) return c.json(apiError("auth.invalid_code"), 400);
+    const verified = await consumeCode(c.env, email, verificationCode, timestamp);
+    if (verified === "invalid") return c.json(apiError("auth.invalid_code"), 400);
+    if (verified === "expired") return c.json(apiError("auth.code_expired"), 400);
+  }
   if (openRegistration && !(await claimRegistrationSlot(c.env, clientIp(c), timestamp))) {
     return c.json(apiError("auth.registration_limit"), 429);
   }
@@ -126,6 +145,25 @@ auth.post("/register", async (c) => {
 
   const session = await createSession(c.env, accountId, timestamp);
   return c.json({ accountId, ...session }, 201);
+});
+
+auth.post("/verify-email", async (c) => {
+  if (!emailVerificationEnabled(c.env)) return c.json({ ok: true, required: false });
+
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const email = normalizeEmail(body?.email);
+  if (!email) return c.json(apiError("auth.invalid_email"), 400);
+  const locale = body?.locale === "vi" ? "vi" : "en";
+
+  const existing = await c.env.DB.prepare("SELECT 1 FROM accounts WHERE email = ?")
+    .bind(email)
+    .first();
+  const result = await issueCode(c.env, email, locale, existing !== null, now());
+  if (result === "cooldown") {
+    return c.json(apiError("auth.code_cooldown", { seconds: RESEND_COOLDOWN_SECONDS }), 429);
+  }
+  if (result === "failed") return c.json(apiError("auth.email_failed"), 502);
+  return c.json({ ok: true, required: true });
 });
 
 /**

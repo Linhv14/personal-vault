@@ -281,6 +281,24 @@ $("setup-server-change").addEventListener("click", () => {
 
 let setupMode: "register" | "login" = "register";
 let registrationOpen = false;
+let verificationRequired = false;
+let codeSentTo: string | null = null;
+
+function setupButtonLabel(): string {
+  if (setupMode === "login") return t("setup.sign_in");
+  return verificationRequired && !codeSentTo ? t("setup.send_code") : t("setup.create");
+}
+
+function showCodeStep(email: string | null): void {
+  codeSentTo = email;
+  const form = $<HTMLFormElement>("form-setup");
+  const code = form.querySelector<HTMLInputElement>('[name="verificationCode"]')!;
+  code.required = Boolean(email);
+  $("setup-code-field").hidden = !email;
+  $("setup-code-hint").textContent = email ? t("setup.code_sent", { email }) : "";
+  form.querySelector("button.primary")!.textContent = setupButtonLabel();
+  if (email) code.focus();
+}
 
 /**
  * Creating a vault and signing in on a second machine are presented as two
@@ -307,9 +325,7 @@ function setSetupMode(mode: "register" | "login"): void {
   // Only enforce a minimum when creating; an existing password is what it is.
   password.minLength = registering ? 12 : 0;
 
-  form.querySelector("button.primary")!.textContent = t(
-    registering ? "setup.create" : "setup.sign_in",
-  );
+  form.querySelector("button.primary")!.textContent = setupButtonLabel();
   $("setup-hint").textContent = t("setup.hint_create");
   $("setup-hint").hidden = !registering;
   $("setup-form-title").textContent = t(registering ? "setup.mode_create" : "setup.mode_signin");
@@ -324,7 +340,11 @@ function serverFieldValue(): string {
 
 async function refreshRegistrationMode(): Promise<void> {
   const url = serverFieldValue();
-  registrationOpen = url ? await api.registrationIsOpen(url) : false;
+  const config = url
+    ? await api.serverConfig(url)
+    : { registrationOpen: false, emailVerification: false };
+  registrationOpen = config.registrationOpen;
+  verificationRequired = config.emailVerification;
   setSetupMode(setupMode);
 }
 
@@ -371,15 +391,24 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
   const button = (event.target as HTMLFormElement).querySelector<HTMLButtonElement>(
     "button.primary",
   )!;
-  const label = button.textContent;
   button.textContent = t("setup.working");
   button.disabled = true;
 
   try {
+    if (setupMode === "register" && verificationRequired && codeSentTo !== email) {
+      await api.requestVerificationCode(apiUrl, email, locale);
+      showCodeStep(email);
+      return;
+    }
     await setLocal({ apiUrl, email });
     if (setupMode === "register") {
       const { record } = await createAccount(email, password);
-      const { token } = await api.register(email, record, String(data.get("registrationToken")));
+      const { token } = await api.register(
+        email,
+        record,
+        String(data.get("registrationToken")),
+        verificationRequired ? String(data.get("verificationCode")).trim() : undefined,
+      );
       await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
       await finishUnlock(email, password, record.kdf, record.wrappedVaultKey, token);
     } else {
@@ -389,10 +418,31 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
     if (!(await getLocal()).wrappedVaultKey) await chrome.storage.local.remove("email");
     showError("setup-error", error);
   } finally {
-    button.textContent = label;
+    button.textContent = setupButtonLabel();
     button.disabled = false;
   }
 });
+
+$("setup-code-resend").addEventListener("click", async () => {
+  setError("setup-error", null);
+  const email = $<HTMLFormElement>("form-setup")
+    .querySelector<HTMLInputElement>('[name="email"]')!
+    .value.trim()
+    .toLowerCase();
+  try {
+    await api.requestVerificationCode(serverFieldValue().replace(/\/$/, ""), email, locale);
+    showCodeStep(email);
+    toast(t("setup.code_resent"));
+  } catch (error) {
+    showError("setup-error", error);
+  }
+});
+
+$<HTMLFormElement>("form-setup")
+  .querySelector<HTMLInputElement>('[name="email"]')!
+  .addEventListener("input", () => {
+    if (codeSentTo) showCodeStep(null);
+  });
 
 $<HTMLFormElement>("form-unlock").addEventListener("submit", async (event) => {
   event.preventDefault();

@@ -19,6 +19,10 @@ export type ApiErrorCode =
   | "auth.invalid_wrapped_key"
   | "auth.email_taken"
   | "auth.registration_limit"
+  | "auth.invalid_code"
+  | "auth.code_expired"
+  | "auth.code_cooldown"
+  | "auth.email_failed"
   | "auth.invalid_credentials"
   | "auth.rate_limited"
   | "auth.unauthorized"
@@ -44,6 +48,10 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.invalid_wrapped_key": "Invalid wrapped vault key",
   "auth.email_taken": "That email is already registered",
   "auth.registration_limit": "Too many new accounts from this network today",
+  "auth.invalid_code": "That verification code is not correct",
+  "auth.code_expired": "The verification code expired; request a new one",
+  "auth.code_cooldown": "Wait a minute before requesting another code",
+  "auth.email_failed": "The verification email could not be sent",
   "auth.invalid_credentials": "Incorrect email or master password",
   "auth.rate_limited": "Too many attempts, try again later",
   "auth.unauthorized": "Not signed in, or the session has expired",
