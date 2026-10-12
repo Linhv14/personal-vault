@@ -8,6 +8,8 @@
 
 import { build } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.mjs";
+import { localizePage } from "./localize-page.mjs";
+import { spawnSync } from "node:child_process";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -75,6 +77,17 @@ async function buildSharePage() {
   await copyPage(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
   await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
   await copyPage(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
+  const landing = await readFile(path.join(root, "share", "landing.html"), "utf8");
+  for (const [lang, file] of [
+    ["en", "index.html"],
+    ["vi", "vi.html"],
+  ]) {
+    await writeFile(
+      path.join(outPublic, file),
+      await injectTokens(localizePage(landing, lang), "share/landing.html"),
+    );
+  }
+  await cp(path.join(root, "share", "assets"), path.join(outPublic, "assets"), { recursive: true });
   await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
 }
 
@@ -120,6 +133,16 @@ async function buildExtension() {
   }
 }
 
+async function packageForDownload() {
+  if (!existsSync(outExtension)) return;
+  const target = path.join(outPublic, "download", "1pw-extension.zip");
+  await mkdir(path.dirname(target), { recursive: true });
+  const zip = spawnSync("zip", ["-r", "-X", "-q", target, "."], { cwd: outExtension });
+  if (zip.error || zip.status !== 0) {
+    console.warn("Skipping the extension download: the `zip` command is not available.");
+  }
+}
+
 /**
  * Clean only this script's own outputs, never all of dist/: other tooling
  * (scripts/preview.mjs) writes siblings there, and wiping them makes a running
@@ -145,4 +168,5 @@ await clean(outExtension);
 
 await buildSharePage();
 await buildExtension();
+await packageForDownload();
 console.log(dev ? "Dev build complete." : "Build complete.");

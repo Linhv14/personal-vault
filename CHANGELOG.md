@@ -8,6 +8,11 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Added
+
+- Landing page at `/` and `/vi`, with a downloadable beta of the extension
+  built for the server it is served from.
+
 ### Changed
 
 - Share screen: shows the item and what the recipient will see; a share

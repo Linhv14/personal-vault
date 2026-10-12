@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <!-- lang:en -->
+    <title>1PW · Passwords and 2FA codes, end-to-end encrypted</title>
+    <meta
+      name="description"
+      content="A free, open-source password manager for Chrome with built-in 2FA codes and expiring share links. Encrypted on your device."
+    />
+    <!-- /lang -->
+    <!-- lang:vi -->
+    <title>1PW · Mật khẩu và mã 2FA, mã hoá đầu-cuối</title>
+    <meta
+      name="description"
+      content="Trình quản lý mật khẩu miễn phí, mã nguồn mở cho Chrome, có sẵn mã 2FA và link chia sẻ tự hết hạn. Mã hoá ngay trên máy bạn."
+    />
+    <!-- /lang -->
+    <link rel="alternate" hreflang="en" href="/" />
+    <link rel="alternate" hreflang="vi" href="/vi" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      /* @tokens */
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+      header {
+        border-bottom: 1px solid var(--border);
+      }
+      .bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: 64px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+        text-decoration: none;
+      }
+      .wordmark {
+        font-size: 20px;
+        font-weight: 750;
+        letter-spacing: -0.03em;
+      }
+      .wordmark-accent {
+        color: var(--accent);
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+      }
+      .nav a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .nav a:hover {
+        color: var(--text);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: center;
+        gap: 48px;
+        padding: 72px 0 56px;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: clamp(34px, 5vw, 52px);
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+      }
+      .lead {
+        margin: 0 0 28px;
+        max-width: 520px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 20px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .button:hover {
+        background: var(--surface-hover);
+      }
+      .button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-text);
+      }
+      .button.primary:hover {
+        background: var(--accent-hover);
+      }
+      .fine {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .shot {
+        justify-self: center;
+        width: 100%;
+        max-width: 340px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        box-shadow:
+          0 1px 2px rgb(0 0 0 / 0.05),
+          0 24px 48px rgb(0 0 0 / 0.1);
+        overflow: hidden;
+      }
+      .shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      section {
+        padding: 64px 0;
+        border-top: 1px solid var(--border);
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-size: clamp(26px, 3.4vw, 34px);
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+      .section-lead {
+        margin: 0 0 36px;
+        max-width: 620px;
+        color: var(--muted);
+      }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+      }
+      .feature h3 {
+        margin: 14px 0 6px;
+        font-size: 17px;
+      }
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .icon {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+      .icon svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .showcase {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        align-items: center;
+        gap: 48px;
+      }
+      .showcase.reverse {
+        grid-template-columns: 1.1fr 0.9fr;
+      }
+      .showcase.reverse .shot {
+        order: 2;
+      }
+      .checks {
+        margin: 20px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .checks li {
+        position: relative;
+        margin-bottom: 10px;
+        padding-left: 28px;
+      }
+      .checks li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--accent-soft)
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12 4 4 8-9'/%3E%3C/svg%3E")
+          center / 12px no-repeat;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      .steps li {
+        padding: 22px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        counter-increment: step;
+      }
+      .steps li::before {
+        content: counter(step);
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        margin-bottom: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .steps strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+      .steps span {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      code {
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: var(--surface);
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        font-size: 0.9em;
+      }
+      .note {
+        margin: 24px 0 0;
+        padding: 14px 16px;
+        border-left: 3px solid var(--warn);
+        background: var(--warn-soft);
+        font-size: 15px;
+      }
+      details {
+        border-bottom: 1px solid var(--border);
+      }
+      summary {
+        padding: 18px 0;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      details p {
+        margin: 0 0 18px;
+        max-width: 720px;
+        color: var(--muted);
+      }
+      footer {
+        padding: 32px 0 48px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .foot {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .foot nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .foot a {
+        color: var(--muted);
+      }
+
+      @media (max-width: 860px) {
+        .hero,
+        .showcase,
+        .showcase.reverse {
+          grid-template-columns: 1fr;
+          gap: 36px;
+        }
+        .showcase.reverse .shot {
+          order: 0;
+        }
+        .hero {
+          padding-top: 48px;
+        }
+        .features {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .steps {
+          grid-template-columns: 1fr;
+        }
+        .nav .hide-sm {
+          display: none;
+        }
+      }
+      @media (max-width: 520px) {
+        .features {
+          grid-template-columns: 1fr;
+        }
+        .actions .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap bar">
+        <a class="brand" href="/">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span class="wordmark"><span class="wordmark-accent">1</span>PW</span>
+        </a>
+        <nav class="nav">
+          <a class="hide-sm" href="https://github.com/Linhv14/personal-vault">GitHub</a>
+          <!-- lang:en --><a href="/vi" hreflang="vi">Tiếng Việt</a><!-- /lang -->
+          <!-- lang:vi --><a href="/" hreflang="en">English</a><!-- /lang -->
+        </nav>
+      </div>
+    </header>
+
+    <!-- lang:en -->
+    <main>
+      <div class="wrap hero">
+        <div>
+          <h1>Your passwords and 2FA codes, encrypted end to end.</h1>
+          <p class="lead">
+            1PW is a password manager for Chrome that keeps logins and two-factor codes in one
+            place. Everything is encrypted on your device, so the server only ever stores data it
+            cannot read.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#install">Get the extension</a>
+            <a class="button" href="https://github.com/Linhv14/personal-vault">Host it yourself</a>
+          </div>
+          <p class="fine">Free and open source. No ads, no tracking.</p>
+        </div>
+        <div class="shot">
+          <img
+            src="/assets/popup-item-en.png"
+            width="720"
+            height="1160"
+            alt="The 1PW popup showing a GitHub login with its 2FA code"
+          />
+        </div>
+      </div>
+
+      <section>
+        <div class="wrap">
+          <h2>Everything you need to sign in</h2>
+          <p class="section-lead">
+            No phone to reach for, no passwords in notes, no copies on someone else's server.
+          </p>
+          <div class="features">
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg
+              ></span>
+              <h3>End-to-end encrypted</h3>
+              <p>AES-256 on your device. Your master password never leaves it.</p>
+            </div>
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" /></svg
+              ></span>
+              <h3>2FA codes built in</h3>
+              <p>Codes appear next to the login and refresh on their own.</p>
+            </div>
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <path d="M12 15V3M7 8l5-5 5 5" />
+                  <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg
+              ></span>
+              <h3>Share links that expire</h3>
+              <p>Send a login that opens once or until it expires. Revoke it any time.</p>
+            </div>
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1z" />
+                  <path d="m4 20 10-10" />
+                  <path d="M19 13v4M17 15h4M7 3v3M5.5 4.5h3" /></svg
+              ></span>
+              <h3>Fill and save on websites</h3>
+              <p>Optional. Suggests your logins and offers to save new ones.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap showcase">
+          <div class="shot">
+            <img
+              src="/assets/popup-list-en.png"
+              width="720"
+              height="740"
+              alt="A list of logins, each with a live 2FA code"
+            />
+          </div>
+          <div>
+            <h2>Two-factor codes, right where you sign in</h2>
+            <p class="section-lead">
+              Scan the QR code on the page or paste the setup key once. From then on the code is
+              next to the login it belongs to.
+            </p>
+            <ul class="checks">
+              <li>Standard TOTP, compatible with every site that uses an authenticator app</li>
+              <li>Works offline from the copy on your device</li>
+              <li>Corrects for a wrong computer clock</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap showcase reverse">
+          <div class="shot">
+            <img
+              src="/assets/popup-share-en.png"
+              width="720"
+              height="1160"
+              alt="Sharing a login with an expiry and a view limit"
+            />
+          </div>
+          <div>
+            <h2>Share a login without pasting it into chat</h2>
+            <p class="section-lead">
+              The recipient opens a link, copies what they need, and nothing stays behind.
+            </p>
+            <ul class="checks">
+              <li>Expires after 1 hour to 30 days</li>
+              <li>Opens once, or until it expires</li>
+              <li>Optionally limited to specific email addresses, or protected with a password</li>
+              <li>The key is in the link, so our server cannot read what you share</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>How your data is protected</h2>
+          <p class="section-lead">
+            Your master password turns into two keys on your device: one proves who you are, the
+            other unlocks your vault and never leaves your computer.
+          </p>
+          <ol class="steps">
+            <li>
+              <strong>Encrypted before it leaves</strong>
+              <span>Every login is sealed with AES-256-GCM on your device.</span>
+            </li>
+            <li>
+              <strong>Stored as ciphertext</strong>
+              <span
+                >The server keeps data it has no key for. A stolen database reveals nothing to guess
+                against.</span
+              >
+            </li>
+            <li>
+              <strong>Decrypted only by you</strong>
+              <span
+                >Only your master password can open the vault. Nobody can reset it, including
+                us.</span
+              >
+            </li>
+          </ol>
+          <p class="note">
+            1PW has not had an independent security audit yet. The design and its limits are public
+            in the
+            <a
+              href="https://github.com/Linhv14/personal-vault/blob/main/docs/explanation/threat-model.md"
+              >threat model</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="wrap">
+          <h2>Get the extension</h2>
+          <p class="section-lead">
+            The Chrome Web Store listing is on its way. Until then, install the beta in a minute.
+            Works in Chrome, Edge, Brave and other Chromium browsers.
+          </p>
+          <ol class="steps">
+            <li>
+              <strong>Download</strong>
+              <span
+                ><a href="/download/1pw-extension.zip">1pw-extension.zip</a>, then unzip it.</span
+              >
+            </li>
+            <li>
+              <strong>Enable developer mode</strong>
+              <span>Open <code>chrome://extensions</code> and turn on Developer mode.</span>
+            </li>
+            <li>
+              <strong>Load it</strong>
+              <span
+                >Choose Load unpacked and select the unzipped folder. Pin 1PW to the toolbar.</span
+              >
+            </li>
+          </ol>
+          <p class="fine">
+            Prefer your own server? Deploy 1PW to your Cloudflare account with one command:
+            <a
+              href="https://github.com/Linhv14/personal-vault/blob/main/docs/tutorials/deploy-your-own-vault.md"
+              >guide</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Questions</h2>
+          <details>
+            <summary>What happens if I forget my master password?</summary>
+            <p>
+              Your vault cannot be opened. Nobody keeps a copy of your master password, so there is
+              no reset. Store it somewhere safe.
+            </p>
+          </details>
+          <details>
+            <summary>Is it free?</summary>
+            <p>
+              Yes. 1PW is open source under the MIT license, and the hosted service at 1pw.online is
+              free.
+            </p>
+          </details>
+          <details>
+            <summary>Where is my data stored?</summary>
+            <p>
+              On Cloudflare, encrypted, plus an encrypted copy on each of your devices. Details are
+              in the <a href="/privacy">privacy policy</a>.
+            </p>
+          </details>
+          <details>
+            <summary>Can I run it on my own server?</summary>
+            <p>
+              Yes. One command deploys it to your own Cloudflare account, inside the free tier for
+              personal use.
+            </p>
+          </details>
+          <details>
+            <summary>Should I use 1PW instead of an established password manager?</summary>
+            <p>
+              If you need an audited product with apps for every platform, use one of those. 1PW is
+              for people who want something small enough to read, built around 2FA codes, that they
+              can host themselves.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+    <!-- /lang -->
+
+    <!-- lang:vi -->
+    <main>
+      <div class="wrap hero">
+        <div>
+          <h1>Mật khẩu và mã 2FA của bạn, mã hoá đầu-cuối.</h1>
+          <p class="lead">
+            1PW là trình quản lý mật khẩu cho Chrome, giữ tài khoản đăng nhập và mã xác thực 2 bước
+            ở cùng một chỗ. Mọi thứ được mã hoá ngay trên máy bạn, nên server chỉ lưu dữ liệu mà nó
+            không đọc được.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#install">Cài extension</a>
+            <a class="button" href="https://github.com/Linhv14/personal-vault">Tự host</a>
+          </div>
+          <p class="fine">Miễn phí và mã nguồn mở. Không quảng cáo, không theo dõi.</p>
+        </div>
+        <div class="shot">
+          <img
+            src="/assets/popup-item-vi.png"
+            width="720"
+            height="1160"
+            alt="Popup 1PW hiện tài khoản GitHub kèm mã 2FA"
+          />
+        </div>
+      </div>
+
+      <section>
+        <div class="wrap">
+          <h2>Đủ mọi thứ để đăng nhập</h2>
+          <p class="section-lead">
+            Không cần với lấy điện thoại, không lưu mật khẩu trong ghi chú, không có bản sao nào
+            trên server người khác đọc được.
+          </p>
+          <div class="features">
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg
+              ></span>
+              <h3>Mã hoá đầu-cuối</h3>
+              <p>AES-256 ngay trên máy bạn. Master password không bao giờ rời máy.</p>
+            </div>
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" /></svg
+              ></span>
+              <h3>Có sẵn mã 2FA</h3>
+              <p>Mã hiện ngay cạnh tài khoản và tự làm mới.</p>
+            </div>
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <path d="M12 15V3M7 8l5-5 5 5" />
+                  <path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg
+              ></span>
+              <h3>Link chia sẻ tự hết hạn</h3>
+              <p>Gửi tài khoản mở được một lần hoặc đến khi hết hạn. Thu hồi bất cứ lúc nào.</p>
+            </div>
+            <div class="feature">
+              <span class="icon"
+                ><svg viewBox="0 0 24 24">
+                  <path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1z" />
+                  <path d="m4 20 10-10" />
+                  <path d="M19 13v4M17 15h4M7 3v3M5.5 4.5h3" /></svg
+              ></span>
+              <h3>Điền và lưu trên trang web</h3>
+              <p>Tuỳ chọn. Gợi ý tài khoản và đề nghị lưu tài khoản mới.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap showcase">
+          <div class="shot">
+            <img
+              src="/assets/popup-list-vi.png"
+              width="720"
+              height="740"
+              alt="Danh sách tài khoản, mỗi tài khoản có mã 2FA đang chạy"
+            />
+          </div>
+          <div>
+            <h2>Mã 2FA ngay chỗ bạn đăng nhập</h2>
+            <p class="section-lead">
+              Quét mã QR trên trang hoặc dán khoá thiết lập một lần. Từ đó mã luôn nằm cạnh tài
+              khoản của nó.
+            </p>
+            <ul class="checks">
+              <li>Chuẩn TOTP, dùng được với mọi trang hỗ trợ ứng dụng xác thực</li>
+              <li>Chạy offline từ bản lưu trên máy bạn</li>
+              <li>Tự bù khi đồng hồ máy tính bị lệch</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap showcase reverse">
+          <div class="shot">
+            <img
+              src="/assets/popup-share-vi.png"
+              width="720"
+              height="1160"
+              alt="Chia sẻ tài khoản với thời hạn và giới hạn lượt mở"
+            />
+          </div>
+          <div>
+            <h2>Chia sẻ tài khoản mà không dán vào chat</h2>
+            <p class="section-lead">Người nhận mở link, copy thứ họ cần, và không để lại gì.</p>
+            <ul class="checks">
+              <li>Hết hạn sau 1 giờ đến 30 ngày</li>
+              <li>Mở được một lần, hoặc đến khi hết hạn</li>
+              <li>Tuỳ chọn giới hạn theo email, hoặc đặt mật khẩu mở link</li>
+              <li>Khoá nằm trong link, nên server không đọc được thứ bạn chia sẻ</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Dữ liệu của bạn được bảo vệ thế nào</h2>
+          <p class="section-lead">
+            Master password được biến thành hai khoá ngay trên máy bạn: một khoá chứng minh bạn là
+            ai, khoá còn lại mở vault và không bao giờ rời máy.
+          </p>
+          <ol class="steps">
+            <li>
+              <strong>Mã hoá trước khi gửi đi</strong>
+              <span>Mọi tài khoản được niêm phong bằng AES-256-GCM trên máy bạn.</span>
+            </li>
+            <li>
+              <strong>Lưu ở dạng mã hoá</strong>
+              <span
+                >Server giữ dữ liệu mà nó không có khoá. Database bị lộ cũng không có gì để dò mật
+                khẩu.</span
+              >
+            </li>
+            <li>
+              <strong>Chỉ bạn giải mã được</strong>
+              <span
+                >Chỉ master password mở được vault. Không ai đặt lại được, kể cả chúng tôi.</span
+              >
+            </li>
+          </ol>
+          <p class="note">
+            1PW chưa được audit bảo mật độc lập. Thiết kế và giới hạn của nó được công bố trong
+            <a
+              href="https://github.com/Linhv14/personal-vault/blob/main/docs/explanation/threat-model.md"
+              >threat model</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="wrap">
+          <h2>Cài extension</h2>
+          <p class="section-lead">
+            Bản trên Chrome Web Store sắp có. Trong lúc chờ, cài bản beta chỉ mất một phút. Chạy
+            được trên Chrome, Edge, Brave và các trình duyệt Chromium khác.
+          </p>
+          <ol class="steps">
+            <li>
+              <strong>Tải về</strong>
+              <span
+                ><a href="/download/1pw-extension.zip">1pw-extension.zip</a>, rồi giải nén.</span
+              >
+            </li>
+            <li>
+              <strong>Bật Developer mode</strong>
+              <span>Mở <code>chrome://extensions</code> và bật Developer mode.</span>
+            </li>
+            <li>
+              <strong>Nạp extension</strong>
+              <span
+                >Chọn Load unpacked, chọn thư mục vừa giải nén. Ghim 1PW lên thanh công cụ.</span
+              >
+            </li>
+          </ol>
+          <p class="fine">
+            Muốn dùng server riêng? Deploy 1PW lên tài khoản Cloudflare của bạn bằng một lệnh:
+            <a
+              href="https://github.com/Linhv14/personal-vault/blob/main/docs/tutorials/deploy-your-own-vault.md"
+              >hướng dẫn</a
+            >.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <h2>Câu hỏi thường gặp</h2>
+          <details>
+            <summary>Nếu tôi quên master password thì sao?</summary>
+            <p>
+              Vault sẽ không mở được. Không ai giữ bản sao master password của bạn nên không có cách
+              đặt lại. Hãy cất nó ở nơi an toàn.
+            </p>
+          </details>
+          <details>
+            <summary>1PW có miễn phí không?</summary>
+            <p>Có. 1PW là mã nguồn mở theo giấy phép MIT, và dịch vụ tại 1pw.online miễn phí.</p>
+          </details>
+          <details>
+            <summary>Dữ liệu của tôi nằm ở đâu?</summary>
+            <p>
+              Trên Cloudflare, ở dạng mã hoá, và một bản mã hoá trên mỗi thiết bị của bạn. Chi tiết
+              trong <a href="/privacy#vi">chính sách quyền riêng tư</a>.
+            </p>
+          </details>
+          <details>
+            <summary>Tôi có tự chạy server riêng được không?</summary>
+            <p>
+              Được. Một lệnh là deploy xong lên tài khoản Cloudflare của bạn, nằm trong gói miễn phí
+              nếu dùng cá nhân.
+            </p>
+          </details>
+          <details>
+            <summary>Tôi có nên dùng 1PW thay cho các trình quản lý mật khẩu lâu năm?</summary>
+            <p>
+              Nếu bạn cần sản phẩm đã được audit, có ứng dụng cho mọi nền tảng, hãy dùng chúng. 1PW
+              dành cho người muốn thứ đủ nhỏ để tự đọc code, xoay quanh mã 2FA, và tự host được.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+    <!-- /lang -->
+
+    <footer>
+      <div class="wrap foot">
+        <span>© 2026 1PW · MIT License</span>
+        <nav>
+          <!-- lang:en --><a href="/privacy">Privacy</a><!-- /lang -->
+          <!-- lang:vi --><a href="/privacy#vi">Quyền riêng tư</a><!-- /lang -->
+          <a href="https://github.com/Linhv14/personal-vault">GitHub</a>
+          <a href="mailto:hello@1pw.online">hello@1pw.online</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

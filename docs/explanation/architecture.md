@@ -54,7 +54,7 @@ src/i18n/     Message catalogues (English, Vietnamese). Only the UI layer uses t
 src/ui/       Design tokens, logo and icons shared by the popup, page script and share page.
 src/worker/   The Worker: routes, sessions, at-rest protection, email.
 extension/    The MV3 extension: popup, service worker, page script, offscreen document.
-share/        The share page and the privacy policy.
+share/        The share page, the landing page and the privacy policy.
 migrations/   D1 schema, applied in order by `npm run deploy`.
 scripts/      Build, deploy, preview and packaging tools.
 test/         Unit tests, and end-to-end tests against a live local Worker.
