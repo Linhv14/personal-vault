@@ -61,16 +61,20 @@ pins an implementation detail. Assert on error codes, never on message text.
 3. Run `npm test` — `test/i18n.test.ts` checks that every locale has the same
    keys and the same `{placeholders}` as English.
 
+## Documentation
+
+Docs follow [Diátaxis](https://diataxis.fr); [`docs/README.md`](docs/README.md)
+is the map. When a change affects behaviour, update the page that describes it
+in the same pull request:
+
+- a new endpoint, error code, limit, setting or command goes in
+  `docs/reference/`, which must match the code exactly;
+- a new task an operator performs gets a page in `docs/how-to/`;
+- the reasoning behind a design choice goes in `docs/explanation/`, not in a
+  code comment;
+- anything a user or operator notices goes in `CHANGELOG.md` under
+  `Unreleased`.
+
 ## Project layout
 
-```
-src/core/      Crypto, TOTP, generator, share payloads. WebCrypto only; runs in
-               the browser, in Workers and in Node.
-src/i18n/      Message catalogues. The UI edge, nothing below it is localized.
-src/worker/    Hono Worker: auth, item sync, share links.
-extension/     MV3 extension. The popup holds all the UI; the service worker
-               only handles auto-lock, because MV3 terminates it when idle.
-share/         The `/s/:id` page recipients open.
-preview/       Harness that runs the popup as a web page for design review.
-scripts/       Build, deploy and preview tooling.
-```
+See [Architecture](docs/explanation/architecture.md#code-layout).

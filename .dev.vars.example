@@ -1,6 +1,6 @@
 # Template for local development secrets (`npm run dev` writes this file for
-# you if it is missing). `cf deploy` generates real secrets on Cloudflare and
-# never reads this file. Copy to .dev.vars to set them by hand; .dev.vars is
+# you if it is missing). `npm run deploy` generates real secrets on Cloudflare
+# and never reads this file. Copy to .dev.vars to set them by hand; .dev.vars is
 # gitignored.
 
 # Required by /api/auth/register. Without it, anyone who finds your Worker URL

@@ -1,62 +1,30 @@
-# Personal Vault
+# 1PW
 
-A password manager you deploy to your own Cloudflare account: a browser
-extension, a Worker, and a D1 database that holds nothing but ciphertext.
+[![CI](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-It exists to make reaching for the authenticator app on your phone unnecessary —
-2FA codes appear in the extension and refresh themselves.
+An end-to-end encrypted password manager with built-in 2FA codes, as a browser
+extension backed by a Cloudflare Worker you deploy yourself. The server stores
+ciphertext and holds no key that opens it.
 
-- **End-to-end encrypted.** The server stores ciphertext and has no key.
-- **TOTP built in**, computed offline per RFC 6238 and verified against all 18
-  vectors in the specification.
-- **Password generation** — random, passphrase or PIN — reporting entropy in bits.
-- **Temporary share links** with an expiry and a view limit, carrying a live 2FA
-  code. The recipient installs nothing.
-- **Works offline** from the copy already synced to your machine.
-- **English and Vietnamese**, following the browser's language.
+- **End-to-end encrypted.** AES-256-GCM on your device; the server sees only
+  ciphertext.
+- **2FA codes in the extension**, refreshing on their own, so you stop reaching
+  for your phone. Add them by pasting a setup key or scanning the QR code on the
+  page.
+- **Autofill, when you want it.** Off by default; suggests and fills matching
+  logins, generates passwords in sign-up forms, offers to save new ones.
+- **Share links** that expire after a time or a number of views, can be limited
+  to specific email addresses, and carry a live 2FA code. The recipient
+  installs nothing.
+- **Your infrastructure.** Runs on your own Cloudflare account, inside the free
+  tier for personal use. Optional open registration for a small shared server.
+- **Works offline** from the encrypted copy on each device; syncs across them.
+- **English and Vietnamese.**
 
-Design and reasoning: [`docs/design.md`](docs/design.md).
-Threat model and what is out of reach: [`SECURITY.md`](SECURITY.md).
+## Quick start
 
-## Why you deploy it yourself
-
-There is no shared server, and that is the point rather than an inconvenience.
-
-A password manager running on its author's infrastructure asks you to trust that
-author — to trust they will not change the code to phone keys home, that they
-will not be breached, that the service still exists next year. Running your own
-means **the author has no access to your data at all**, however much they might
-want it.
-
-It fits inside Cloudflare's free tier (Workers 100k requests/day, D1 5GB). On a
-`*.workers.dev` subdomain it costs nothing.
-
-## Trust model in one diagram
-
-```
-master password + email
-   └─ PBKDF2-SHA256 600k ─→ master key
-         ├─ HKDF "auth" ─→ auth key       → sent to the server, decrypts nothing
-         └─ HKDF "enc"  ─→ wrapping key   → NEVER leaves your machine
-                             └─ unwraps the vault key → AES-256-GCM per item
-```
-
-The server **does** learn: your email, how many items you have, when they
-changed, and when you signed in. It **never** learns site names, usernames,
-passwords, TOTP secrets or notes.
-
-Two limits stated plainly:
-
-1. **Forget the master password and the vault is gone.** There is no recovery,
-   deliberately — a recovery backdoor is a backdoor.
-2. **Whatever app carries a share link can read all of it**, including the key
-   after the `#`, because to that app a link is just text. Your server stays
-   blind; the messenger does not. Use the optional extra passphrase, sent
-   through a different channel, when that matters.
-
-## Install your own server
-
-You need a free Cloudflare account and Node 22 or newer.
+You need a Cloudflare account, Node.js 22+, and Chrome 116+.
 
 ```bash
 git clone https://github.com/Linhv14/personal-vault.git
@@ -65,150 +33,55 @@ npm ci
 npm run deploy
 ```
 
-`npm run deploy` does the whole job and is safe to run again:
+Load `dist/extension` in `chrome://extensions` (Developer mode → Load unpacked),
+choose **Create a new vault**, and use the registration token from
+`.secrets.local.txt`. Back up `AT_REST_SECRET` from that file before anything
+else.
 
-1. Opens a browser to sign in to Cloudflare if needed, and asks which account
-   to use if you have more than one.
-2. Creates the `vault` D1 database (or reuses it) and applies migrations.
-3. Generates `REGISTRATION_TOKEN`, `EMAIL_PROBE_SECRET` and `AT_REST_SECRET`,
-   writing the registration token and `AT_REST_SECRET` to `.secrets.local.txt`
-   (gitignored) rather than printing them. **Back up `AT_REST_SECRET` offline**:
-   if it is lost or replaced, every account on the Worker is locked out.
-4. Builds and deploys the Worker, prints its URL, and rebuilds the extension
-   with that URL baked in.
+The full walkthrough is [Deploy your own vault](docs/tutorials/deploy-your-own-vault.md).
 
-Then load the extension: open `chrome://extensions`, enable **Developer
-mode**, choose **Load unpacked** and select `dist/extension`. In the popup,
-choose **Create a new vault** and enter your email, the registration token
-from `.secrets.local.txt` and a master password. The server address is already
-set by the build, so you are never asked for it.
+## How it protects you
 
-> `REGISTRATION_TOKEN` is what stops strangers creating accounts on your Worker.
-> Without it, your URL is an open signup page.
-
-### Using an extension built for another server
-
-If you installed a build that points at someone else's server (for example
-the published 1PW extension), choose **Create a new vault** or **Sign in to
-your vault**, press **Use your own server** under the button, and enter your
-Worker URL (`npm run status` prints it).
-
-## Setting up another machine
-
-Load the same extension build, choose **Sign in to your vault**, and enter
-your email and master password. No registration token is needed: it only
-gates account creation. Items, 2FA secrets and notes are pulled down encrypted
-and decrypted locally with the key your master password unwraps.
-
-Losing every device loses nothing: the vault lives in your D1 database, and
-email plus master password is enough to reach it again. Losing the master
-password loses everything, because nothing else can unwrap the vault key.
-
-`test/e2e.test.ts` covers exactly this path against a real Worker, starting from
-a client that holds no cached state.
-
-## Running a shared server
-
-By default only someone holding `REGISTRATION_TOKEN` can create an account,
-which is right for a personal Worker. To let anyone who installs the extension
-sign up on your server:
-
-```bash
-npm run deploy -- --open-registration    # switch back: --token-registration
+```
+master password ─ PBKDF2-SHA256, 600k ─► master key
+                                           ├─ HKDF "auth" ─► auth key ──► server (proves who you are)
+                                           └─ HKDF "enc"  ─► wrapping key ─► unwraps the vault key
+                                                                              └─ AES-256-GCM per item
 ```
 
-The choice is remembered for later deploys. With registration open:
+The server learns your email, how many items you have and when they change. It
+never learns site names, usernames, passwords, 2FA secrets or notes. Two limits,
+stated plainly:
 
-- Each network can create at most 5 accounts a day, and 5 a minute.
-- Each account is limited to 5,000 items, 60 writes a minute and 20 sessions.
-- Users can delete their own account and all its items from Settings.
-- Vaults stay end-to-end encrypted: you, as the operator, cannot read them.
-  You do hold everyone's ciphertext, so back up D1 and `AT_REST_SECRET`, and
-  publish a privacy policy before inviting strangers.
-- Require email verification with `--email-from no-reply@your-domain`. Codes
-  go out through [Resend](https://resend.com) by default (free tier, works on
-  the Workers free plan): verify your domain there, then
-  `npx wrangler secret put RESEND_API_KEY -c .wrangler.local.toml`. With a
-  Workers Paid plan, `--email-provider cloudflare` uses Cloudflare Email
-  Sending instead. Without either, an email address is only an identifier.
-- Serve on your own domain with `--domain your-domain` (a zone in the same
-  Cloudflare account). The `workers.dev` address keeps working.
+1. **A forgotten master password cannot be recovered.** Nobody holds a copy.
+2. **Whatever app carries a share link can open it.** Add a link password and
+   send it another way when that matters.
 
-## Backups
+Details: [Cryptography](docs/explanation/cryptography.md) ·
+[Threat model](docs/explanation/threat-model.md).
 
-- `npm run backup` exports the production database to `backups/` (gitignored,
-  mode 600). It holds ciphertext only, but it is useless without
-  `AT_REST_SECRET`, so store the two together, offline.
-- Cloudflare D1 also keeps 30 days of point-in-time history:
-  `npx wrangler d1 time-travel restore vault --timestamp=<ISO time> -c .wrangler.local.toml`.
+## Documentation
 
-## Publishing
+| I want to…                                    | Read                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------ |
+| Set it up for the first time                  | [Deploy your own vault](docs/tutorials/deploy-your-own-vault.md)   |
+| Use it on another computer                    | [Add another device](docs/how-to/add-another-device.md)            |
+| Host it for family or a team                  | [Run a shared server](docs/how-to/run-a-shared-server.md)          |
+| Protect against data loss                     | [Back up and restore](docs/how-to/back-up-and-restore.md)          |
+| Replace a leaked key                          | [Rotate secrets](docs/how-to/rotate-secrets.md)                    |
+| Install a new release                         | [Upgrade a deployment](docs/how-to/upgrade.md)                     |
+| Look up a command, setting, endpoint or limit | [Reference](docs/README.md#reference-facts-to-look-up)             |
+| Understand the design                         | [Explanation](docs/README.md#explanation-why-it-is-built-this-way) |
 
-- `npm run package` builds `dist/personal-vault-extension-<version>.zip` with
-  your server URL baked in.
-- [docs/chrome-web-store.md](docs/chrome-web-store.md) has the listing text,
-  permission justifications and privacy answers the dashboard asks for.
-- The privacy policy is served at `https://<your-worker>/privacy`.
+Everything is indexed in [`docs/README.md`](docs/README.md).
 
-## Upgrading from 0.1.x
+## Project
 
-0.2.0 changes the API and the at-rest format, so do these in order:
-
-1. `npm run deploy`. It adds the new `AT_REST_SECRET` and writes it to
-   `.secrets.local.txt`. Back it up offline, then delete it from that file.
-2. Reload the extension on **every** machine (`npm run build`, then reload
-   `dist/extension` in `chrome://extensions`). An old extension cannot change the
-   master password against the new server, and items it creates are rejected by
-   upgraded machines, which only accept items bound to their id.
-3. Unlock once on each machine while online. The server upgrades the stored
-   hash and wrapped key on that login, and the extension re-encrypts older items
-   after its first sync.
-
-## Commands
-
-```bash
-npm run deploy      # deploy (safe to repeat)
-npm run dev         # Worker + local D1 at http://127.0.0.1:8787
-npm run preview     # the popup as a web page, for UI work
-npm run status      # which account and resources are in use
-npm run logs        # tail the Worker
-npm test
-npm run typecheck
-npm run format
-```
-
-## Notes on the tooling
-
-`wrangler.toml` deliberately carries **no `account_id` or `database_id`** —
-those belong to whoever deploys. `npm run deploy` writes them into
-`.wrangler.local.toml` (gitignored) and runs Wrangler against that, so running
-`npx wrangler deploy` directly will not work.
-
-Cloudflare's own [`cf` CLI](https://developers.cloudflare.com/cf/) entered open
-beta in September 2026 and will eventually replace Wrangler. This project stays
-on Wrangler for now: `cf` is beta, uses a different configuration format, and
-does not provision a D1 database automatically either. The deploy script is
-intentionally _not_ exposed as a `cf` command so it cannot shadow the real one.
-
-## Things that look odd but are deliberate
-
-- **`src/core` has no dependencies.** Every library there would sit in the path
-  of your passwords.
-- **The extension has no content script**, so it never gains read or write
-  access to the pages you visit. The cost is no autofill — you copy from the
-  popup instead.
-- **`chrome.storage.local` holds only ciphertext and settings**; it is on disk
-  in the clear. The vault key lives in `chrome.storage.session`, which is not.
-- **Deleting an item writes a tombstone** rather than removing the row, or an
-  offline device would sync it back.
-- **TOTP uses HMAC-SHA1**, as RFC 6238 requires. SHA-256 would produce codes
-  that every site rejects.
-- **QR scanning uses Chrome's `BarcodeDetector`**, not a bundled library: that
-  library would see your 2FA secret before you do.
+- [Contributing](CONTRIBUTING.md): development setup and house rules.
+- [Security policy](SECURITY.md): how to report a vulnerability.
+- [Changelog](CHANGELOG.md).
 
 ## License
 
-MIT, and no warranty. This is a personal tool that has not had an independent
-security audit. If you need an audited password manager, use Bitwarden or
-1Password. What this gives you instead is a codebase small enough to read in an
-afternoon and infrastructure nobody else controls.
+[MIT](LICENSE), without warranty. 1PW has not had an independent security
+audit; if you need an audited password manager, use Bitwarden or 1Password.

@@ -3,7 +3,7 @@
  * holds every password you own, each third-party library is one more place
  * malicious code could be planted.
  *
- * Key flow (see docs/design.md §2):
+ * Key flow (see docs/explanation/cryptography.md):
  *
  *   master password + email
  *        -> PBKDF2-SHA256 600k  -> master key

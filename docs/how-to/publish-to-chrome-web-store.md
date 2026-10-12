@@ -1,10 +1,35 @@
-# Publishing to the Chrome Web Store
+# Publish to the Chrome Web Store
 
-Everything the developer dashboard asks for, ready to paste. Build the upload
-with `npm run package`, which writes `dist/personal-vault-extension-<version>.zip`
-with your deployed server URL baked in.
+Ship the extension to people who will not build it themselves. A published
+build signs in to **your** server by default, so publish only if you run a
+shared server ([Run a shared server](run-a-shared-server.md)).
 
-## Store listing
+## Prerequisites
+
+- A [Chrome Web Store developer account](https://chrome.google.com/webstore/devconsole)
+  (one-time registration fee).
+- A deployed Worker with a privacy policy that matches it, served at
+  `https://<worker>/privacy`.
+- Screenshots at 1280×800: the popup list, an item with its 2FA code, the
+  autofill menu on a login page, and the share page. Take them from
+  `npm run preview` and a real login page.
+
+## Build the upload
+
+```bash
+npm run deploy      # make sure the baked-in server URL is current
+npm run package
+```
+
+This writes `dist/personal-vault-extension-<version>.zip`. Bump `version` in
+both `package.json` and `extension/manifest.json` before each new upload; the
+store rejects a version it has already seen.
+
+## Fill in the dashboard
+
+Everything the dashboard asks for, ready to paste.
+
+### Store listing
 
 **Name:** 1PW
 
@@ -27,11 +52,9 @@ End-to-end encrypted password manager with built-in 2FA codes, autofill and self
 
 **Category:** Productivity · **Language:** English, Vietnamese
 
-**Icon:** `extension/icons/icon-128.png`. Screenshots (1280×800) of the popup
-list, an item with its 2FA code, the autofill menu on a login page and the share
-page are required; take them from `npm run preview` and a real login page.
+**Icon:** `extension/icons/icon-128.png`.
 
-## Privacy practices
+### Privacy practices
 
 **Single purpose:** Store, generate and fill the user's own passwords and 2FA
 codes, end-to-end encrypted.
@@ -59,4 +82,4 @@ codes, end-to-end encrypted.
 - Not sold, not used for anything unrelated to the single purpose, not used for
   creditworthiness or lending.
 
-**Privacy policy URL:** `https://<your-worker>.workers.dev/privacy`
+**Privacy policy URL:** `https://<worker>/privacy`

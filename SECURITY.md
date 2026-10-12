@@ -1,91 +1,53 @@
-# Security
+# Security policy
 
 ## Reporting a vulnerability
 
-Open a [private security advisory](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
-on this repository rather than a public issue. There is no bug bounty.
+Please report vulnerabilities privately through
+[GitHub private vulnerability reporting](https://github.com/Linhv14/personal-vault/security/advisories/new),
+not in a public issue.
 
-Because every user runs their own deployment, a fix reaches people only when
-they pull and redeploy. Advisories will state plainly whether existing data is
-affected and whether a master password change is warranted.
+Include what an attacker needs (network position, an account, a copy of the
+database), the steps to reproduce, and what they gain. A proof of concept
+against a local deployment (`npm run dev`) is ideal; do not test against
+servers you do not operate.
 
-## Scope and honesty about it
+What to expect:
 
-This is a personal project. It has **not** had an independent security audit.
-If you need an audited password manager, use Bitwarden or 1Password. What this
-project offers instead is a small codebase you can read end to end in an
-afternoon, and infrastructure nobody else controls.
+| Step                             | Target                                                              |
+| -------------------------------- | ------------------------------------------------------------------- |
+| Acknowledgement                  | Within 3 days                                                       |
+| Assessment and severity          | Within 7 days                                                       |
+| Fix for a critical or high issue | Within 30 days                                                      |
+| Public advisory                  | When the fix is released, crediting you unless you prefer otherwise |
 
-## Threat model
+There is no bug bounty.
 
-### What the server cannot learn
+## Supported versions
 
-The Worker stores ciphertext and has no key. Site names, usernames, passwords,
-TOTP secrets and notes are encrypted client-side with AES-256-GCM under a vault
-key the server never receives.
+Only the latest release receives security fixes. Every deployment is run by its
+operator, so a fix reaches users only when the operator pulls it and redeploys
+(see [Upgrade a deployment](docs/how-to/upgrade.md)). Advisories state whether
+stored data is affected and whether users should change their master password.
 
-Concretely: a full dump of the D1 database, plus the Worker source, plus the
-secrets in Cloudflare, still decrypts nothing without a master password.
+| Version | Supported |
+| ------- | --------- |
+| 0.2.x   | Yes       |
+| < 0.2   | No        |
 
-A dump of the database alone is not even something to guess passwords
-against: the auth key hash and the wrapped vault key are both keyed by
-`AT_REST_SECRET`, a Worker secret that is not in D1. With the database and the
-secrets together, each guess still costs 600,000 PBKDF2-SHA256 iterations.
+## Scope
 
-### What the server does learn
+In scope: the Worker, the extension, the share page, the build and deploy
+scripts, and the cryptographic design.
 
-- The account email.
-- Item count and modification times.
-- Sign-in times and IP addresses.
+Out of scope: weaknesses that need malware on an unlocked device, a lost master
+password, the service that carries a share link reading it, and the other
+limits stated in the [threat model](docs/explanation/threat-model.md). Reports
+showing those limits are worse than documented are in scope.
 
-Accepted for a single-user vault. If that metadata matters to you, this design
-is not sufficient.
+## Audit status
 
-### What is explicitly out of reach
-
-- **A forgotten master password.** There is no recovery, by design. A recovery
-  backdoor is a backdoor.
-- **A compromised endpoint.** Malware on the machine running the extension can
-  read the vault once it is unlocked. No client-side design survives this.
-- **The channel carrying a share link.** A link's fragment holds its decryption
-  key, and whatever app transports the link can read it. Use the optional extra
-  passphrase, delivered separately, when that matters.
-
-## Design decisions that carry security weight
-
-| Decision                                                         | Reason                                                                            |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Auth key and encryption key derived separately via HKDF          | The server authenticates you without holding anything that decrypts the vault     |
-| Random vault key, wrapped by a password-derived key              | Changing the master password re-wraps one key instead of re-encrypting every item |
-| PBKDF2-SHA256, 600,000 iterations                                | Built into WebCrypto; avoids a WASM dependency in the path of every password      |
-| AES-256-GCM, fresh 12-byte nonce per encryption                  | Authenticated: tampering fails loudly rather than yielding plausible garbage      |
-| Page script only when "Suggest logins on websites" is on         | Off by default; the permission is requested only when you turn it on              |
-| Autofill fills only on click, top frame, matching domain         | The service worker checks the domain Chrome reports, not one the page claims      |
-| Vault key in `chrome.storage.session` only                       | That area is memory-backed; `storage.local` is on disk in the clear               |
-| No dependencies in `src/core`                                    | Every library there would sit in the path of your passwords                       |
-| Registration gated by a secret token                             | An exposed Worker is otherwise an open signup page                                |
-| Open registration (opt-in) capped per network and account        | A shared server cannot be flooded by one client or one account                    |
-| Prelogin returns decoy KDF params for unknown emails             | Registered addresses cannot be enumerated                                         |
-| Login limited to 10 failures per 15 minutes                      | Blocks online guessing                                                            |
-| Anonymous endpoints limited to 30 requests/min per IP            | One client cannot exhaust the free-tier quota or hammer share ids                 |
-| Auth hash and wrapped key keyed by `AT_REST_SECRET`              | A leaked D1 database alone gives nothing to guess passwords against               |
-| Change of master password requires the current auth key          | A stolen session token cannot replace the wrapped key and lock the owner out      |
-| Each item sealed with its id as associated data                  | The server cannot swap ciphertext between items                                   |
-| Clipboard cleared by the service worker after 30s                | Still happens after the popup closes                                              |
-| Share page served with a strict CSP and `frame-ancestors 'none'` | No injected script or framing on the page that shows a secret                     |
-
-## Verifying the claims yourself
-
-The strongest assertions in this README are enforced by tests, not prose:
-
-```bash
-npm test
-```
-
-- `test/crypto.test.ts` — the auth key is not the master key; a wrapping key is
-  non-extractable; tampering is detected; nonces never repeat.
-- `test/popup.test.ts` — the vault key reaches `storage.session` and never
-  `storage.local`, and no plaintext appears in anything sent to the server.
-- `test/e2e.test.ts` — against a real Worker and D1, no plaintext appears in any
-  response.
-- `test/totp.test.ts` — all 18 RFC 6238 vectors across SHA-1/256/512.
+1PW has not had an independent security audit. If you need an audited password
+manager, use Bitwarden or 1Password. What 1PW offers instead is a codebase
+small enough to read end to end, infrastructure you control, and a
+[threat model](docs/explanation/threat-model.md) that says what it does not
+protect.

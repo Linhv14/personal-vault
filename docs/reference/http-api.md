@@ -1,0 +1,319 @@
+# HTTP API
+
+The Worker's API, as used by the extension and the share page. It is not a
+public, versioned API: it changes with the extension, and only the extension
+from the same release is guaranteed to work with it.
+
+## Conventions
+
+- **Base URL:** `https://<worker>/api`.
+- **Bodies:** JSON in, JSON out. Timestamps are Unix seconds. Binary values
+  (ciphertext, nonces, keys, salts) are standard base64 with padding, except
+  where noted as base64url.
+- **Authentication:** `Authorization: Bearer <token>`, where the token comes
+  from `register` or `login`. There are no cookies, so there is no CSRF
+  surface.
+- **CORS:** only `chrome-extension://` and `moz-extension://` origins are
+  allowed. The share page calls the API from the same origin and needs no CORS.
+- **Sealed value:** an object `{ "ciphertext": string, "nonce": string }`
+  produced by AES-256-GCM with a 12-byte nonce.
+- **Errors:** every failure has the shape below. `code` is stable and meant for
+  programs; `error` is an English sentence for humans; `params` holds values for
+  the localized message.
+
+  ```json
+  {
+    "code": "auth.rate_limited",
+    "error": "Too many attempts, try again later",
+    "params": { "seconds": 840 }
+  }
+  ```
+
+Rate limits per endpoint are listed in [Limits](limits.md). Any endpoint can
+also return `429 server.rate_limited` and `500 server.error`.
+
+## Server
+
+### `GET /api/config`
+
+What the server requires at sign-up. No authentication.
+
+```json
+{ "registration": "token", "emailVerification": false }
+```
+
+`registration` is `token` or `open`. `emailVerification` is `true` when a
+sender and a mail provider are configured.
+
+### `GET /api/time`
+
+The server clock, used by the extension to correct 2FA codes on a machine whose
+clock is off.
+
+```json
+{ "serverTime": 1791820800 }
+```
+
+## Accounts
+
+### `POST /api/auth/verify-email`
+
+Send a 6-digit sign-up code to an address. Only meaningful when
+`emailVerification` is on.
+
+| Field    | Type   | Notes                  |
+| -------- | ------ | ---------------------- |
+| `email`  | string | Required               |
+| `locale` | string | `en` (default) or `vi` |
+
+| Status | Body / code                                                                               |
+| ------ | ----------------------------------------------------------------------------------------- |
+| 200    | `{ "ok": true, "required": true }`; or `"required": false` when the server sends no email |
+| 400    | `auth.invalid_email`                                                                      |
+| 429    | `auth.code_cooldown` with `params.seconds`                                                |
+| 502    | `auth.email_failed`                                                                       |
+
+An address that already has an account receives a "you already have an
+account" email instead of a code, and the response is the same, so the endpoint
+does not reveal which addresses are registered.
+
+### `POST /api/auth/register`
+
+Create an account. The client derives every key; the server receives only the
+auth key and the wrapped vault key.
+
+Header `X-Registration-Token` is required when `registration` is `token`.
+
+| Field              | Type   | Notes                                                                                  |
+| ------------------ | ------ | -------------------------------------------------------------------------------------- |
+| `email`            | string | Normalized to lower case                                                               |
+| `kdf`              | object | `{ "type": "pbkdf2-sha256", "iterations": 100000–5000000, "salt": base64 ≤ 64 bytes }` |
+| `authKey`          | string | base64, 32 bytes                                                                       |
+| `wrappedVaultKey`  | sealed | The vault key sealed under the wrapping key                                            |
+| `verificationCode` | string | 6 digits; required when `emailVerification` is on                                      |
+
+| Status | Body / code                                                                                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 201    | `{ "accountId": string, "token": string, "expiresAt": number }`                                                                                              |
+| 400    | `auth.invalid_body`, `auth.invalid_email`, `auth.invalid_kdf`, `auth.invalid_auth_key`, `auth.invalid_wrapped_key`, `auth.invalid_code`, `auth.code_expired` |
+| 403    | `auth.bad_registration_token`                                                                                                                                |
+| 409    | `auth.email_taken`                                                                                                                                           |
+| 429    | `auth.registration_limit`                                                                                                                                    |
+
+### `POST /api/auth/prelogin`
+
+The KDF parameters to derive the auth key with, before signing in.
+
+Request `{ "email": string }`. Response:
+
+```json
+{ "kdf": { "type": "pbkdf2-sha256", "iterations": 600000, "salt": "…" } }
+```
+
+An unknown address gets plausible parameters derived from a server secret, the
+same on every call, so the response does not reveal whether an account exists.
+
+### `POST /api/auth/login`
+
+| Field     | Type   | Notes            |
+| --------- | ------ | ---------------- |
+| `email`   | string |                  |
+| `authKey` | string | base64, 32 bytes |
+
+| Status | Body / code                                                                    |
+| ------ | ------------------------------------------------------------------------------ |
+| 200    | `{ "token": string, "expiresAt": number, "wrappedVaultKey": sealed }`          |
+| 400    | `auth.invalid_credentials` (malformed body)                                    |
+| 401    | `auth.invalid_credentials` (wrong email or key; the two are not distinguished) |
+| 429    | `auth.rate_limited` with `params.seconds` until the lock ends                  |
+
+### `POST /api/auth/logout`
+
+Authenticated. Revokes the current session. Returns `{ "ok": true }`.
+
+### `POST /api/auth/change-password`
+
+Authenticated. Replaces the KDF parameters, auth key and wrapped vault key in
+one step, then revokes every session of the account.
+
+| Field             | Type   | Notes                                              |
+| ----------------- | ------ | -------------------------------------------------- |
+| `currentAuthKey`  | string | Proves knowledge of the current password           |
+| `kdf`             | object | As in `register`                                   |
+| `authKey`         | string | The new auth key                                   |
+| `wrappedVaultKey` | sealed | The same vault key, wrapped under the new password |
+
+Returns `{ "ok": true }`, or `400` for a malformed field and
+`403 auth.invalid_credentials` when `currentAuthKey` is wrong.
+
+### `POST /api/auth/delete-account`
+
+Authenticated. Request `{ "currentAuthKey": string }`. Deletes the account, its
+items and its sessions. Returns `{ "ok": true }`, or
+`403 auth.invalid_credentials`.
+
+Shares are not linked to accounts, so links already sent keep working until
+they expire or run out of views.
+
+## Items
+
+All item endpoints require authentication. An item is a single sealed blob; the
+server never sees its fields.
+
+### `GET /api/items?since=<timestamp>`
+
+Changes since a cursor, oldest first. Omit `since` (or send `0`) for everything.
+
+```json
+{
+  "serverTime": 1791820799,
+  "items": [
+    { "id": "…", "ciphertext": "…", "nonce": "…", "updatedAt": 1791820700, "deletedAt": null },
+    {
+      "id": "…",
+      "ciphertext": null,
+      "nonce": null,
+      "updatedAt": 1791820750,
+      "deletedAt": 1791820750
+    }
+  ]
+}
+```
+
+Use `serverTime` as the next `since`. A deleted item comes back as a tombstone
+with `deletedAt` set and no ciphertext.
+
+### `PUT /api/items/:id`
+
+Create or replace an item. `:id` is a UUID chosen by the client. Body: a sealed
+value, ciphertext at most 64 KiB.
+
+| Status | Body / code                                                                   |
+| ------ | ----------------------------------------------------------------------------- |
+| 200    | `{ "id": string, "updatedAt": number }`                                       |
+| 400    | `items.invalid_id`, `items.invalid_payload`                                   |
+| 403    | `items.forbidden` (the id belongs to another account), `items.quota_exceeded` |
+
+Writing to a deleted item's id restores it.
+
+### `DELETE /api/items/:id`
+
+Replaces the item with a tombstone. Returns `{ "id": string, "deletedAt": number }`,
+or `404 items.not_found`.
+
+## Shares
+
+### `POST /api/shares`
+
+Authenticated. Store an encrypted share. The key stays in the link fragment
+and never reaches the server.
+
+| Field        | Type     | Notes                                                   |
+| ------------ | -------- | ------------------------------------------------------- |
+| `ciphertext` | string   | ≤ 16 KiB decoded                                        |
+| `nonce`      | string   | 12 bytes                                                |
+| `ttlSeconds` | number   | 60 – 2,592,000                                          |
+| `maxViews`   | integer  | 1 – 100                                                 |
+| `recipients` | string[] | Optional, up to 10 addresses; needs email on the server |
+
+| Status | Body / code                                                                                                                         |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 201    | `{ "id": string, "expiresAt": number, "maxViews": number, "revokeToken": string }`                                                  |
+| 400    | `shares.invalid_payload`, `shares.invalid_ttl`, `shares.invalid_max_views`, `shares.invalid_recipients`, `shares.email_unavailable` |
+
+`id` and `revokeToken` are base64url. The server stores only a hash of
+`revokeToken`; keep it to revoke or check the share later.
+
+The link is `https://<worker>/s/<id>#<key>`, where `<key>` is the base64url
+share key, followed by `.p` when the link also needs a passphrase.
+
+### `POST /api/shares/status`
+
+Authenticated. Look up shares you created. Request:
+
+```json
+{ "shares": [{ "id": "…", "revokeToken": "…" }] }
+```
+
+Up to 50 entries. Each answer is either
+`{ "id", "active": true, "expiresAt", "viewsLeft" }` or `{ "id", "active": false }`.
+A wrong token reads as inactive.
+
+### `DELETE /api/shares/:id`
+
+Authenticated. Header `X-Revoke-Token: <token>`. Deletes the share at once.
+Returns `{ "ok": true }`, or `404 shares.gone` for an unknown id or a wrong
+token.
+
+### `GET /api/shares/:id`
+
+No authentication. Spends one view and returns the ciphertext:
+
+```json
+{ "ciphertext": "…", "nonce": "…", "expiresAt": 1791907200, "viewsLeft": 0 }
+```
+
+| Status | Code                                                                        |
+| ------ | --------------------------------------------------------------------------- |
+| 403    | `shares.email_required`: restricted share; no view is spent                 |
+| 404    | `shares.gone`: unknown, expired, revoked or out of views, indistinguishably |
+
+### `POST /api/shares/:id/code`
+
+No authentication. Request `{ "email": string, "locale"?: "en" | "vi" }`.
+Emails a 6-digit code if the address is a recipient of the share.
+
+Always returns `{ "ok": true }`, whether or not the address is allowed, the
+share exists, a cooldown applies, or sending failed. Anything else would let
+someone test addresses against the recipient list.
+
+### `POST /api/shares/:id/open`
+
+No authentication. Request `{ "email": string, "code": string }`. On success,
+spends one view and returns the same body as `GET /api/shares/:id`.
+
+Errors: `400 shares.invalid_code`, `400 shares.code_expired`, `404 shares.gone`.
+
+## Pages
+
+| Path       | Content                                                                     |
+| ---------- | --------------------------------------------------------------------------- |
+| `/s/:id`   | The recipient page. Served with `Cache-Control: no-store` and a strict CSP. |
+| `/privacy` | The privacy policy.                                                         |
+
+## Error codes
+
+| Code                          | Status        | Meaning                                                          |
+| ----------------------------- | ------------- | ---------------------------------------------------------------- |
+| `auth.bad_registration_token` | 403           | Missing or wrong `X-Registration-Token`                          |
+| `auth.invalid_body`           | 400           | Body is not a JSON object                                        |
+| `auth.invalid_email`          | 400           | Not an email address                                             |
+| `auth.invalid_kdf`            | 400           | KDF type, iterations or salt out of bounds                       |
+| `auth.invalid_auth_key`       | 400           | Auth key is not 32 bytes of base64                               |
+| `auth.invalid_wrapped_key`    | 400           | Wrapped vault key is not a valid sealed value                    |
+| `auth.email_taken`            | 409           | An account already uses the address                              |
+| `auth.registration_limit`     | 429           | Daily account limit for this network reached                     |
+| `auth.invalid_code`           | 400           | Sign-up code is wrong or missing                                 |
+| `auth.code_expired`           | 400           | Sign-up code expired or used up its attempts                     |
+| `auth.code_cooldown`          | 429           | A code was sent less than a minute ago                           |
+| `auth.email_failed`           | 502           | The mail provider rejected the message                           |
+| `auth.invalid_credentials`    | 400, 401, 403 | Wrong email or key, or a malformed credential                    |
+| `auth.rate_limited`           | 429           | Too many failed logins for this email                            |
+| `auth.unauthorized`           | 401           | Missing, unknown or expired session token                        |
+| `items.invalid_id`            | 400           | Id is not a UUID                                                 |
+| `items.invalid_payload`       | 400           | Ciphertext or nonce malformed or too large                       |
+| `items.forbidden`             | 403           | The id belongs to another account                                |
+| `items.not_found`             | 404           | No live item with that id                                        |
+| `items.quota_exceeded`        | 403           | The account holds the maximum number of items                    |
+| `shares.invalid_payload`      | 400           | Ciphertext or nonce malformed or too large, or a bad status list |
+| `shares.invalid_ttl`          | 400           | `ttlSeconds` out of range                                        |
+| `shares.invalid_max_views`    | 400           | `maxViews` out of range                                          |
+| `shares.invalid_recipients`   | 400           | More than 10 recipients or an invalid address                    |
+| `shares.email_unavailable`    | 400           | Recipients given, but the server cannot send email               |
+| `shares.gone`                 | 404           | Share unknown, expired, revoked or out of views                  |
+| `shares.email_required`       | 403           | Restricted share; open it with an emailed code                   |
+| `shares.invalid_code`         | 400           | Share code wrong or missing                                      |
+| `shares.code_expired`         | 400           | Share code expired or used up its attempts                       |
+| `server.rate_limited`         | 429           | Rate limit reached                                               |
+| `server.not_found`            | 404           | No such endpoint                                                 |
+| `server.error`                | 500           | Unexpected failure; details go to the Worker log only            |
