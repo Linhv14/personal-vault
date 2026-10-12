@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { APP_NAME } from "../src/core/brand.js";
 import { createMailer } from "../src/worker/mailer.js";
 
 const message = { to: "user@example.com", subject: "Code", text: "123456", html: "<p>123456</p>" };
@@ -24,7 +25,7 @@ describe("createMailer", () => {
     expect(url).toBe("https://api.resend.com/emails");
     expect(new Headers(init.headers).get("Authorization")).toBe("Bearer re_test");
     expect(JSON.parse(String(init.body))).toEqual({
-      from: "Personal Vault <no-reply@1pw.online>",
+      from: `${APP_NAME} <no-reply@1pw.online>`,
       to: ["user@example.com"],
       subject: "Code",
       text: "123456",
@@ -58,7 +59,7 @@ describe("createMailer", () => {
     await createMailer({ EMAIL_FROM: "no-reply@1pw.online", EMAIL: binding })!.send(message);
     expect(binding.send).toHaveBeenCalledWith({
       ...message,
-      from: { email: "no-reply@1pw.online", name: "Personal Vault" },
+      from: { email: "no-reply@1pw.online", name: APP_NAME },
     });
   });
 });

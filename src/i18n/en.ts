@@ -7,6 +7,8 @@
  *
  * Placeholders use `{name}` and are substituted by `translator()`.
  */
+
+import { APP_NAME } from "../core/brand.js";
 export const en = {
   // --- Errors thrown by src/core -------------------------------------------
   "error.base32.invalid_character": 'Invalid character in base32 secret: "{char}"',
@@ -110,7 +112,6 @@ export const en = {
   "setup.code_resend": "Resend code",
   "setup.code_resent": "Code sent again",
   "setup.password_mismatch": "The two master passwords do not match",
-  "setup.permission_denied": "Access to the server must be granted to continue",
   "setup.working": "Deriving keys…",
 
   // --- Unlock --------------------------------------------------------------
@@ -232,10 +233,10 @@ export const en = {
   "list.autofill_enable": "Turn on",
   "settings.autofill": "Suggest logins on websites",
   "settings.autofill_enabled": "On. Reload open pages to start.",
-  "autofill.trigger": "Personal Vault",
-  "autofill.unavailable": "Can't reach Personal Vault. Reload the page.",
+  "autofill.trigger": APP_NAME,
+  "autofill.unavailable": `Can't reach ${APP_NAME}. Reload the page.`,
   "autofill.locked": "Vault is locked",
-  "autofill.locked_hint": "Click to open Personal Vault",
+  "autofill.locked_hint": `Click to open ${APP_NAME}`,
   "autofill.generate": "Use a strong password",
   "autofill.generate_hint": "Generate and fill a random password",
   "autofill.no_match": "No logins for {domain} yet",
@@ -244,7 +245,7 @@ export const en = {
   "autofill.save": "Save",
   "autofill.update": "Update",
   "autofill.not_now": "Not now",
-  "autofill.saved": "Saved to Personal Vault",
+  "autofill.saved": `Saved to ${APP_NAME}`,
   "autofill.save_failed": "Couldn't save. Check your connection and try again.",
   "autofill.unlock_to_save": "Unlock the vault, then press Save again",
   "view.loading": "Opening…",
@@ -265,7 +266,7 @@ export const en = {
   "view.gone_hint":
     "It has expired, run out of views, or never existed. Ask the sender for a new link.",
   "view.missing_title": "This link is incomplete",
-  "view.footer": "End-to-end encrypted with Personal Vault",
+  "view.footer": `End-to-end encrypted with ${APP_NAME}`,
   "view.privacy": "Privacy",
   "view.totp_label": "2FA code{issuer}",
 } as const;

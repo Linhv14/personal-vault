@@ -6,6 +6,7 @@ import type {
   PendingPrompt,
   Suggestion,
 } from "../lib/autofill-protocol.js";
+import { APP_NAME } from "../../src/core/brand.js";
 import { icon } from "../../src/ui/icons.js";
 import { CONTENT_STYLES } from "./styles.js";
 
@@ -199,7 +200,7 @@ async function openMenu(): Promise<void> {
 
   const heading = document.createElement("div");
   heading.className = "heading";
-  heading.append(icon("shield"), "Personal Vault");
+  heading.append(icon("shield"), APP_NAME);
   menu.append(heading);
 
   if (!response.ok) {

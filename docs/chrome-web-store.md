@@ -6,14 +6,14 @@ with your deployed server URL baked in.
 
 ## Store listing
 
-**Name:** Personal Vault
+**Name:** 1pw
 
 **Summary (≤132 characters):**
 End-to-end encrypted password manager with built-in 2FA codes, autofill and self-destructing share links.
 
 **Description:**
 
-> Personal Vault keeps your passwords and 2FA codes encrypted on your device.
+> 1pw keeps your passwords and 2FA codes encrypted on your device.
 > The server only ever stores ciphertext: nobody, including whoever runs it, can
 > read your vault.
 >

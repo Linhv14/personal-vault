@@ -48,6 +48,7 @@ import {
 import * as api from "../lib/api.js";
 import { disableAutofill, enableAutofill, isAutofillEnabled } from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
+import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
 import {
   DEFAULT_AUTO_LOCK_MINUTES,
@@ -106,6 +107,9 @@ function applyStaticText(): void {
   }
   for (const node of document.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]")) {
     node.placeholder = t(node.dataset.i18nPlaceholder as MessageKey);
+  }
+  for (const node of document.querySelectorAll<HTMLElement>("[data-app-name]")) {
+    node.textContent = APP_NAME;
   }
   for (const node of document.querySelectorAll<HTMLElement>("[data-i18n-title]")) {
     node.title = t(node.dataset.i18nTitle as MessageKey);
@@ -388,13 +392,6 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
 
   if (setupMode === "register" && password !== String(data.get("confirm"))) {
     setError("setup-error", t("setup.password_mismatch"));
-    return;
-  }
-
-  // Ask for exactly this server's origin rather than shipping `https://*/*`.
-  const granted = await chrome.permissions.request({ origins: [`${apiUrl}/*`] });
-  if (!granted) {
-    setError("setup-error", t("setup.permission_denied"));
     return;
   }
 

@@ -5,6 +5,7 @@
  * rather than a string that silently shows up in English at runtime.
  */
 
+import { APP_NAME } from "../core/brand.js";
 import type { Catalogue } from "./en.js";
 
 export const vi: Catalogue = {
@@ -110,7 +111,6 @@ export const vi: Catalogue = {
   "setup.code_resend": "Gửi lại mã",
   "setup.code_resent": "Đã gửi lại mã",
   "setup.password_mismatch": "Hai lần nhập master password không giống nhau",
-  "setup.permission_denied": "Cần cấp quyền truy cập server mới dùng được",
   "setup.working": "Đang tạo khoá…",
 
   // --- Unlock --------------------------------------------------------------
@@ -232,10 +232,10 @@ export const vi: Catalogue = {
   "list.autofill_enable": "Bật",
   "settings.autofill": "Gợi ý tự điền trên trang web",
   "settings.autofill_enabled": "Đã bật. Tải lại các trang đang mở để bắt đầu.",
-  "autofill.trigger": "Personal Vault",
-  "autofill.unavailable": "Không kết nối được Personal Vault. Tải lại trang.",
+  "autofill.trigger": APP_NAME,
+  "autofill.unavailable": `Không kết nối được ${APP_NAME}. Tải lại trang.`,
   "autofill.locked": "Vault đang khoá",
-  "autofill.locked_hint": "Bấm để mở Personal Vault",
+  "autofill.locked_hint": `Bấm để mở ${APP_NAME}`,
   "autofill.generate": "Dùng mật khẩu mạnh",
   "autofill.generate_hint": "Tạo và điền một mật khẩu ngẫu nhiên",
   "autofill.no_match": "Chưa có tài khoản cho {domain}",
@@ -244,7 +244,7 @@ export const vi: Catalogue = {
   "autofill.save": "Lưu",
   "autofill.update": "Cập nhật",
   "autofill.not_now": "Để sau",
-  "autofill.saved": "Đã lưu vào Personal Vault",
+  "autofill.saved": `Đã lưu vào ${APP_NAME}`,
   "autofill.save_failed": "Không lưu được. Kiểm tra kết nối rồi thử lại.",
   "autofill.unlock_to_save": "Mở khoá vault rồi bấm Lưu lại",
   "view.loading": "Đang mở…",
@@ -264,7 +264,7 @@ export const vi: Catalogue = {
   "view.gone_hint":
     "Link đã hết hạn, đã dùng hết lượt xem, hoặc không tồn tại. Hãy nhờ người gửi tạo link mới.",
   "view.missing_title": "Link chưa đầy đủ",
-  "view.footer": "Mã hoá đầu-cuối với Personal Vault",
+  "view.footer": `Mã hoá đầu-cuối với ${APP_NAME}`,
   "view.privacy": "Quyền riêng tư",
   "view.totp_label": "Mã 2FA{issuer}",
 };

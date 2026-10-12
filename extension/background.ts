@@ -6,6 +6,12 @@
  * state lives in `chrome.storage`; this file only cleans up.
  */
 
+import {
+  grantsAutofill,
+  registerAutofillScript,
+  revokesAutofill,
+  unregisterAutofillScript,
+} from "./lib/autofill-permission.js";
 import { isAutofillRequest } from "./lib/autofill-protocol.js";
 import { handleAutofill, trustedSender } from "./lib/autofill-service.js";
 import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
@@ -41,4 +47,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .then(sendResponse)
     .catch((error: unknown) => sendResponse({ ok: false, error: String(error) }));
   return true;
+});
+
+chrome.permissions.onAdded.addListener((permissions) => {
+  if (grantsAutofill(permissions)) void registerAutofillScript();
+});
+
+chrome.permissions.onRemoved.addListener((permissions) => {
+  if (revokesAutofill(permissions)) void unregisterAutofillScript();
 });

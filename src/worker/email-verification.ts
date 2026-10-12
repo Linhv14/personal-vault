@@ -1,4 +1,5 @@
 import { toBase64, timingSafeEqual, utf8Encode } from "../core/bytes.js";
+import { APP_NAME } from "../core/brand.js";
 import { randomInt } from "../core/generator.js";
 import { createMailer, type Mailer } from "./mailer.js";
 import type { Env } from "./types.js";
@@ -31,20 +32,18 @@ type Locale = "en" | "vi";
 
 const COPY = {
   en: {
-    codeSubject: (code: string) => `${code} is your Personal Vault code`,
+    codeSubject: (code: string) => `${code} is your ${APP_NAME} code`,
     codeBody: (code: string) =>
-      `Your Personal Vault verification code is ${code}.\n\nIt expires in 15 minutes. If you did not try to create a vault, you can ignore this email.`,
+      `Your ${APP_NAME} verification code is ${code}.\n\nIt expires in 15 minutes. If you did not try to create a vault, you can ignore this email.`,
     existingSubject: "Someone tried to sign up with your email",
-    existingBody:
-      'Someone, possibly you, just tried to create a Personal Vault account with this email address, but it already has one.\n\nIf it was you, choose "Sign in to your vault" instead. If not, you can ignore this email: your vault is unaffected.',
+    existingBody: `Someone, possibly you, just tried to create a ${APP_NAME} account with this email address, but it already has one.\n\nIf it was you, choose "Sign in to your vault" instead. If not, you can ignore this email: your vault is unaffected.`,
   },
   vi: {
-    codeSubject: (code: string) => `${code} là mã Personal Vault của bạn`,
+    codeSubject: (code: string) => `${code} là mã ${APP_NAME} của bạn`,
     codeBody: (code: string) =>
-      `Mã xác minh Personal Vault của bạn là ${code}.\n\nMã hết hạn sau 15 phút. Nếu bạn không tạo vault, hãy bỏ qua thư này.`,
+      `Mã xác minh ${APP_NAME} của bạn là ${code}.\n\nMã hết hạn sau 15 phút. Nếu bạn không tạo vault, hãy bỏ qua thư này.`,
     existingSubject: "Có người thử đăng ký bằng email của bạn",
-    existingBody:
-      'Ai đó, có thể là bạn, vừa thử tạo tài khoản Personal Vault bằng địa chỉ email này, nhưng email đã có tài khoản.\n\nNếu là bạn, hãy chọn "Đăng nhập vault có sẵn". Nếu không, bạn có thể bỏ qua thư này: vault của bạn không bị ảnh hưởng.',
+    existingBody: `Ai đó, có thể là bạn, vừa thử tạo tài khoản ${APP_NAME} bằng địa chỉ email này, nhưng email đã có tài khoản.\n\nNếu là bạn, hãy chọn "Đăng nhập vault có sẵn". Nếu không, bạn có thể bỏ qua thư này: vault của bạn không bị ảnh hưởng.`,
   },
 } as const;
 

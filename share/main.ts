@@ -19,6 +19,7 @@ import {
   type MessageKey,
   type Translate,
 } from "../src/i18n/index.js";
+import { APP_NAME } from "../src/core/brand.js";
 import { hydrateIcons, icon, type IconName } from "../src/ui/icons.js";
 
 interface ShareResponse {
@@ -68,6 +69,9 @@ function failWith(error: unknown): void {
 function applyStaticText(): void {
   for (const node of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
     node.textContent = t(node.dataset.i18n as MessageKey);
+  }
+  for (const node of document.querySelectorAll<HTMLElement>("[data-app-name]")) {
+    node.textContent = APP_NAME;
   }
   for (const node of document.querySelectorAll<HTMLInputElement>("[data-i18n-placeholder]")) {
     node.placeholder = t(node.dataset.i18nPlaceholder as MessageKey);

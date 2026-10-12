@@ -201,9 +201,9 @@ describe("extension popup", () => {
     expect(server.account).not.toBeNull();
   });
 
-  it("requests permission for the configured origin only", () => {
-    // Shipping `https://*/*` would grant far more reach than the extension needs.
-    expect(chromeMock.permissions.request).toHaveBeenCalledWith({ origins: [`${API_URL}/*`] });
+  it("signs up without asking for any browser permission", () => {
+    // A permission prompt closes the popup, which used to abort the first sign-in.
+    expect(chromeMock.permissions.request).not.toHaveBeenCalled();
   });
 
   it("keeps the vault key in session storage, never in local storage", () => {

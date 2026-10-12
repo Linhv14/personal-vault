@@ -1,3 +1,5 @@
+import { APP_NAME } from "../core/brand.js";
+
 export interface OutgoingEmail {
   to: string;
   subject: string;
@@ -25,7 +27,7 @@ export interface MailerEnv {
   EMAIL?: EmailBinding;
 }
 
-const SENDER_NAME = "Personal Vault";
+const SENDER_NAME = APP_NAME;
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 export function createMailer(env: MailerEnv): Mailer | null {

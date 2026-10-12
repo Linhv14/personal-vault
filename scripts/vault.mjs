@@ -311,7 +311,7 @@ async function ensureSecrets(configPath, options) {
     if (!existsSync(SECRETS_NOTE)) {
       writeFileSync(
         SECRETS_NOTE,
-        "Secrets for this Personal Vault deployment (gitignored — do not commit or share).\n\n",
+        "Secrets for this 1pw deployment (gitignored — do not commit or share).\n\n",
       );
     }
     appendFileSync(SECRETS_NOTE, lines.join("\n"));

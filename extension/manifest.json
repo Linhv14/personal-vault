@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Personal Vault",
+  "name": "1pw",
   "version": "0.2.0",
   "description": "End-to-end encrypted personal vault: passwords, self-refreshing 2FA codes, and temporary share links.",
   "icons": {
@@ -14,7 +14,7 @@
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Personal Vault",
+    "default_title": "1pw",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"
