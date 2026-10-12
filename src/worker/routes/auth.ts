@@ -3,13 +3,9 @@ import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
 import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
 import { apiError } from "../errors.js";
-import {
-  consumeCode,
-  emailVerificationEnabled,
-  isCode,
-  issueCode,
-  RESEND_COOLDOWN_SECONDS,
-} from "../email-verification.js";
+import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
+import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
+import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
 import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
@@ -167,7 +163,7 @@ auth.post("/verify-email", async (c) => {
     now(),
   );
   if (result === "cooldown") {
-    return c.json(apiError("auth.code_cooldown", { seconds: RESEND_COOLDOWN_SECONDS }), 429);
+    return c.json(apiError("auth.code_cooldown", { seconds: CODE_RESEND_COOLDOWN_SECONDS }), 429);
   }
   if (result === "failed") return c.json(apiError("auth.email_failed"), 502);
   return c.json({ ok: true, required: true });
@@ -203,14 +199,7 @@ auth.post("/prelogin", async (c) => {
 });
 
 async function decoyKdf(env: Env, email: string): Promise<KdfBody> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    utf8Encode(env.EMAIL_PROBE_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, utf8Encode(email)));
+  const mac = await keyedHashBytes(env.EMAIL_PROBE_SECRET, email);
   return {
     type: "pbkdf2-sha256",
     iterations: DEFAULT_KDF_ITERATIONS,
@@ -350,16 +339,7 @@ auth.post("/change-password", async (c) => {
 });
 
 async function claimRegistrationSlot(env: Env, ip: string, timestamp: number): Promise<boolean> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    utf8Encode(env.EMAIL_PROBE_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const ipHash = toBase64(
-    new Uint8Array(await crypto.subtle.sign("HMAC", key, utf8Encode(`registration-ip:${ip}`))),
-  );
+  const ipHash = await keyedHash(env.EMAIL_PROBE_SECRET, `registration-ip:${ip}`);
   const claimed = await env.DB.prepare(
     `INSERT INTO registration_counts (ip_hash, day, count) VALUES (?, ?, 1)
      ON CONFLICT(ip_hash, day) DO UPDATE SET count = count + 1

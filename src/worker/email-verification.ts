@@ -1,31 +1,18 @@
-import { toBase64, timingSafeEqual, utf8Encode } from "../core/bytes.js";
-import { randomInt } from "../core/generator.js";
+import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
 import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
+import { keyedHash } from "./keyed-hash.js";
 import { createMailer, type Mailer } from "./mailer.js";
+import { CODE_MAX_ATTEMPTS, CODE_RESEND_COOLDOWN_SECONDS, generateCode } from "./one-time-code.js";
 import type { Env } from "./types.js";
 
 const CODE_TTL_SECONDS = 15 * 60;
-export const RESEND_COOLDOWN_SECONDS = 60;
-const MAX_ATTEMPTS = 5;
 
 export function emailVerificationEnabled(env: Env): boolean {
   return createMailer(env) !== null;
 }
 
-export function isCode(value: unknown): value is string {
-  return typeof value === "string" && /^\d{6}$/.test(value);
-}
-
 async function codeHash(env: Env, email: string, code: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    utf8Encode(env.EMAIL_PROBE_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = await crypto.subtle.sign("HMAC", key, utf8Encode(`email-code:${email}:${code}`));
-  return toBase64(new Uint8Array(mac));
+  return keyedHash(env.EMAIL_PROBE_SECRET, `email-code:${email}:${code}`);
 }
 
 export type IssueResult = "sent" | "cooldown" | "failed";
@@ -46,9 +33,9 @@ export async function issueCode(
   const previous = await env.DB.prepare("SELECT sent_at FROM email_verifications WHERE email = ?")
     .bind(email)
     .first<{ sent_at: number }>();
-  if (previous && timestamp - previous.sent_at < RESEND_COOLDOWN_SECONDS) return "cooldown";
+  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) return "cooldown";
 
-  const code = String(randomInt(1_000_000)).padStart(6, "0");
+  const code = generateCode();
   await env.DB.prepare(
     `INSERT INTO email_verifications (email, code_hash, expires_at, attempts, sent_at)
      VALUES (?, ?, ?, 0, ?)
@@ -86,7 +73,7 @@ export async function consumeCode(
   )
     .bind(email)
     .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= MAX_ATTEMPTS) return "expired";
+  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) return "expired";
 
   const matches = timingSafeEqual(
     utf8Encode(await codeHash(env, email, code)),
