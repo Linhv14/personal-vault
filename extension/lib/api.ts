@@ -191,7 +191,7 @@ export async function deleteItem(id: string): Promise<{ deletedAt: number }> {
 
 export interface ShareOptions {
   ttlSeconds: number;
-  maxViews: number;
+  maxViews: number | null;
   recipients: string[];
 }
 
@@ -218,7 +218,7 @@ export async function createShareLink(
 
 export type ShareStatus =
   | { id: string; active: false }
-  | { id: string; active: true; expiresAt: number; viewsLeft: number };
+  | { id: string; active: true; expiresAt: number; viewsLeft: number | null };
 
 export async function shareStatuses(
   shares: { id: string; revokeToken: string }[],

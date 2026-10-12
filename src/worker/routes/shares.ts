@@ -19,6 +19,12 @@ const MAX_SHARE_BYTES = 16 * 1024;
 const MAX_TTL_SECONDS = 30 * 24 * 60 * 60;
 const MAX_VIEWS_LIMIT = 100;
 const MAX_STATUS_LOOKUPS = 50;
+const UNLIMITED_VIEWS = 0;
+const VIEWABLE = "(max_views = 0 OR view_count < max_views)";
+
+function viewsLeft(row: { max_views: number; view_count: number }): number | null {
+  return row.max_views === UNLIMITED_VIEWS ? null : row.max_views - row.view_count;
+}
 
 function now(): number {
   return Math.floor(Date.now() / 1000);
@@ -40,15 +46,15 @@ async function claimView(
   const row = await c.env.DB.prepare(
     `UPDATE shares
         SET view_count = view_count + 1
-      WHERE id = ? AND expires_at > ? AND view_count < max_views
+      WHERE id = ? AND expires_at > ? AND ${VIEWABLE}
   RETURNING ciphertext, nonce, expires_at, max_views, view_count`,
   )
     .bind(id, timestamp)
     .first<ClaimedShare>();
   if (!row) return c.json(apiError("shares.gone"), 404);
 
-  const viewsLeft = row.max_views - row.view_count;
-  if (viewsLeft <= 0) {
+  const remaining = viewsLeft(row);
+  if (remaining === 0) {
     c.executionCtx.waitUntil(c.env.DB.prepare("DELETE FROM shares WHERE id = ?").bind(id).run());
   }
 
@@ -57,7 +63,7 @@ async function claimView(
     ciphertext: row.ciphertext,
     nonce: row.nonce,
     expiresAt: row.expires_at,
-    viewsLeft,
+    viewsLeft: remaining,
   });
 }
 
@@ -83,9 +89,10 @@ shares.post("/", async (c) => {
     return c.json(apiError("shares.invalid_ttl"), 400);
   }
   if (
-    !Number.isInteger(maxViews) ||
-    (maxViews as number) < 1 ||
-    (maxViews as number) > MAX_VIEWS_LIMIT
+    maxViews !== null &&
+    (!Number.isInteger(maxViews) ||
+      (maxViews as number) < 1 ||
+      (maxViews as number) > MAX_VIEWS_LIMIT)
   ) {
     return c.json(apiError("shares.invalid_max_views"), 400);
   }
@@ -112,7 +119,7 @@ shares.post("/", async (c) => {
       ciphertext,
       nonce,
       expiresAt,
-      maxViews,
+      maxViews ?? UNLIMITED_VIEWS,
       timestamp,
       await hashToken(revokeToken),
       allowed.length > 0 ? 1 : 0,
@@ -155,14 +162,14 @@ shares.post("/status", async (c) => {
       const owned =
         row?.revoke_hash &&
         timingSafeEqual(utf8Encode(await hashToken(revokeToken)), utf8Encode(row.revoke_hash));
-      if (!row || !owned || row.expires_at <= timestamp || row.view_count >= row.max_views) {
+      if (!row || !owned || row.expires_at <= timestamp || viewsLeft(row) === 0) {
         return { id, active: false };
       }
       return {
         id,
         active: true,
         expiresAt: row.expires_at,
-        viewsLeft: row.max_views - row.view_count,
+        viewsLeft: viewsLeft(row),
       };
     }),
   );
@@ -189,7 +196,7 @@ shares.get("/:id", async (c) => {
   const timestamp = now();
 
   const share = await c.env.DB.prepare(
-    "SELECT restricted FROM shares WHERE id = ? AND expires_at > ? AND view_count < max_views",
+    `SELECT restricted FROM shares WHERE id = ? AND expires_at > ? AND ${VIEWABLE}`,
   )
     .bind(id, timestamp)
     .first<{ restricted: number }>();

@@ -25,7 +25,8 @@ describe("message catalogues", () => {
   it("every locale uses the same placeholders as English", () => {
     // A translation that drops `{seconds}` silently renders an incomplete
     // sentence; one that invents a placeholder renders a literal brace.
-    const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+    const placeholders = (text: string) =>
+      [...new Set([...text.matchAll(/\{(\w+)(?:\}|,\s*plural,)/g)].map((m) => m[1]))].sort();
 
     for (const locale of LOCALES) {
       for (const [key, value] of Object.entries(CATALOGUES[locale])) {
@@ -130,5 +131,21 @@ describe("describeError", () => {
     const unknownKey = Object.assign(new Error("error.nope"), { messageKey: "error.nope" });
     expect(describeError(unknownKey, createTranslator("en"))).toBe("error.nope");
     expect(describeError("plain string", createTranslator("en"))).toBe("plain string");
+  });
+
+  it("picks the plural form for the count instead of writing (s)", () => {
+    const en = createTranslator("en");
+    expect(en("links.views_left", { views: 1 })).toBe("1 view left");
+    expect(en("links.views_left", { views: 4 })).toBe("4 views left");
+    expect(en("share.protection_emails", { count: 2 })).toBe("2 emails");
+    expect(createTranslator("vi")("links.views_left", { views: 4 })).toBe("Còn 4 lượt xem");
+  });
+
+  it("states numbers exactly, never with (s) or an approximation", () => {
+    for (const locale of LOCALES) {
+      for (const [key, value] of Object.entries(CATALOGUES[locale])) {
+        expect(value, `${locale}:${key}`).not.toMatch(/\(s\)|~\{|≈/);
+      }
+    }
   });
 });

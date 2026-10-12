@@ -28,22 +28,22 @@ Exact, stored in D1.
 
 ## Sizes and ranges
 
-| Value                           | Limit                               | Defined in                    |
-| ------------------------------- | ----------------------------------- | ----------------------------- |
-| Item ciphertext                 | 64 KiB decoded                      | `src/worker/routes/items.ts`  |
-| Share ciphertext                | 16 KiB decoded                      | `src/worker/routes/shares.ts` |
-| AES-GCM nonce                   | 12 bytes                            | `src/core/crypto.ts`          |
-| KDF iterations accepted         | 100,000 – 5,000,000                 | `src/worker/routes/auth.ts`   |
-| KDF iterations for new accounts | 600,000                             | `src/core/crypto.ts`          |
-| Share lifetime (API)            | 60 seconds – 30 days                | `src/worker/routes/shares.ts` |
-| Share lifetime (extension)      | 1 hour, **1 day**, 7, 14 or 30 days | `extension/popup/popup.html`  |
-| Share views (API)               | 1 – 100                             | `src/worker/routes/shares.ts` |
-| Share views (extension)         | **1**, 3 or 10                      | `extension/popup/popup.html`  |
-| Share recipients                | 10 email addresses                  | `src/worker/share-access.ts`  |
-| Share status lookups            | 50 per request                      | `src/worker/routes/shares.ts` |
-| Generated password length       | 8 – 64 characters (default 20)      | `extension/popup/popup.html`  |
-| Generated passphrase            | 4 – 12 words (default 8)            | `extension/popup/popup.html`  |
-| Generated PIN                   | 4 – 12 digits (default 6)           | `extension/popup/popup.html`  |
+| Value                           | Limit                           | Defined in                    |
+| ------------------------------- | ------------------------------- | ----------------------------- |
+| Item ciphertext                 | 64 KiB decoded                  | `src/worker/routes/items.ts`  |
+| Share ciphertext                | 16 KiB decoded                  | `src/worker/routes/shares.ts` |
+| AES-GCM nonce                   | 12 bytes                        | `src/core/crypto.ts`          |
+| KDF iterations accepted         | 100,000 – 5,000,000             | `src/worker/routes/auth.ts`   |
+| KDF iterations for new accounts | 600,000                         | `src/core/crypto.ts`          |
+| Share lifetime (API)            | 60 seconds – 30 days            | `src/worker/routes/shares.ts` |
+| Share lifetime (extension)      | 1 hour, **1 day**, 7 or 30 days | `extension/popup/popup.html`  |
+| Share views (API)               | 1 – 100, or `null` for no limit | `src/worker/routes/shares.ts` |
+| Share views (extension)         | **Once**, or until it expires   | `extension/popup/popup.html`  |
+| Share recipients                | 10 email addresses              | `src/worker/share-access.ts`  |
+| Share status lookups            | 50 per request                  | `src/worker/routes/shares.ts` |
+| Generated password length       | 8 – 64 characters (default 20)  | `extension/popup/popup.html`  |
+| Generated passphrase            | 4 – 12 words (default 8)        | `extension/popup/popup.html`  |
+| Generated PIN                   | 4 – 12 digits (default 6)       | `extension/popup/popup.html`  |
 
 Bold marks the extension's default.
 

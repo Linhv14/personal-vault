@@ -26,7 +26,7 @@ interface ShareResponse {
   ciphertext: string;
   nonce: string;
   expiresAt: number;
-  viewsLeft: number;
+  viewsLeft: number | null;
 }
 
 class ShareGone extends Error {}
@@ -285,15 +285,11 @@ function render(payload: SharePayload): void {
   const site = websiteLink(payload.url);
   if (site) chips.push(site);
   if (cached) {
-    const minutes = Math.max(0, Math.round((cached.expiresAt * 1000 - Date.now()) / 60_000));
-    chips.push(
-      chip(
-        "clock",
-        minutes >= 60
-          ? t("view.expires_hours", { count: Math.round(minutes / 60) })
-          : t("view.expires_minutes", { count: minutes }),
-      ),
-    );
+    const until = new Date(cached.expiresAt * 1000).toLocaleString(locale, {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+    chips.push(chip("clock", t("view.available_until", { time: until })));
   }
   el("meta").replaceChildren(...chips);
 
@@ -304,12 +300,14 @@ function render(payload: SharePayload): void {
   if (payload.totp) fields.append(totpField(payload.totp));
   if (payload.note) fields.append(noteField(payload.note));
 
-  const lastView = !cached?.viewsLeft;
+  const viewsLeft = cached ? cached.viewsLeft : 0;
+  const lastView = viewsLeft === 0;
   const warning = el("warning");
+  warning.hidden = viewsLeft === null;
   warning.className = lastView ? "notice last" : "notice";
   warning.replaceChildren(
     icon(lastView ? "alert" : "eye"),
-    lastView ? t("view.last_view") : t("view.views_left", { count: cached?.viewsLeft ?? 0 }),
+    lastView ? t("view.last_view") : t("view.views_left", { count: viewsLeft ?? 0 }),
   );
 
   show("content");

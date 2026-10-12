@@ -51,17 +51,31 @@ export function resolveLocale(preference: LocalePreference | undefined): Locale 
 export function createTranslator(locale: Locale): Translate {
   const catalogue = CATALOGUES[locale];
 
+  const plurals = new Intl.PluralRules(locale);
+
   return (key, params) => {
     const template = catalogue[key];
     if (!params) return template;
 
     // `{name}` -> value. An unknown placeholder is left as-is so a typo shows up
     // in the UI instead of silently rendering an empty string.
-    return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-      name in params ? String(params[name]) : match,
-    );
+    return template
+      .replace(PLURAL_BLOCK, (match, name: string, body: string) => {
+        if (!(name in params)) return match;
+        const count = Number(params[name]);
+        const forms = Object.fromEntries(
+          [...body.matchAll(/(=?\w+)\s*\{([^{}]*)\}/g)].map(([, form, text]) => [form, text]),
+        );
+        const text = forms[`=${count}`] ?? forms[plurals.select(count)] ?? forms.other ?? match;
+        return text.replace(/#/g, String(count));
+      })
+      .replace(/\{(\w+)\}/g, (match, name: string) =>
+        name in params ? String(params[name]) : match,
+      );
   };
 }
+
+const PLURAL_BLOCK = /\{(\w+),\s*plural,((?:\s*=?\w+\s*\{[^{}]*\})+)\s*\}/g;
 
 /**
  * Turn anything thrown anywhere into a sentence in the active language.

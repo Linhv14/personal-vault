@@ -297,6 +297,32 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       expect(second.body.code).toBe("shares.gone");
     });
 
+    it("keeps a link without a view limit open until it expires", async () => {
+      const { sealed } = await createShare({ password: "many views" });
+      const created = await api("/api/shares", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ ...sealed, ttlSeconds: 600, maxViews: null }),
+      });
+      expect(created.status).toBe(201);
+      expect(created.body.maxViews).toBeNull();
+
+      for (let view = 0; view < 3; view++) {
+        const fetched = await api(`/api/shares/${created.body.id}`);
+        expect(fetched.status).toBe(200);
+        expect(fetched.body.viewsLeft).toBeNull();
+      }
+
+      const status = await api("/api/shares/status", {
+        method: "POST",
+        token,
+        body: JSON.stringify({
+          shares: [{ id: created.body.id, revokeToken: created.body.revokeToken }],
+        }),
+      });
+      expect(status.body.shares[0]).toMatchObject({ active: true, viewsLeft: null });
+    });
+
     it("requires a session to create a link but not to read one", async () => {
       const { sealed } = await createShare({ password: "x" });
       const result = await api("/api/shares", {
@@ -313,6 +339,7 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
         { ...sealed, ttlSeconds: 999_999_999, maxViews: 1 },
         { ...sealed, ttlSeconds: 600, maxViews: 0 },
         { ...sealed, ttlSeconds: 600, maxViews: 1000 },
+        { ...sealed, ttlSeconds: 600 },
       ]) {
         const result = await api("/api/shares", {
           method: "POST",

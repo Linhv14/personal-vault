@@ -62,6 +62,7 @@ import {
 } from "../lib/shared-links.js";
 import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton, type IconName } from "../../src/ui/icons.js";
+import { addRecipients, MAX_SHARE_RECIPIENTS, singleViewAllowed } from "../lib/recipients.js";
 import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
 import {
   clearAccountData,
@@ -1109,57 +1110,182 @@ function regenerate(): void {
 }
 
 let sharing: VaultItem | null = null;
+let shareRecipients: string[] = [];
 
 function shareForm(): HTMLFormElement {
   return $<HTMLFormElement>("form-share");
 }
 
-function showRecipientsField(): void {
-  const access = new FormData(shareForm()).get("access");
-  $("share-recipients-field").hidden = access !== "emails";
+function checkedOption(name: string): HTMLInputElement {
+  return shareForm().querySelector<HTMLInputElement>(`[name="${name}"]:checked`)!;
+}
+
+function optionLabel(input: HTMLInputElement): string {
+  return input.closest("label")!.textContent!.trim();
+}
+
+function restrictedToEmails(): boolean {
+  return !$("share-access-group").hidden && checkedOption("access").value === "emails";
+}
+
+function chip(iconName: IconName, text: string): HTMLElement {
+  const node = document.createElement("span");
+  node.className = "chip";
+  const label = document.createElement("span");
+  label.className = "chip-text";
+  label.textContent = text;
+  node.append(icon(iconName), label);
+  return node;
+}
+
+function renderShareSubject(item: VaultItem): void {
+  const name = document.createElement("div");
+  name.className = "item-name";
+  const title = document.createElement("div");
+  title.className = "item-title";
+  title.textContent = item.title;
+  const sub = document.createElement("div");
+  sub.className = "item-sub";
+  sub.textContent = item.url ? (registrableDomain(item.url) ?? item.url) : (item.username ?? "");
+  name.append(title, sub);
+  $("share-subject").replaceChildren(avatar(item.title), name);
+}
+
+function renderShareFields(item: VaultItem): void {
+  const fields: [boolean, MessageKey][] = [
+    [Boolean(item.username), "common.username"],
+    [Boolean(item.password), "common.password"],
+    [Boolean(item.note), "common.note"],
+  ];
+  $("share-fields").replaceChildren(
+    ...fields.filter(([shared]) => shared).map(([, key]) => chip("check", t(key))),
+  );
+}
+
+function renderRecipients(): void {
+  const container = $("share-recipients");
+  const entry = $<HTMLInputElement>("share-recipient-entry");
+  const chips = shareRecipients.map((email) => {
+    const node = chip("mail", email);
+    const remove = iconButton("close", t("share.remove_recipient", { email }), () => {
+      shareRecipients = shareRecipients.filter((other) => other !== email);
+      renderRecipients();
+      entry.focus();
+    });
+    node.append(remove);
+    return node;
+  });
+  container.replaceChildren(...chips, entry);
+  entry.disabled = shareRecipients.length >= MAX_SHARE_RECIPIENTS;
+  $("share-recipients-count").textContent = `${shareRecipients.length}/${MAX_SHARE_RECIPIENTS}`;
+  syncShareForm();
+}
+
+function setRecipientsHint(message: string | null): void {
+  const hint = $("share-recipients-hint");
+  hint.textContent = message ?? t("share.recipients_hint");
+  hint.classList.toggle("warn-text", message !== null);
+  $("share-recipients").setAttribute("aria-invalid", String(message !== null));
+}
+
+function commitRecipientEntry(): boolean {
+  const entry = $<HTMLInputElement>("share-recipient-entry");
+  if (!entry.value.trim()) return true;
+  const update = addRecipients(shareRecipients, entry.value);
+  shareRecipients = update.recipients;
+  entry.value = update.rejected.join(", ");
+  setRecipientsHint(
+    update.rejected.length > 0
+      ? t("share.recipients_invalid", { emails: update.rejected.join(", ") })
+      : update.overflow
+        ? t("share.recipients_full")
+        : null,
+  );
+  renderRecipients();
+  return update.rejected.length === 0;
+}
+
+function syncShareForm(): void {
+  const form = shareForm();
+  const restricted = restrictedToEmails();
+  $("share-recipients-field").hidden = !restricted;
+
+  const includeTotp =
+    !$("share-totp-field").hidden &&
+    form.querySelector<HTMLInputElement>('[name="includeTotp"]')!.checked;
+  $("share-totp-hint").hidden = !includeTotp;
+
+  const recipientCount = restricted ? shareRecipients.length : 0;
+  const allowOnce = singleViewAllowed(recipientCount);
+  const once = form.querySelector<HTMLInputElement>('[name="maxViews"][value="1"]')!;
+  once.disabled = !allowOnce;
+  if (!allowOnce) {
+    form.querySelector<HTMLInputElement>('[name="maxViews"][value="unlimited"]')!.checked = true;
+  }
+  $("share-views-hint").hidden = allowOnce;
+
+  const passphrase = String(new FormData(form).get("passphrase") ?? "").trim();
+  const protections = [
+    ...(restricted && recipientCount > 0
+      ? [t("share.protection_emails", { count: recipientCount })]
+      : []),
+    ...(passphrase ? [t("share.protection_passphrase")] : []),
+  ];
+  $("share-protection-state").textContent = protections.join(" · ");
+
+  $("share-summary").textContent = [
+    t("share.summary_expiry", { duration: optionLabel(checkedOption("ttl")) }),
+    t(once.checked ? "share.result_once" : "share.result_unlimited"),
+  ].join(" · ");
 }
 
 async function openShare(item: VaultItem): Promise<void> {
   clearTimers();
   sharing = item;
+  shareRecipients = [];
   setError("share-error", null);
   const form = shareForm();
   form.reset();
+  $<HTMLDetailsElement>("share-protection").open = false;
   $("share-result").hidden = true;
   form.hidden = false;
-  $("share-item").textContent = item.title;
-  form.querySelector<HTMLInputElement>('[name="includeTotp"]')!.closest("label")!.hidden =
-    !item.totp;
+  renderShareSubject(item);
+  renderShareFields(item);
+  $("share-totp-field").hidden = !item.totp;
 
   const { apiUrl } = await getLocal();
   const config = await api.serverConfig(apiUrl ?? "");
   $("share-access-group").hidden = !config.emailVerification;
-  showRecipientsField();
+  setRecipientsHint(null);
+  renderRecipients();
   show("share");
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_SHARE_RECIPIENTS = 10;
+shareForm().addEventListener("change", syncShareForm);
+shareForm().addEventListener("input", (event) => {
+  if ((event.target as HTMLElement).id !== "share-recipient-entry") syncShareForm();
+});
 
-function parseRecipients(raw: string): string[] | null {
-  const emails = [
-    ...new Set(
-      raw
-        .split(/[\s,;]+/)
-        .map((email) => email.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  ];
-  const valid =
-    emails.length > 0 &&
-    emails.length <= MAX_SHARE_RECIPIENTS &&
-    emails.every((email) => EMAIL_PATTERN.test(email));
-  return valid ? emails : null;
-}
+$("share-recipients").addEventListener("click", (event) => {
+  if (event.target === event.currentTarget) $("share-recipient-entry").focus();
+});
 
-for (const radio of shareForm().querySelectorAll<HTMLInputElement>('[name="access"]')) {
-  radio.addEventListener("change", showRecipientsField);
-}
+const recipientEntry = $<HTMLInputElement>("share-recipient-entry");
+recipientEntry.addEventListener("keydown", (event) => {
+  if (["Enter", ",", ";", " "].includes(event.key)) {
+    event.preventDefault();
+    commitRecipientEntry();
+  } else if (
+    event.key === "Backspace" &&
+    recipientEntry.value === "" &&
+    shareRecipients.length > 0
+  ) {
+    shareRecipients = shareRecipients.slice(0, -1);
+    renderRecipients();
+  }
+});
+recipientEntry.addEventListener("blur", () => commitRecipientEntry());
+recipientEntry.addEventListener("paste", () => setTimeout(commitRecipientEntry));
 
 $("share-back").addEventListener("click", () => {
   renderList();
@@ -1171,17 +1297,20 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
   setError("share-error", null);
   if (!sharing) return;
 
-  const data = new FormData(event.target as HTMLFormElement);
-  const includeTotp = data.get("includeTotp") === "on";
-  const passphrase = String(data.get("passphrase")).trim() || undefined;
-  const maxViews = Number(data.get("maxViews"));
-  const ttlSeconds = Number(data.get("ttl"));
-  const recipients =
-    data.get("access") === "emails" ? parseRecipients(String(data.get("recipients") ?? "")) : [];
-  if (!recipients) {
-    setError("share-error", t("error.shares.invalid_recipients"));
+  const restricted = restrictedToEmails();
+  if (restricted && !commitRecipientEntry()) return;
+  if (restricted && shareRecipients.length === 0) {
+    setRecipientsHint(t("share.recipients_required"));
+    $("share-recipient-entry").focus();
     return;
   }
+
+  const data = new FormData(event.target as HTMLFormElement);
+  const includeTotp = data.get("includeTotp") === "on";
+  const passphrase = String(data.get("passphrase") ?? "").trim() || undefined;
+  const maxViews = data.get("maxViews") === "1" ? 1 : null;
+  const ttlSeconds = Number(data.get("ttl"));
+  const recipients = restricted ? [...shareRecipients] : [];
 
   try {
     const { sealed, fragment } = await createShare(
@@ -1216,7 +1345,7 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
 
     $<HTMLTextAreaElement>("share-url").value = url;
     $("share-note").replaceChildren(
-      metaLine("eye", t("share.result_views", { views: maxViews })),
+      metaLine("eye", t(maxViews === 1 ? "share.result_once" : "share.result_unlimited")),
       metaLine("clock", t("share.result_expiry", { expiry: formatExpiry(created.expiresAt) })),
       ...(recipients.length > 0
         ? [metaLine("mail", t("share.result_note_recipients", { emails: recipients.join(", ") }))]
@@ -1407,7 +1536,7 @@ function formatExpiry(epochSeconds: number): string {
   });
 }
 
-function sharedLinkRow(link: SharedLink, viewsLeft: number, expiresAt: number): HTMLElement {
+function sharedLinkRow(link: SharedLink, viewsLeft: number | null, expiresAt: number): HTMLElement {
   const row = document.createElement("div");
   row.className = "link-row";
 
@@ -1419,7 +1548,12 @@ function sharedLinkRow(link: SharedLink, viewsLeft: number, expiresAt: number): 
   const meta = document.createElement("div");
   meta.className = "meta-lines";
   meta.append(
-    metaLine("eye", t("links.views_left", { views: viewsLeft })),
+    metaLine(
+      "eye",
+      viewsLeft === null
+        ? t("share.result_unlimited")
+        : t("links.views_left", { views: viewsLeft }),
+    ),
     metaLine("clock", t("links.expires", { expiry: formatExpiry(expiresAt) })),
   );
   if (link.recipients.length > 0) {

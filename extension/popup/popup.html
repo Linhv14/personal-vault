@@ -313,9 +313,22 @@
           <i data-icon="back"></i>
         </button>
         <h1 data-i18n="share.title"></h1>
-        <span class="subtitle" id="share-item"></span>
       </header>
       <form id="form-share" class="stack">
+        <div class="share-subject" id="share-subject"></div>
+        <section class="share-contents" aria-labelledby="share-contents-label">
+          <span class="field-label" id="share-contents-label" data-i18n="share.contents"></span>
+          <div class="chips" id="share-fields"></div>
+          <label class="check" id="share-totp-field"
+            ><span data-i18n="share.include_totp"></span><input type="checkbox" name="includeTotp"
+          /></label>
+          <small
+            class="hint warn-text"
+            id="share-totp-hint"
+            data-i18n="share.totp_hint"
+            hidden
+          ></small>
+        </section>
         <fieldset class="choice-group">
           <legend data-i18n="share.expires_in"></legend>
           <div class="segmented">
@@ -329,11 +342,6 @@
             ></label>
             <label class="tab"
               ><input type="radio" name="ttl" value="604800" /><span data-i18n="share.ttl_7d"></span
-            ></label>
-            <label class="tab"
-              ><input type="radio" name="ttl" value="1209600" /><span
-                data-i18n="share.ttl_14d"
-              ></span
             ></label>
             <label class="tab"
               ><input type="radio" name="ttl" value="2592000" /><span
@@ -351,58 +359,71 @@
               ></span
             ></label>
             <label class="tab"
-              ><input type="radio" name="maxViews" value="3" /><span
-                data-i18n="share.views_3"
-              ></span
-            ></label>
-            <label class="tab"
-              ><input type="radio" name="maxViews" value="10" /><span
-                data-i18n="share.views_10"
+              ><input type="radio" name="maxViews" value="unlimited" /><span
+                data-i18n="share.views_unlimited"
               ></span
             ></label>
           </div>
+          <small class="hint" id="share-views-hint" data-i18n="share.views_hint" hidden></small>
         </fieldset>
-        <fieldset class="choice-group" id="share-access-group">
-          <legend data-i18n="share.access"></legend>
-          <div class="segmented">
-            <label class="tab"
-              ><input type="radio" name="access" value="anyone" checked /><span
-                data-i18n="share.access_anyone"
-              ></span
-            ></label>
-            <label class="tab"
-              ><input type="radio" name="access" value="emails" /><span
-                data-i18n="share.access_emails"
-              ></span
+        <details class="disclosure" id="share-protection">
+          <summary>
+            <span data-i18n="share.protection"></span
+            ><span class="disclosure-state" id="share-protection-state"></span>
+          </summary>
+          <div class="stack">
+            <fieldset class="choice-group" id="share-access-group">
+              <legend data-i18n="share.access"></legend>
+              <div class="segmented">
+                <label class="tab"
+                  ><input type="radio" name="access" value="anyone" checked /><span
+                    data-i18n="share.access_anyone"
+                  ></span
+                ></label>
+                <label class="tab"
+                  ><input type="radio" name="access" value="emails" /><span
+                    data-i18n="share.access_emails"
+                  ></span
+                ></label>
+              </div>
+            </fieldset>
+            <div class="form-field" id="share-recipients-field" hidden>
+              <span class="field-label"
+                ><span data-i18n="share.recipients_label"></span
+                ><span class="counter" id="share-recipients-count"></span
+              ></span>
+              <div class="chip-input" id="share-recipients">
+                <input
+                  id="share-recipient-entry"
+                  type="email"
+                  autocomplete="off"
+                  data-i18n-placeholder="share.recipients_placeholder"
+                  data-i18n-title="share.recipients_label"
+                />
+              </div>
+              <small
+                class="hint"
+                id="share-recipients-hint"
+                data-i18n="share.recipients_hint"
+              ></small>
+            </div>
+            <label
+              ><span data-i18n="share.passphrase"></span
+              ><input
+                name="passphrase"
+                type="text"
+                autocomplete="off"
+                data-i18n-placeholder="share.passphrase_placeholder" /><small
+                class="hint"
+                data-i18n="share.passphrase_hint"
+              ></small
             ></label>
           </div>
-        </fieldset>
-        <label id="share-recipients-field" hidden
-          ><span data-i18n="share.recipients_label"></span
-          ><textarea
-            name="recipients"
-            rows="2"
-            autocomplete="off"
-            data-i18n-placeholder="share.recipients_placeholder"
-          ></textarea
-          ><small class="hint" data-i18n="share.recipients_hint"></small
-        ></label>
-        <label class="check"
-          ><span data-i18n="share.include_totp"></span
-          ><input type="checkbox" name="includeTotp" checked
-        /></label>
-        <label
-          ><span data-i18n="share.passphrase"></span
-          ><input
-            name="passphrase"
-            type="text"
-            autocomplete="off"
-            data-i18n-placeholder="share.passphrase_placeholder" /><small
-            class="hint"
-            data-i18n="share.passphrase_hint"
-          ></small
-        ></label>
-        <button class="primary" type="submit" data-i18n="share.create"></button>
+        </details>
+        <div class="stack tight">
+          <button class="primary" type="submit" data-i18n="share.create"></button>
+          <p class="hint center" id="share-summary"></p>
+        </div>
       </form>
       <div id="share-result" class="stack" hidden>
         <div class="result-head">

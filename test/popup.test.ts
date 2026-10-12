@@ -67,6 +67,8 @@ const server = {
   items: new Map<string, { ciphertext: string; nonce: string; updatedAt: number }>(),
   /** Every request body seen, used to prove the server never gets plaintext. */
   received: [] as string[],
+  emailVerification: false,
+  shareRequests: [] as Record<string, any>[],
 };
 
 function json(body: unknown, status = 200): Response {
@@ -111,6 +113,10 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
 
   if (url.pathname === "/api/time") return json({ serverTime: now });
 
+  if (url.pathname === "/api/config") {
+    return json({ registration: "token", emailVerification: server.emailVerification });
+  }
+
   if (url.pathname === "/api/items" && method === "GET") {
     return json({
       serverTime: now,
@@ -125,6 +131,7 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   }
 
   if (url.pathname === "/api/shares" && method === "POST") {
+    server.shareRequests.push(body);
     return json({ id: "share-1", expiresAt: now + 86400, maxViews: body.maxViews }, 201);
   }
 
@@ -267,12 +274,22 @@ describe("extension popup", () => {
     expect(shown).toBe(await generateTotp({ secret: TOTP_SECRET }));
   });
 
-  it("creates a share link without sending the key to the server", async () => {
+  async function openShareScreen(): Promise<void> {
+    el("share-back").click();
+    await waitFor(() => visibleScreen() === "screen-list", "the list");
+    el("matching-list").querySelector<HTMLElement>(".item-head")!.click();
     const shareButton = [...el("matching-list").querySelectorAll("button")].find(
       (button) => button.textContent === "Share",
     )!;
     shareButton.dispatchEvent(new Event("click", { bubbles: true }));
-    await waitFor(() => visibleScreen() === "screen-share", "the share screen");
+    await waitFor(
+      () => visibleScreen() === "screen-share" && el("share-result").hidden,
+      "the share screen",
+    );
+  }
+
+  it("creates a share link without sending the key to the server", async () => {
+    await openShareScreen();
 
     el<HTMLFormElement>("form-share").dispatchEvent(
       new Event("submit", { bubbles: true, cancelable: true }),
@@ -284,6 +301,50 @@ describe("extension popup", () => {
 
     const fragment = url.split("#")[1]!;
     expect(server.received.join("\n")).not.toContain(fragment);
+  });
+
+  it("leaves the 2FA key out of a share unless the user opts in", async () => {
+    await openShareScreen();
+    const totp = el("form-share").querySelector<HTMLInputElement>('[name="includeTotp"]')!;
+    expect(el("share-totp-field").hidden).toBe(false);
+    expect(totp.checked).toBe(false);
+    expect(el("share-totp-hint").hidden).toBe(true);
+
+    totp.click();
+    expect(el("share-totp-hint").hidden).toBe(false);
+  });
+
+  it("keeps a link for several recipients open until it expires", async () => {
+    server.emailVerification = true;
+    await openShareScreen();
+    el("form-share").querySelector<HTMLInputElement>('[name="access"][value="emails"]')!.click();
+    expect(el("share-recipients-field").hidden).toBe(false);
+
+    const entry = el<HTMLInputElement>("share-recipient-entry");
+    entry.value = "a@example.com, b@example.com not-an-email";
+    entry.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    expect(el("share-recipients").querySelectorAll(".chip")).toHaveLength(2);
+    expect(entry.value).toBe("not-an-email");
+    expect(el("share-recipients").getAttribute("aria-invalid")).toBe("true");
+
+    const views = (value: string) =>
+      el("form-share").querySelector<HTMLInputElement>(`[name="maxViews"][value="${value}"]`)!;
+    expect(views("1").disabled).toBe(true);
+    expect(views("unlimited").checked).toBe(true);
+    expect(el("share-views-hint").hidden).toBe(false);
+
+    entry.value = "";
+    server.shareRequests.length = 0;
+    el<HTMLFormElement>("form-share").dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => !el("share-result").hidden, "the generated link");
+    expect(server.shareRequests[0]).toMatchObject({
+      maxViews: null,
+      recipients: ["a@example.com", "b@example.com"],
+    });
+    server.emailVerification = false;
   });
 
   it("clears session storage when locked, keeping the offline cache", async () => {

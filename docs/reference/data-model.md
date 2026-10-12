@@ -56,7 +56,7 @@ with the account.
 | `ciphertext`  | Share payload sealed under the link key | Approximate size            |
 | `nonce`       | AES-GCM nonce                           | Nothing                     |
 | `expires_at`  | Unix seconds                            | Lifetime                    |
-| `max_views`   | 1 – 100                                 | View limit                  |
+| `max_views`   | 1 – 100, or 0 for no limit              | View limit                  |
 | `view_count`  | Views spent                             | Whether it was opened       |
 | `created_at`  | Unix seconds                            | Creation time               |
 | `revoke_hash` | SHA-256 of the revoke token             | Nothing usable              |

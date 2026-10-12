@@ -9,7 +9,7 @@ export interface SharedLink {
   title: string;
   createdAt: number;
   expiresAt: number;
-  maxViews: number;
+  maxViews: number | null;
   recipients: string[];
   hasPassphrase: boolean;
   revokeToken: string;

@@ -10,6 +10,17 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Share screen: shows the item and what the recipient will see; the 2FA key
+  is left out unless ticked, with a warning; recipients and the link password
+  sit under "Extra protection"; recipient emails are entered as validated
+  chips; a summary line states expiry and views.
+- A share opens once or until it expires, replacing 1, 3 or 10 views. The API
+  accepts `maxViews: null` for no view limit.
+- A link for several recipients cannot be one-time: the first recipient would
+  use up the only view.
+- Share lifetimes are 1 hour, 1 day, 7 or 30 days.
+- The share page shows the exact time a link stops working instead of an
+  approximate countdown, and plural forms replace "(s)" labels.
 - Documentation reorganized into tutorials, how-to guides, reference and
   explanation under `docs/`.
 - `npm run status` prints the Worker URL.

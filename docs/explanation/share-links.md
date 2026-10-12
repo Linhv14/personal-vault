@@ -20,6 +20,10 @@ and a limited number of views, while the server stays unable to read it.
 
 The server sees the ciphertext and the id. The key exists only in the link.
 
+A 2FA secret is left out unless the sender ticks it, with a warning: the
+recipient gets the key itself, so they can keep generating codes after the
+link expires.
+
 The recipient page never writes the password into the page: it can be copied,
 not displayed, so it does not end up in screenshots, screen shares or the
 browser's form history. A 2FA secret becomes a live code that refreshes on the
@@ -47,9 +51,11 @@ What reduces it:
 
 ## Controls on a share
 
-**Lifetime and views.** 1 hour to 30 days, 1 to 10 views in the extension
-(the API allows up to 100). An expired or used-up share stops opening at once
-and is deleted within the hour.
+**Lifetime and views.** 1 hour, 1 day, 7 or 30 days. A link opens once, or
+any number of times until it expires, the same two choices 1Password offers;
+counts like "3 views" ask the sender to predict how often a link will be
+reloaded, which nobody can. The API still accepts a count from 1 to 100. An
+expired or used-up share stops opening at once and is deleted within the hour.
 
 **One answer for every dead link.** Unknown, expired, revoked and used-up
 shares all return `shares.gone`, so the API never confirms that an id existed.
@@ -73,6 +79,10 @@ code to it if it is on the list, and spends the view only when the right code
 is entered. Requesting a code returns the same response whether the address is
 on the list, the share exists, or a cooldown is running, so the list cannot be
 probed one guess at a time.
+
+A view is spent per opening, not per person, so a one-time link to several
+recipients would let the first one lock the others out. The extension
+therefore offers "once" only for anyone-with-the-link or a single recipient.
 
 Restriction protects against a carrier that reads the link but not the
 recipient's inbox. It does not help when the same provider carries both.

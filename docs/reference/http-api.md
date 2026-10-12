@@ -208,17 +208,17 @@ or `404 items.not_found`.
 Authenticated. Store an encrypted share. The key stays in the link fragment
 and never reaches the server.
 
-| Field        | Type     | Notes                                                   |
-| ------------ | -------- | ------------------------------------------------------- |
-| `ciphertext` | string   | ≤ 16 KiB decoded                                        |
-| `nonce`      | string   | 12 bytes                                                |
-| `ttlSeconds` | number   | 60 – 2,592,000                                          |
-| `maxViews`   | integer  | 1 – 100                                                 |
-| `recipients` | string[] | Optional, up to 10 addresses; needs email on the server |
+| Field        | Type              | Notes                                                                  |
+| ------------ | ----------------- | ---------------------------------------------------------------------- |
+| `ciphertext` | string            | ≤ 16 KiB decoded                                                       |
+| `nonce`      | string            | 12 bytes                                                               |
+| `ttlSeconds` | number            | 60 – 2,592,000                                                         |
+| `maxViews`   | integer or `null` | 1 – 100, or `null` for no view limit (the link works until it expires) |
+| `recipients` | string[]          | Optional, up to 10 addresses; needs email on the server                |
 
 | Status | Body / code                                                                                                                         |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 201    | `{ "id": string, "expiresAt": number, "maxViews": number, "revokeToken": string }`                                                  |
+| 201    | `{ "id": string, "expiresAt": number, "maxViews": number \| null, "revokeToken": string }`                                          |
 | 400    | `shares.invalid_payload`, `shares.invalid_ttl`, `shares.invalid_max_views`, `shares.invalid_recipients`, `shares.email_unavailable` |
 
 `id` and `revokeToken` are base64url. The server stores only a hash of
@@ -237,6 +237,7 @@ Authenticated. Look up shares you created. Request:
 
 Up to 50 entries. Each answer is either
 `{ "id", "active": true, "expiresAt", "viewsLeft" }` or `{ "id", "active": false }`.
+`viewsLeft` is `null` for a link without a view limit.
 A wrong token reads as inactive.
 
 ### `DELETE /api/shares/:id`
@@ -252,6 +253,9 @@ No authentication. Spends one view and returns the ciphertext:
 ```json
 { "ciphertext": "…", "nonce": "…", "expiresAt": 1791907200, "viewsLeft": 0 }
 ```
+
+`viewsLeft` is `null` when the link has no view limit, and `0` when this was
+the last view.
 
 | Status | Code                                                                        |
 | ------ | --------------------------------------------------------------------------- |
@@ -307,7 +311,7 @@ Errors: `400 shares.invalid_code`, `400 shares.code_expired`, `404 shares.gone`.
 | `items.quota_exceeded`        | 403           | The account holds the maximum number of items                    |
 | `shares.invalid_payload`      | 400           | Ciphertext or nonce malformed or too large, or a bad status list |
 | `shares.invalid_ttl`          | 400           | `ttlSeconds` out of range                                        |
-| `shares.invalid_max_views`    | 400           | `maxViews` out of range                                          |
+| `shares.invalid_max_views`    | 400           | `maxViews` missing, or not `null` or 1 – 100                     |
 | `shares.invalid_recipients`   | 400           | More than 10 recipients or an invalid address                    |
 | `shares.email_unavailable`    | 400           | Recipients given, but the server cannot send email               |
 | `shares.gone`                 | 404           | Share unknown, expired, revoked or out of views                  |
