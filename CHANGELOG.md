@@ -21,6 +21,7 @@ version may change the API or storage format; such releases list the steps in
   bottom; unlock and setup stay as short as their content.
 - The share page shows expiry, and the last-view warning, in a banner at the
   top of the card.
+- Emails are shorter and say only what the reader must do.
 - Share page text cut to what the reader needs: one short line per state,
   no captions under fields, and "password" instead of "passphrase".
 - The share page no longer claims to clear the clipboard after 30 seconds; a
@@ -40,6 +41,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- The privacy policy said the server never sends email and that Cloudflare
+  was the only third party; sign-up codes go out through Resend. The policy
+  is rewritten with a data inventory, providers, retention and rights.
 - Reloading an opened share link said the link was incomplete, because the
   page removed the key from the address bar after opening it.
 - The `shares.invalid_ttl` error message stated a 7-day maximum; the limit is
