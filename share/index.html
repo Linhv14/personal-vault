@@ -381,24 +381,34 @@
         transition: none;
       }
 
-      .notice {
+      .banner {
         display: flex;
         align-items: flex-start;
-        gap: 8px;
-        margin-top: 16px;
-        color: var(--muted);
+        gap: 10px;
+        margin: -28px -28px 24px;
+        padding: 12px 28px;
+        border-radius: 20px 20px 0 0;
+        border-bottom: 1px solid var(--border);
+        background: var(--accent-soft);
         font-size: 13px;
       }
-      .notice.last {
-        padding: 10px 12px;
-        border-radius: 12px;
-        background: var(--warn-soft);
-        color: var(--warn);
-      }
-      .notice .icon {
+      .banner .icon {
         width: 16px;
         height: 16px;
+        flex-shrink: 0;
         margin-top: 2px;
+        color: var(--accent);
+      }
+      .banner strong {
+        display: block;
+        font-weight: 650;
+      }
+      .banner.last {
+        background: var(--warn-soft);
+        color: var(--text);
+      }
+      .banner.last .icon {
+        color: var(--warn);
       }
     </style>
   </head>
@@ -477,6 +487,7 @@
         </div>
 
         <div id="state-content" hidden>
+          <div class="banner" id="banner" role="status"></div>
           <div class="head">
             <span class="avatar" id="avatar"></span>
             <div class="head-text">
@@ -486,7 +497,6 @@
             </div>
           </div>
           <div class="fields" id="fields"></div>
-          <p class="notice" id="warning"></p>
         </div>
       </div>
       <div class="toast" id="toast" role="status" hidden></div>

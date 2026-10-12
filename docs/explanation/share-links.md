@@ -8,8 +8,10 @@ and a limited number of views, while the server stays unable to read it.
 ```
 1. The sender picks an item, a lifetime, a view limit, and optionally
    recipients and a passphrase.
-2. The extension draws a 32-byte share key and seals the chosen fields
-   (title, site, username, password, note, 2FA secret) with AES-256-GCM.
+2. The extension draws a 32-byte share key and seals the title, website,
+   username, password and, when the item has one, the 2FA secret, with
+   AES-256-GCM. Notes are never shared: they tend to hold recovery codes and
+   other secrets the recipient does not need to sign in.
 3. It uploads the ciphertext. The Worker stores it under a random id and
    returns the id and a revoke token.
 4. The link is   https://<worker>/s/<id>#<share key>
@@ -20,9 +22,9 @@ and a limited number of views, while the server stays unable to read it.
 
 The server sees the ciphertext and the id. The key exists only in the link.
 
-A 2FA secret is left out unless the sender ticks it, with a warning: the
-recipient gets the key itself, so they can keep generating codes after the
-link expires.
+When the item has 2FA, the share screen says so: the recipient gets the secret
+itself, not one code, so they can keep generating codes after the link
+expires.
 
 The recipient page never writes the password into the page: it can be copied,
 not displayed, so it does not end up in screenshots, screen shares or the

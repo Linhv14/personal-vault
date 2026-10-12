@@ -10,10 +10,16 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
-- Share screen: shows the item and what the recipient will see; the 2FA key
-  is left out unless ticked, with a warning; recipients and the link password
-  sit under "Extra protection"; recipient emails are entered as validated
-  chips; a summary line states expiry and views.
+- Share screen: shows the item and what the recipient will see; a share
+  holds the website, username, password and 2FA secret if any, never the
+  note; recipients and the link password sit under "Extra protection";
+  recipient emails are entered as validated chips; a summary line states
+  expiry and views.
+- "Link ready" and "Shared links" are reduced to one summary line per link,
+  with copy and revoke as icons.
+- The popup has a fixed height, so footers stay at the bottom of every screen.
+- The share page shows expiry, and the last-view warning, in a banner at the
+  top of the card.
 - A share opens once or until it expires, replacing 1, 3 or 10 views. The API
   accepts `maxViews: null` for no view limit.
 - A link for several recipients cannot be one-time: the first recipient would

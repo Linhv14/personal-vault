@@ -126,7 +126,14 @@
         <button class="primary" type="submit" data-i18n="unlock.submit"></button>
       </form>
       <p class="error" id="unlock-error" hidden></p>
-      <button type="button" class="link quiet" id="unlock-reset" data-i18n="unlock.reset"></button>
+      <div class="screen-footer">
+        <button
+          type="button"
+          class="link quiet"
+          id="unlock-reset"
+          data-i18n="unlock.reset"
+        ></button>
+      </div>
     </section>
 
     <section id="screen-list" class="screen" hidden>
@@ -319,9 +326,6 @@
         <section class="share-contents" aria-labelledby="share-contents-label">
           <span class="field-label" id="share-contents-label" data-i18n="share.contents"></span>
           <div class="chips" id="share-fields"></div>
-          <label class="check" id="share-totp-field"
-            ><span data-i18n="share.include_totp"></span><input type="checkbox" name="includeTotp"
-          /></label>
           <small
             class="hint warn-text"
             id="share-totp-hint"
@@ -425,26 +429,31 @@
           <p class="hint center" id="share-summary"></p>
         </div>
       </form>
-      <div id="share-result" class="stack" hidden>
+      <div id="share-result" class="share-result" hidden>
         <div class="result-head">
           <span class="brand-mark"><i data-icon="check"></i></span>
           <h2 data-i18n="share.ready"></h2>
-          <div class="meta-lines" id="share-note"></div>
+          <p class="hint" id="share-note"></p>
         </div>
-        <textarea id="share-url" class="link-box" rows="3" readonly></textarea>
+        <input
+          id="share-url"
+          class="link-box"
+          readonly
+          data-i18n-title="share.link"
+          aria-label="Link"
+        />
         <button class="primary" id="share-copy" data-i18n="share.copy_link"></button>
-        <p
-          class="hint center"
-          id="share-passphrase-note"
-          data-i18n="share.result_note_passphrase"
-          hidden
-        ></p>
-        <button
-          type="button"
-          class="link quiet"
-          id="share-manage"
-          data-i18n="share.manage"
-        ></button>
+        <p class="notice" id="share-passphrase-note" hidden>
+          <i data-icon="lock"></i><span data-i18n="share.result_note_passphrase"></span>
+        </p>
+        <div class="screen-footer">
+          <button
+            type="button"
+            class="link quiet"
+            id="share-manage"
+            data-i18n="share.manage"
+          ></button>
+        </div>
       </div>
       <p class="error" id="share-error" hidden></p>
     </section>
@@ -461,7 +470,7 @@
         <span data-logo="44"></span>
         <p data-i18n="links.empty"></p>
       </div>
-      <p class="hint center" data-i18n="links.only_this_device"></p>
+      <p class="hint center screen-footer" data-i18n="links.only_this_device"></p>
       <p class="error" id="links-error" hidden></p>
     </section>
 
@@ -557,7 +566,7 @@
           ></button>
         </form>
       </div>
-      <p class="about" id="settings-about"></p>
+      <p class="about screen-footer" id="settings-about"></p>
       <p class="error" id="settings-error" hidden></p>
     </section>
 

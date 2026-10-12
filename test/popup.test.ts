@@ -240,6 +240,7 @@ describe("extension popup", () => {
     setField(form, "username", "user@example.com");
     setField(form, "password", ITEM_PASSWORD);
     setField(form, "totp", TOTP_SECRET);
+    setField(form, "note", "Recovery codes are in the safe");
 
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
@@ -296,22 +297,31 @@ describe("extension popup", () => {
     );
     await waitFor(() => !el("share-result").hidden, "the generated link");
 
-    const url = el<HTMLTextAreaElement>("share-url").value;
+    const url = el<HTMLInputElement>("share-url").value;
     expect(url).toMatch(/^https:\/\/vault\.test\/s\/share-1#[A-Za-z0-9_-]+$/);
 
     const fragment = url.split("#")[1]!;
     expect(server.received.join("\n")).not.toContain(fragment);
   });
 
-  it("leaves the 2FA key out of a share unless the user opts in", async () => {
+  it("shares the website, username, password and 2FA, never the note", async () => {
     await openShareScreen();
-    const totp = el("form-share").querySelector<HTMLInputElement>('[name="includeTotp"]')!;
-    expect(el("share-totp-field").hidden).toBe(false);
-    expect(totp.checked).toBe(false);
-    expect(el("share-totp-hint").hidden).toBe(true);
-
-    totp.click();
+    expect(el("share-fields").textContent).toContain("2FA code");
+    expect(el("share-fields").textContent).not.toContain("Note");
     expect(el("share-totp-hint").hidden).toBe(false);
+
+    server.shareRequests.length = 0;
+    el<HTMLFormElement>("form-share").dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => !el("share-result").hidden, "the generated link");
+
+    const fragment = el<HTMLInputElement>("share-url").value.split("#")[1]!;
+    const { openShare } = await import("../src/core/share.js");
+    const payload = await openShare(fragment, server.shareRequests[0] as never);
+    expect(payload).toMatchObject({ url: "github.com", password: ITEM_PASSWORD });
+    expect(payload.totp?.secret).toBe(TOTP_SECRET);
+    expect(payload.note).toBeUndefined();
   });
 
   it("keeps a link for several recipients open until it expires", async () => {

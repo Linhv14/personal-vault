@@ -196,7 +196,6 @@ export const en = {
   "share.max_views": "Opens",
   "share.views_1": "Once",
   "share.views_unlimited": "Until it expires",
-  "share.include_totp": "Include 2FA secret",
   "share.passphrase": "Link password",
   "share.passphrase_placeholder": "Leave empty if not needed",
   "share.create": "Create link",
@@ -216,10 +215,9 @@ export const en = {
     "Recipients must enter a code sent to their email to see it. Up to 10 addresses.",
   "share.passphrase_hint":
     "The recipient must enter this password. Send it separately, for example the link by email and the password by text message.",
-  "share.result_note_recipients": "Only opens for: {emails}",
   "share.contents": "The recipient sees",
   "share.totp_hint":
-    "They get the secret, not just the current code, so they can keep making codes after the link expires. Share it only with someone you would trust with the account.",
+    "The link includes the 2FA secret, so the recipient can keep generating codes after it expires.",
   "share.views_hint":
     "With more than one recipient, the link stays open until it expires so each of them can view it.",
   "share.protection": "Extra protection",
@@ -230,7 +228,7 @@ export const en = {
   "share.recipients_full": "That is the limit of 10 recipients.",
   "share.recipients_required": "Add at least one email.",
   "share.remove_recipient": "Remove {email}",
-  "share.manage": "See shared links",
+  "share.manage": "Manage shared links",
   "links.title": "Shared links",
   "links.empty": "No active links.",
   "links.restricted": "{count, plural, one {Only # email} other {Only # emails}}",
@@ -244,7 +242,6 @@ export const en = {
   "settings.account_email": "Account",
   "settings.item_count": "Saved items",
   "settings.last_sync": "Last synced",
-  "share.result_expiry": "Expires {expiry}",
   "links.views_left": "{views, plural, one {# view left} other {# views left}}",
   "share.result_once": "Opens once",
   "share.result_unlimited": "Opens until it expires",
@@ -304,11 +301,10 @@ export const en = {
   "view.default_title": "Shared details",
   "view.missing_key":
     "The decryption key was cut off the end of the link. Ask the sender to resend it whole.",
-  "view.views_left":
-    "{count, plural, one {This link can be opened # more time.} other {This link can be opened # more times.}}",
+  "view.views_left": "{count, plural, one {# view left} other {# views left}}",
   "view.available_until": "You can view this until {time}",
-  "view.last_view":
-    "This was the last view. Save what you need now: reloading won't open it again.",
+  "view.last_view": "Copy what you need before you close this page. The link won't open again.",
+  "view.last_view_title": "This is the last view",
   "view.gone_title": "This link is no longer available",
   "view.gone_hint":
     "It has expired, run out of views, or never existed. Ask the sender for a new link.",

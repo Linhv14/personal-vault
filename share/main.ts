@@ -284,13 +284,6 @@ function render(payload: SharePayload): void {
   const chips: HTMLElement[] = [];
   const site = websiteLink(payload.url);
   if (site) chips.push(site);
-  if (cached) {
-    const until = new Date(cached.expiresAt * 1000).toLocaleString(locale, {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-    chips.push(chip("clock", t("view.available_until", { time: until })));
-  }
   el("meta").replaceChildren(...chips);
 
   const fields = el("fields");
@@ -300,17 +293,35 @@ function render(payload: SharePayload): void {
   if (payload.totp) fields.append(totpField(payload.totp));
   if (payload.note) fields.append(noteField(payload.note));
 
-  const viewsLeft = cached ? cached.viewsLeft : 0;
-  const lastView = viewsLeft === 0;
-  const warning = el("warning");
-  warning.hidden = viewsLeft === null;
-  warning.className = lastView ? "notice last" : "notice";
-  warning.replaceChildren(
-    icon(lastView ? "alert" : "eye"),
-    lastView ? t("view.last_view") : t("view.views_left", { count: viewsLeft ?? 0 }),
-  );
+  renderBanner(cached);
 
   show("content");
+}
+
+function renderBanner(share: ShareResponse | null): void {
+  const banner = el("banner");
+  if (!share || share.viewsLeft === 0) {
+    const title = document.createElement("strong");
+    title.textContent = t("view.last_view_title");
+    const text = document.createElement("span");
+    text.append(title, t("view.last_view"));
+    banner.className = "banner last";
+    banner.replaceChildren(icon("alert"), text);
+    return;
+  }
+  const until = new Date(share.expiresAt * 1000).toLocaleString(locale, {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const text = [
+    t("view.available_until", { time: until }),
+    ...(share.viewsLeft === null ? [] : [t("view.views_left", { count: share.viewsLeft })]),
+  ].join(" · ");
+  banner.className = "banner";
+  banner.replaceChildren(icon("clock"), text);
 }
 
 function field(label: string): { wrap: HTMLElement; body: HTMLElement } {

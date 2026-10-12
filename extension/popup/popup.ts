@@ -1165,9 +1165,10 @@ function renderShareSubject(item: VaultItem): void {
 
 function renderShareFields(item: VaultItem): void {
   const fields: [boolean, MessageKey][] = [
+    [Boolean(item.url), "common.url"],
     [Boolean(item.username), "common.username"],
     [Boolean(item.password), "common.password"],
-    [Boolean(item.note), "common.note"],
+    [Boolean(item.totp), "common.totp"],
   ];
   $("share-fields").replaceChildren(
     ...fields.filter(([shared]) => shared).map(([, key]) => chip("check", t(key))),
@@ -1222,11 +1223,6 @@ function syncShareForm(): void {
   const restricted = restrictedToEmails();
   $("share-recipients-field").hidden = !restricted;
 
-  const includeTotp =
-    !$("share-totp-field").hidden &&
-    form.querySelector<HTMLInputElement>('[name="includeTotp"]')!.checked;
-  $("share-totp-hint").hidden = !includeTotp;
-
   const recipientCount = restricted ? shareRecipients.length : 0;
   const allowOnce = singleViewAllowed(recipientCount);
   const once = form.querySelector<HTMLInputElement>('[name="maxViews"][value="1"]')!;
@@ -1263,7 +1259,7 @@ async function openShare(item: VaultItem): Promise<void> {
   form.hidden = false;
   renderShareSubject(item);
   renderShareFields(item);
-  $("share-totp-field").hidden = !item.totp;
+  $("share-totp-hint").hidden = !item.totp;
 
   const { apiUrl } = await getLocal();
   const config = await api.serverConfig(apiUrl ?? "");
@@ -1318,7 +1314,6 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
   }
 
   const data = new FormData(event.target as HTMLFormElement);
-  const includeTotp = data.get("includeTotp") === "on";
   const passphrase = String(data.get("passphrase") ?? "").trim() || undefined;
   const maxViews = data.get("maxViews") === "1" ? 1 : null;
   const ttlSeconds = Number(data.get("ttl"));
@@ -1331,8 +1326,7 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
         url: sharing.url,
         username: sharing.username,
         password: sharing.password,
-        note: sharing.note,
-        totp: includeTotp ? sharing.totp : undefined,
+        totp: sharing.totp,
       },
       passphrase,
     );
@@ -1355,14 +1349,13 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
       });
     }
 
-    $<HTMLTextAreaElement>("share-url").value = url;
-    $("share-note").replaceChildren(
-      metaLine("eye", t(maxViews === 1 ? "share.result_once" : "share.result_unlimited")),
-      metaLine("clock", t("share.result_expiry", { expiry: formatExpiry(created.expiresAt) })),
-      ...(recipients.length > 0
-        ? [metaLine("mail", t("share.result_note_recipients", { emails: recipients.join(", ") }))]
-        : []),
-    );
+    $<HTMLInputElement>("share-url").value = url;
+    $("share-note").textContent = [
+      sharing.title,
+      t("links.expires", { expiry: formatExpiry(created.expiresAt) }),
+      t(maxViews === 1 ? "share.result_once" : "share.result_unlimited"),
+      ...(recipients.length > 0 ? [t("links.restricted", { count: recipients.length })] : []),
+    ].join(" · ");
     $("share-passphrase-note").hidden = !passphrase;
 
     $("form-share").hidden = true;
@@ -1374,7 +1367,7 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
 
 $("share-copy").addEventListener("click", async () => {
   // The link carries the decryption key, so it gets the same clipboard timeout.
-  await copy($<HTMLTextAreaElement>("share-url").value, t("share.link").toLowerCase());
+  await copy($<HTMLInputElement>("share-url").value, t("share.link").toLowerCase());
 });
 
 async function openSettings(): Promise<void> {
@@ -1534,17 +1527,14 @@ $("settings-logout").addEventListener("click", async () => {
 
 void boot();
 
-function metaLine(name: IconName, text: string): HTMLElement {
-  const line = document.createElement("span");
-  line.className = "meta-line";
-  line.append(icon(name), text);
-  return line;
-}
-
 function formatExpiry(epochSeconds: number): string {
-  return new Date(epochSeconds * 1000).toLocaleString(locale, {
-    dateStyle: "short",
-    timeStyle: "short",
+  const date = new Date(epochSeconds * 1000);
+  return date.toLocaleString(locale, {
+    day: "numeric",
+    month: "numeric",
+    ...(date.getFullYear() !== new Date().getFullYear() && { year: "numeric" }),
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -1557,27 +1547,19 @@ function sharedLinkRow(link: SharedLink, viewsLeft: number | null, expiresAt: nu
   const title = document.createElement("div");
   title.className = "item-title";
   title.textContent = link.title;
-  const meta = document.createElement("div");
-  meta.className = "meta-lines";
-  meta.append(
-    metaLine(
-      "eye",
-      viewsLeft === null
-        ? t("share.result_unlimited")
-        : t("links.views_left", { views: viewsLeft }),
-    ),
-    metaLine("clock", t("links.expires", { expiry: formatExpiry(expiresAt) })),
-  );
-  if (link.recipients.length > 0) {
-    meta.append(metaLine("mail", t("links.restricted", { count: link.recipients.length })));
-  }
-  text.append(title, meta);
+  const sub = document.createElement("div");
+  sub.className = "item-sub";
+  sub.textContent = [
+    t("links.expires", { expiry: formatExpiry(expiresAt) }),
+    ...(viewsLeft === null ? [] : [t("links.views_left", { views: viewsLeft })]),
+    ...(link.recipients.length > 0
+      ? [t("links.restricted", { count: link.recipients.length })]
+      : []),
+  ].join(" · ");
+  sub.title = sub.textContent;
+  text.append(title, sub);
 
-  const revoke = document.createElement("button");
-  revoke.type = "button";
-  revoke.className = "secondary danger";
-  revoke.textContent = t("links.revoke");
-  revoke.addEventListener("click", async () => {
+  const revoke = iconButton("link-off", t("links.revoke"), async () => {
     if (!vaultKey || !confirm(t("links.revoke_confirm", { title: link.title }))) return;
     setError("links-error", null);
     try {
@@ -1590,6 +1572,7 @@ function sharedLinkRow(link: SharedLink, viewsLeft: number | null, expiresAt: nu
       showError("links-error", error);
     }
   });
+  revoke.classList.add("revoke");
 
   row.append(
     avatar(link.title),
