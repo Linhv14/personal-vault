@@ -18,7 +18,7 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline/promises";
 import path from "node:path";
@@ -41,7 +41,7 @@ const WRANGLER = path.join(root, "node_modules", "wrangler", "bin", "wrangler.js
 
 const DB_NAME = "vault";
 const DATABASE_ID_SENTINEL = "SET_BY_DEPLOY";
-const REQUIRED_SECRETS = ["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET"];
+const REQUIRED_SECRETS = ["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET", "AT_REST_SECRET"];
 
 const style = {
   step: (text) => console.log(`\n\x1b[1m▸ ${text}\x1b[0m`),
@@ -254,7 +254,7 @@ async function ensureSecrets(configPath) {
     ) ?? [];
   const present = new Set(listed.map((secret) => secret.name));
 
-  let registrationToken;
+  const generated = {};
   for (const name of REQUIRED_SECRETS) {
     if (present.has(name)) {
       style.ok(`${name} already set`);
@@ -277,26 +277,40 @@ async function ensureSecrets(configPath) {
       throw new Error(`Could not set ${name}: ${result.stderr || result.stdout}`);
     }
 
-    if (name === "REGISTRATION_TOKEN") registrationToken = value;
+    generated[name] = value;
     style.ok(`${name} generated`);
   }
 
-  if (registrationToken) {
+  const lines = [];
+  if (generated.REGISTRATION_TOKEN) {
+    lines.push(
+      `REGISTRATION_TOKEN=${generated.REGISTRATION_TOKEN}`,
+      '  -> Enter this in the extension\'s "Registration token" field on first setup.',
+      "  -> Anyone holding it can create an account on your Worker.",
+      "  -> Lost it? Run: npx wrangler secret put REGISTRATION_TOKEN -c .wrangler.local.toml",
+      "",
+    );
+  }
+  if (generated.AT_REST_SECRET) {
+    lines.push(
+      `AT_REST_SECRET=${generated.AT_REST_SECRET}`,
+      "  -> Protects password hashes and wrapped vault keys stored in D1.",
+      "  -> BACK THIS UP OFFLINE, then delete it from this file. Cloudflare cannot show it again.",
+      "  -> If it is lost or replaced, EVERY account on this Worker is locked out for good.",
+      "",
+    );
+  }
+  if (lines.length > 0) {
     // Written to a file rather than printed: terminals get scrolled back,
     // screenshotted, and pasted into bug reports.
-    writeFileSync(
-      SECRETS_NOTE,
-      [
-        "Secrets for this Personal Vault deployment (gitignored — do not commit or share).",
-        "",
-        `REGISTRATION_TOKEN=${registrationToken}`,
-        '  -> Enter this in the extension\'s "Registration token" field on first setup.',
-        "  -> Anyone holding it can create an account on your Worker.",
-        "  -> Lost it? Run: npx wrangler secret put REGISTRATION_TOKEN -c .wrangler.local.toml",
-        "",
-      ].join("\n"),
-    );
-    style.warn(`Registration token written to ${path.basename(SECRETS_NOTE)}`);
+    if (!existsSync(SECRETS_NOTE)) {
+      writeFileSync(
+        SECRETS_NOTE,
+        "Secrets for this Personal Vault deployment (gitignored — do not commit or share).\n\n",
+      );
+    }
+    appendFileSync(SECRETS_NOTE, lines.join("\n"));
+    style.warn(`New secrets written to ${path.basename(SECRETS_NOTE)}`);
   }
 }
 
@@ -353,10 +367,17 @@ async function dev() {
       [
         'REGISTRATION_TOKEN="token-dev-local"',
         `EMAIL_PROBE_SECRET="${randomBytes(32).toString("base64url")}"`,
+        `AT_REST_SECRET="${randomBytes(32).toString("base64url")}"`,
         "",
       ].join("\n"),
     );
     style.ok('Created .dev.vars with the registration token "token-dev-local"');
+  } else if (!readFileSync(path.join(root, ".dev.vars"), "utf8").includes("AT_REST_SECRET=")) {
+    appendFileSync(
+      path.join(root, ".dev.vars"),
+      `\nAT_REST_SECRET="${randomBytes(32).toString("base64url")}"\n`,
+    );
+    style.ok("Added AT_REST_SECRET to .dev.vars");
   }
 
   style.step("Worker running at http://127.0.0.1:8787");

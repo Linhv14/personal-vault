@@ -18,6 +18,14 @@ migrations_dir = "migrations"
 
 # Purge expired share links. Without the cron, expired ciphertext lingers in D1;
 # still unreadable, but keeping data longer than necessary is a needless risk.
+# Per-IP limit on every endpoint reachable without a session (register,
+# prelogin, login, reading a share). The per-email lockout in auth.ts stops
+# password guessing; this stops one client from burning the free-tier quota.
+[[ratelimits]]
+name = "ANONYMOUS_RATE_LIMITER"
+namespace_id = "7301"
+simple = { limit = 30, period = 60 }
+
 [triggers]
 crons = ["17 * * * *"]
 
@@ -31,3 +39,6 @@ enabled = true
 #                        finds the URL can create an account.
 #   EMAIL_PROBE_SECRET — HMAC key used to fabricate KDF parameters for addresses
 #                        that do not exist, so registrations cannot be probed.
+#   AT_REST_SECRET     — protects auth_key_hash and wrapped_vault_key in D1, so a
+#                        leaked database cannot be attacked offline. Back it
+#                        up: losing it locks every account out.

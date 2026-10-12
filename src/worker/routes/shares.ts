@@ -58,22 +58,13 @@ shares.get("/:id", async (c) => {
 
   // Claim the view with a single conditional UPDATE. Reading first and writing
   // after would let two people open a `max_views = 1` link simultaneously.
-  const claimed = await c.env.DB.prepare(
+  const row = await c.env.DB.prepare(
     `UPDATE shares
         SET view_count = view_count + 1
-      WHERE id = ? AND expires_at > ? AND view_count < max_views`,
+      WHERE id = ? AND expires_at > ? AND view_count < max_views
+  RETURNING ciphertext, nonce, expires_at, max_views, view_count`,
   )
     .bind(id, timestamp)
-    .run();
-
-  // One response for every cause — missing, expired, exhausted — so the API
-  // never confirms that an id once existed.
-  if (!claimed.meta.changes) return c.json(apiError("shares.gone"), 404);
-
-  const row = await c.env.DB.prepare(
-    "SELECT ciphertext, nonce, expires_at, max_views, view_count FROM shares WHERE id = ?",
-  )
-    .bind(id)
     .first<{
       ciphertext: string;
       nonce: string;

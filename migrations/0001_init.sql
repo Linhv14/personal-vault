@@ -53,8 +53,8 @@ CREATE TABLE shares (
 
 CREATE INDEX idx_shares_expiry ON shares (expires_at);
 
--- Blocks online password guessing. Offline guessing is not possible: it needs
--- wrapped_vault_key, which requires signing in first.
+-- Blocks online password guessing. Offline guessing from a database dump is
+-- blocked separately: see "What a leaked database is worth" in docs/design.md.
 CREATE TABLE login_attempts (
   email TEXT PRIMARY KEY,
   failures INTEGER NOT NULL DEFAULT 0,

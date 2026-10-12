@@ -72,6 +72,35 @@ Why each layer exists:
    on a 500-item vault is 500 writes and one chance to lose data partway.
 3. **KDF parameters live on the account record** (`kdf_type`, `kdf_iterations`,
    `kdf_salt`), so moving to Argon2id later does not invalidate existing vaults.
+4. **Each item is bound to its id.** Items are sealed with the associated data
+   `personal-vault/item/<id>`, so a server cannot swap one item's ciphertext
+   into another's slot: it fails the GCM tag instead of showing the wrong
+   secret under the right name. Items written before this binding existed are
+   re-encrypted automatically after the next online sync; from then on that
+   device refuses unbound ciphertext.
+
+### What a leaked database is worth
+
+Two columns could be used to test password guesses offline: `auth_key_hash`
+and `wrapped_vault_key`. Both are protected by a second, server-side key,
+`AT_REST_SECRET`, held as a Worker secret and never stored in D1:
+
+- `auth_key_hash` is `HMAC-SHA256(k_auth, auth key)`, not a bare SHA-256.
+- `wrapped_vault_key` is sealed again with AES-256-GCM under `k_wrap`, with the
+  account id as associated data so rows cannot be swapped between accounts.
+
+`k_auth` and `k_wrap` are derived from `AT_REST_SECRET` with HKDF. A dump of D1
+alone therefore offers nothing to guess against. Only an attacker holding the
+database **and** the Worker secrets is back to a PBKDF2-SHA256 600,000 guess
+per attempt — the same position as against a Bitwarden server.
+
+Rows written before this layer carry no `v2:` prefix. They are still accepted
+and rewritten in protected form on the account's next successful login.
+
+`AT_REST_SECRET` must be backed up. Losing or replacing it makes every hash
+unverifiable and every wrapped key unopenable: all accounts are locked out.
+`npm run deploy` writes it to `.secrets.local.txt` exactly once for that reason;
+move it somewhere offline and delete it from the file.
 
 ### Why PBKDF2 rather than Argon2id
 
@@ -189,8 +218,13 @@ passphrase mixed into the key through HKDF and delivered separately.
 - **Never write the vault key or plaintext to `chrome.storage.local`**; that
   area is on disk in the clear. It holds ciphertext and settings only.
 - **The clipboard is shared with every running application** and clipboard
-  managers persist history, so copies are cleared after 30 seconds — but only if
-  the clipboard still holds what we put there.
+  managers persist history, so copies are cleared after 30 seconds. A timer in
+  the popup dies the moment the popup closes, which is usually right after
+  copying, so the service worker owns the timer (`chrome.alarms`) and clears the
+  clipboard from an offscreen document. Without the `clipboardRead` permission
+  (and the install warning that comes with it) it cannot check what the
+  clipboard holds, so the clear is unconditional: something you copy yourself
+  within those 30 seconds is cleared too.
 - **`@cloudflare/workers-types` defines HTMLRewriter's `Element`**, which
   collides with the DOM's. Worker and browser code therefore use separate
   `tsconfig` files.

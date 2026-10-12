@@ -59,6 +59,7 @@ export const en = {
   "error.shares.invalid_ttl": "The expiry is out of the allowed range",
   "error.shares.invalid_max_views": "The view limit is out of the allowed range",
   "error.shares.gone": "This link does not exist, has expired, or is out of views",
+  "error.server.rate_limited": "Too many requests. Wait a minute and try again.",
   "error.server.not_found": "No such endpoint",
   "error.server.error": "Server error",
 

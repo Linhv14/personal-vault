@@ -1,6 +1,7 @@
 import { Hono } from "hono";
-import { DEFAULT_KDF_ITERATIONS, hashAuthKey } from "../../core/crypto.js";
-import { fromBase64, timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
+import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
+import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
+import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
 import { apiError } from "../errors.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
@@ -102,8 +103,8 @@ auth.post("/register", async (c) => {
         kdf.type,
         kdf.iterations,
         kdf.salt,
-        await hashAuthKey(authKey),
-        wrappedVaultKey.ciphertext,
+        await protectAuthKey(c.env, authKey),
+        await protectWrappedKey(c.env, accountId, wrappedVaultKey.ciphertext),
         wrappedVaultKey.nonce,
         timestamp,
       )
@@ -190,24 +191,36 @@ auth.post("/login", async (c) => {
       wrap_nonce: string;
     }>();
 
-  const providedHash = await hashAuthKey(authKey);
   // Compare in constant time, and run the comparison even when no account
   // exists, so response timing does not reveal which addresses are real.
-  const expectedHash = row?.auth_key_hash ?? providedHash.replace(/.$/, "A");
-  const matches =
-    row !== null && timingSafeEqual(fromBase64(providedHash), fromBase64(expectedHash));
+  const verification = row
+    ? await verifyAuthKey(c.env, authKey, row.auth_key_hash)
+    : await verifyAuthKey(c.env, authKey, "v2:" + toBase64(new Uint8Array(32)));
 
-  if (!matches) {
+  if (!row || !verification.matches) {
     await recordFailure(c.env, email, timestamp);
     return c.json(apiError("auth.invalid_credentials"), 401);
   }
 
   await clearFailures(c.env, email);
+  const wrapped = await revealWrappedKey(c.env, row.id, row.wrapped_vault_key);
+  if (verification.needsUpgrade || wrapped.needsUpgrade) {
+    await c.env.DB.prepare(
+      "UPDATE accounts SET auth_key_hash = ?, wrapped_vault_key = ? WHERE id = ? AND auth_key_hash = ?",
+    )
+      .bind(
+        await protectAuthKey(c.env, authKey),
+        await protectWrappedKey(c.env, row.id, wrapped.ciphertext),
+        row.id,
+        row.auth_key_hash,
+      )
+      .run();
+  }
   const session = await createSession(c.env, row.id, timestamp);
 
   return c.json({
     ...session,
-    wrappedVaultKey: { ciphertext: row.wrapped_vault_key, nonce: row.wrap_nonce },
+    wrappedVaultKey: { ciphertext: wrapped.ciphertext, nonce: row.wrap_nonce },
   });
 });
 
@@ -222,28 +235,38 @@ auth.post("/logout", async (c) => {
  */
 auth.post("/change-password", async (c) => {
   const body = await c.req.json().catch(() => null);
-  const { kdf, authKey, wrappedVaultKey } = (body ?? {}) as Record<string, unknown>;
+  const { currentAuthKey, kdf, authKey, wrappedVaultKey } = (body ?? {}) as Record<string, unknown>;
+  if (!isBase64(currentAuthKey, 32)) return c.json(apiError("auth.invalid_credentials"), 400);
   if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
   if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
   if (!isSealed(wrappedVaultKey, 64)) return c.json(apiError("auth.invalid_wrapped_key"), 400);
 
   const { accountId } = c.get("session");
-  await c.env.DB.prepare(
+  const row = await c.env.DB.prepare("SELECT auth_key_hash FROM accounts WHERE id = ?")
+    .bind(accountId)
+    .first<{ auth_key_hash: string }>();
+  if (!row || !(await verifyAuthKey(c.env, currentAuthKey, row.auth_key_hash)).matches) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
+
+  const result = await c.env.DB.prepare(
     `UPDATE accounts
         SET kdf_type = ?, kdf_iterations = ?, kdf_salt = ?,
             auth_key_hash = ?, wrapped_vault_key = ?, wrap_nonce = ?
-      WHERE id = ?`,
+      WHERE id = ? AND auth_key_hash = ?`,
   )
     .bind(
       kdf.type,
       kdf.iterations,
       kdf.salt,
-      await hashAuthKey(authKey),
-      wrappedVaultKey.ciphertext,
+      await protectAuthKey(c.env, authKey),
+      await protectWrappedKey(c.env, accountId, wrappedVaultKey.ciphertext),
       wrappedVaultKey.nonce,
       accountId,
+      row.auth_key_hash,
     )
     .run();
+  if (!result.meta.changes) return c.json(apiError("auth.invalid_credentials"), 403);
 
   // Revoke every session: other devices still hold the old vault key and must
   // unlock again.

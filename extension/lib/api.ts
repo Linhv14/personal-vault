@@ -113,8 +113,14 @@ export async function logout(): Promise<void> {
   await request("/api/auth/logout", { method: "POST" }).catch(() => {});
 }
 
-export async function changePassword(record: AccountCryptoRecord): Promise<void> {
-  await request("/api/auth/change-password", { method: "POST", body: JSON.stringify(record) });
+export async function changePassword(
+  currentAuthKey: string,
+  record: AccountCryptoRecord,
+): Promise<void> {
+  await request("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentAuthKey, ...record }),
+  });
 }
 
 export async function fetchItems(

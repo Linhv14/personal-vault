@@ -59,6 +59,7 @@ export const vi: Catalogue = {
   "error.shares.invalid_ttl": "Thời hạn nằm ngoài khoảng cho phép",
   "error.shares.invalid_max_views": "Số lượt xem nằm ngoài khoảng cho phép",
   "error.shares.gone": "Link không tồn tại, đã hết hạn hoặc đã dùng hết lượt xem",
+  "error.server.rate_limited": "Quá nhiều yêu cầu. Đợi một phút rồi thử lại.",
   "error.server.not_found": "Không có endpoint này",
   "error.server.error": "Lỗi server",
 

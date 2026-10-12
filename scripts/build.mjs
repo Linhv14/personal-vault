@@ -53,6 +53,7 @@ async function buildSharePage() {
     outfile: path.join(outPublic, "share.js"),
   });
   await cp(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
+  await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
 }
 
 async function buildExtension() {
@@ -64,7 +65,7 @@ async function buildExtension() {
 
   await mkdir(outExtension, { recursive: true });
 
-  const entryPoints = ["popup/popup.ts", "background.ts"]
+  const entryPoints = ["popup/popup.ts", "background.ts", "offscreen/offscreen.ts"]
     .map((file) => path.join(source, file))
     .filter((file) => existsSync(file));
 

@@ -6,6 +6,7 @@ import type { AppBindings } from "../types.js";
 const items = new Hono<AppBindings>();
 
 const MAX_ITEM_BYTES = 64 * 1024;
+const UPDATED_AT_RESOLUTION_SECONDS = 1;
 
 function now(): number {
   return Math.floor(Date.now() / 1000);
@@ -38,7 +39,7 @@ items.get("/", async (c) => {
     // Clients use this as the `since` cursor for their next call. It has to be
     // the server clock: if each device used its own, a device running a few
     // seconds fast would skip exactly the items it just changed.
-    serverTime,
+    serverTime: serverTime - UPDATED_AT_RESOLUTION_SECONDS,
     items: results.map((row) => ({
       id: row.id,
       ciphertext: row.deleted_at ? null : row.ciphertext,

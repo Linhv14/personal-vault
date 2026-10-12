@@ -10,3 +10,8 @@ REGISTRATION_TOKEN="token-dev-local"
 # HMAC key used to fabricate KDF parameters for addresses that do not exist, so
 # nobody can probe which emails are registered. Any random string works.
 EMAIL_PROBE_SECRET="replace-with-a-random-string"
+
+# Key for the server-side layer over password hashes and wrapped vault keys in
+# D1. A database dump without this secret cannot be used to guess passwords.
+# Losing or changing it in production locks every account out.
+AT_REST_SECRET="replace-with-a-random-string"

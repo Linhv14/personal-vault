@@ -16,7 +16,7 @@ import {
   type KdfParams,
   type SealedData,
 } from "../../src/core/crypto.js";
-import { toBase64 } from "../../src/core/bytes.js";
+import { fromBase64, toBase64 } from "../../src/core/bytes.js";
 import type { Bytes } from "../../src/core/bytes.js";
 import {
   generatePassphrase,
@@ -26,9 +26,11 @@ import {
   type GeneratedSecret,
 } from "../../src/core/generator.js";
 import {
+  buildOtpauthUri,
   generateTotp,
   parseTotpInput,
   secondsRemaining,
+  TOTP_DEFAULTS,
   type TotpConfig,
 } from "../../src/core/totp.js";
 import { buildShareUrl, createShare } from "../../src/core/share.js";
@@ -44,6 +46,7 @@ import {
   type Translate,
 } from "../../src/i18n/index.js";
 import * as api from "../lib/api.js";
+import { scheduleClipboardClear } from "../lib/clipboard.js";
 import {
   DEFAULT_AUTO_LOCK_MINUTES,
   getLocal,
@@ -57,6 +60,7 @@ import {
   decryptAll,
   importKey,
   matchingItems,
+  migrateUnboundItems,
   newItemId,
   registrableDomain,
   removeItem,
@@ -134,17 +138,7 @@ function toast(message: string): void {
 async function copy(value: string, what: string): Promise<void> {
   await navigator.clipboard.writeText(value);
   toast(t("common.copied", { what }));
-  setTimeout(async () => {
-    try {
-      // Only clear if it still holds what we put there; the user may have copied
-      // something else in the meantime.
-      if ((await navigator.clipboard.readText()) === value) {
-        await navigator.clipboard.writeText("");
-      }
-    } catch {
-      /* clipboard-read permission not granted */
-    }
-  }, 30_000);
+  await scheduleClipboardClear();
 }
 
 let vaultKey: CryptoKey | null = null;
@@ -194,6 +188,7 @@ async function boot(): Promise<void> {
 }
 
 async function enterVault(rawBase64: string): Promise<void> {
+  vaultKeyRaw = fromBase64(rawBase64);
   vaultKey = await importKey(rawBase64);
   items = await decryptAll(vaultKey, locale);
   renderList();
@@ -205,10 +200,11 @@ async function backgroundSync(): Promise<void> {
   const status = $("sync-status");
   status.textContent = t("list.syncing");
   try {
-    const changed = await sync();
-    if (changed === null) {
+    const synced = await sync();
+    if (synced === null) {
       status.textContent = t("list.offline");
     } else {
+      const changed = synced + (vaultKey ? await migrateUnboundItems(vaultKey) : 0);
       if (changed > 0 && vaultKey) {
         items = await decryptAll(vaultKey, locale);
         renderList();
@@ -316,6 +312,7 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
       await doLogin(email, password);
     }
   } catch (error) {
+    if (!(await getLocal()).wrappedVaultKey) await chrome.storage.local.remove("email");
     showError("setup-error", error);
   } finally {
     button.textContent = label;
@@ -389,7 +386,6 @@ async function finishUnlock(
   const wrappingKey = await deriveWrappingKey(masterKey);
   const raw = await openSealed(wrappingKey, wrapped);
 
-  vaultKeyRaw = raw;
   await unlock(toBase64(raw), token);
   await enterVault(toBase64(raw));
 }
@@ -647,10 +643,18 @@ function openEditor(item: VaultItem | null): void {
   set("url", item?.url ?? (item ? "" : tabUrl ? (registrableDomain(tabUrl) ?? "") : ""));
   set("username", item?.username ?? "");
   set("password", item?.password ?? "");
-  set("totp", item?.totp?.secret ?? "");
+  set("totp", item?.totp ? totpFieldValue(item.totp) : "");
   set("note", item?.note ?? "");
 
   show("edit");
+}
+
+function totpFieldValue(config: TotpConfig): string {
+  const usesDefaults =
+    config.algorithm === TOTP_DEFAULTS.algorithm &&
+    config.digits === TOTP_DEFAULTS.digits &&
+    config.period === TOTP_DEFAULTS.period;
+  return usesDefaults ? config.secret : buildOtpauthUri(config);
 }
 
 $("edit-back").addEventListener("click", () => {
@@ -1013,11 +1017,11 @@ $<HTMLFormElement>("form-change-password").addEventListener("submit", async (eve
 
   const local = await getLocal();
 
-  // Verify the current password against the cached wrapped key; no server call
-  // is needed, because unwrapping succeeding *is* the proof.
+  let currentAuthKey: string;
   try {
     const masterKey = await deriveMasterKey(local.email!, String(data.get("current")), local.kdf!);
     await openSealed(await deriveWrappingKey(masterKey), local.wrappedVaultKey!);
+    currentAuthKey = toBase64(await deriveAuthKey(masterKey));
   } catch {
     setError("settings-error", t("settings.wrong_current"));
     return;
@@ -1025,7 +1029,7 @@ $<HTMLFormElement>("form-change-password").addEventListener("submit", async (eve
 
   try {
     const record = await rewrapVaultKey(local.email!, next, vaultKeyRaw);
-    await api.changePassword(record);
+    await api.changePassword(currentAuthKey, record);
     await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
     await lock();
     alert(t("settings.changed"));

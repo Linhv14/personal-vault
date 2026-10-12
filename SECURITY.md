@@ -27,6 +27,11 @@ key the server never receives.
 Concretely: a full dump of the D1 database, plus the Worker source, plus the
 secrets in Cloudflare, still decrypts nothing without a master password.
 
+A dump of the database alone is not even something to guess passwords
+against: the auth key hash and the wrapped vault key are both keyed by
+`AT_REST_SECRET`, a Worker secret that is not in D1. With the database and the
+secrets together, each guess still costs 600,000 PBKDF2-SHA256 iterations.
+
 ### What the server does learn
 
 - The account email.
@@ -48,18 +53,24 @@ is not sufficient.
 
 ## Design decisions that carry security weight
 
-| Decision                                                | Reason                                                                              |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Auth key and encryption key derived separately via HKDF | The server authenticates you without holding anything that decrypts the vault       |
-| Random vault key, wrapped by a password-derived key     | Changing the master password re-wraps one key instead of re-encrypting every item   |
-| PBKDF2-SHA256, 600,000 iterations                       | Built into WebCrypto; avoids a WASM dependency in the path of every password        |
-| AES-256-GCM, fresh 12-byte nonce per encryption         | Authenticated: tampering fails loudly rather than yielding plausible garbage        |
-| No content script in the extension                      | It never gains read/write access to the pages you visit                             |
-| Vault key in `chrome.storage.session` only              | That area is memory-backed; `storage.local` is on disk in the clear                 |
-| No dependencies in `src/core`                           | Every library there would sit in the path of your passwords                         |
-| Registration gated by a secret token                    | An exposed Worker is otherwise an open signup page                                  |
-| Prelogin returns decoy KDF params for unknown emails    | Registered addresses cannot be enumerated                                           |
-| Login limited to 10 failures per 15 minutes             | Blocks online guessing; offline guessing needs the wrapped key, which needs a login |
+| Decision                                                         | Reason                                                                            |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Auth key and encryption key derived separately via HKDF          | The server authenticates you without holding anything that decrypts the vault     |
+| Random vault key, wrapped by a password-derived key              | Changing the master password re-wraps one key instead of re-encrypting every item |
+| PBKDF2-SHA256, 600,000 iterations                                | Built into WebCrypto; avoids a WASM dependency in the path of every password      |
+| AES-256-GCM, fresh 12-byte nonce per encryption                  | Authenticated: tampering fails loudly rather than yielding plausible garbage      |
+| No content script in the extension                               | It never gains read/write access to the pages you visit                           |
+| Vault key in `chrome.storage.session` only                       | That area is memory-backed; `storage.local` is on disk in the clear               |
+| No dependencies in `src/core`                                    | Every library there would sit in the path of your passwords                       |
+| Registration gated by a secret token                             | An exposed Worker is otherwise an open signup page                                |
+| Prelogin returns decoy KDF params for unknown emails             | Registered addresses cannot be enumerated                                         |
+| Login limited to 10 failures per 15 minutes                      | Blocks online guessing                                                            |
+| Anonymous endpoints limited to 30 requests/min per IP            | One client cannot exhaust the free-tier quota or hammer share ids                 |
+| Auth hash and wrapped key keyed by `AT_REST_SECRET`              | A leaked D1 database alone gives nothing to guess passwords against               |
+| Change of master password requires the current auth key          | A stolen session token cannot replace the wrapped key and lock the owner out      |
+| Each item sealed with its id as associated data                  | The server cannot swap ciphertext between items                                   |
+| Clipboard cleared by the service worker after 30s                | Still happens after the popup closes                                              |
+| Share page served with a strict CSP and `frame-ancestors 'none'` | No injected script or framing on the page that shows a secret                     |
 
 ## Verifying the claims yourself
 

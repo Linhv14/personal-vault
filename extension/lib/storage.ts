@@ -30,6 +30,7 @@ export interface LocalState {
   wrappedVaultKey?: SealedData;
   items?: CachedItem[];
   lastSync?: number;
+  unboundItemsMigrated?: boolean;
   autoLockMinutes?: number;
   /** Offset of this machine's clock against the server, in seconds. */
   clockSkew?: number;

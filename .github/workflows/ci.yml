@@ -18,6 +18,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm audit --audit-level=high
+
       # Two projects: browser code and Worker code have conflicting globals, so
       # they cannot share one tsconfig.
       - run: npm run typecheck

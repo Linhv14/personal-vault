@@ -224,3 +224,14 @@ describe("hashAuthKey", () => {
     expect(hash).not.toBe(record.authKey);
   });
 });
+
+describe("associated data", () => {
+  it("only opens with the exact associated data it was sealed with", async () => {
+    const key = await importVaultKey(createVaultKey());
+    const sealed = await sealJson(key, { title: "bank" }, utf8Encode("item-a"));
+
+    expect(await openJson(key, sealed, utf8Encode("item-a"))).toEqual({ title: "bank" });
+    await expect(openJson(key, sealed, utf8Encode("item-b"))).rejects.toThrow();
+    await expect(openJson(key, sealed)).rejects.toThrow();
+  });
+});

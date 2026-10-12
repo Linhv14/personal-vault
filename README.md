@@ -71,9 +71,12 @@ npm run deploy
 2. Asks which account to use, if you have more than one.
 3. Creates the `vault` D1 database, or reuses it.
 4. Applies migrations.
-5. Generates `REGISTRATION_TOKEN` and `EMAIL_PROBE_SECRET`, writing the
-   registration token to `.secrets.local.txt` (gitignored) rather than printing
-   it to a terminal that gets scrolled back and screenshotted.
+5. Generates `REGISTRATION_TOKEN`, `EMAIL_PROBE_SECRET` and `AT_REST_SECRET`,
+   writing the registration token and `AT_REST_SECRET` to `.secrets.local.txt`
+   (gitignored) rather than printing them to a terminal that gets scrolled back
+   and screenshotted. **Back up `AT_REST_SECRET` offline**: if it is lost or
+   replaced, every account on the Worker is locked out. Existing deployments
+   get it on their next `npm run deploy`.
 6. Builds and deploys, printing your Worker URL.
 
 Then load the extension:
@@ -113,6 +116,20 @@ password loses everything, because nothing else can unwrap the vault key.
 
 `test/e2e.test.ts` covers exactly this path against a real Worker, starting from
 a client that holds no cached state.
+
+## Upgrading from 0.1.x
+
+0.2.0 changes the API and the at-rest format, so do these in order:
+
+1. `npm run deploy`. It adds the new `AT_REST_SECRET` and writes it to
+   `.secrets.local.txt`. Back it up offline, then delete it from that file.
+2. Reload the extension on **every** machine (`npm run build`, then reload
+   `dist/extension` in `chrome://extensions`). An old extension cannot change the
+   master password against the new server, and items it creates are rejected by
+   upgraded machines, which only accept items bound to their id.
+3. Unlock once on each machine while online. The server upgrades the stored
+   hash and wrapped key on that login, and the extension re-encrypts older items
+   after its first sync.
 
 ## Commands
 

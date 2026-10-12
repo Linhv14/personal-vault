@@ -130,29 +130,53 @@ async function importAesKey(raw: Bytes): Promise<CryptoKey> {
 
 // Symmetric encryption
 
-export async function seal(key: CryptoKey, plaintext: Bytes): Promise<SealedData> {
+export async function seal(
+  key: CryptoKey,
+  plaintext: Bytes,
+  associatedData?: Bytes,
+): Promise<SealedData> {
   // A fresh nonce per encryption. Reusing a nonce with the same AES-GCM key is
   // catastrophic: it leaks plaintext *and* the authentication key.
   const nonce = randomBytes(NONCE_BYTES);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, plaintext);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, ...(associatedData && { additionalData: associatedData }) },
+    key,
+    plaintext,
+  );
   return { ciphertext: toBase64(new Uint8Array(ciphertext)), nonce: toBase64(nonce) };
 }
 
-export async function open(key: CryptoKey, sealed: SealedData): Promise<Bytes> {
+export async function open(
+  key: CryptoKey,
+  sealed: SealedData,
+  associatedData?: Bytes,
+): Promise<Bytes> {
   const plaintext = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: fromBase64(sealed.nonce) },
+    {
+      name: "AES-GCM",
+      iv: fromBase64(sealed.nonce),
+      ...(associatedData && { additionalData: associatedData }),
+    },
     key,
     fromBase64(sealed.ciphertext),
   );
   return new Uint8Array(plaintext);
 }
 
-export async function sealJson(key: CryptoKey, value: unknown): Promise<SealedData> {
-  return seal(key, utf8Encode(JSON.stringify(value)));
+export async function sealJson(
+  key: CryptoKey,
+  value: unknown,
+  associatedData?: Bytes,
+): Promise<SealedData> {
+  return seal(key, utf8Encode(JSON.stringify(value)), associatedData);
 }
 
-export async function openJson<T>(key: CryptoKey, sealed: SealedData): Promise<T> {
-  return JSON.parse(utf8Decode(await open(key, sealed))) as T;
+export async function openJson<T>(
+  key: CryptoKey,
+  sealed: SealedData,
+  associatedData?: Bytes,
+): Promise<T> {
+  return JSON.parse(utf8Decode(await open(key, sealed, associatedData))) as T;
 }
 
 // Vault key

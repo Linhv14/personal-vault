@@ -133,6 +133,7 @@ async function load(): Promise<void> {
 }
 
 function render(payload: SharePayload): void {
+  history.replaceState(null, "", location.pathname);
   el("title").textContent = payload.title?.trim() || t("view.default_title");
 
   const parts: string[] = [];

@@ -23,6 +23,18 @@ app.use(
   }),
 );
 
+const limitByClientIp: MiddlewareHandler<AppBindings> = async (c, next) => {
+  const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
+  const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp });
+  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  await next();
+};
+
+app.use("/api/auth/register", limitByClientIp);
+app.use("/api/auth/prelogin", limitByClientIp);
+app.use("/api/auth/login", limitByClientIp);
+app.on("GET", "/api/shares/*", limitByClientIp);
+
 const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
   const session = await resolveSession(c.env, c.req.header("Authorization"));
   if (!session) return c.json(apiError("auth.unauthorized"), 401);
@@ -53,11 +65,11 @@ app.route("/api/shares", shares);
 app.get("/api/time", (c) => c.json({ serverTime: Math.floor(Date.now() / 1000) }));
 
 app.get("/s/:id", async (c) => {
-  const response = await c.env.ASSETS.fetch(new URL("/share.html", c.req.url));
-  return new Response(response.body, {
-    status: response.status,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
-  });
+  const asset = await c.env.ASSETS.fetch(new URL("/share.html", c.req.url));
+  const response = new Response(asset.body, asset);
+  response.headers.set("Content-Type", "text/html; charset=utf-8");
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 });
 
 app.notFound((c) =>

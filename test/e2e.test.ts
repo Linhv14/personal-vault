@@ -217,7 +217,9 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
   it("returns only items changed after the cursor", async () => {
     const list = await api("/api/items?since=0", { token });
     const after = await api(`/api/items?since=${list.body.serverTime}`, { token });
-    expect(after.body.items).toHaveLength(0);
+    for (const row of after.body.items) {
+      expect(row.updatedAt).toBeGreaterThan(list.body.serverTime);
+    }
   });
 
   it("deletes with a tombstone rather than removing the row", async () => {
@@ -334,6 +336,31 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       // Same ciphertext, right passphrase — and no extra view is consumed.
       expect((await openShare(fragment, fetched.body, "coffee")).password).toBe("two factors");
     });
+  });
+
+  it("refuses a password change from a session without the current auth key", async () => {
+    const forged = await createAccount(email, "attacker chosen password", ITERATIONS);
+    const withoutProof = await api("/api/auth/change-password", {
+      method: "POST",
+      token,
+      body: JSON.stringify(forged.record),
+    });
+    expect(withoutProof.status).toBe(400);
+
+    const wrongProof = await api("/api/auth/change-password", {
+      method: "POST",
+      token,
+      body: JSON.stringify({ currentAuthKey: forged.record.authKey, ...forged.record }),
+    });
+    expect(wrongProof.status).toBe(403);
+    expect(wrongProof.body.code).toBe("auth.invalid_credentials");
+
+    const unlocked = await unlockVault(email, masterPassword, {
+      kdf: (await api("/api/auth/prelogin", { method: "POST", body: JSON.stringify({ email }) }))
+        .body.kdf,
+      wrappedVaultKey: record.wrappedVaultKey,
+    });
+    expect(unlocked.authKey).toBe(record.authKey);
   });
 
   it("invalidates the token on logout", async () => {

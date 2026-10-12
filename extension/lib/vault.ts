@@ -8,7 +8,7 @@
  */
 
 import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
-import { fromBase64 } from "../../src/core/bytes.js";
+import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
 import * as api from "./api.js";
 import { getLocal, setLocal, type CachedItem } from "./storage.js";
@@ -29,17 +29,39 @@ export async function importKey(vaultKeyRaw: string): Promise<CryptoKey> {
   return importVaultKey(fromBase64(vaultKeyRaw));
 }
 
+function itemAssociatedData(id: string) {
+  return utf8Encode(`personal-vault/item/${id}`);
+}
+
+async function openItem(
+  key: CryptoKey,
+  row: CachedItem & { ciphertext: string; nonce: string },
+  allowUnbound: boolean,
+): Promise<{ item: VaultItem; unbound: boolean }> {
+  const sealed = { ciphertext: row.ciphertext, nonce: row.nonce };
+  try {
+    return {
+      item: await openJson<VaultItem>(key, sealed, itemAssociatedData(row.id)),
+      unbound: false,
+    };
+  } catch (error) {
+    if (!allowUnbound) throw error;
+    return { item: await openJson<VaultItem>(key, sealed), unbound: true };
+  }
+}
+
+function isLive(row: CachedItem): row is CachedItem & { ciphertext: string; nonce: string } {
+  return !row.deletedAt && Boolean(row.ciphertext) && Boolean(row.nonce);
+}
+
 export async function decryptAll(key: CryptoKey, locale = "en"): Promise<VaultItem[]> {
-  const { items = [] } = await getLocal();
+  const { items = [], unboundItemsMigrated = false } = await getLocal();
   const output: VaultItem[] = [];
 
   for (const row of items) {
-    if (row.deletedAt || !row.ciphertext || !row.nonce) continue;
+    if (!isLive(row)) continue;
     try {
-      const item = await openJson<VaultItem>(key, {
-        ciphertext: row.ciphertext,
-        nonce: row.nonce,
-      });
+      const { item } = await openItem(key, row, !unboundItemsMigrated);
       output.push({ ...item, id: row.id, updatedAt: row.updatedAt });
     } catch {
       // One corrupt item must not take down the whole list.
@@ -62,6 +84,7 @@ export async function sync(): Promise<number | null> {
     throw error;
   }
 
+  let changed = 0;
   if (response.items.length > 0) {
     const merged = new Map(items.map((item) => [item.id, item]));
     for (const incoming of response.items) {
@@ -69,15 +92,22 @@ export async function sync(): Promise<number | null> {
       // Last write wins on the server clock. Two devices editing the same item
       // within the same second is not worth more machinery for a personal vault.
       if (!existing || incoming.updatedAt >= existing.updatedAt) {
+        if (
+          !existing ||
+          existing.ciphertext !== incoming.ciphertext ||
+          existing.deletedAt !== incoming.deletedAt
+        ) {
+          changed++;
+        }
         merged.set(incoming.id, incoming);
       }
     }
-    await setLocal({ items: [...merged.values()] });
+    if (changed > 0) await setLocal({ items: [...merged.values()] });
   }
 
   // The cursor is the server's clock, never the local one.
   await setLocal({ lastSync: response.serverTime });
-  return response.items.length;
+  return changed;
 }
 
 export async function saveItem(
@@ -87,7 +117,7 @@ export async function saveItem(
   const now = Math.floor(Date.now() / 1000);
   const payload: VaultItem = { ...item, createdAt: item.createdAt ?? now, updatedAt: now };
 
-  const sealed = await sealJson(key, payload);
+  const sealed = await sealJson(key, payload, itemAssociatedData(payload.id));
   const { updatedAt } = await api.putItem(payload.id, sealed);
 
   await upsertCache({
@@ -104,6 +134,29 @@ export async function saveItem(
 export async function removeItem(id: string): Promise<void> {
   const { deletedAt } = await api.deleteItem(id);
   await upsertCache({ id, ciphertext: null, nonce: null, updatedAt: deletedAt, deletedAt });
+}
+
+export async function migrateUnboundItems(key: CryptoKey): Promise<number> {
+  const { items = [], unboundItemsMigrated = false } = await getLocal();
+  if (unboundItemsMigrated) return 0;
+
+  let migrated = 0;
+  for (const row of items) {
+    if (!isLive(row)) continue;
+    let opened: { item: VaultItem; unbound: boolean };
+    try {
+      opened = await openItem(key, row, true);
+    } catch {
+      continue;
+    }
+    if (!opened.unbound) continue;
+    const { updatedAt: _updatedAt, ...item } = opened.item;
+    await saveItem(key, { ...item, id: row.id });
+    migrated++;
+  }
+
+  await setLocal({ unboundItemsMigrated: true });
+  return migrated;
 }
 
 async function upsertCache(row: CachedItem): Promise<void> {
