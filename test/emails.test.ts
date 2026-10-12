@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { existingAccountEmail, verificationCodeEmail } from "../src/worker/emails.js";
 
@@ -16,7 +17,15 @@ describe("verificationCodeEmail", () => {
   it("links the privacy policy on the site that sent it, and loads nothing remote", () => {
     expect(email.html).toContain('href="https://1pw.online/privacy"');
     expect(email.text).toContain("https://1pw.online/privacy");
-    expect(email.html).not.toMatch(/<img|src=|url\(/);
+    expect(email.html).not.toMatch(/url\(/);
+    const sources = [...email.html.matchAll(/src="([^"]*)"/g)].map((match) => match[1]);
+    expect(sources).toEqual(["cid:1pw-logo"]);
+    expect(email.inlineImages.map((image) => image.contentId)).toEqual(["1pw-logo"]);
+  });
+
+  it("embeds the extension icon as the logo, so the two never drift apart", () => {
+    const icon = readFileSync(new URL("../extension/icons/icon-128.png", import.meta.url));
+    expect(email.inlineImages[0]!.base64).toBe(icon.toString("base64"));
   });
 
   it("speaks the requested language", () => {

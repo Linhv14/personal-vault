@@ -1,4 +1,6 @@
 import { APP_NAME } from "../core/brand.js";
+import { EMAIL_LOGO_PNG_BASE64 } from "./email-logo.js";
+import type { InlineImage } from "./mailer.js";
 
 export type EmailLocale = "en" | "vi";
 
@@ -6,7 +8,15 @@ export interface RenderedEmail {
   subject: string;
   text: string;
   html: string;
+  inlineImages: InlineImage[];
 }
+
+const LOGO: InlineImage = {
+  contentId: "1pw-logo",
+  filename: "1pw.png",
+  contentType: "image/png",
+  base64: EMAIL_LOGO_PNG_BASE64,
+};
 
 interface EmailContext {
   locale: EmailLocale;
@@ -124,7 +134,7 @@ function layout(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.page}">
 <tr><td align="center" style="padding:32px 16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px">
-<tr><td style="padding:0 4px 20px;font:750 24px/1 ${FONT};letter-spacing:-0.5px;color:${COLORS.text}">${wordmark}</td></tr>
+<tr><td style="padding:0 4px 20px"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:10px;vertical-align:middle"><img src="cid:${LOGO.contentId}" width="32" height="32" alt="" style="display:block;border:0;border-radius:8px"></td><td style="vertical-align:middle;font:750 24px/1 ${FONT};letter-spacing:-0.5px;color:${COLORS.text}">${wordmark}</td></tr></table></td></tr>
 <tr><td style="padding:32px 28px;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:16px">
 <h1 style="margin:0 0 12px;font:650 22px/1.3 ${FONT};color:${COLORS.text}">${escape(email.heading)}</h1>
 ${email.body}
@@ -156,6 +166,7 @@ export function verificationCodeEmail(context: EmailContext, code: string): Rend
       strings.expiry,
       strings.ignore,
     ]),
+    inlineImages: [LOGO],
     html: layout(context, {
       subject,
       preheader: strings.preheader(code),
@@ -174,6 +185,7 @@ export function existingAccountEmail(context: EmailContext): RenderedEmail {
   return {
     subject: strings.subject,
     text: plainText(context, [strings.heading, strings.intro, strings.next, strings.ignore]),
+    inlineImages: [LOGO],
     html: layout(context, {
       subject: strings.subject,
       preheader: strings.preheader,
@@ -195,6 +207,7 @@ export function shareAccessEmail(context: EmailContext, code: string): RenderedE
       strings.expiry,
       strings.ignore,
     ]),
+    inlineImages: [LOGO],
     html: layout(context, {
       subject,
       preheader: strings.preheader(code),

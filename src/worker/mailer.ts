@@ -1,10 +1,19 @@
 import { APP_NAME } from "../core/brand.js";
+import { fromBase64 } from "../core/bytes.js";
+
+export interface InlineImage {
+  contentId: string;
+  filename: string;
+  contentType: string;
+  base64: string;
+}
 
 export interface OutgoingEmail {
   to: string;
   subject: string;
   text: string;
   html: string;
+  inlineImages?: InlineImage[];
 }
 
 export interface Mailer {
@@ -18,6 +27,13 @@ interface EmailBinding {
     subject: string;
     text: string;
     html: string;
+    attachments?: {
+      content: ArrayBuffer;
+      filename: string;
+      type: string;
+      disposition: "inline";
+      contentId: string;
+    }[];
   }): Promise<unknown>;
 }
 
@@ -50,6 +66,14 @@ function resendMailer(apiKey: string, from: string): Mailer {
           subject: message.subject,
           text: message.text,
           html: message.html,
+          ...(message.inlineImages?.length && {
+            attachments: message.inlineImages.map((image) => ({
+              filename: image.filename,
+              content: image.base64,
+              content_type: image.contentType,
+              content_id: image.contentId,
+            })),
+          }),
         }),
       });
       if (!response.ok) {
@@ -61,8 +85,20 @@ function resendMailer(apiKey: string, from: string): Mailer {
 
 function cloudflareMailer(binding: EmailBinding, from: string): Mailer {
   return {
-    async send(message) {
-      await binding.send({ ...message, from: { email: from, name: SENDER_NAME } });
+    async send({ inlineImages = [], ...message }) {
+      await binding.send({
+        ...message,
+        from: { email: from, name: SENDER_NAME },
+        ...(inlineImages.length && {
+          attachments: inlineImages.map((image) => ({
+            content: fromBase64(image.base64).buffer,
+            filename: image.filename,
+            type: image.contentType,
+            disposition: "inline" as const,
+            contentId: image.contentId,
+          })),
+        }),
+      });
     },
   };
 }

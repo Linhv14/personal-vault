@@ -62,4 +62,40 @@ describe("createMailer", () => {
       from: { email: "no-reply@1pw.online", name: APP_NAME },
     });
   });
+
+  const logo = {
+    contentId: "logo",
+    filename: "logo.png",
+    contentType: "image/png",
+    base64: "iVBORw==",
+  };
+
+  it("sends inline images to Resend as attachments with a content id", async () => {
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await createMailer({ EMAIL_FROM: "a@b.co", RESEND_API_KEY: "k" })!.send({
+      ...message,
+      inlineImages: [logo],
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body)).attachments).toEqual([
+      { filename: "logo.png", content: "iVBORw==", content_type: "image/png", content_id: "logo" },
+    ]);
+  });
+
+  it("sends inline images through the Cloudflare binding as inline attachments", async () => {
+    const binding = { send: vi.fn(async (_: unknown) => ({})) };
+    await createMailer({ EMAIL_FROM: "a@b.co", EMAIL: binding })!.send({
+      ...message,
+      inlineImages: [logo],
+    });
+    const sent = binding.send.mock.calls[0]![0] as { attachments: Record<string, unknown>[] };
+    expect(sent.attachments[0]).toMatchObject({
+      filename: "logo.png",
+      type: "image/png",
+      disposition: "inline",
+      contentId: "logo",
+    });
+    expect(sent).not.toHaveProperty("inlineImages");
+  });
 });

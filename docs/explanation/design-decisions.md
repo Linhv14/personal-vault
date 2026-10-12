@@ -54,7 +54,8 @@ domain was added still point at `workers.dev`. Disabling it would strand them.
 
 **Resend by default for email.** Cloudflare Email Sending needs the Workers Paid
 plan. Resend's free tier works with the free plan and authenticates the domain
-with DKIM and SPF. Emails carry no tracking and no remote images.
+with DKIM and SPF. Emails carry no tracking and no remote images; the logo is
+attached inline (`cid:`), so opening a message loads nothing from a server.
 
 ## Server
 

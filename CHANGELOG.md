@@ -49,6 +49,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Emails show the 1PW logo, attached inline so nothing is loaded from a
+  server when the message is opened.
+- Every popup screen scrolls inside one frame with the same padding on all
+  sides, so footers no longer touch the bottom edge.
 - The search field showed its focus ring around the input only, leaving the
   icon outside.
 - The privacy policy said the server never sends email and that Cloudflare
