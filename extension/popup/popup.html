@@ -37,25 +37,14 @@
           <h1 id="setup-form-title"></h1>
         </header>
         <form id="form-setup" class="stack">
-          <div id="setup-server" class="stack">
-            <div class="server-summary" id="setup-server-summary" hidden>
-              <span id="setup-server-host"></span>
-              <button
-                type="button"
-                class="link"
-                id="setup-server-change"
-                data-i18n="setup.server_change"
-              ></button>
-            </div>
-            <label id="setup-server-field"
-              ><span data-i18n="setup.server"></span
-              ><input
-                name="apiUrl"
-                type="url"
-                placeholder="https://personal-vault.you.workers.dev"
-                required
-            /></label>
-          </div>
+          <label id="setup-server-field" hidden
+            ><span data-i18n="setup.server"></span
+            ><input
+              name="apiUrl"
+              type="url"
+              placeholder="https://personal-vault.you.workers.dev"
+              required
+          /></label>
           <label
             ><span data-i18n="setup.email"></span
             ><input name="email" type="email" autocomplete="username" required
@@ -109,6 +98,12 @@
           /></label>
           <p class="hint" id="setup-hint"></p>
           <button class="primary" type="submit" data-i18n="setup.create"></button>
+          <button
+            type="button"
+            class="link quiet"
+            id="setup-custom-server"
+            data-i18n="setup.custom_server"
+          ></button>
         </form>
         <p class="error" id="setup-error" hidden></p>
       </div>
@@ -413,8 +408,7 @@
         <div class="result-head">
           <span class="brand-mark"><i data-icon="check"></i></span>
           <h2 data-i18n="share.ready"></h2>
-          <p class="hint" id="share-note"></p>
-          <p class="hint" id="share-recipients-note" hidden></p>
+          <div class="meta-lines" id="share-note"></div>
         </div>
         <textarea id="share-url" class="link-box" rows="3" readonly></textarea>
         <button class="primary" id="share-copy" data-i18n="share.copy_link"></button>
@@ -457,6 +451,20 @@
         </button>
         <h1 data-i18n="settings.title"></h1>
       </header>
+      <div class="group">
+        <div class="info-row">
+          <span data-i18n="settings.account_email"></span
+          ><span class="info-value" id="settings-email"></span>
+        </div>
+        <div class="info-row">
+          <span data-i18n="settings.item_count"></span
+          ><span class="info-value" id="settings-count"></span>
+        </div>
+        <div class="info-row">
+          <span data-i18n="settings.last_sync"></span
+          ><span class="info-value" id="settings-last-sync"></span>
+        </div>
+      </div>
       <div class="group">
         <label class="range"
           ><span data-i18n="settings.auto_lock"></span
@@ -528,7 +536,6 @@
           ></button>
         </form>
       </div>
-      <p class="hint center" id="settings-info"></p>
       <p class="about" id="settings-about"></p>
       <p class="error" id="settings-error" hidden></p>
     </section>

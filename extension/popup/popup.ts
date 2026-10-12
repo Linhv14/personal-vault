@@ -61,7 +61,7 @@ import {
   type SharedLink,
 } from "../lib/shared-links.js";
 import { APP_NAME } from "../../src/core/brand.js";
-import { hydrateIcons, icon, iconButton } from "../../src/ui/icons.js";
+import { hydrateIcons, icon, iconButton, type IconName } from "../../src/ui/icons.js";
 import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
 import {
   clearPendingSignup,
@@ -206,15 +206,17 @@ async function boot(): Promise<void> {
   if (!local.apiUrl || !local.email) {
     const serverField =
       $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!;
-    serverField.value = local.apiUrl ?? deployedServerUrl();
+    defaultServer = deployedServerUrl();
+    serverField.value = local.apiUrl ?? defaultServer;
+    customServer = serverField.value !== defaultServer;
     const signup = await loadPendingSignup();
     if (signup) {
       serverField.value = signup.apiUrl;
+      customServer = signup.apiUrl !== defaultServer;
       setupField("email").value = signup.email;
       setupField("registrationToken").value = signup.registrationToken;
       codeSentTo = signup.email;
     }
-    showServerSummary(serverField.value);
     void serverConfigFor(serverField.value);
     show("setup");
     if (signup) await showSetupForm("register");
@@ -310,22 +312,13 @@ async function backgroundSync(): Promise<void> {
   }
 }
 
-function showServerSummary(url: string): void {
-  let host = "";
-  try {
-    host = url ? new URL(url).host : "";
-  } catch {
-    host = "";
-  }
-  $("setup-server-host").textContent = host;
-  $("setup-server-summary").hidden = !host;
-  $("setup-server-field").hidden = Boolean(host);
-}
+let defaultServer = "";
+let customServer = false;
 
-$("setup-server-change").addEventListener("click", () => {
-  $("setup-server-summary").hidden = true;
-  $("setup-server-field").hidden = false;
-  $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="apiUrl"]')!.focus();
+$("setup-custom-server").addEventListener("click", () => {
+  customServer = true;
+  renderSetupForm();
+  setupField("apiUrl").focus();
 });
 
 let setupMode: "register" | "login" = "register";
@@ -365,7 +358,9 @@ function renderSetupForm(): void {
   const codeStep = awaitingCode();
   const askPassword = !registering || !verificationRequired || codeStep;
 
-  $("setup-server").hidden = codeStep;
+  const askServer = (customServer || !defaultServer) && !codeStep;
+  $("setup-server-field").hidden = !askServer;
+  $("setup-custom-server").hidden = askServer || codeStep || !defaultServer;
   showSetupField("email", !codeStep);
   showSetupField("registrationToken", registering && !registrationOpen && !codeStep);
   showSetupField("password", askPassword);
@@ -1218,18 +1213,14 @@ $<HTMLFormElement>("form-share").addEventListener("submit", async (event) => {
     }
 
     $<HTMLTextAreaElement>("share-url").value = url;
-    $("share-note").textContent = t("share.result_note", {
-      views: maxViews,
-      expiry: new Date(created.expiresAt * 1000).toLocaleString(locale, {
-        dateStyle: "short",
-        timeStyle: "short",
-      }),
-    });
+    $("share-note").replaceChildren(
+      metaLine("eye", t("share.result_views", { views: maxViews })),
+      metaLine("clock", t("share.result_expiry", { expiry: formatExpiry(created.expiresAt) })),
+      ...(recipients.length > 0
+        ? [metaLine("mail", t("share.result_note_recipients", { emails: recipients.join(", ") }))]
+        : []),
+    );
     $("share-passphrase-note").hidden = !passphrase;
-    $("share-recipients-note").hidden = recipients.length === 0;
-    $("share-recipients-note").textContent = t("share.result_note_recipients", {
-      emails: recipients.join(", "),
-    });
 
     $("form-share").hidden = true;
     $("share-result").hidden = false;
@@ -1268,15 +1259,12 @@ async function openSettings(): Promise<void> {
     wordmark(),
     ` · v${chrome.runtime.getManifest().version}`,
   );
-  $("settings-info").textContent = t("settings.info", {
-    email: local.email ?? "",
-    count: items.length,
-    sync: local.lastSync
-      ? t("settings.synced_at", {
-          time: new Date(local.lastSync * 1000).toLocaleTimeString(locale),
-        })
-      : t("settings.never_synced"),
-  });
+  $("settings-email").textContent = local.email ?? "";
+  $("settings-email").title = local.email ?? "";
+  $("settings-count").textContent = String(items.length);
+  $("settings-last-sync").textContent = local.lastSync
+    ? formatExpiry(local.lastSync)
+    : t("settings.never_synced");
 
   show("settings");
 }
@@ -1403,6 +1391,13 @@ $("settings-logout").addEventListener("click", async () => {
 
 void boot();
 
+function metaLine(name: IconName, text: string): HTMLElement {
+  const line = document.createElement("span");
+  line.className = "meta-line";
+  line.append(icon(name), text);
+  return line;
+}
+
 function formatExpiry(epochSeconds: number): string {
   return new Date(epochSeconds * 1000).toLocaleString(locale, {
     dateStyle: "short",
@@ -1419,15 +1414,16 @@ function sharedLinkRow(link: SharedLink, viewsLeft: number, expiresAt: number): 
   const title = document.createElement("div");
   title.className = "item-title";
   title.textContent = link.title;
-  const sub = document.createElement("div");
-  sub.className = "item-sub";
-  sub.textContent = [
-    t("links.status", { views: viewsLeft, expiry: formatExpiry(expiresAt) }),
-    link.recipients.length > 0 ? t("links.restricted", { count: link.recipients.length }) : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  text.append(title, sub);
+  const meta = document.createElement("div");
+  meta.className = "meta-lines";
+  meta.append(
+    metaLine("eye", t("links.views_left", { views: viewsLeft })),
+    metaLine("clock", t("links.expires", { expiry: formatExpiry(expiresAt) })),
+  );
+  if (link.recipients.length > 0) {
+    meta.append(metaLine("mail", t("links.restricted", { count: link.recipients.length })));
+  }
+  text.append(title, meta);
 
   const revoke = document.createElement("button");
   revoke.type = "button";

@@ -178,10 +178,48 @@ label.range output {
 }
 label.check select {
   width: auto;
-  padding: 6px 0;
-  background: none;
-  text-align: right;
+  min-width: 140px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 40px;
+  font-size: 13.5px;
+}
+.info-row > :first-child {
   color: var(--muted);
+  flex-shrink: 0;
+}
+.info-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+.meta-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+.meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.meta-line .icon {
+  width: 13px;
+  height: 13px;
+}
+.result-head .meta-lines {
+  align-items: center;
 }
 
 input,
@@ -189,7 +227,7 @@ textarea,
 select {
   width: 100%;
   padding: 9px 11px;
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--text);
   border: 1px solid transparent;
   border-radius: var(--radius);
@@ -871,7 +909,17 @@ label small.hint {
 }
 .group input:not([type="range"]):not([type="checkbox"]),
 .group select {
-  background: var(--bg);
+  background-color: var(--bg);
+}
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  cursor: pointer;
 }
 .group .stack {
   padding: 4px 0 12px;
