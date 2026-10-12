@@ -66,7 +66,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "items.not_found": "Item not found",
   "items.quota_exceeded": "This vault has reached its item limit",
   "shares.invalid_payload": "Invalid ciphertext or nonce",
-  "shares.invalid_ttl": "ttlSeconds must be between 60 and 604800",
+  "shares.invalid_ttl": "ttlSeconds must be between 60 and 2592000 (30 days)",
   "shares.invalid_max_views": "maxViews is out of range",
   "shares.gone": "This link does not exist, has expired, or is out of views",
   "shares.invalid_recipients": "Recipients must be up to 10 valid email addresses",

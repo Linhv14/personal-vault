@@ -404,7 +404,7 @@ async function status() {
   }
   console.log(`Account:  ${state.accountName} (${state.accountId})`);
   console.log(`Database: ${DB_NAME} (${state.databaseId ?? "not created"})`);
-
+  console.log(`Worker:   ${state.workerUrl ?? "not deployed"}`);
   const deployments = wranglerCapture(["deployments", "list", "-c", GENERATED]);
   console.log(deployments.ok ? deployments.stdout.trim() : "No deployments yet.");
 }
