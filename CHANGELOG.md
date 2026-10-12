@@ -33,6 +33,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Reloading an opened share link said the link was incomplete, because the
+  page removed the key from the address bar after opening it.
 - The `shares.invalid_ttl` error message stated a 7-day maximum; the limit is
   30 days.
 

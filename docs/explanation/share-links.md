@@ -22,6 +22,11 @@ and a limited number of views, while the server stays unable to read it.
 
 The server sees the ciphertext and the id. The key exists only in the link.
 
+The page leaves the key in the address bar, so a recipient can reload a link
+that still has views. The full link therefore stays in that browser's history
+until the link expires, which is no more than the recipient could keep by
+saving the link itself.
+
 When the item has 2FA, the share screen says so: the recipient gets the secret
 itself, not one code, so they can keep generating codes after the link
 expires.

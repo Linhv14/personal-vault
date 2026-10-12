@@ -276,7 +276,6 @@ function chip(name: IconName, text: string): HTMLElement {
 }
 
 function render(payload: SharePayload): void {
-  history.replaceState(null, "", location.pathname);
   const title = payload.title?.trim() || t("view.default_title");
   el("title").textContent = title;
   el("avatar").textContent = [...title][0]?.toUpperCase() ?? "?";
