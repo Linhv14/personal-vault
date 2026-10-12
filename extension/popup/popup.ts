@@ -289,13 +289,23 @@ function setSetupMode(mode: "register" | "login"): void {
   );
   $("setup-hint").textContent = t("setup.hint_create");
   $("setup-hint").hidden = !registering;
-  $("setup-mode-create").classList.toggle("active", registering);
-  $("setup-mode-signin").classList.toggle("active", !registering);
+  $("setup-form-title").textContent = t(registering ? "setup.mode_create" : "setup.mode_signin");
   setError("setup-error", null);
 }
 
-$("setup-mode-create").addEventListener("click", () => setSetupMode("register"));
-$("setup-mode-signin").addEventListener("click", () => setSetupMode("login"));
+function showSetupForm(mode: "register" | "login"): void {
+  setSetupMode(mode);
+  $("setup-choice").hidden = true;
+  $("setup-form-wrap").hidden = false;
+  $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="email"]')!.focus();
+}
+
+$("setup-mode-create").addEventListener("click", () => showSetupForm("register"));
+$("setup-mode-signin").addEventListener("click", () => showSetupForm("login"));
+$("setup-back").addEventListener("click", () => {
+  $("setup-form-wrap").hidden = true;
+  $("setup-choice").hidden = false;
+});
 
 $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
   event.preventDefault();

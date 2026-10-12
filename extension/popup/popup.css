@@ -37,8 +37,6 @@
 body {
   width: 360px;
   min-height: 240px;
-  max-height: 580px;
-  overflow-y: auto;
   margin: 0;
   padding: 16px;
   background: var(--bg);
@@ -109,6 +107,14 @@ h2 {
 }
 .brand h1 {
   font-size: 17px;
+}
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+.brand.compact h1 {
+  font-size: 15px;
 }
 .brand-mark {
   display: grid;
@@ -280,6 +286,46 @@ button.danger {
   color: var(--text);
   font-weight: 600;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+}
+.choice:hover {
+  background: var(--surface-hover);
+}
+.choice-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.choice-text strong {
+  font-weight: 600;
+}
+.choice-text small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .server-summary {

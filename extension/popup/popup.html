@@ -7,58 +7,85 @@
   </head>
   <body>
     <section id="screen-setup" class="screen" hidden>
-      <div class="brand">
-        <span class="brand-mark"><i data-icon="shield"></i></span>
-        <h1>Personal Vault</h1>
-        <p class="tagline" data-i18n="setup.tagline"></p>
-      </div>
-      <div class="segmented">
-        <button class="tab active" id="setup-mode-create" data-i18n="setup.mode_create"></button>
-        <button class="tab" id="setup-mode-signin" data-i18n="setup.mode_signin"></button>
-      </div>
-      <form id="form-setup" class="stack">
-        <div class="server-summary" id="setup-server-summary" hidden>
-          <span id="setup-server-host"></span>
-          <button
-            type="button"
-            class="link"
-            id="setup-server-change"
-            data-i18n="setup.server_change"
-          ></button>
+      <div id="setup-choice">
+        <div class="brand">
+          <span class="brand-mark"><i data-icon="shield"></i></span>
+          <h1>Personal Vault</h1>
+          <p class="tagline" data-i18n="setup.tagline"></p>
         </div>
-        <label id="setup-server-field"
-          ><span data-i18n="setup.server"></span
-          ><input
-            name="apiUrl"
-            type="url"
-            placeholder="https://personal-vault.you.workers.dev"
-            required
-        /></label>
-        <label
-          ><span data-i18n="setup.email"></span
-          ><input name="email" type="email" autocomplete="username" required
-        /></label>
-        <label
-          ><span data-i18n="setup.registration_token"></span
-          ><input name="registrationToken" type="password" autocomplete="off" required
-        /></label>
-        <label
-          ><span data-i18n="setup.master_password"></span
-          ><input
-            name="password"
-            type="password"
-            autocomplete="new-password"
-            minlength="12"
-            required
-        /></label>
-        <label
-          ><span data-i18n="setup.confirm"></span
-          ><input name="confirm" type="password" autocomplete="new-password" required
-        /></label>
-        <p class="hint" id="setup-hint"></p>
-        <button class="primary" type="submit" data-i18n="setup.create"></button>
-      </form>
-      <p class="error" id="setup-error" hidden></p>
+        <div class="choices">
+          <button class="choice" id="setup-mode-create">
+            <span class="choice-icon"><i data-icon="plus"></i></span>
+            <span class="choice-text">
+              <strong data-i18n="setup.mode_create"></strong>
+              <small data-i18n="setup.mode_create_hint"></small>
+            </span>
+          </button>
+          <button class="choice" id="setup-mode-signin">
+            <span class="choice-icon"><i data-icon="lock"></i></span>
+            <span class="choice-text">
+              <strong data-i18n="setup.mode_signin"></strong>
+              <small data-i18n="setup.mode_signin_hint"></small>
+            </span>
+          </button>
+        </div>
+      </div>
+      <div id="setup-form-wrap" hidden>
+        <header class="title-bar">
+          <button class="icon-button" id="setup-back" data-i18n-title="common.back">
+            <i data-icon="back"></i>
+          </button>
+          <h1 id="setup-form-title"></h1>
+        </header>
+        <form id="form-setup" class="stack">
+          <div class="server-summary" id="setup-server-summary" hidden>
+            <span id="setup-server-host"></span>
+            <button
+              type="button"
+              class="link"
+              id="setup-server-change"
+              data-i18n="setup.server_change"
+            ></button>
+          </div>
+          <label id="setup-server-field"
+            ><span data-i18n="setup.server"></span
+            ><input
+              name="apiUrl"
+              type="url"
+              placeholder="https://personal-vault.you.workers.dev"
+              required
+          /></label>
+          <label
+            ><span data-i18n="setup.email"></span
+            ><input name="email" type="email" autocomplete="username" required
+          /></label>
+          <label
+            ><span data-i18n="setup.registration_token"></span
+            ><input
+              name="registrationToken"
+              type="password"
+              autocomplete="off"
+              data-i18n-placeholder="setup.registration_token_hint"
+              required
+          /></label>
+          <label
+            ><span data-i18n="setup.master_password"></span
+            ><input
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              minlength="12"
+              required
+          /></label>
+          <label
+            ><span data-i18n="setup.confirm"></span
+            ><input name="confirm" type="password" autocomplete="new-password" required
+          /></label>
+          <p class="hint" id="setup-hint"></p>
+          <button class="primary" type="submit" data-i18n="setup.create"></button>
+        </form>
+        <p class="error" id="setup-error" hidden></p>
+      </div>
     </section>
 
     <section id="screen-unlock" class="screen" hidden>
