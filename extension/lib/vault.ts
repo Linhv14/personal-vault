@@ -180,6 +180,29 @@ export function newItemId(): string {
  * is an irrelevant suggestion in a list, not a security hole: this only ranks
  * suggestions, it never fills anything into a page.
  */
+const SHARED_HOSTING_SUFFIXES = new Set([
+  "github.io",
+  "gitlab.io",
+  "vercel.app",
+  "netlify.app",
+  "pages.dev",
+  "workers.dev",
+  "web.app",
+  "firebaseapp.com",
+  "herokuapp.com",
+  "appspot.com",
+  "blogspot.com",
+  "azurewebsites.net",
+  "cloudfront.net",
+  "onrender.com",
+  "fly.dev",
+  "glitch.me",
+  "ngrok.io",
+  "ngrok-free.app",
+  "repl.co",
+  "surge.sh",
+]);
+
 export function registrableDomain(rawUrl: string): string | null {
   let hostname: string;
   try {
@@ -187,8 +210,12 @@ export function registrableDomain(rawUrl: string): string | null {
   } catch {
     return null;
   }
+  if (/^[\d.]+$/.test(hostname) || hostname.includes(":")) return hostname;
   const labels = hostname.replace(/^www\./, "").split(".");
   if (labels.length <= 2) return labels.join(".");
+  if (SHARED_HOSTING_SUFFIXES.has(labels.slice(-2).join("."))) {
+    return labels.slice(-3).join(".");
+  }
 
   // Common two-level suffixes: com.vn, co.uk, ac.jp...
   const twoPartTlds = new Set(["com", "net", "org", "edu", "gov", "co", "ac"]);

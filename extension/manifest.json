@@ -4,8 +4,8 @@
   "version": "0.2.0",
   "description": "End-to-end encrypted personal vault: passwords, self-refreshing 2FA codes, and temporary share links.",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "alarms", "activeTab", "offscreen", "clipboardWrite"],
-  "optional_host_permissions": ["https://*/*"],
+  "permissions": ["storage", "alarms", "activeTab", "offscreen", "clipboardWrite", "scripting"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Personal Vault"

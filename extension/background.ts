@@ -6,6 +6,8 @@
  * state lives in `chrome.storage`; this file only cleans up.
  */
 
+import { isAutofillRequest } from "./lib/autofill-protocol.js";
+import { handleAutofill, trustedSender } from "./lib/autofill-service.js";
 import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
 
@@ -26,4 +28,17 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     const { lockAt } = (await chrome.storage.session.get("lockAt")) as { lockAt?: number };
     if (lockAt && Date.now() > lockAt) await lock();
   })();
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!isAutofillRequest(message)) return false;
+  const trusted = trustedSender(sender, chrome.runtime.id);
+  if (!trusted) {
+    sendResponse({ ok: false, error: "untrusted_sender" });
+    return false;
+  }
+  handleAutofill(message, trusted)
+    .then(sendResponse)
+    .catch((error: unknown) => sendResponse({ ok: false, error: String(error) }));
+  return true;
 });

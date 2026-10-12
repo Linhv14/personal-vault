@@ -209,7 +209,33 @@ server stays blind; the messenger does not. 1Password has the same constraint.
 Mitigations: short TTL and a single view by default, plus an optional extra
 passphrase mixed into the key through HKDF and delivered separately.
 
-## 8. Known traps
+## 8. Suggesting logins on websites
+
+Off by default. Turning it on in Settings requests `https://*/*` and
+`http://*/*` and registers `content/content.js` at runtime; turning it off
+unregisters the script and drops the permission. Without it the extension
+touches no page at all.
+
+When on, focusing a password field (or the username field before it) shows an
+icon. Clicking it asks the service worker for logins matching the page:
+
+- **Trust comes from Chrome, not the page.** The service worker derives the
+  domain from `sender.url` and serves only the top frame of an https page
+  (http only on localhost). A page cannot claim to be another site, and a
+  framed login cannot be filled.
+- **Suggestions carry no secrets.** The menu receives titles and usernames.
+  Only the login you click is sent back, and only if it matches the domain,
+  even if the page somehow learns another item's id.
+- **Nothing happens without a real click.** Every action checks `isTrusted`;
+  the UI lives in a closed shadow root.
+- **Shared hosting is split by tenant.** `alice.github.io` and
+  `mallory.github.io` are different sites, as are any two IP addresses.
+
+Submitting a form with a password stores it in `chrome.storage.session` for
+five minutes, keyed by tab, and the page (or the next one, after navigation)
+offers to save or update it. Locking the vault clears it.
+
+## 9. Known traps
 
 - **MV3 kills the service worker after ~30s idle.** A vault key held in a plain
   variable disappears, and the popup starts demanding the master password
@@ -229,12 +255,12 @@ passphrase mixed into the key through HKDF and delivered separately.
   collides with the DOM's. Worker and browser code therefore use separate
   `tsconfig` files.
 
-## 9. Cost
+## 10. Cost
 
 Comfortably inside Cloudflare's free tier (Workers 100k requests/day, D1 5GB).
 On a `*.workers.dev` subdomain there is nothing to pay at all.
 
-## 10. Deployment tooling
+## 11. Deployment tooling
 
 `npm run deploy` (`scripts/vault.mjs`) wraps Wrangler rather than calling it
 directly, because no Cloudflare CLI creates a D1 database automatically when the

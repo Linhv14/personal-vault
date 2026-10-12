@@ -86,6 +86,19 @@ Object.assign(globalThis, {
       async request() {
         return true;
       },
+      async contains() {
+        return false;
+      },
+      async remove() {
+        return true;
+      },
+    },
+    scripting: {
+      async getRegisteredContentScripts() {
+        return [];
+      },
+      async registerContentScripts() {},
+      async unregisterContentScripts() {},
     },
     alarms: { async create() {}, onAlarm: { addListener() {} } },
     runtime: { onInstalled: { addListener() {} }, onStartup: { addListener() {} } },

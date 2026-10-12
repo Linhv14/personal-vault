@@ -65,7 +65,12 @@ async function buildExtension() {
 
   await mkdir(outExtension, { recursive: true });
 
-  const entryPoints = ["popup/popup.ts", "background.ts", "offscreen/offscreen.ts"]
+  const entryPoints = [
+    "popup/popup.ts",
+    "background.ts",
+    "offscreen/offscreen.ts",
+    "content/content.ts",
+  ]
     .map((file) => path.join(source, file))
     .filter((file) => existsSync(file));
 

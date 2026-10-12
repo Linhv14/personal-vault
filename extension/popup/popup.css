@@ -522,6 +522,36 @@ button.primary.danger-fill {
   transition: none;
 }
 
+.promo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px 8px 10px;
+  margin-bottom: 8px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-size: 12.5px;
+}
+.promo .brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: none;
+}
+.promo .brand-mark .icon {
+  width: 18px;
+  height: 18px;
+}
+.promo-text {
+  flex: 1;
+}
+.promo .link {
+  font-weight: 600;
+}
+#autofill-promo-close .icon {
+  transform: rotate(45deg);
+}
+
 .empty {
   display: flex;
   flex-direction: column;

@@ -89,3 +89,30 @@ describe("item binding to its id", () => {
     expect(await migrateUnboundItems(key)).toBe(0);
   });
 });
+
+describe("registrableDomain", () => {
+  it("groups subdomains of an ordinary site", async () => {
+    const { registrableDomain } = await import("../extension/lib/vault.js");
+    expect(registrableDomain("https://accounts.google.com/signin")).toBe("google.com");
+    expect(registrableDomain("www.github.com")).toBe("github.com");
+    expect(registrableDomain("https://shop.example.com.vn")).toBe("example.com.vn");
+  });
+
+  it("keeps tenants of shared hosting apart", async () => {
+    const { registrableDomain } = await import("../extension/lib/vault.js");
+    expect(registrableDomain("https://alice.github.io")).toBe("alice.github.io");
+    expect(registrableDomain("https://alice.github.io")).not.toBe(
+      registrableDomain("https://mallory.github.io"),
+    );
+    expect(registrableDomain("https://personal-vault.linhdv.workers.dev")).toBe(
+      "linhdv.workers.dev",
+    );
+  });
+
+  it("never collapses IP addresses", async () => {
+    const { registrableDomain } = await import("../extension/lib/vault.js");
+    expect(registrableDomain("http://192.168.1.1")).toBe("192.168.1.1");
+    expect(registrableDomain("http://10.0.1.1")).toBe("10.0.1.1");
+    expect(registrableDomain("http://[::1]:8080")).toBe("[::1]");
+  });
+});

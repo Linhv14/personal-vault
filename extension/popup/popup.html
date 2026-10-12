@@ -129,6 +129,14 @@
         </button>
       </header>
       <p class="warn" id="clock-warning" hidden></p>
+      <div class="promo" id="autofill-promo" hidden>
+        <span class="brand-mark"><i data-icon="shield"></i></span>
+        <span class="promo-text" data-i18n="list.autofill_promo"></span>
+        <button class="link" id="autofill-promo-enable" data-i18n="list.autofill_enable"></button>
+        <button class="icon-button" id="autofill-promo-close" data-i18n-title="common.close">
+          <i data-icon="plus"></i>
+        </button>
+      </div>
       <div id="matching-section" hidden>
         <h2 id="matching-title"></h2>
         <div class="list" id="matching-list"></div>
@@ -344,6 +352,9 @@
           ><span data-i18n="settings.language"></span
           ><select id="settings-locale"></select
         ></label>
+        <label class="check"
+          ><span data-i18n="settings.autofill"></span><input id="settings-autofill" type="checkbox"
+        /></label>
       </div>
       <div class="group">
         <button

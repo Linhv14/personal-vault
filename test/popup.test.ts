@@ -43,7 +43,16 @@ const chromeMock = {
     query: vi.fn(async () => [{ url: "https://github.com/settings" }]),
     captureVisibleTab: vi.fn(),
   },
-  permissions: { request: vi.fn(async () => true) },
+  permissions: {
+    request: vi.fn(async () => true),
+    contains: vi.fn(async () => false),
+    remove: vi.fn(async () => true),
+  },
+  scripting: {
+    getRegisteredContentScripts: vi.fn(async () => []),
+    registerContentScripts: vi.fn(async () => {}),
+    unregisterContentScripts: vi.fn(async () => {}),
+  },
   alarms: { create: vi.fn(async () => {}), onAlarm: { addListener: vi.fn() } },
   runtime: { onInstalled: { addListener: vi.fn() }, onStartup: { addListener: vi.fn() } },
 };

@@ -59,7 +59,8 @@ is not sufficient.
 | Random vault key, wrapped by a password-derived key              | Changing the master password re-wraps one key instead of re-encrypting every item |
 | PBKDF2-SHA256, 600,000 iterations                                | Built into WebCrypto; avoids a WASM dependency in the path of every password      |
 | AES-256-GCM, fresh 12-byte nonce per encryption                  | Authenticated: tampering fails loudly rather than yielding plausible garbage      |
-| No content script in the extension                               | It never gains read/write access to the pages you visit                           |
+| Page script only when "Suggest logins on websites" is on         | Off by default; the permission is requested only when you turn it on              |
+| Autofill fills only on click, top frame, matching domain         | The service worker checks the domain Chrome reports, not one the page claims      |
 | Vault key in `chrome.storage.session` only                       | That area is memory-backed; `storage.local` is on disk in the clear               |
 | No dependencies in `src/core`                                    | Every library there would sit in the path of your passwords                       |
 | Registration gated by a secret token                             | An exposed Worker is otherwise an open signup page                                |

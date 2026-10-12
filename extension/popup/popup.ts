@@ -46,6 +46,7 @@ import {
   type Translate,
 } from "../../src/i18n/index.js";
 import * as api from "../lib/api.js";
+import { disableAutofill, enableAutofill, isAutofillEnabled } from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { hydrateIcons, icon, iconButton } from "./icons.js";
 import {
@@ -199,7 +200,27 @@ async function enterVault(rawBase64: string): Promise<void> {
   renderList();
   show("list");
   void backgroundSync();
+  void refreshAutofillPromo();
 }
+
+async function refreshAutofillPromo(): Promise<void> {
+  const { autofillPromoDismissed } = await getLocal();
+  $("autofill-promo").hidden = Boolean(autofillPromoDismissed) || (await isAutofillEnabled());
+}
+
+async function turnOnAutofill(): Promise<boolean> {
+  const enabled = await enableAutofill();
+  if (enabled) toast(t("settings.autofill_enabled"));
+  return enabled;
+}
+
+$("autofill-promo-enable").addEventListener("click", async () => {
+  if (await turnOnAutofill()) $("autofill-promo").hidden = true;
+});
+$("autofill-promo-close").addEventListener("click", async () => {
+  $("autofill-promo").hidden = true;
+  await setLocal({ autofillPromoDismissed: true });
+});
 
 async function backgroundSync(): Promise<void> {
   const status = $("sync-status");
@@ -1027,6 +1048,7 @@ async function openSettings(): Promise<void> {
     ...LOCALES.map((code) => new Option(LOCALE_NAMES[code], code)),
   );
   select.value = local.locale ?? "auto";
+  $<HTMLInputElement>("settings-autofill").checked = await isAutofillEnabled();
 
   $("settings-info").textContent = t("settings.info", {
     email: local.email ?? "",
@@ -1062,6 +1084,15 @@ $("settings-locale").addEventListener("change", async (event) => {
   setSetupMode(setupMode);
   if (vaultKey) items = await decryptAll(vaultKey, locale);
   await openSettings();
+});
+
+$("settings-autofill").addEventListener("change", async (event) => {
+  const checkbox = event.target as HTMLInputElement;
+  if (checkbox.checked) {
+    checkbox.checked = await turnOnAutofill();
+  } else {
+    await disableAutofill();
+  }
 });
 
 $("settings-change-password").addEventListener("click", () => {
