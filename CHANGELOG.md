@@ -33,6 +33,8 @@ version may change the API or storage format; such releases list the steps in
 - The share page shows expiry, and the last-view warning, in a banner at the
   top of the card.
 - Emails are shorter and say only what the reader must do.
+- The email footer states why the reader received it, with their address,
+  links the site and the privacy policy, and names the product.
 - Share page text cut to what the reader needs: one short line per state,
   no captions under fields, and "password" instead of "passphrase".
 - The share page no longer claims to clear the clipboard after 30 seconds; a

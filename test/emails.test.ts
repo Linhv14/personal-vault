@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { existingAccountEmail, verificationCodeEmail } from "../src/worker/emails.js";
 
-const context = { locale: "en" as const, siteUrl: "https://1pw.online" };
+const context = {
+  locale: "en" as const,
+  siteUrl: "https://1pw.online",
+  recipient: "me@example.com",
+};
 
 describe("verificationCodeEmail", () => {
   const email = verificationCodeEmail(context, "042917");
@@ -46,5 +50,19 @@ describe("existingAccountEmail", () => {
     const email = existingAccountEmail({ ...context, siteUrl: 'https://x.test/"><script>' });
     expect(email.html).not.toContain("<script>");
     expect(email.html).toContain("&#34;&#62;&#60;script&#62;");
+  });
+});
+
+describe("email footer", () => {
+  it("says why the reader got the email, naming their address", () => {
+    const email = verificationCodeEmail(context, "042917");
+    expect(email.html).toContain("a sign-up code was requested for me@example.com");
+    expect(email.text).toContain("a sign-up code was requested for me@example.com");
+    expect(email.html).toContain('href="https://1pw.online"');
+  });
+
+  it("escapes the recipient address", () => {
+    const email = existingAccountEmail({ ...context, recipient: '"><img src=x>@example.com' });
+    expect(email.html).not.toContain("<img src=x>");
   });
 });
