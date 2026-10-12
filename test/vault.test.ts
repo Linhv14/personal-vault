@@ -116,3 +116,26 @@ describe("registrableDomain", () => {
     expect(registrableDomain("http://[::1]:8080")).toBe("[::1]");
   });
 });
+
+describe("clearAccountData", () => {
+  it("drops the account but keeps this device's preferences", async () => {
+    const { clearAccountData } = await import("../extension/lib/storage.js");
+    localArea.clear();
+    for (const [key, value] of Object.entries({
+      email: "me@example.com",
+      items: [{ id: "x" }],
+      wrappedVaultKey: { ciphertext: "c", nonce: "n" },
+      locale: "vi",
+      autoLockMinutes: 30,
+      autofillPromoDismissed: true,
+    })) {
+      localArea.set(key, value);
+    }
+    await clearAccountData();
+    expect(Object.fromEntries(localArea)).toEqual({
+      locale: "vi",
+      autoLockMinutes: 30,
+      autofillPromoDismissed: true,
+    });
+  });
+});

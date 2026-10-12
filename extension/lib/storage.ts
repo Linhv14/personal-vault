@@ -84,6 +84,21 @@ export async function setLocal(patch: Partial<LocalState>): Promise<void> {
   await chrome.storage.local.set(patch);
 }
 
+const DEVICE_PREFERENCES = [
+  "locale",
+  "autoLockMinutes",
+  "autofillPromoDismissed",
+] as const satisfies readonly (keyof LocalState)[];
+
+export async function clearAccountData(): Promise<void> {
+  const local = await getLocal();
+  const preferences = Object.fromEntries(
+    DEVICE_PREFERENCES.filter((key) => local[key] !== undefined).map((key) => [key, local[key]]),
+  );
+  await chrome.storage.local.clear();
+  await chrome.storage.local.set(preferences);
+}
+
 async function getSession(): Promise<SessionState> {
   return (await chrome.storage.session.get(null)) as SessionState;
 }

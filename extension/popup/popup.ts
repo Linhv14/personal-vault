@@ -64,6 +64,7 @@ import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton, type IconName } from "../../src/ui/icons.js";
 import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
 import {
+  clearAccountData,
   clearPendingSignup,
   DEFAULT_AUTO_LOCK_MINUTES,
   getLocal,
@@ -245,8 +246,9 @@ async function enterVault(rawBase64: string): Promise<void> {
 
 async function refreshAutofillPromo(): Promise<void> {
   const { autofillPromoDismissed } = await getLocal();
-  $("autofill-promo").hidden =
-    !autofillSupported() || Boolean(autofillPromoDismissed) || (await isAutofillEnabled());
+  const showPromo = autofillSupported() && !autofillPromoDismissed && !(await isAutofillEnabled());
+  $("autofill-promo").hidden = !showPromo;
+  if (showPromo) await setLocal({ autofillPromoDismissed: true });
 }
 
 async function turnOnAutofill(): Promise<boolean> {
@@ -580,7 +582,7 @@ async function finishUnlock(
 
 $("unlock-reset").addEventListener("click", async () => {
   if (!confirm(t("unlock.reset_confirm"))) return;
-  await chrome.storage.local.clear();
+  await clearAccountData();
   await lock();
   location.reload();
 });
@@ -1367,7 +1369,7 @@ $<HTMLFormElement>("form-delete-account").addEventListener("submit", async (even
 
   try {
     await api.deleteAccount(currentAuthKey);
-    await chrome.storage.local.clear();
+    await clearAccountData();
     await lock();
     alert(t("settings.deleted"));
     location.reload();
@@ -1384,7 +1386,7 @@ $("settings-privacy").addEventListener("click", async () => {
 $("settings-logout").addEventListener("click", async () => {
   if (!confirm(t("settings.logout_confirm"))) return;
   await api.logout();
-  await chrome.storage.local.clear();
+  await clearAccountData();
   await lock();
   location.reload();
 });
