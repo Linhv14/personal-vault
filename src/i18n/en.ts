@@ -161,7 +161,8 @@ export const en = {
   "edit.scanning": "Looking for a QR code…",
   "edit.scan_not_qr": "Found a QR code, but it is not a 2FA code.",
   "edit.scan_none": "No QR code visible. Scroll it into view and retry.",
-  "edit.scan_capture_failed": "Could not capture the tab: {reason}",
+  "edit.scan_capture_failed":
+    "Couldn't read this tab. Open the page that shows the QR code, then try again.",
   "edit.scan_ok": "QR read{issuer} · code {code}",
   "edit.scan_ok_issuer": " for {issuer}",
   "edit.totp_parse_failed": "Could not read that 2FA secret: {reason}",
@@ -195,7 +196,7 @@ export const en = {
   "share.max_views": "Opens",
   "share.views_1": "Once",
   "share.views_unlimited": "Until it expires",
-  "share.include_totp": "Include 2FA key",
+  "share.include_totp": "Include 2FA secret",
   "share.passphrase": "Link password",
   "share.passphrase_placeholder": "Leave empty if not needed",
   "share.create": "Create link",
@@ -218,7 +219,7 @@ export const en = {
   "share.result_note_recipients": "Only opens for: {emails}",
   "share.contents": "The recipient sees",
   "share.totp_hint":
-    "They get the key, not just the current code, so they can keep making codes after the link expires. Share it only with someone you would trust with the account.",
+    "They get the secret, not just the current code, so they can keep making codes after the link expires. Share it only with someone you would trust with the account.",
   "share.views_hint":
     "With more than one recipient, the link stays open until it expires so each of them can view it.",
   "share.protection": "Extra protection",

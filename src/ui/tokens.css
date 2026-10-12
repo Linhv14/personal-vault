@@ -13,6 +13,7 @@
   --accent-text: #ffffff;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --focus-ring: color-mix(in srgb, var(--accent) 45%, transparent);
+  --focus-halo: color-mix(in srgb, var(--accent) 20%, transparent);
   --danger: #dc2626;
   --danger-soft: color-mix(in srgb, var(--danger) 10%, transparent);
   --ok: #15803d;

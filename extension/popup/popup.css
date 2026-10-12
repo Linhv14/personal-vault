@@ -252,11 +252,19 @@ input[type="range"] {
 textarea {
   resize: vertical;
 }
-input:focus,
+input:not([type="checkbox"], [type="radio"], [type="range"]):focus,
 textarea:focus,
-select:focus {
+select:focus,
+.field-with-actions:focus-within,
+.chip-input:focus-within {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-halo);
+}
+.field-with-actions input:focus,
+.chip-input input:focus {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 button {
@@ -271,9 +279,8 @@ button {
     color 0.15s;
 }
 button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="range"]:focus-visible,
 label.tab:has(input:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
@@ -775,9 +782,6 @@ label small.hint {
   border: 1px solid transparent;
   background: var(--surface);
 }
-.field-with-actions:focus-within {
-  border-color: var(--accent);
-}
 .field-with-actions input {
   flex: 1;
   min-width: 0;
@@ -981,6 +985,9 @@ select {
 .hint.warn-text {
   color: var(--warn);
 }
+.hint.error-text {
+  color: var(--danger);
+}
 
 .share-subject {
   display: flex;
@@ -1053,11 +1060,11 @@ select {
   background: var(--surface);
   cursor: text;
 }
-.chip-input:focus-within {
-  border-color: var(--accent);
-}
 .chip-input[aria-invalid="true"] {
   border-color: var(--danger);
+}
+.chip-input[aria-invalid="true"]:focus-within {
+  box-shadow: 0 0 0 3px var(--danger-soft);
 }
 .chip-input input {
   flex: 1;
@@ -1065,9 +1072,6 @@ select {
   padding: 3px 5px;
   border: none;
   background: none;
-}
-.chip-input input:focus-visible {
-  outline: none;
 }
 
 .disclosure {

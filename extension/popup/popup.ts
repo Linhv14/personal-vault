@@ -852,7 +852,7 @@ function openEditor(item: VaultItem | null): void {
   clearTimers();
   editing = item;
   setError("edit-error", null);
-  $("edit-totp-hint").textContent = "";
+  setScanHint("");
 
   const form = $<HTMLFormElement>("form-edit");
   form.reset();
@@ -913,18 +913,27 @@ $("edit-generate").addEventListener("click", () => {
  * before you do — so it is a bad place to add a dependency. Where the API is
  * missing, pasting by hand still works and always will.
  */
-$("edit-scan").addEventListener("click", async () => {
+function setScanHint(text: string, failed = false): void {
   const hint = $("edit-totp-hint");
+  hint.textContent = text;
+  hint.hidden = text === "";
+  hint.classList.toggle("error-text", failed);
+}
 
+function pngFromDataUrl(dataUrl: string): Blob {
+  return new Blob([fromBase64(dataUrl.slice(dataUrl.indexOf(",") + 1))], { type: "image/png" });
+}
+
+$("edit-scan").addEventListener("click", async () => {
   if (!("BarcodeDetector" in self)) {
-    hint.textContent = t("edit.scan_unsupported");
+    setScanHint(t("edit.scan_unsupported"), true);
     return;
   }
 
-  hint.textContent = t("edit.scanning");
+  setScanHint(t("edit.scanning"));
   try {
     const dataUrl = await chrome.tabs.captureVisibleTab({ format: "png" });
-    const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
+    const bitmap = await createImageBitmap(pngFromDataUrl(dataUrl));
 
     const Detector = (
       self as unknown as {
@@ -937,7 +946,7 @@ $("edit-scan").addEventListener("click", async () => {
 
     const otpauth = codes.find((code) => code.rawValue.toLowerCase().startsWith("otpauth://"));
     if (!otpauth) {
-      hint.textContent = t(codes.length ? "edit.scan_not_qr" : "edit.scan_none");
+      setScanHint(t(codes.length ? "edit.scan_not_qr" : "edit.scan_none"), true);
       return;
     }
 
@@ -948,12 +957,15 @@ $("edit-scan").addEventListener("click", async () => {
     const titleField = form.querySelector<HTMLInputElement>('[name="title"]')!;
     if (config.issuer && !titleField.value) titleField.value = config.issuer;
 
-    hint.textContent = t("edit.scan_ok", {
-      issuer: config.issuer ? t("edit.scan_ok_issuer", { issuer: config.issuer }) : "",
-      code: await generateTotp(config, nowMs()),
-    });
+    setScanHint(
+      t("edit.scan_ok", {
+        issuer: config.issuer ? t("edit.scan_ok_issuer", { issuer: config.issuer }) : "",
+        code: await generateTotp(config, nowMs()),
+      }),
+    );
   } catch (error) {
-    hint.textContent = t("edit.scan_capture_failed", { reason: describeError(error, t) });
+    console.warn("QR scan failed:", error);
+    setScanHint(t("edit.scan_capture_failed"), true);
   }
 });
 
