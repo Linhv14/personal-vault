@@ -227,6 +227,13 @@ async function ensureDatabase() {
  * id — this is a public template and those values belong to each operator. The
  * generated file is gitignored.
  */
+function registrationMode() {
+  const flags = process.argv.slice(3);
+  if (flags.includes("--open-registration")) writeState({ registrationMode: "open" });
+  if (flags.includes("--token-registration")) writeState({ registrationMode: "token" });
+  return readState().registrationMode === "open" ? "open" : "token";
+}
+
 function writeGeneratedConfig(accountId, databaseId) {
   const template = readFileSync(TEMPLATE, "utf8");
   if (!template.includes(DATABASE_ID_SENTINEL)) {
@@ -235,6 +242,7 @@ function writeGeneratedConfig(accountId, databaseId) {
 
   const generated = template
     .replace(DATABASE_ID_SENTINEL, databaseId)
+    .replace(/^REGISTRATION_MODE = .*$/m, `REGISTRATION_MODE = "${registrationMode()}"`)
     .replace(
       /^compatibility_date = .*$/m,
       (line) =>
@@ -347,10 +355,13 @@ async function deploy() {
   }
 
   console.log("");
-  style.ok("Done. Two steps left:");
+  const open = registrationMode() === "open";
+  style.ok(`Done. Registration is ${open ? "OPEN to anyone" : "gated by REGISTRATION_TOKEN"}.`);
   style.info("1. chrome://extensions → Developer mode → Load unpacked → dist/extension");
   style.info(
-    `2. In the popup, enter the Worker URL above and the token in ${path.basename(SECRETS_NOTE)}`,
+    open
+      ? "2. In the popup, choose Create a new vault"
+      : `2. In the popup, create a vault with the token in ${path.basename(SECRETS_NOTE)}`,
   );
 }
 
@@ -410,6 +421,8 @@ if (!command || !(command in COMMANDS)) {
 
   deploy   Create D1 and secrets if needed, migrate, build and deploy to your
            own Cloudflare account. Safe to run repeatedly.
+           --open-registration   let anyone create an account (shared server)
+           --token-registration  require REGISTRATION_TOKEN again (default)
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787
   status   Show the account and resources in use
   logs     Tail the Worker logs

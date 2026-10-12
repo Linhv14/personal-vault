@@ -2,6 +2,9 @@ export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   ANONYMOUS_RATE_LIMITER: RateLimit;
+  REGISTRATION_RATE_LIMITER: RateLimit;
+  ACCOUNT_RATE_LIMITER: RateLimit;
+  REGISTRATION_MODE: string;
   /** Required to register. Without it your Worker is a public signup page. */
   REGISTRATION_TOKEN: string;
   /** HMAC key used to fabricate KDF params for addresses that do not exist. */

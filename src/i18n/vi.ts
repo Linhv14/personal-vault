@@ -48,6 +48,8 @@ export const vi: Catalogue = {
   "error.auth.invalid_auth_key": "Khoá xác thực không hợp lệ",
   "error.auth.invalid_wrapped_key": "Vault key đã bọc không hợp lệ",
   "error.auth.email_taken": "Email này đã được đăng ký trên server",
+  "error.auth.registration_limit":
+    "Mạng này đã tạo quá nhiều tài khoản hôm nay. Thử lại vào ngày mai.",
   "error.auth.invalid_credentials": "Email hoặc master password không đúng",
   "error.auth.rate_limited": "Sai quá nhiều lần. Thử lại sau {seconds} giây.",
   "error.auth.unauthorized": "Chưa đăng nhập, hoặc session đã hết hạn",
@@ -55,6 +57,7 @@ export const vi: Catalogue = {
   "error.items.invalid_payload": "Dữ liệu mã hoá không hợp lệ",
   "error.items.forbidden": "Bạn không có quyền với item đó",
   "error.items.not_found": "Không tìm thấy item",
+  "error.items.quota_exceeded": "Vault đã đầy (5.000 item).",
   "error.shares.invalid_payload": "Dữ liệu mã hoá không hợp lệ",
   "error.shares.invalid_ttl": "Thời hạn nằm ngoài khoảng cho phép",
   "error.shares.invalid_max_views": "Số lượt xem nằm ngoài khoảng cho phép",
@@ -209,6 +212,11 @@ export const vi: Catalogue = {
   "settings.wrong_current": "Đó không phải master password hiện tại",
   "settings.need_relock": "Hãy khoá rồi mở lại vault trước khi đổi master password",
   "settings.logout": "Đăng xuất khỏi máy này",
+  "settings.delete_account": "Xoá tài khoản",
+  "settings.delete_hint": "Xoá vĩnh viễn vault và mọi item trên server. Không khôi phục được.",
+  "settings.delete_submit": "Xoá vĩnh viễn",
+  "settings.delete_confirm": "Xoá vĩnh viễn vault của {email}?",
+  "settings.deleted": "Đã xoá tài khoản và vault.",
   "settings.logout_confirm":
     "Đăng xuất và xoá toàn bộ dữ liệu trên máy này? Vault trên server không bị ảnh hưởng.",
 

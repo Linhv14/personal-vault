@@ -10,6 +10,7 @@ import { toBase64, toBase64Url, randomBytes, fromBase64 } from "../core/bytes.js
 import type { Env, SessionContext } from "./types.js";
 
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const MAX_SESSIONS_PER_ACCOUNT = 20;
 
 export async function hashToken(token: string): Promise<string> {
   // The token is 32 random bytes, so one SHA-256 round suffices: no dictionary
@@ -26,11 +27,20 @@ export async function createSession(
   const token = toBase64Url(randomBytes(32));
   const expiresAt = now + SESSION_TTL_SECONDS;
 
-  await env.DB.prepare(
-    "INSERT INTO sessions (token_hash, account_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
-  )
-    .bind(await hashToken(token), accountId, now, expiresAt)
-    .run();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO sessions (token_hash, account_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+    ).bind(await hashToken(token), accountId, now, expiresAt),
+    env.DB.prepare(
+      `DELETE FROM sessions
+        WHERE account_id = ?
+          AND token_hash NOT IN (
+            SELECT token_hash FROM sessions
+             WHERE account_id = ?
+             ORDER BY created_at DESC
+             LIMIT ?)`,
+    ).bind(accountId, accountId, MAX_SESSIONS_PER_ACCOUNT),
+  ]);
 
   return { token, expiresAt };
 }

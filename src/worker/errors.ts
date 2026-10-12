@@ -18,6 +18,7 @@ export type ApiErrorCode =
   | "auth.invalid_auth_key"
   | "auth.invalid_wrapped_key"
   | "auth.email_taken"
+  | "auth.registration_limit"
   | "auth.invalid_credentials"
   | "auth.rate_limited"
   | "auth.unauthorized"
@@ -25,6 +26,7 @@ export type ApiErrorCode =
   | "items.invalid_payload"
   | "items.forbidden"
   | "items.not_found"
+  | "items.quota_exceeded"
   | "shares.invalid_payload"
   | "shares.invalid_ttl"
   | "shares.invalid_max_views"
@@ -41,6 +43,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.invalid_auth_key": "Invalid auth key",
   "auth.invalid_wrapped_key": "Invalid wrapped vault key",
   "auth.email_taken": "That email is already registered",
+  "auth.registration_limit": "Too many new accounts from this network today",
   "auth.invalid_credentials": "Incorrect email or master password",
   "auth.rate_limited": "Too many attempts, try again later",
   "auth.unauthorized": "Not signed in, or the session has expired",
@@ -48,6 +51,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",
   "items.not_found": "Item not found",
+  "items.quota_exceeded": "This vault has reached its item limit",
   "shares.invalid_payload": "Invalid ciphertext or nonce",
   "shares.invalid_ttl": "ttlSeconds must be between 60 and 604800",
   "shares.invalid_max_views": "maxViews is out of range",

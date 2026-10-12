@@ -48,6 +48,8 @@ export const en = {
   "error.auth.invalid_auth_key": "Invalid authentication key",
   "error.auth.invalid_wrapped_key": "Invalid wrapped vault key",
   "error.auth.email_taken": "That email is already registered on this server",
+  "error.auth.registration_limit":
+    "Too many new accounts from this network today. Try again tomorrow.",
   "error.auth.invalid_credentials": "Incorrect email or master password",
   "error.auth.rate_limited": "Too many failed attempts. Try again in {seconds} seconds.",
   "error.auth.unauthorized": "Not signed in, or the session has expired",
@@ -55,6 +57,7 @@ export const en = {
   "error.items.invalid_payload": "Invalid encrypted payload",
   "error.items.forbidden": "You do not have access to that item",
   "error.items.not_found": "Item not found",
+  "error.items.quota_exceeded": "This vault is full (5,000 items).",
   "error.shares.invalid_payload": "Invalid encrypted payload",
   "error.shares.invalid_ttl": "The expiry is out of the allowed range",
   "error.shares.invalid_max_views": "The view limit is out of the allowed range",
@@ -209,6 +212,11 @@ export const en = {
   "settings.wrong_current": "That is not the current master password",
   "settings.need_relock": "Lock and unlock the vault before changing the master password",
   "settings.logout": "Sign out of this device",
+  "settings.delete_account": "Delete account",
+  "settings.delete_hint": "Erases this vault and every item on the server. This cannot be undone.",
+  "settings.delete_submit": "Delete permanently",
+  "settings.delete_confirm": "Permanently delete the vault for {email}?",
+  "settings.deleted": "Your account and vault have been deleted.",
   "settings.logout_confirm":
     "Sign out and erase all data on this machine? The vault on the server is untouched.",
 

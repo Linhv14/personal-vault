@@ -259,6 +259,7 @@ $("setup-server-change").addEventListener("click", () => {
 });
 
 let setupMode: "register" | "login" = "register";
+let registrationOpen = false;
 
 /**
  * Creating a vault and signing in on a second machine are presented as two
@@ -275,8 +276,9 @@ function setSetupMode(mode: "register" | "login"): void {
 
   for (const name of ["registrationToken", "confirm"]) {
     const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
-    field.required = registering;
-    field.closest("label")!.hidden = !registering;
+    const needed = registering && !(name === "registrationToken" && registrationOpen);
+    field.required = needed;
+    field.closest("label")!.hidden = !needed;
   }
 
   const password = form.querySelector<HTMLInputElement>('[name="password"]')!;
@@ -293,12 +295,29 @@ function setSetupMode(mode: "register" | "login"): void {
   setError("setup-error", null);
 }
 
+function serverFieldValue(): string {
+  return $<HTMLFormElement>("form-setup")
+    .querySelector<HTMLInputElement>('[name="apiUrl"]')!
+    .value.trim();
+}
+
+async function refreshRegistrationMode(): Promise<void> {
+  const url = serverFieldValue();
+  registrationOpen = url ? await api.registrationIsOpen(url) : false;
+  setSetupMode(setupMode);
+}
+
 function showSetupForm(mode: "register" | "login"): void {
   setSetupMode(mode);
   $("setup-choice").hidden = true;
   $("setup-form-wrap").hidden = false;
   $<HTMLFormElement>("form-setup").querySelector<HTMLInputElement>('[name="email"]')!.focus();
+  if (mode === "register") void refreshRegistrationMode();
 }
+
+$<HTMLFormElement>("form-setup")
+  .querySelector<HTMLInputElement>('[name="apiUrl"]')!
+  .addEventListener("change", () => void refreshRegistrationMode());
 
 $("setup-mode-create").addEventListener("click", () => showSetupForm("register"));
 $("setup-mode-signin").addEventListener("click", () => showSetupForm("login"));
@@ -1082,6 +1101,38 @@ $<HTMLFormElement>("form-change-password").addEventListener("submit", async (eve
     await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
     await lock();
     alert(t("settings.changed"));
+    location.reload();
+  } catch (error) {
+    showError("settings-error", error);
+  }
+});
+
+$("settings-delete-account").addEventListener("click", () => {
+  $("form-delete-account").hidden = !$("form-delete-account").hidden;
+});
+
+$<HTMLFormElement>("form-delete-account").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setError("settings-error", null);
+  const local = await getLocal();
+  const password = String(new FormData(event.target as HTMLFormElement).get("current"));
+
+  let currentAuthKey: string;
+  try {
+    const masterKey = await deriveMasterKey(local.email!, password, local.kdf!);
+    await openSealed(await deriveWrappingKey(masterKey), local.wrappedVaultKey!);
+    currentAuthKey = toBase64(await deriveAuthKey(masterKey));
+  } catch {
+    setError("settings-error", t("settings.wrong_current"));
+    return;
+  }
+  if (!confirm(t("settings.delete_confirm", { email: local.email ?? "" }))) return;
+
+  try {
+    await api.deleteAccount(currentAuthKey);
+    await chrome.storage.local.clear();
+    await lock();
+    alert(t("settings.deleted"));
     location.reload();
   } catch (error) {
     showError("settings-error", error);

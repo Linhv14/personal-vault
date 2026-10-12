@@ -3,11 +3,13 @@ import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
 import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
 import { apiError } from "../errors.js";
+import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
 
 const auth = new Hono<AppBindings>();
 
+const MAX_ACCOUNTS_PER_IP_PER_DAY = 5;
 const MAX_FAILURES = 10;
 const WINDOW_SECONDS = 15 * 60;
 const LOCK_SECONDS = 15 * 60;
@@ -67,10 +69,13 @@ function isKdf(value: unknown): value is KdfBody {
  * strangers' data.
  */
 auth.post("/register", async (c) => {
-  const provided = c.req.header("x-registration-token") ?? "";
-  const expected = c.env.REGISTRATION_TOKEN;
-  if (!expected || !timingSafeEqual(utf8Encode(provided), utf8Encode(expected))) {
-    return c.json(apiError("auth.bad_registration_token"), 403);
+  const openRegistration = isOpenRegistration(c.env);
+  if (!openRegistration) {
+    const provided = c.req.header("x-registration-token") ?? "";
+    const expected = c.env.REGISTRATION_TOKEN;
+    if (!expected || !timingSafeEqual(utf8Encode(provided), utf8Encode(expected))) {
+      return c.json(apiError("auth.bad_registration_token"), 403);
+    }
   }
 
   const body = await c.req.json().catch(() => null);
@@ -88,6 +93,9 @@ auth.post("/register", async (c) => {
   }
 
   const timestamp = now();
+  if (openRegistration && !(await claimRegistrationSlot(c.env, clientIp(c), timestamp))) {
+    return c.json(apiError("auth.registration_limit"), 429);
+  }
   const accountId = crypto.randomUUID();
 
   try {
@@ -224,6 +232,28 @@ auth.post("/login", async (c) => {
   });
 });
 
+auth.post("/delete-account", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const { currentAuthKey } = (body ?? {}) as Record<string, unknown>;
+  if (!isBase64(currentAuthKey, 32)) return c.json(apiError("auth.invalid_credentials"), 400);
+
+  const { accountId } = c.get("session");
+  const row = await c.env.DB.prepare("SELECT email, auth_key_hash FROM accounts WHERE id = ?")
+    .bind(accountId)
+    .first<{ email: string; auth_key_hash: string }>();
+  if (!row || !(await verifyAuthKey(c.env, currentAuthKey, row.auth_key_hash)).matches) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
+
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM items WHERE account_id = ?").bind(accountId),
+    c.env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(accountId),
+    c.env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(row.email),
+    c.env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(accountId),
+  ]);
+  return c.json({ ok: true });
+});
+
 auth.post("/logout", async (c) => {
   await revokeSession(c.env, c.get("session").tokenHash);
   return c.json({ ok: true });
@@ -273,6 +303,28 @@ auth.post("/change-password", async (c) => {
   await revokeAllSessions(c.env, accountId);
   return c.json({ ok: true });
 });
+
+async function claimRegistrationSlot(env: Env, ip: string, timestamp: number): Promise<boolean> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    utf8Encode(env.EMAIL_PROBE_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const ipHash = toBase64(
+    new Uint8Array(await crypto.subtle.sign("HMAC", key, utf8Encode(`registration-ip:${ip}`))),
+  );
+  const claimed = await env.DB.prepare(
+    `INSERT INTO registration_counts (ip_hash, day, count) VALUES (?, ?, 1)
+     ON CONFLICT(ip_hash, day) DO UPDATE SET count = count + 1
+       WHERE count < ?
+     RETURNING count`,
+  )
+    .bind(ipHash, Math.floor(timestamp / 86_400), MAX_ACCOUNTS_PER_IP_PER_DAY)
+    .first<{ count: number }>();
+  return claimed !== null;
+}
 
 // Online password-guessing defence
 

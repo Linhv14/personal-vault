@@ -6,6 +6,7 @@ import type { AppBindings } from "../types.js";
 const items = new Hono<AppBindings>();
 
 const MAX_ITEM_BYTES = 64 * 1024;
+const MAX_ITEMS_PER_ACCOUNT = 5_000;
 const UPDATED_AT_RESOLUTION_SECONDS = 1;
 
 function now(): number {
@@ -61,6 +62,18 @@ items.put("/:id", async (c) => {
   }
 
   const { accountId } = c.get("session");
+  const usage = await c.env.DB.prepare(
+    `SELECT
+       (SELECT count(*) FROM items WHERE account_id = ? AND deleted_at IS NULL) AS live,
+       EXISTS(SELECT 1 FROM items WHERE id = ? AND account_id = ? AND deleted_at IS NULL)
+         AS existing`,
+  )
+    .bind(accountId, id, accountId)
+    .first<{ live: number; existing: number }>();
+  if (!usage?.existing && (usage?.live ?? 0) >= MAX_ITEMS_PER_ACCOUNT) {
+    return c.json(apiError("items.quota_exceeded"), 403);
+  }
+
   const updatedAt = now();
 
   const result = await c.env.DB.prepare(

@@ -368,6 +368,49 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect((await api("/api/items", { token })).status).toBe(401);
   });
 
+  it("reports the registration mode so the extension can hide the token field", async () => {
+    const result = await api("/api/config");
+    expect(result.status).toBe(200);
+    expect(["open", "token"]).toContain(result.body.registration);
+  });
+
+  it("deletes an account and its items only with the current auth key", async () => {
+    const doomedEmail = `doomed-${Date.now()}@example.com`;
+    const doomed = await createAccount(doomedEmail, "a password to delete", ITERATIONS);
+    const registered = await api("/api/auth/register", {
+      method: "POST",
+      headers: { "x-registration-token": REGISTRATION_TOKEN },
+      body: JSON.stringify({ email: doomedEmail, ...doomed.record }),
+    });
+    const doomedToken = registered.body.token;
+    await api(`/api/items/${crypto.randomUUID()}`, {
+      method: "PUT",
+      token: doomedToken,
+      body: JSON.stringify(await sealJson(doomed.vaultKey, { title: "gone soon" })),
+    });
+
+    const wrongKey = await api("/api/auth/delete-account", {
+      method: "POST",
+      token: doomedToken,
+      body: JSON.stringify({ currentAuthKey: record.authKey }),
+    });
+    expect(wrongKey.status).toBe(403);
+
+    const deleted = await api("/api/auth/delete-account", {
+      method: "POST",
+      token: doomedToken,
+      body: JSON.stringify({ currentAuthKey: doomed.record.authKey }),
+    });
+    expect(deleted.status).toBe(200);
+
+    expect((await api("/api/items", { token: doomedToken })).status).toBe(401);
+    const login = await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: doomedEmail, authKey: doomed.record.authKey }),
+    });
+    expect(login.status).toBe(401);
+  });
+
   it("exposes server time for clock-drift detection", async () => {
     const result = await api("/api/time");
     expect(result.status).toBe(200);

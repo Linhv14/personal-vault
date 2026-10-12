@@ -241,6 +241,10 @@ button.link.quiet {
 button.danger {
   color: var(--danger);
 }
+button.primary.danger-fill {
+  background: var(--danger);
+  color: #fff;
+}
 #edit-delete {
   align-self: center;
 }

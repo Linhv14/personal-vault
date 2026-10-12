@@ -123,6 +123,23 @@ export async function changePassword(
   });
 }
 
+export async function deleteAccount(currentAuthKey: string): Promise<void> {
+  await request("/api/auth/delete-account", {
+    method: "POST",
+    body: JSON.stringify({ currentAuthKey }),
+  });
+}
+
+export async function registrationIsOpen(apiUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/config`);
+    const { registration } = (await response.json()) as { registration?: string };
+    return registration === "open";
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchItems(
   since: number,
 ): Promise<{ serverTime: number; items: CachedItem[] }> {

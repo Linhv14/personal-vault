@@ -5,6 +5,7 @@ import { apiError } from "./errors.js";
 import auth from "./routes/auth.js";
 import items from "./routes/items.js";
 import shares from "./routes/shares.js";
+import { clientIp, isOpenRegistration } from "./request.js";
 import { resolveSession } from "./session.js";
 import type { AppBindings, Env } from "./types.js";
 
@@ -24,11 +25,18 @@ app.use(
 );
 
 const limitByClientIp: MiddlewareHandler<AppBindings> = async (c, next) => {
-  const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
-  const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp });
+  const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp(c) });
   if (!success) return c.json(apiError("server.rate_limited"), 429);
   await next();
 };
+
+const limitRegistrationsByIp: MiddlewareHandler<AppBindings> = async (c, next) => {
+  const { success } = await c.env.REGISTRATION_RATE_LIMITER.limit({ key: clientIp(c) });
+  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  await next();
+};
+
+app.use("/api/auth/register", limitRegistrationsByIp);
 
 app.use("/api/auth/register", limitByClientIp);
 app.use("/api/auth/prelogin", limitByClientIp);
@@ -46,11 +54,30 @@ app.use("/api/items", requireAuth);
 app.use("/api/items/*", requireAuth);
 app.use("/api/auth/logout", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
+app.use("/api/auth/delete-account", requireAuth);
 
 // Creating a share needs a session; reading one must not, since the recipient
 // has no account.
 app.use("/api/shares", async (c, next) =>
   c.req.method === "POST" ? requireAuth(c, next) : next(),
+);
+
+const limitWritesByAccount: MiddlewareHandler<AppBindings> = async (c, next) => {
+  if (c.req.method === "GET") return next();
+  const { success } = await c.env.ACCOUNT_RATE_LIMITER.limit({
+    key: c.get("session").accountId,
+  });
+  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  await next();
+};
+
+app.use("/api/items/*", limitWritesByAccount);
+app.use("/api/shares", async (c, next) =>
+  c.req.method === "POST" ? limitWritesByAccount(c, next) : next(),
+);
+
+app.get("/api/config", (c) =>
+  c.json({ registration: isOpenRegistration(c.env) ? "open" : "token" }),
 );
 
 app.route("/api/auth", auth);
@@ -93,9 +120,12 @@ export default {
       env.DB.prepare("DELETE FROM shares WHERE expires_at <= ?").bind(now),
       env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
       env.DB.prepare("DELETE FROM login_attempts WHERE window_start <= ?").bind(now - 86_400),
+      env.DB.prepare("DELETE FROM registration_counts WHERE day < ?").bind(
+        Math.floor(now / 86_400),
+      ),
     ]);
     console.log(
-      "Cleaned up shares/sessions/login_attempts:",
+      "Cleaned up shares/sessions/login_attempts/registration_counts:",
       results.map((r) => r.meta.changes).join("/"),
     );
   },

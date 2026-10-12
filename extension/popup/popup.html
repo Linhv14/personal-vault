@@ -378,6 +378,26 @@
           <button class="primary" type="submit" data-i18n="settings.change_submit"></button>
         </form>
         <button class="row-button danger" id="settings-logout" data-i18n="settings.logout"></button>
+        <button
+          class="row-button danger"
+          id="settings-delete-account"
+          data-i18n="settings.delete_account"
+        ></button>
+        <form id="form-delete-account" class="stack" hidden>
+          <input
+            name="current"
+            type="password"
+            autocomplete="off"
+            data-i18n-placeholder="settings.current_password"
+            required
+          />
+          <p class="hint" data-i18n="settings.delete_hint"></p>
+          <button
+            class="primary danger-fill"
+            type="submit"
+            data-i18n="settings.delete_submit"
+          ></button>
+        </form>
       </div>
       <p class="hint center" id="settings-info"></p>
       <p class="error" id="settings-error" hidden></p>

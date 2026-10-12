@@ -26,6 +26,23 @@ name = "ANONYMOUS_RATE_LIMITER"
 namespace_id = "7301"
 simple = { limit = 30, period = 60 }
 
+[[ratelimits]]
+name = "REGISTRATION_RATE_LIMITER"
+namespace_id = "7302"
+simple = { limit = 5, period = 60 }
+
+# Per-account cap on writes (items, shares), so one account cannot flood D1.
+[[ratelimits]]
+name = "ACCOUNT_RATE_LIMITER"
+namespace_id = "7303"
+simple = { limit = 60, period = 60 }
+
+# "token" (default): creating an account needs REGISTRATION_TOKEN, right for a
+# personal Worker. "open": anyone can sign up, for a shared hosted server; set
+# it with `npm run deploy -- --open-registration`.
+[vars]
+REGISTRATION_MODE = "token"
+
 [triggers]
 crons = ["17 * * * *"]
 

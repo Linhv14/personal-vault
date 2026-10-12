@@ -63,6 +63,7 @@ is not sufficient.
 | Vault key in `chrome.storage.session` only                       | That area is memory-backed; `storage.local` is on disk in the clear               |
 | No dependencies in `src/core`                                    | Every library there would sit in the path of your passwords                       |
 | Registration gated by a secret token                             | An exposed Worker is otherwise an open signup page                                |
+| Open registration (opt-in) capped per network and account        | A shared server cannot be flooded by one client or one account                    |
 | Prelogin returns decoy KDF params for unknown emails             | Registered addresses cannot be enumerated                                         |
 | Login limited to 10 failures per 15 minutes                      | Blocks online guessing                                                            |
 | Anonymous endpoints limited to 30 requests/min per IP            | One client cannot exhaust the free-tier quota or hammer share ids                 |

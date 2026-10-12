@@ -117,6 +117,28 @@ password loses everything, because nothing else can unwrap the vault key.
 `test/e2e.test.ts` covers exactly this path against a real Worker, starting from
 a client that holds no cached state.
 
+## Running a shared server
+
+By default only someone holding `REGISTRATION_TOKEN` can create an account,
+which is right for a personal Worker. To let anyone who installs the extension
+sign up on your server:
+
+```bash
+npm run deploy -- --open-registration    # switch back: --token-registration
+```
+
+The choice is remembered for later deploys. With registration open:
+
+- Each network can create at most 5 accounts a day, and 5 a minute.
+- Each account is limited to 5,000 items, 60 writes a minute and 20 sessions.
+- Users can delete their own account and all its items from Settings.
+- Vaults stay end-to-end encrypted: you, as the operator, cannot read them.
+  You do hold everyone's ciphertext, so back up D1 and `AT_REST_SECRET`, and
+  publish a privacy policy before inviting strangers.
+- An email address is only an identifier; nothing is sent to it. Anyone can
+  register an address they do not own, and registering a taken address tells
+  them it exists. Add email verification before relying on addresses.
+
 ## Upgrading from 0.1.x
 
 0.2.0 changes the API and the at-rest format, so do these in order:
