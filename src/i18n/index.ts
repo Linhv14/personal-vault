@@ -75,8 +75,16 @@ export function describeError(error: unknown, t: Translate): string {
   if (isVaultError(error)) {
     return t(`error.${error.code}` as MessageKey, error.params);
   }
+  if (isLocalizedApiError(error)) return t(error.messageKey, error.params);
   if (error instanceof Error) return error.message;
   return String(error);
+}
+
+function isLocalizedApiError(
+  error: unknown,
+): error is { messageKey: MessageKey; params?: Record<string, string | number> } {
+  const messageKey = (error as { messageKey?: unknown } | null)?.messageKey;
+  return typeof messageKey === "string" && messageKey in en;
 }
 
 /** Type guard used by the API client, which builds codes dynamically. */

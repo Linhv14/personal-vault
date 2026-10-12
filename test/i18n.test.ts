@@ -114,6 +114,20 @@ describe("describeError", () => {
   it("falls back to the raw message for unexpected errors", () => {
     // Hiding a genuine bug behind a friendly phrase makes it undebuggable.
     expect(describeError(new Error("boom"), createTranslator("en"))).toBe("boom");
+  });
+
+  it("localizes errors from the API client by their message key", () => {
+    const apiError = Object.assign(new Error("error.auth.invalid_credentials"), {
+      messageKey: "error.auth.invalid_credentials",
+      params: {},
+    });
+    expect(describeError(apiError, createTranslator("en"))).toBe(
+      "Incorrect email or master password",
+    );
+    expect(describeError(apiError, createTranslator("vi"))).not.toContain("error.");
+
+    const unknownKey = Object.assign(new Error("error.nope"), { messageKey: "error.nope" });
+    expect(describeError(unknownKey, createTranslator("en"))).toBe("error.nope");
     expect(describeError("plain string", createTranslator("en"))).toBe("plain string");
   });
 });
