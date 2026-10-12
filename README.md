@@ -54,61 +54,51 @@ Two limits stated plainly:
    blind; the messenger does not. Use the optional extra passphrase, sent
    through a different channel, when that matters.
 
-## Install
+## Install your own server
 
-Requires Node 20+ and a Cloudflare account.
+You need a free Cloudflare account and Node 22 or newer.
 
 ```bash
-git clone <this repo> personal-vault
+git clone https://github.com/Linhv14/personal-vault.git
 cd personal-vault
-npm install
+npm ci
 npm run deploy
 ```
 
-`npm run deploy` is idempotent and does the whole job:
+`npm run deploy` does the whole job and is safe to run again:
 
-1. Opens a browser to sign in to Cloudflare if needed.
-2. Asks which account to use, if you have more than one.
-3. Creates the `vault` D1 database, or reuses it.
-4. Applies migrations.
-5. Generates `REGISTRATION_TOKEN`, `EMAIL_PROBE_SECRET` and `AT_REST_SECRET`,
+1. Opens a browser to sign in to Cloudflare if needed, and asks which account
+   to use if you have more than one.
+2. Creates the `vault` D1 database (or reuses it) and applies migrations.
+3. Generates `REGISTRATION_TOKEN`, `EMAIL_PROBE_SECRET` and `AT_REST_SECRET`,
    writing the registration token and `AT_REST_SECRET` to `.secrets.local.txt`
-   (gitignored) rather than printing them to a terminal that gets scrolled back
-   and screenshotted. **Back up `AT_REST_SECRET` offline**: if it is lost or
-   replaced, every account on the Worker is locked out. Existing deployments
-   get it on their next `npm run deploy`.
-6. Builds and deploys, printing your Worker URL.
+   (gitignored) rather than printing them. **Back up `AT_REST_SECRET` offline**:
+   if it is lost or replaced, every account on the Worker is locked out.
+4. Builds and deploys the Worker, prints its URL, and rebuilds the extension
+   with that URL baked in.
 
-Then load the extension:
-
-```bash
-npm run build
-```
-
-Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**
-and select `dist/extension`.
-
-The popup opens on **New vault**. The server address is already filled in — the
-deploy records your Worker URL and the build bakes it into the extension — so
-you only supply your email, the registration token from `.secrets.local.txt`,
-and a master password.
+Then load the extension: open `chrome://extensions`, enable **Developer
+mode**, choose **Load unpacked** and select `dist/extension`. In the popup,
+choose **Create a new vault** and enter your email, the registration token
+from `.secrets.local.txt` and a master password. The server address is already
+set by the build, so you are never asked for it.
 
 > `REGISTRATION_TOKEN` is what stops strangers creating accounts on your Worker.
 > Without it, your URL is an open signup page.
 
+### Using an extension built for another server
+
+If you installed a build that points at someone else's server (for example
+the published 1PW extension), choose **Create a new vault** or **Sign in to
+your vault**, press **Use your own server** under the button, and enter your
+Worker URL (`npm run status` prints it).
+
 ## Setting up another machine
 
-Clone, `npm install`, `npm run build`, load `dist/extension`, then choose
-**Sign in** instead of New vault. You need three things:
-
-- the server address — already filled in if you deployed from this checkout,
-  otherwise copy it from `npm run status`
-- your email
-- your master password
-
-**No registration token.** It exists only to gate account creation, so a second
-machine never needs it. Everything else — items, 2FA secrets, notes — is pulled
-down encrypted and decrypted locally with the key your master password unwraps.
+Load the same extension build, choose **Sign in to your vault**, and enter
+your email and master password. No registration token is needed: it only
+gates account creation. Items, 2FA secrets and notes are pulled down encrypted
+and decrypted locally with the key your master password unwraps.
 
 Losing every device loses nothing: the vault lives in your D1 database, and
 email plus master password is enough to reach it again. Losing the master
