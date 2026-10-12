@@ -7,6 +7,7 @@ export interface Env {
   REGISTRATION_MODE: string;
   EMAIL?: SendEmail;
   EMAIL_FROM?: string;
+  RESEND_API_KEY?: string;
   /** Required to register. Without it your Worker is a public signup page. */
   REGISTRATION_TOKEN: string;
   /** HMAC key used to fabricate KDF params for addresses that do not exist. */

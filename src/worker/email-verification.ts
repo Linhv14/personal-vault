@@ -1,5 +1,6 @@
 import { toBase64, timingSafeEqual, utf8Encode } from "../core/bytes.js";
 import { randomInt } from "../core/generator.js";
+import { createMailer, type Mailer } from "./mailer.js";
 import type { Env } from "./types.js";
 
 const CODE_TTL_SECONDS = 15 * 60;
@@ -7,7 +8,7 @@ export const RESEND_COOLDOWN_SECONDS = 60;
 const MAX_ATTEMPTS = 5;
 
 export function emailVerificationEnabled(env: Env): boolean {
-  return Boolean(env.EMAIL_FROM && env.EMAIL);
+  return createMailer(env) !== null;
 }
 
 export function isCode(value: unknown): value is string {
@@ -63,6 +64,7 @@ export type IssueResult = "sent" | "cooldown" | "failed";
 
 export async function issueCode(
   env: Env,
+  mailer: Mailer,
   email: string,
   locale: Locale,
   alreadyRegistered: boolean,
@@ -90,9 +92,8 @@ export async function issueCode(
   const subject = alreadyRegistered ? copy.existingSubject : copy.codeSubject(code);
   const text = alreadyRegistered ? copy.existingBody : copy.codeBody(code);
   try {
-    await env.EMAIL!.send({
+    await mailer.send({
       to: email,
-      from: { email: env.EMAIL_FROM!, name: "Personal Vault" },
       subject,
       text,
       html: html(text, alreadyRegistered ? undefined : code),

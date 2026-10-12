@@ -135,9 +135,14 @@ The choice is remembered for later deploys. With registration open:
 - Vaults stay end-to-end encrypted: you, as the operator, cannot read them.
   You do hold everyone's ciphertext, so back up D1 and `AT_REST_SECRET`, and
   publish a privacy policy before inviting strangers.
-- An email address is only an identifier; nothing is sent to it. Anyone can
-  register an address they do not own, and registering a taken address tells
-  them it exists. Add email verification before relying on addresses.
+- Require email verification with `--email-from no-reply@your-domain`. Codes
+  go out through [Resend](https://resend.com) by default (free tier, works on
+  the Workers free plan): verify your domain there, then
+  `npx wrangler secret put RESEND_API_KEY -c .wrangler.local.toml`. With a
+  Workers Paid plan, `--email-provider cloudflare` uses Cloudflare Email
+  Sending instead. Without either, an email address is only an identifier.
+- Serve on your own domain with `--domain your-domain` (a zone in the same
+  Cloudflare account). The `workers.dev` address keeps working.
 
 ## Backups
 

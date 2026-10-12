@@ -10,6 +10,7 @@ import {
   issueCode,
   RESEND_COOLDOWN_SECONDS,
 } from "../email-verification.js";
+import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
@@ -148,7 +149,8 @@ auth.post("/register", async (c) => {
 });
 
 auth.post("/verify-email", async (c) => {
-  if (!emailVerificationEnabled(c.env)) return c.json({ ok: true, required: false });
+  const mailer = createMailer(c.env);
+  if (!mailer) return c.json({ ok: true, required: false });
 
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const email = normalizeEmail(body?.email);
@@ -158,7 +160,7 @@ auth.post("/verify-email", async (c) => {
   const existing = await c.env.DB.prepare("SELECT 1 FROM accounts WHERE email = ?")
     .bind(email)
     .first();
-  const result = await issueCode(c.env, email, locale, existing !== null, now());
+  const result = await issueCode(c.env, mailer, email, locale, existing !== null, now());
   if (result === "cooldown") {
     return c.json(apiError("auth.code_cooldown", { seconds: RESEND_COOLDOWN_SECONDS }), 429);
   }

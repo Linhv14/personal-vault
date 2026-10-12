@@ -20,6 +20,7 @@
     "test/**/*.ts",
     "extension/**/*.ts",
     "share/**/*.ts",
-    "preview/**/*.ts"
+    "preview/**/*.ts",
+    "scripts/**/*.d.mts"
   ]
 }

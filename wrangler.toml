@@ -1,6 +1,9 @@
 name = "personal-vault"
 main = "src/worker/index.ts"
 compatibility_date = "2025-10-01"
+# Every version would otherwise get its own public URL, keeping old builds
+# reachable after a fix ships.
+preview_urls = false
 
 # The share page is a static asset; the Worker only handles /api/* and /s/*.
 [assets]
@@ -16,8 +19,6 @@ database_name = "vault"
 database_id = "SET_BY_DEPLOY"
 migrations_dir = "migrations"
 
-# Purge expired share links. Without the cron, expired ciphertext lingers in D1;
-# still unreadable, but keeping data longer than necessary is a needless risk.
 # Per-IP limit on every endpoint reachable without a session (register,
 # prelogin, login, reading a share). The per-email lockout in auth.ts stops
 # password guessing; this stops one client from burning the free-tier quota.
@@ -39,10 +40,13 @@ simple = { limit = 60, period = 60 }
 
 # "token" (default): creating an account needs REGISTRATION_TOKEN, right for a
 # personal Worker. "open": anyone can sign up, for a shared hosted server; set
-# it with `npm run deploy -- --open-registration`.
+# it with `npm run deploy -- --open-registration`. EMAIL_FROM is added the same
+# way by `--email-from`.
 [vars]
 REGISTRATION_MODE = "token"
 
+# Purge expired share links. Without the cron, expired ciphertext lingers in D1;
+# still unreadable, but keeping data longer than necessary is a needless risk.
 [triggers]
 crons = ["17 * * * *"]
 
@@ -59,3 +63,5 @@ enabled = true
 #   AT_REST_SECRET     — protects auth_key_hash and wrapped_vault_key in D1, so a
 #                        leaked database cannot be attacked offline. Back it
 #                        up: losing it locks every account out.
+#   RESEND_API_KEY     — only with `--email-from` and the default Resend
+#                        provider. Not generated: create it at resend.com.
