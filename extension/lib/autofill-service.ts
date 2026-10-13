@@ -1,7 +1,14 @@
 import { generatePassword } from "../../src/core/generator.js";
-import { itemType } from "./item-types.js";
+import { withPasswordHistory } from "./item-types.js";
 import type { AutofillRequest, AutofillResponse, PendingPrompt } from "./autofill-protocol.js";
-import { newItemId, openVault, registrableDomain, saveItem, type VaultItem } from "./vault.js";
+import {
+  matchesSite,
+  newItemId,
+  openVault,
+  registrableDomain,
+  saveItem,
+  type VaultItem,
+} from "./vault.js";
 
 const PENDING_TTL_MS = 5 * 60_000;
 
@@ -41,12 +48,6 @@ export function trustedSender(
   return { tabId: sender.tab.id, url: url.href, domain };
 }
 
-function itemMatches(item: VaultItem, domain: string): boolean {
-  return (
-    itemType(item) === "login" && item.url !== undefined && registrableDomain(item.url) === domain
-  );
-}
-
 function pendingKey(tabId: number): string {
   return `autofill:pending:${tabId}`;
 }
@@ -62,14 +63,18 @@ async function readPending(sender: TrustedSender): Promise<PendingCapture | null
   return pending;
 }
 
-function existingLogin(items: VaultItem[], domain: string, username?: string) {
+function existingLogin(items: VaultItem[], pageUrl: string, username?: string) {
   return items.find(
-    (item) => itemMatches(item, domain) && (item.username ?? "") === (username ?? ""),
+    (item) => matchesSite(item, pageUrl) && (item.username ?? "") === (username ?? ""),
   );
 }
 
-function promptFor(pending: PendingCapture, items: VaultItem[] | null): PendingPrompt | null {
-  const existing = items && existingLogin(items, pending.domain, pending.username);
+function promptFor(
+  pending: PendingCapture,
+  pageUrl: string,
+  items: VaultItem[] | null,
+): PendingPrompt | null {
+  const existing = items && existingLogin(items, pageUrl, pending.username);
   if (existing?.password === pending.password) return null;
   return { domain: pending.domain, username: pending.username, update: Boolean(existing) };
 }
@@ -83,7 +88,7 @@ export async function handleAutofill(
       const vault = await openVault();
       if (!vault) return { ok: true, locked: true };
       const suggestions = vault.items
-        .filter((item) => itemMatches(item, sender.domain))
+        .filter((item) => matchesSite(item, sender.url))
         .map(({ id, title, username }) => ({ id, title, username }));
       return { ok: true, locked: false, suggestions, domain: sender.domain };
     }
@@ -92,7 +97,7 @@ export async function handleAutofill(
       const vault = await openVault();
       if (!vault) return { ok: true, locked: true };
       const item = vault.items.find((candidate) => candidate.id === request.id);
-      if (!item?.password || !itemMatches(item, sender.domain)) {
+      if (!item?.password || !matchesSite(item, sender.url)) {
         return { ok: false, error: "no_match" };
       }
       return { ok: true, credentials: { username: item.username, password: item.password } };
@@ -110,7 +115,7 @@ export async function handleAutofill(
         at: Date.now(),
       };
       const vault = await openVault();
-      const prompt = promptFor(pending, vault?.items ?? null);
+      const prompt = promptFor(pending, sender.url, vault?.items ?? null);
       if (prompt) await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
       return { ok: true, prompt };
     }
@@ -119,7 +124,7 @@ export async function handleAutofill(
       const pending = await readPending(sender);
       if (!pending) return { ok: true, prompt: null };
       const vault = await openVault();
-      return { ok: true, prompt: promptFor(pending, vault?.items ?? null) };
+      return { ok: true, prompt: promptFor(pending, sender.url, vault?.items ?? null) };
     }
 
     case "autofill:save": {
@@ -130,11 +135,19 @@ export async function handleAutofill(
         await chrome.action.openPopup?.().catch(() => {});
         return { ok: true, saved: false, locked: true };
       }
-      const existing = existingLogin(vault.items, pending.domain, pending.username);
+      const existing = existingLogin(vault.items, sender.url, pending.username);
       await saveItem(
         vault.key,
         existing
-          ? { ...existing, password: pending.password }
+          ? {
+              ...existing,
+              password: pending.password,
+              passwordHistory: withPasswordHistory(
+                existing,
+                pending.password,
+                Math.floor(Date.now() / 1000),
+              ),
+            }
           : {
               id: newItemId(),
               title: pending.domain,

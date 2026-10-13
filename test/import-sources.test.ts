@@ -124,8 +124,8 @@ describe("Bitwarden", () => {
     const { json, publicKey } = await bitwardenExport();
     const source = await read(encode(json));
     expect(source.format).toBe("bitwarden");
-    expect(source.skipped).toEqual({ other: 1 });
-    const [login, note, card, identity] = source.drafts;
+    expect(source.skipped).toEqual({});
+    const [login, note, card, identity, bank] = source.drafts;
 
     expect(login).toMatchObject({
       title: "GitHub",
@@ -135,7 +135,11 @@ describe("Bitwarden", () => {
       createdAt: 1704164645,
     });
     expect(login?.totp?.secret).toBe("JBSWY3DPEHPK3PXP");
-    expect(login?.note).toBe("work\n\nWebsites:\nhttps://gist.github.com\n\nPIN: 1234");
+    expect(login).toMatchObject({
+      note: "work",
+      urls: ["https://gist.github.com"],
+      fields: [{ label: "PIN", value: "1234", hidden: true }],
+    });
     expect(login?.passkey).toMatchObject({
       credentialId: toBase64Url(
         Uint8Array.from(Buffer.from("8c6ae6a43a534b6e9f250f8a1d9bbc11", "hex")),
@@ -168,7 +172,7 @@ describe("Bitwarden", () => {
       cardNumber: "4111111111111111",
       cardExpiry: "04/27",
       cardCvv: "123",
-      note: "Brand: Visa",
+      fields: [{ label: "Brand", value: "Visa" }],
     });
     expect(identity).toMatchObject({
       type: "identity",
@@ -176,8 +180,9 @@ describe("Bitwarden", () => {
       address: "1 Main St\nApt 2",
       city: "Hanoi",
       country: "VN",
-      note: "Passport number: B1234567",
+      fields: [{ label: "Passport number", value: "B1234567" }],
     });
+    expect(bank).toMatchObject({ type: "bank", title: "Bank account" });
   });
 
   it("opens a password-protected export and rejects a wrong password", async () => {
@@ -188,7 +193,13 @@ describe("Bitwarden", () => {
       code: "wrong_passphrase",
     });
     const source = await read(file, "export", "export password");
-    expect(source.drafts.map((draft) => draft.title)).toEqual(["GitHub", "Recipe", "Visa", "Home"]);
+    expect(source.drafts.map((draft) => draft.title)).toEqual([
+      "GitHub",
+      "Recipe",
+      "Visa",
+      "Home",
+      "Bank account",
+    ]);
   });
 
   it("explains exports it cannot open", async () => {
@@ -209,7 +220,12 @@ describe("Bitwarden", () => {
     const source = await read(encode(csv));
     expect(source.format).toBe("bitwarden");
     expect(source.drafts).toMatchObject([
-      { title: "GitHub", url: "https://github.com", username: "octocat", note: "PIN: 1234" },
+      {
+        title: "GitHub",
+        url: "https://github.com",
+        username: "octocat",
+        fields: [{ label: "PIN", value: "1234" }],
+      },
       { type: "note", title: "Recipe", note: "flour" },
     ]);
   });
@@ -358,7 +374,9 @@ describe("1Password", () => {
       username: "octocat",
       password: "hunter2",
       createdAt: 1700000000,
-      note: "work\n\nWebsites:\nhttps://gist.github.com\n\nPIN: 1234",
+      note: "work",
+      urls: ["https://gist.github.com"],
+      fields: [{ label: "PIN", value: "1234", hidden: true }],
     });
     expect(login?.totp?.secret).toBe("JBSWY3DPEHPK3PXP");
     expect(card).toMatchObject({
@@ -367,7 +385,7 @@ describe("1Password", () => {
       cardNumber: "4111111111111111",
       cardExpiry: "04/27",
       cardCvv: "123",
-      note: "type: visa",
+      fields: [{ label: "type", value: "visa" }],
     });
     expect(identity).toMatchObject({
       type: "identity",
@@ -377,7 +395,7 @@ describe("1Password", () => {
       city: "Hanoi",
       postalCode: "100000",
       country: "vn",
-      note: "birth date: 1990-01-01",
+      fields: [{ label: "birth date", value: "1990-01-01" }],
     });
     expect(wifi).toMatchObject({ type: "wifi", ssid: "HomeNet", password: "wifi-pass" });
     expect(note).toMatchObject({ type: "note", title: "Recipe", note: "flour" });
@@ -417,5 +435,138 @@ describe("other files", () => {
       { id: "1", createdAt: 0, updatedAt: 0, ...source.drafts[0], title: "Github" },
     ]);
     expect(again.skipped).toEqual({ duplicate: 1 });
+  });
+});
+
+describe("more item types", () => {
+  it("maps Bitwarden SSH keys, password history, passports and bank accounts", async () => {
+    const json = JSON.stringify({
+      encrypted: false,
+      items: [
+        {
+          type: 1,
+          name: "Mail",
+          login: { username: "me", password: "now" },
+          passwordHistory: [{ password: "before", lastUsedDate: "2024-01-02T03:04:05.000Z" }],
+        },
+        {
+          type: 5,
+          name: "Laptop",
+          sshKey: {
+            privateKey:
+              "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----",
+            publicKey: "ssh-ed25519 AAAA me@laptop",
+            keyFingerprint: "SHA256:xyz",
+          },
+        },
+        {
+          type: 8,
+          name: "Passport",
+          passport: {
+            givenName: "Jane",
+            surname: "Doe",
+            passportNumber: "B123",
+            expirationDate: "2030-01-01",
+          },
+        },
+        {
+          type: 6,
+          name: "Savings",
+          bankAccount: {
+            bankName: "VCB",
+            nameOnAccount: "Jane",
+            accountNumber: "0011",
+            swiftCode: "BFTVVNVX",
+          },
+        },
+      ],
+    });
+    const [login, ssh, passport, bank] = (await read(encode(json))).drafts;
+    expect(login?.passwordHistory).toEqual([{ password: "before", changedAt: 1704164645 }]);
+    expect(ssh).toMatchObject({
+      type: "ssh",
+      sshPublicKey: "ssh-ed25519 AAAA me@laptop",
+      sshFingerprint: "SHA256:xyz",
+    });
+    expect(ssh?.sshPrivateKey).toContain("OPENSSH PRIVATE KEY");
+    expect(passport).toMatchObject({
+      type: "document",
+      documentKind: "Passport",
+      fullName: "Jane Doe",
+      documentNumber: "B123",
+      expiresOn: "2030-01-01",
+    });
+    expect(bank).toMatchObject({
+      type: "bank",
+      bankName: "VCB",
+      fullName: "Jane",
+      accountNumber: "0011",
+      swift: "BFTVVNVX",
+    });
+  });
+
+  it("maps 1Password bank accounts, licenses, API credentials and SSH keys", async () => {
+    const field = (id: string, value: Record<string, unknown>) => ({ id, title: id, value });
+    const item = (categoryUuid: string, title: string, fields: unknown[], details = {}) => ({
+      uuid: title,
+      state: "active",
+      categoryUuid,
+      overview: { title },
+      details: { sections: [{ title: "", fields }], ...details },
+    });
+    const data = {
+      accounts: [
+        {
+          vaults: [
+            {
+              items: [
+                item("101", "Savings", [
+                  field("bankName", { string: "VCB" }),
+                  field("accountNo", { string: "0011" }),
+                  field("telephonePin", { concealed: "9999" }),
+                ]),
+                item("100", "Editor", [
+                  field("reg_code", { concealed: "AAAA-BBBB" }),
+                  field("product_version", { string: "3" }),
+                ]),
+                item("112", "Stripe", [
+                  field("credential", { concealed: "sk_live" }),
+                  field("hostname", { string: "api.stripe.com" }),
+                ]),
+                item("114", "Laptop", [
+                  field("private_key", {
+                    sshKey: {
+                      privateKey: "PRIVATE",
+                      metadata: { publicKey: "ssh-ed25519 AAAA", fingerprint: "SHA256:x" },
+                    },
+                  }),
+                ]),
+                item("001", "Mail", [], {
+                  password: "now",
+                  passwordHistory: [{ value: "before", time: 1700000000 }],
+                }),
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const archive = await makeZip({ "export.data": JSON.stringify(data) }, 8);
+    const [bank, license, api, ssh, login] = (await read(archive)).drafts;
+    expect(bank).toMatchObject({
+      type: "bank",
+      bankName: "VCB",
+      accountNumber: "0011",
+      pin: "9999",
+    });
+    expect(license).toMatchObject({ type: "license", licenseKey: "AAAA-BBBB", version: "3" });
+    expect(api).toMatchObject({ type: "api", url: "api.stripe.com", password: "sk_live" });
+    expect(ssh).toMatchObject({
+      type: "ssh",
+      sshPrivateKey: "PRIVATE",
+      sshPublicKey: "ssh-ed25519 AAAA",
+      sshFingerprint: "SHA256:x",
+    });
+    expect(login?.passwordHistory).toEqual([{ password: "before", changedAt: 1700000000 }]);
   });
 });

@@ -44,23 +44,31 @@ with the account.
 The sealed item is a JSON object. The server never sees it; the fields below
 are what every client reads after decrypting.
 
-| Field                                                | Types       | Content                                                              |
-| ---------------------------------------------------- | ----------- | -------------------------------------------------------------------- |
-| `id`, `title`                                        | all         | Same id as the row; the name shown in lists                          |
-| `type`                                               | all         | `login`, `note`, `card`, `identity`, `recovery` or `wifi`            |
-| `createdAt`, `updatedAt`                             | all         | Unix seconds                                                         |
-| `note`                                               | all         | Free text                                                            |
-| `url`, `username`                                    | login       | Website and user name                                                |
-| `password`                                           | login, wifi | Password                                                             |
-| `totp`                                               | login       | `{ secret, algorithm, digits, period, issuer? }`                     |
-| `passkey`                                            | login       | Private key and metadata, see [Passkeys](../explanation/passkeys.md) |
-| `cardholder`, `cardNumber`                           | card        | Name on card; digits only                                            |
-| `cardExpiry`                                         | card        | `MM/YY`                                                              |
-| `cardCvv`, `cardPin`                                 | card        | Security code and PIN                                                |
-| `fullName`, `email`, `phone`, `company`              | identity    | Contact details                                                      |
-| `address`, `city`, `region`, `postalCode`, `country` | identity    | Postal address                                                       |
-| `codes`                                              | recovery    | Array of one-time recovery codes                                     |
-| `ssid`                                               | wifi        | Network name                                                         |
+| Field                                                                | Types                              | Content                                                                                                |
+| -------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `id`, `title`                                                        | all                                | Same id as the row; the name shown in lists                                                            |
+| `type`                                                               | all                                | `login`, `note`, `card`, `identity`, `recovery`, `wifi`, `api`, `ssh`, `bank`, `document` or `license` |
+| `createdAt`, `updatedAt`                                             | all                                | Unix seconds                                                                                           |
+| `note`                                                               | all                                | Free text                                                                                              |
+| `fields`                                                             | all                                | Custom fields: `{ label, value, hidden? }`                                                             |
+| `url`, `username`                                                    | login, api                         | Website (host for an API key) and user name or key id                                                  |
+| `urls`                                                               | login                              | Further websites the login is offered on                                                               |
+| `urlMatch`                                                           | login                              | `host` to offer it only on the exact host; otherwise the whole site                                    |
+| `password`                                                           | login, wifi, api, ssh              | Password, API secret or key passphrase                                                                 |
+| `passwordHistory`                                                    | login, wifi, api                   | Up to 10 replaced passwords: `{ password, changedAt }`, newest first                                   |
+| `totp`                                                               | login                              | `{ secret, algorithm, digits, period, issuer? }`                                                       |
+| `passkey`                                                            | login                              | Private key and metadata, see [Passkeys](../explanation/passkeys.md)                                   |
+| `cardholder`, `cardNumber`, `cardExpiry`, `cardCvv`, `cardPin`       | card                               | Name, digits only, `MM/YY`, security code, PIN                                                         |
+| `fullName`                                                           | identity, bank, document, license  | Person's or account holder's name                                                                      |
+| `email`, `phone`, `company`                                          | identity (`email` also license)    | Contact details                                                                                        |
+| `address`, `city`, `region`, `postalCode`, `country`                 | identity (`country` also document) | Postal address                                                                                         |
+| `codes`                                                              | recovery                           | Array of one-time recovery codes                                                                       |
+| `ssid`                                                               | wifi                               | Network name                                                                                           |
+| `sshPublicKey`, `sshPrivateKey`, `sshFingerprint`                    | ssh                                | Key pair and fingerprint                                                                               |
+| `bankName`, `accountNumber`, `routingNumber`, `swift`, `iban`, `pin` | bank                               | Account details                                                                                        |
+| `documentKind`, `documentNumber`, `issuedOn`, `issuer`               | document                           | Passport, ID card or licence details                                                                   |
+| `expiresOn`                                                          | api, document, license             | Expiry date as written                                                                                 |
+| `licenseKey`, `version`                                              | license                            | Software licence key and version                                                                       |
 
 An item without `type` is a login, or a note when it holds nothing but a
 title and a note: items saved before types existed keep working without a

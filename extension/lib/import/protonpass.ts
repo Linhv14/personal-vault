@@ -5,12 +5,13 @@ import { decryptWithPassphrase, OpenPgpError, type OpenPgpErrorCode } from "./op
 import { readProtonPasskey, type ProtonPasskeyFields } from "./proton-passkey.js";
 import {
   countSkip,
+  customFields,
   firstTotp,
   ImportError,
-  joinNote,
   list,
   object,
   text,
+  type FieldEntry,
   type ImportErrorCode,
   type ImportSource,
   type JsonObject,
@@ -21,6 +22,7 @@ interface ExtraField {
   name: string;
   value: string;
   totp: boolean;
+  hidden: boolean;
 }
 
 interface ProtonEntry {
@@ -52,8 +54,25 @@ function extraFields(value: unknown): ExtraField[] {
       name: text(field.fieldName),
       value: text(data.content ?? data.totpUri ?? data.timestamp),
       totp: field.type === "totp",
+      hidden: field.type === "hidden",
     };
   });
+}
+
+function sectionFields(sections: unknown): ExtraField[] {
+  return list(sections).flatMap((raw) => {
+    const section = object(raw);
+    return extraFields(section.sectionFields).map((extra) => ({
+      ...extra,
+      name: [text(section.sectionName), extra.name].filter(Boolean).join(" · "),
+    }));
+  });
+}
+
+function asEntries(fields: ExtraField[]): FieldEntry[] {
+  return fields
+    .filter((field) => !field.totp)
+    .map((field) => ({ label: field.name, value: field.value, hidden: field.hidden }));
 }
 
 function fromJsonItem(raw: unknown): ProtonEntry {
@@ -207,21 +226,21 @@ function cardDraft(entry: ProtonEntry): ItemDraft {
     cardExpiry: expiry,
     cardCvv: text(content.verificationNumber) || undefined,
     cardPin: text(content.pin) || undefined,
-    note: joinNote([
-      entry.note,
-      !expiry && rawExpiry && `Expiry: ${rawExpiry}`,
-      ...entry.extraFields.map(fieldLine),
+    note: entry.note || undefined,
+    fields: customFields([
+      { label: "Expiry", value: expiry ? undefined : rawExpiry },
+      ...asEntries(entry.extraFields),
     ]),
     createdAt: entry.createTime,
   };
 }
 
-const IDENTITY_EXTRAS: [string, string][] = [
+const IDENTITY_EXTRAS: [string, string, boolean?][] = [
   ["birthdate", "Birthdate"],
   ["gender", "Gender"],
   ["floor", "Floor"],
   ["county", "County"],
-  ["socialSecurityNumber", "Social security number"],
+  ["socialSecurityNumber", "Social security number", true],
   ["passportNumber", "Passport number"],
   ["licenseNumber", "License number"],
   ["website", "Website"],
@@ -252,13 +271,6 @@ function identityDraft(entry: ProtonEntry): ItemDraft {
     field("fullName") ||
     [field("firstName"), field("middleName"), field("lastName")].filter(Boolean).join(" ") ||
     undefined;
-  const sections = list(content.extraSections).flatMap((raw) => {
-    const section = object(raw);
-    return extraFields(section.sectionFields).map((extra) => ({
-      ...extra,
-      name: [text(section.sectionName), extra.name].filter(Boolean).join(" · "),
-    }));
-  });
   return {
     type: "identity",
     title: entry.name || fullName || "Address",
@@ -271,26 +283,21 @@ function identityDraft(entry: ProtonEntry): ItemDraft {
     region: field("stateOrProvince"),
     postalCode: field("zipOrPostalCode"),
     country: field("countryOrRegion"),
-    note: joinNote([
-      entry.note,
-      IDENTITY_EXTRAS.flatMap(([key, label]) => {
-        const value = field(key);
-        return value ? [`${label}: ${value}`] : [];
-      }).join("\n"),
-      ...IDENTITY_EXTRA_LISTS.flatMap((key) => extraFields(content[key])).map(fieldLine),
-      ...sections.map(fieldLine),
-      ...entry.extraFields.map(fieldLine),
+    note: entry.note || undefined,
+    fields: customFields([
+      ...IDENTITY_EXTRAS.map(([key, label, hidden]) => ({ label, value: field(key), hidden })),
+      ...asEntries(IDENTITY_EXTRA_LISTS.flatMap((key) => extraFields(content[key]))),
+      ...asEntries(sectionFields(content.extraSections)),
+      ...asEntries(entry.extraFields),
     ]),
     createdAt: entry.createTime,
   };
 }
 
-function fieldLine(field: ExtraField): string | false {
-  return Boolean(field.value) && `${field.name}: ${field.value}`;
-}
-
 function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
   if (entry.trashed) return "trashed";
+  const sections = sectionFields(entry.content.sections);
+  const extras = [...entry.extraFields, ...sections];
   switch (entry.type) {
     case "login": {
       const url = entry.urls[0];
@@ -298,29 +305,25 @@ function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
       if (!title && !entry.password) return "other";
       const username = entry.username || entry.email || undefined;
       const { totp, unreadable } = firstTotp(
-        [
-          entry.totp,
-          ...entry.extraFields.filter((field) => field.totp).map((field) => field.value),
-        ],
+        [entry.totp, ...extras.filter((field) => field.totp).map((field) => field.value)],
         title,
       );
-      const fields = entry.extraFields.filter((field) => !field.totp && field.value);
       const [passkey, ...otherPasskeys] = entry.passkeys;
       const login: ItemDraft = {
         title: title || "Login",
         url,
+        urls: entry.urls.length > 1 ? entry.urls.slice(1) : undefined,
         username,
         password: entry.password || undefined,
         totp,
-        note: joinNote([
-          entry.note,
-          entry.username &&
-            entry.email &&
-            entry.email !== entry.username &&
-            `Email: ${entry.email}`,
-          entry.urls.length > 1 && `Websites:\n${entry.urls.slice(1).join("\n")}`,
-          ...fields.map(fieldLine),
-          ...unreadable.map((uri) => `2FA: ${uri}`),
+        note: entry.note || undefined,
+        fields: customFields([
+          {
+            label: "Email",
+            value: entry.username && entry.email !== entry.username ? entry.email : undefined,
+          },
+          ...asEntries(extras),
+          ...unreadable.map((uri) => ({ label: "2FA", value: uri, hidden: true })),
         ]),
         passkey,
         createdAt: entry.createTime,
@@ -337,12 +340,14 @@ function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
       ];
     }
     case "note":
-      if (!entry.name && !entry.note) return "other";
+    case "custom":
+      if (!entry.name && !entry.note && extras.length === 0) return "other";
       return [
         {
           type: "note",
           title: entry.name || "Note",
-          note: joinNote([entry.note, ...entry.extraFields.map(fieldLine)]),
+          note: entry.note || undefined,
+          fields: customFields(asEntries(extras)),
           createdAt: entry.createTime,
         },
       ];
@@ -353,7 +358,21 @@ function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
           title: entry.name || entry.ssid || "Wi-Fi",
           ssid: entry.ssid || undefined,
           password: entry.password || undefined,
-          note: joinNote([entry.note, ...entry.extraFields.map(fieldLine)]),
+          note: entry.note || undefined,
+          fields: customFields(asEntries(extras)),
+          createdAt: entry.createTime,
+        },
+      ];
+    case "sshKey":
+      return [
+        {
+          type: "ssh",
+          title: entry.name || "SSH key",
+          sshPrivateKey: text(entry.content.privateKey) || undefined,
+          sshPublicKey: text(entry.content.publicKey) || undefined,
+          sshFingerprint: text(entry.content.fingerprint) || undefined,
+          note: entry.note || undefined,
+          fields: customFields(asEntries(extras)),
           createdAt: entry.createTime,
         },
       ];

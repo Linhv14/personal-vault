@@ -399,6 +399,11 @@ describe("extension popup", () => {
       "Addresses0",
       "Recovery codes0",
       "Wi-Fi0",
+      "API keys0",
+      "SSH keys0",
+      "Bank accounts0",
+      "Documents0",
+      "Licenses0",
     ]);
     chips.find((chip) => chip.textContent === "Wi-Fi0")!.click();
     expect(el("list-empty-type").hidden).toBe(false);

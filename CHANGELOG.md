@@ -10,6 +10,15 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- More item types: API keys, SSH keys, bank accounts, documents (passport, ID,
+  licence) and software licenses. Every item can hold custom fields, shown or
+  hidden.
+- A login can list several websites, and can be limited to its exact host.
+- Replacing a password keeps the old one: the last 10 are listed under the
+  item, from the editor and from autofill's Update.
+- Import keeps extra websites, custom fields and password history, and maps
+  Bitwarden and 1Password SSH keys, bank accounts, passports, licences and API
+  credentials to their own types.
 - Item types: notes, cards, addresses, recovery codes and Wi-Fi networks, each
   with its own fields. The list shows logins for the current site first, then
   filters by type; **+** asks which type to create. Items saved earlier stay

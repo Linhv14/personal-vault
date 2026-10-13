@@ -1,4 +1,5 @@
 import { parseTotpInput, type TotpConfig } from "../../../src/core/totp.js";
+import { cleanCustomFields, type CustomField } from "../item-types.js";
 import type { ItemDraft } from "../vault.js";
 
 export type ImportErrorCode =
@@ -43,17 +44,6 @@ export function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-export function joinNote(parts: (string | false | undefined)[]): string | undefined {
-  const note = parts.filter((part): part is string => Boolean(part && part.trim())).join("\n\n");
-  return note || undefined;
-}
-
-export function lines(pairs: [string, string | undefined][]): string {
-  return pairs
-    .flatMap(([label, value]) => (value?.trim() ? [`${label}: ${value.trim()}`] : []))
-    .join("\n");
-}
-
 export function countSkip(skipped: ImportSource["skipped"], reason: SkipReason, count = 1): void {
   if (count > 0) skipped[reason] = (skipped[reason] ?? 0) + count;
 }
@@ -78,4 +68,18 @@ export function firstTotp(
     }
   }
   return { totp: undefined, unreadable: present };
+}
+
+export interface FieldEntry {
+  label: string;
+  value: string | undefined;
+  hidden?: boolean;
+}
+
+export function customFields(entries: FieldEntry[]): CustomField[] | undefined {
+  return cleanCustomFields(
+    entries.flatMap(({ label, value, hidden }) =>
+      value?.trim() ? [{ label, value: value.trim(), hidden }] : [],
+    ),
+  );
 }

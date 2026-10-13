@@ -62,18 +62,23 @@ device, in batches of up to 100.
 
 ## What is imported
 
-| From                        | Becomes in 1PW                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------ |
-| Login                       | Login with title, first website, username, password, 2FA secret and passkey    |
-| Extra websites, fields      | Lines in the note (`name: value`); a 2FA field is used if there is no main one |
-| Note                        | Note                                                                           |
-| Credit card                 | Card with name, number, expiry as `MM/YY`, security code and PIN               |
-| Identity                    | Address with name, contact details and postal address; the rest in the note    |
-| Wi-Fi or wireless router    | Wi-Fi with the network name and password                                       |
-| SSH key, licence and others | Note holding every field (Bitwarden SSH keys, 1Password categories)            |
-| Recovery codes file         | One recovery codes item                                                        |
-| Alias, document, bank       | Skipped and counted                                                            |
-| Items in the trash          | Skipped and counted                                                            |
+| From                     | Becomes in 1PW                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| Login                    | Login with title, websites, username, password, 2FA secret, passkey and password history |
+| Extra fields             | Custom fields, hidden when they were hidden; a 2FA field is used if there is no main one |
+| Note                     | Note                                                                                     |
+| Credit card              | Card with name, number, expiry as `MM/YY`, security code and PIN                         |
+| Identity                 | Address with name, contact details and postal address; the rest as fields                |
+| Wi-Fi or wireless router | Wi-Fi with the network name and password                                                 |
+| SSH key                  | SSH key with private key, public key and fingerprint                                     |
+| Bank account             | Bank account                                                                             |
+| Passport, ID, licence    | Document                                                                                 |
+| Software licence         | Software license                                                                         |
+| API credential           | API key                                                                                  |
+| Other categories         | Note holding every field                                                                 |
+| Recovery codes file      | One recovery codes item                                                                  |
+| Alias, attached document | Skipped and counted                                                                      |
+| Items in the trash       | Skipped and counted                                                                      |
 
 An item already in the vault is skipped: a login with the same website (or
 title), username and password, a card with the same number, or another item of

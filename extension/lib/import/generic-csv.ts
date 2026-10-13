@@ -1,5 +1,5 @@
 import { registrableDomain, type ItemDraft } from "../vault.js";
-import { firstTotp, joinNote, type ImportSource } from "./source.js";
+import { customFields, firstTotp, type ImportSource } from "./source.js";
 
 const COLUMNS = {
   title: ["title", "name", "item name", "account"],
@@ -42,7 +42,8 @@ export function genericCsv(header: string[], records: Record<string, string>[]):
         username,
         password,
         totp,
-        note: joinNote([read(row, "note"), ...unreadable.map((uri) => `2FA: ${uri}`)]),
+        note: read(row, "note") || undefined,
+        fields: customFields(unreadable.map((uri) => ({ label: "2FA", value: uri, hidden: true }))),
       },
     ];
   });

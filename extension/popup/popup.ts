@@ -90,6 +90,11 @@ import {
   TYPE_FIELDS,
   TYPE_ICON,
   TYPE_LABEL,
+  cleanCustomFields,
+  cleanUrls,
+  HAS_PASSWORD_HISTORY,
+  withPasswordHistory,
+  type CustomField,
   type FieldSpec,
   type TextFieldKey,
   type ItemType,
@@ -614,7 +619,7 @@ function renderTypeFilter(): void {
   const chip = (value: ItemType | "all", label: string, count: number) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = count === 0 ? "type-chip empty" : "type-chip";
+    button.className = count === 0 ? "type-chip unused" : "type-chip";
     button.setAttribute("role", "tab");
     button.setAttribute("aria-selected", String(typeFilter === value));
     const name = document.createElement("span");
@@ -749,7 +754,31 @@ function itemSubtitle(item: VaultItem): string {
       return item.ssid ?? "";
     case "note":
       return (item.note ?? "").split("\n")[0] ?? "";
+    case "api":
+      return item.username || (item.url ? (hostLabel(item.url) ?? item.url) : "");
+    case "ssh":
+      return item.sshFingerprint ?? keyComment(item.sshPublicKey);
+    case "bank": {
+      const digits = (item.accountNumber ?? "").replace(/\s/g, "").slice(-4);
+      return [item.bankName, digits && `•••• ${digits}`].filter(Boolean).join(" · ");
+    }
+    case "document":
+      return [item.documentKind, item.fullName].filter(Boolean).join(" · ");
+    case "license":
+      return [item.version, item.fullName].filter(Boolean).join(" · ");
   }
+}
+
+function hostLabel(url: string): string | null {
+  try {
+    return new URL(url.includes("://") ? url : `https://${url}`).host;
+  } catch {
+    return null;
+  }
+}
+
+function keyComment(publicKey: string | undefined): string {
+  return publicKey?.trim().split(/\s+/).slice(2).join(" ") ?? "";
 }
 
 function copyAction(name: IconName, label: MessageKey, what: string, value: string): HTMLElement {
@@ -776,7 +805,33 @@ function quickAction(item: VaultItem): HTMLElement[] {
         : [];
     case "wifi":
       return password;
-    default:
+    case "api":
+      return item.password
+        ? [copyAction("key", "item.copy_secret", t("field.api_secret"), item.password)]
+        : [];
+    case "ssh":
+      return item.sshPublicKey
+        ? [copyAction("copy", "item.copy_public_key", t("field.public_key"), item.sshPublicKey)]
+        : [];
+    case "bank":
+      return item.accountNumber
+        ? [
+            copyAction(
+              "copy",
+              "item.copy_account_number",
+              t("field.account_number"),
+              item.accountNumber,
+            ),
+          ]
+        : [];
+    case "license":
+      return item.licenseKey
+        ? [copyAction("key", "item.copy_license_key", t("field.license_key"), item.licenseKey)]
+        : [];
+    case "note":
+    case "identity":
+    case "recovery":
+    case "document":
       return [];
   }
 }
@@ -835,6 +890,8 @@ function detailRows(spec: FieldSpec, item: VaultItem): HTMLElement[] {
     case "password":
     case "secret":
       return [valueRow(label, value, true)];
+    case "multilineSecret":
+      return [valueRow(label, value, true, "•".repeat(12))];
     case "cardNumber":
       return [valueRow(label, formatCardNumber(value), true, `•••• ${lastFour(value)}`)];
     default:
@@ -860,15 +917,54 @@ function codesGrid(codes: string[]): HTMLElement {
   return grid;
 }
 
+function customFieldRows(item: VaultItem): HTMLElement[] {
+  return (item.fields ?? []).map((field) =>
+    valueRow(field.label || t("edit.field_value"), field.value, field.hidden === true),
+  );
+}
+
+function passwordHistoryRows(item: VaultItem): HTMLElement[] {
+  const history = item.passwordHistory ?? [];
+  if (history.length === 0) return [];
+  const details = document.createElement("details");
+  details.className = "history";
+  const summary = document.createElement("summary");
+  summary.append(icon("history"), t("item.password_history", { count: history.length }));
+  details.append(summary);
+  details.addEventListener(
+    "toggle",
+    () => {
+      details.append(
+        ...history.map((change) =>
+          valueRow(
+            t("item.changed_on", { date: formatExpiry(change.changedAt) }),
+            change.password,
+            true,
+          ),
+        ),
+      );
+    },
+    { once: true },
+  );
+  return [details];
+}
+
 function fillItemBody(body: HTMLElement, item: VaultItem): void {
   const type = itemType(item);
-  for (const spec of TYPE_FIELDS[type]) body.append(...detailRows(spec, item));
+  for (const spec of TYPE_FIELDS[type]) {
+    if (spec.key === "note") body.append(...customFieldRows(item));
+    body.append(...detailRows(spec, item));
+    if (spec.key === "url" && type === "login") {
+      body.append(...(item.urls ?? []).map((url) => valueRow(t("field.website"), url, false)));
+    }
+  }
   if (item.passkey) {
     const value = document.createElement("span");
     value.className = "v";
     value.textContent = t("item.passkey_saved", { site: item.passkey.rpId });
     body.append(fieldBlock(t("common.passkey"), value));
   }
+  body.append(...passwordHistoryRows(item));
 
   const actions = document.createElement("div");
   actions.className = "item-actions";
@@ -1039,11 +1135,13 @@ function editInput(
     return spec.kind === "cardNumber" ? formatCardNumber(raw) : raw;
   };
 
-  if (spec.kind === "multiline" || spec.kind === "codes") {
+  if (spec.kind === "multiline" || spec.kind === "codes" || spec.kind === "multilineSecret") {
     const area = document.createElement("textarea");
     area.name = spec.key;
-    area.rows = spec.kind === "codes" ? 6 : editingType === "note" ? 8 : 2;
+    area.rows =
+      spec.kind === "multiline" ? (editingType === "note" ? 8 : 2) : spec.kind === "codes" ? 6 : 5;
     area.value = value();
+    if (spec.kind === "multilineSecret") area.className = "mono concealed";
     if (spec.kind === "codes") {
       area.className = "mono";
       area.addEventListener("paste", () => {
@@ -1106,7 +1204,7 @@ function editField(spec: FieldSpec, item: VaultItem | null): HTMLElement[] {
   const input = editInput(spec, item);
 
   const actions: HTMLButtonElement[] = [];
-  if (spec.kind === "password" || spec.kind === "secret") {
+  if (spec.kind === "password" || spec.kind === "secret" || spec.kind === "multilineSecret") {
     actions.push(fieldAction("reveal", "eye", "common.show"));
   }
   if (spec.kind === "password") actions.push(fieldAction("generate", "refresh", "edit.regenerate"));
@@ -1135,7 +1233,92 @@ function editField(spec: FieldSpec, item: VaultItem | null): HTMLElement[] {
     hint.textContent = t("field.codes_hint");
     extra.push(hint);
   }
+  if (spec.key === "url" && editingType === "login") extra.push(websiteEditor(item));
   return [label, ...extra];
+}
+
+function textButton(action: string, name: IconName, label: MessageKey): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "link add-row";
+  button.dataset["action"] = action;
+  button.append(icon(name), t(label));
+  return button;
+}
+
+function websiteRow(value: string): HTMLElement {
+  const row = document.createElement("span");
+  row.className = "field-with-actions";
+  const input = document.createElement("input");
+  input.name = "urls";
+  input.autocomplete = "off";
+  input.placeholder = "example.com";
+  input.value = value;
+  row.append(input, fieldAction("remove-row", "minus", "edit.remove"));
+  return row;
+}
+
+function websiteEditor(item: VaultItem | null): HTMLElement {
+  const block = document.createElement("div");
+  block.className = "stack tight";
+  const list = document.createElement("div");
+  list.className = "stack tight";
+  list.id = "edit-urls";
+  list.append(...(item?.urls ?? []).map(websiteRow));
+  const match = document.createElement("label");
+  match.className = "check";
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.name = "urlMatch";
+  checkbox.checked = item?.urlMatch === "host";
+  match.append(checkbox, t("edit.match_host"));
+  block.append(list, textButton("add-url", "plus", "edit.add_website"), match);
+  return block;
+}
+
+function customFieldRow(field: CustomField): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "custom-row";
+  row.dataset["hidden"] = String(field.hidden === true);
+  const name = document.createElement("input");
+  name.className = "custom-label";
+  name.autocomplete = "off";
+  name.placeholder = t("edit.field_label");
+  name.value = field.label;
+  const value = document.createElement("input");
+  value.className = "custom-value";
+  value.autocomplete = "off";
+  value.placeholder = t("edit.field_value");
+  value.type = field.hidden ? "password" : "text";
+  value.value = field.value;
+  const hide = fieldAction("toggle-hidden", field.hidden ? "eye-off" : "eye", "edit.hide_field");
+  hide.setAttribute("aria-pressed", String(field.hidden === true));
+  const values = document.createElement("span");
+  values.className = "field-with-actions";
+  values.append(value, hide, fieldAction("remove-row", "minus", "edit.remove"));
+  row.append(name, values);
+  return row;
+}
+
+function customFieldsEditor(item: VaultItem | null): HTMLElement {
+  const block = document.createElement("div");
+  block.className = "stack tight";
+  const list = document.createElement("div");
+  list.className = "stack";
+  list.id = "edit-custom";
+  list.append(...(item?.fields ?? []).map(customFieldRow));
+  block.append(list, textButton("add-field", "plus", "edit.add_field"));
+  return block;
+}
+
+function readCustomFields(): CustomField[] | undefined {
+  return cleanCustomFields(
+    [...$("edit-custom").querySelectorAll<HTMLElement>(".custom-row")].map((row) => ({
+      label: row.querySelector<HTMLInputElement>(".custom-label")?.value ?? "",
+      value: row.querySelector<HTMLInputElement>(".custom-value")?.value ?? "",
+      hidden: row.dataset["hidden"] === "true",
+    })),
+  );
 }
 
 function openEditor(
@@ -1152,7 +1335,13 @@ function openEditor(
   $("edit-title").textContent = t(item ? "edit.edit_title" : NEW_LABEL[type]);
   $("edit-delete").hidden = !item;
   editInputNamed("title").value = item?.title ?? "";
-  $("edit-fields").replaceChildren(...TYPE_FIELDS[type].flatMap((spec) => editField(spec, item)));
+  $("edit-fields").replaceChildren(
+    ...TYPE_FIELDS[type].flatMap((spec) =>
+      spec.key === "note"
+        ? [customFieldsEditor(item), ...editField(spec, item)]
+        : editField(spec, item),
+    ),
+  );
 
   show("edit");
   editInputNamed("title").focus();
@@ -1179,17 +1368,54 @@ $("edit-back").addEventListener("click", () => {
 
 $("edit-fields").addEventListener("click", (event) => {
   const button = (event.target as Element).closest<HTMLButtonElement>("button[data-action]");
-  const field = button?.parentElement?.querySelector("input");
-  if (!button || !field) return;
+  if (!button) return;
+  switch (button.dataset["action"]) {
+    case "add-url": {
+      const row = websiteRow("");
+      $("edit-urls").append(row);
+      row.querySelector("input")?.focus();
+      return;
+    }
+    case "add-field": {
+      const row = customFieldRow({ label: "", value: "" });
+      $("edit-custom").append(row);
+      row.querySelector("input")?.focus();
+      return;
+    }
+    case "remove-row":
+      (button.closest(".custom-row") ?? button.parentElement)?.remove();
+      return;
+    case "toggle-hidden": {
+      const row = button.closest<HTMLElement>(".custom-row");
+      const value = row?.querySelector<HTMLInputElement>(".custom-value");
+      if (!row || !value) return;
+      const hidden = row.dataset["hidden"] !== "true";
+      row.dataset["hidden"] = String(hidden);
+      value.type = hidden ? "password" : "text";
+      button.setAttribute("aria-pressed", String(hidden));
+      button.replaceChildren(icon(hidden ? "eye-off" : "eye"));
+      return;
+    }
+  }
+  const field = button.parentElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    "input, textarea",
+  );
+  if (!field) return;
   switch (button.dataset["action"]) {
     case "reveal": {
-      field.type = field.type === "password" ? "text" : "password";
-      const hidden = field.type === "password";
+      let hidden: boolean;
+      if (field instanceof HTMLTextAreaElement) {
+        hidden = field.classList.toggle("concealed");
+      } else {
+        field.type = field.type === "password" ? "text" : "password";
+        hidden = field.type === "password";
+      }
       button.replaceChildren(icon(hidden ? "eye" : "eye-off"));
       button.title = t(hidden ? "common.show" : "common.hide");
       break;
     }
     case "generate": {
+      if (!(field instanceof HTMLInputElement)) return;
       const generated = generatePassword({ length: 20 });
       field.value = generated.value;
       field.type = "text";
@@ -1197,7 +1423,7 @@ $("edit-fields").addEventListener("click", (event) => {
       break;
     }
     case "scan":
-      void scanTotp(field);
+      if (field instanceof HTMLInputElement) void scanTotp(field);
       break;
   }
 });
@@ -1265,7 +1491,9 @@ async function scanTotp(field: HTMLInputElement): Promise<void> {
   }
 }
 
-type EditedFields = Partial<Pick<VaultItem, TextFieldKey | "totp" | "codes">>;
+type EditedFields = Partial<
+  Pick<VaultItem, TextFieldKey | "totp" | "codes" | "urls" | "urlMatch" | "fields">
+>;
 
 function readEditedFields(data: FormData): EditedFields {
   const text = (key: string, trim = true): string | undefined => {
@@ -1298,12 +1526,18 @@ function readEditedFields(data: FormData): EditedFields {
       }
       case "password":
       case "secret":
+      case "multilineSecret":
         fields[key] = text(key, false);
         break;
       default:
         fields[key] = text(key);
     }
   }
+  if (editingType === "login") {
+    fields.urls = cleanUrls(data.getAll("urls").map(String));
+    fields.urlMatch = data.get("urlMatch") ? "host" : undefined;
+  }
+  fields.fields = readCustomFields();
   return fields;
 }
 
@@ -1341,6 +1575,9 @@ $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
       type: editingType,
       title: String(data.get("title")).trim(),
       ...fields,
+      passwordHistory: HAS_PASSWORD_HISTORY.has(editingType)
+        ? withPasswordHistory(editing, fields.password, Math.floor(nowMs() / 1000))
+        : editing?.passwordHistory,
     });
     items = await decryptAll(vaultKey, locale);
     renderList();

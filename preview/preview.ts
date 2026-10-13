@@ -24,6 +24,15 @@ const SAMPLE_ITEMS: Omit<VaultItem, "createdAt" | "updatedAt">[] = [
     password: "7Qp!vR2xKm#4zLd9Wn",
     totp: { secret: "JBSWY3DPEHPK3PXP", algorithm: "SHA-1", digits: 6, period: 30 },
     note: "Recovery codes are in the safe.",
+    urls: ["gist.github.com"],
+    fields: [
+      { label: "Org", value: "acme-inc" },
+      { label: "Recovery PIN", value: "482913", hidden: true },
+    ],
+    passwordHistory: [
+      { password: "old-Password-1", changedAt: 1760000000 },
+      { password: "older-Password-0", changedAt: 1750000000 },
+    ],
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
@@ -79,6 +88,24 @@ const SAMPLE_ITEMS: Omit<VaultItem, "createdAt" | "updatedAt">[] = [
     title: "Nhà - 5G",
     ssid: "HomeNet-5G",
     password: "maple-orbit-quartz-58",
+  },
+  {
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    type: "ssh",
+    title: "MacBook",
+    sshPublicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOm you@macbook",
+    sshFingerprint: "SHA256:k3Yl0r8vQe7m2nB",
+    sshPrivateKey:
+      "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\n-----END OPENSSH PRIVATE KEY-----",
+  },
+  {
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    type: "bank",
+    title: "Vietcombank",
+    bankName: "Vietcombank",
+    fullName: "NGUYEN VAN AN",
+    accountNumber: "0011004417",
+    swift: "BFTVVNVX",
   },
   {
     id: "99999999-9999-4999-8999-999999999999",

@@ -3,16 +3,17 @@ import { cardDigits } from "../item-types.js";
 import type { StoredPasskey } from "../passkey/authenticator.js";
 import { fromBase64Url, toBase64Url } from "../passkey/base64url.js";
 import { registrableDomain, type ItemDraft } from "../vault.js";
+import type { CustomField } from "../item-types.js";
 import {
   cardExpiry,
   countSkip,
+  customFields,
   firstTotp,
   ImportError,
-  joinNote,
-  lines,
   list,
   object,
   text,
+  type FieldEntry,
   type ImportSource,
   type JsonObject,
 } from "./source.js";
@@ -166,13 +167,41 @@ async function readPasskey(raw: unknown): Promise<StoredPasskey | null> {
   }
 }
 
-function fieldLines(item: JsonObject): string {
-  return lines(
-    list(item.fields)
+const FIELD_HIDDEN = 1;
+const BANK_ACCOUNT = 6;
+const DRIVERS_LICENSE = 7;
+const PASSPORT = 8;
+
+function itemFields(item: JsonObject, extra: FieldEntry[] = []): CustomField[] | undefined {
+  return customFields([
+    ...extra,
+    ...list(item.fields)
       .map(object)
       .filter((field) => field.type !== FIELD_LINKED)
-      .map((field): [string, string] => [text(field.name), text(field.value)]),
-  );
+      .map((field) => ({
+        label: text(field.name),
+        value: text(field.value),
+        hidden: field.type === FIELD_HIDDEN,
+      })),
+  ]);
+}
+
+function common(item: JsonObject, extra: FieldEntry[] = []) {
+  return {
+    note: text(item.notes) || undefined,
+    fields: itemFields(item, extra),
+    createdAt: seconds(item.creationDate),
+  };
+}
+
+function history(item: JsonObject) {
+  const changes = list(item.passwordHistory)
+    .map(object)
+    .flatMap((change) => {
+      const password = text(change.password);
+      return password ? [{ password, changedAt: seconds(change.lastUsedDate) ?? 0 }] : [];
+    });
+  return changes.length > 0 ? changes : undefined;
 }
 
 async function loginDrafts(item: JsonObject, source: ImportSource): Promise<ItemDraft[]> {
@@ -191,17 +220,16 @@ async function loginDrafts(item: JsonObject, source: ImportSource): Promise<Item
   const draft: ItemDraft = {
     title,
     url,
+    urls: uris.length > 1 ? uris.slice(1) : undefined,
     username,
     password: text(login.password) || undefined,
     totp,
     passkey,
-    note: joinNote([
-      text(item.notes),
-      uris.length > 1 && `Websites:\n${uris.slice(1).join("\n")}`,
-      fieldLines(item),
-      ...unreadable.map((uri) => `2FA: ${uri}`),
-    ]),
-    createdAt: seconds(item.creationDate),
+    passwordHistory: history(item),
+    ...common(
+      item,
+      unreadable.map((uri) => ({ label: "2FA", value: uri, hidden: true })),
+    ),
   };
   return [
     draft,
@@ -224,8 +252,7 @@ function cardDraft(item: JsonObject): ItemDraft {
     cardNumber: cardDigits(text(card.number)) || undefined,
     cardExpiry: cardExpiry(text(card.expMonth), text(card.expYear)),
     cardCvv: text(card.code) || undefined,
-    note: joinNote([text(item.notes), lines([["Brand", text(card.brand)]]), fieldLines(item)]),
-    createdAt: seconds(item.creationDate),
+    ...common(item, [{ label: "Brand", value: text(card.brand) }]),
   };
 }
 
@@ -249,27 +276,75 @@ function identityDraft(item: JsonObject): ItemDraft {
     region: field("state"),
     postalCode: field("postalCode"),
     country: field("country"),
-    note: joinNote([
-      text(item.notes),
-      lines([
-        ["Title", field("title")],
-        ["Username", field("username")],
-        ["Social security number", field("ssn")],
-        ["Passport number", field("passportNumber")],
-        ["License number", field("licenseNumber")],
-      ]),
-      fieldLines(item),
+    ...common(item, [
+      { label: "Title", value: field("title") },
+      { label: "Username", value: field("username") },
+      { label: "Social security number", value: field("ssn"), hidden: true },
+      { label: "Passport number", value: field("passportNumber") },
+      { label: "License number", value: field("licenseNumber") },
     ]),
-    createdAt: seconds(item.creationDate),
   };
 }
 
-function noteDraft(item: JsonObject, extra = ""): ItemDraft {
+function bankDraft(item: JsonObject): ItemDraft {
+  const bank = object(item.bankAccount);
+  const field = (key: string) => text(bank[key]).trim() || undefined;
   return {
-    type: "note",
-    title: text(item.name) || "Note",
-    note: joinNote([text(item.notes), extra, fieldLines(item)]),
-    createdAt: seconds(item.creationDate),
+    type: "bank",
+    title: text(item.name) || field("bankName") || "Bank account",
+    bankName: field("bankName"),
+    fullName: field("nameOnAccount"),
+    accountNumber: field("accountNumber"),
+    routingNumber: field("routingNumber") ?? field("branchNumber"),
+    swift: field("swiftCode"),
+    iban: field("iban"),
+    pin: field("pin"),
+    ...common(item, [
+      { label: "Account type", value: field("accountType") },
+      { label: "Phone", value: field("bankContactPhone") },
+    ]),
+  };
+}
+
+function documentDraft(item: JsonObject, kind: "driversLicense" | "passport"): ItemDraft {
+  const data = object(item[kind]);
+  const field = (key: string) => text(data[key]).trim() || undefined;
+  const fullName =
+    kind === "passport"
+      ? [field("givenName"), field("surname")].filter(Boolean).join(" ")
+      : [field("firstName"), field("middleName"), field("lastName")].filter(Boolean).join(" ");
+  return {
+    type: "document",
+    title: text(item.name) || (kind === "passport" ? "Passport" : "Driver's license"),
+    documentKind: kind === "passport" ? "Passport" : "Driver's license",
+    fullName: fullName || undefined,
+    documentNumber: field(kind === "passport" ? "passportNumber" : "licenseNumber"),
+    issuedOn: field("issueDate"),
+    expiresOn: field("expirationDate"),
+    issuer: field("issuingAuthority"),
+    country: field("issuingCountry"),
+    ...common(item, [
+      { label: "Date of birth", value: field("dateOfBirth") },
+      { label: "State", value: field("issuingState") },
+      { label: "Class", value: field("licenseClass") },
+      { label: "Nationality", value: field("nationality") },
+      { label: "Place of birth", value: field("birthPlace") },
+      { label: "Sex", value: field("sex") },
+      { label: "Type", value: field("passportType") },
+      { label: "National ID", value: field("nationalIdentificationNumber") },
+    ]),
+  };
+}
+
+function sshDraft(item: JsonObject): ItemDraft {
+  const key = object(item.sshKey);
+  return {
+    type: "ssh",
+    title: text(item.name) || "SSH key",
+    sshPublicKey: text(key.publicKey) || undefined,
+    sshFingerprint: text(key.keyFingerprint) || undefined,
+    sshPrivateKey: text(key.privateKey) || undefined,
+    ...common(item),
   };
 }
 
@@ -286,7 +361,7 @@ async function fromItems(items: unknown[]): Promise<ImportSource> {
         source.drafts.push(...(await loginDrafts(item, source)));
         break;
       case SECURE_NOTE:
-        source.drafts.push(noteDraft(item));
+        source.drafts.push({ type: "note", title: text(item.name) || "Note", ...common(item) });
         break;
       case CARD:
         source.drafts.push(cardDraft(item));
@@ -294,20 +369,18 @@ async function fromItems(items: unknown[]): Promise<ImportSource> {
       case IDENTITY:
         source.drafts.push(identityDraft(item));
         break;
-      case SSH_KEY: {
-        const key = object(item.sshKey);
-        source.drafts.push(
-          noteDraft(
-            item,
-            lines([
-              ["Public key", text(key.publicKey)],
-              ["Fingerprint", text(key.keyFingerprint)],
-              ["Private key", text(key.privateKey)],
-            ]),
-          ),
-        );
+      case SSH_KEY:
+        source.drafts.push(sshDraft(item));
         break;
-      }
+      case BANK_ACCOUNT:
+        source.drafts.push(bankDraft(item));
+        break;
+      case DRIVERS_LICENSE:
+        source.drafts.push(documentDraft(item, "driversLicense"));
+        break;
+      case PASSPORT:
+        source.drafts.push(documentDraft(item, "passport"));
+        break;
       default:
         countSkip(source.skipped, "other");
     }

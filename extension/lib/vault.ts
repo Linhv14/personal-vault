@@ -11,7 +11,14 @@ import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/c
 import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
 import type { StoredPasskey } from "./passkey/authenticator.js";
-import { cardDigits, itemType, searchableText, type ItemType } from "./item-types.js";
+import {
+  cardDigits,
+  itemType,
+  searchableText,
+  type CustomField,
+  type ItemType,
+  type PasswordChange,
+} from "./item-types.js";
 import * as api from "./api.js";
 import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
 
@@ -41,6 +48,26 @@ export interface VaultItem {
   country?: string;
   codes?: string[];
   ssid?: string;
+  urls?: string[];
+  urlMatch?: "domain" | "host";
+  fields?: CustomField[];
+  passwordHistory?: PasswordChange[];
+  expiresOn?: string;
+  sshPublicKey?: string;
+  sshPrivateKey?: string;
+  sshFingerprint?: string;
+  bankName?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  swift?: string;
+  iban?: string;
+  pin?: string;
+  documentKind?: string;
+  documentNumber?: string;
+  issuedOn?: string;
+  issuer?: string;
+  licenseKey?: string;
+  version?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -179,6 +206,16 @@ export function duplicateKey(item: ItemDraft): string {
       return ["note", title, item.note ?? ""].join("\n");
     case "recovery":
       return ["recovery", title, (item.codes ?? []).join("\n")].join("\n");
+    case "api":
+      return ["api", item.url ?? title, item.username ?? "", item.password ?? ""].join("\n");
+    case "ssh":
+      return ["ssh", item.sshFingerprint || item.sshPublicKey || title].join("\n");
+    case "bank":
+      return ["bank", item.accountNumber || item.iban || title].join("\n");
+    case "document":
+      return ["document", item.documentNumber || title].join("\n");
+    case "license":
+      return ["license", item.licenseKey || title].join("\n");
   }
 }
 
@@ -321,16 +358,37 @@ export function registrableDomain(rawUrl: string): string | null {
   return labels.slice(-2).join(".");
 }
 
+function hostname(rawUrl: string): string | null {
+  try {
+    return new URL(rawUrl.includes("://") ? rawUrl : `https://${rawUrl}`).hostname.replace(
+      /^www\./,
+      "",
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function itemSites(item: Pick<VaultItem, "url" | "urls">): string[] {
+  return [item.url, ...(item.urls ?? [])].filter((url): url is string => Boolean(url));
+}
+
+export function matchesSite(
+  item: Pick<VaultItem, "type" | "url" | "urls" | "urlMatch" | "username" | "password" | "note">,
+  pageUrl: string,
+): boolean {
+  if (itemType(item) !== "login") return false;
+  const domain = registrableDomain(pageUrl);
+  if (!domain) return false;
+  const host = hostname(pageUrl);
+  return itemSites(item).some((site) =>
+    item.urlMatch === "host" ? hostname(site) === host : registrableDomain(site) === domain,
+  );
+}
+
 export function matchingItems(items: VaultItem[], tabUrl: string | undefined): VaultItem[] {
   if (!tabUrl) return [];
-  const target = registrableDomain(tabUrl);
-  if (!target) return [];
-  return items.filter(
-    (item) =>
-      itemType(item) === "login" &&
-      item.url !== undefined &&
-      registrableDomain(item.url) === target,
-  );
+  return items.filter((item) => matchesSite(item, tabUrl));
 }
 
 export function searchItems(items: VaultItem[], query: string): VaultItem[] {

@@ -1,24 +1,32 @@
-import { cardDigits } from "../item-types.js";
+import { cardDigits, type CustomField } from "../item-types.js";
 import { registrableDomain, type ItemDraft } from "../vault.js";
 import {
   cardExpiry,
   countSkip,
+  customFields,
   firstTotp,
-  joinNote,
-  lines,
   list,
   object,
   text,
+  type FieldEntry,
   type ImportSource,
   type JsonObject,
 } from "./source.js";
 
-const LOGIN_LIKE = new Set(["001", "005", "102", "110", "111", "112"]);
+const LOGIN_LIKE = new Set(["001", "005", "102", "110", "111"]);
 const CREDIT_CARD = "002";
-const SECURE_NOTE = "003";
 const IDENTITY = "004";
-const DOCUMENT = "006";
+const DOCUMENT_FILE = "006";
+const SOFTWARE_LICENSE = "100";
+const BANK_ACCOUNT = "101";
 const WIRELESS_ROUTER = "109";
+const API_CREDENTIAL = "112";
+const SSH_KEY = "114";
+const ID_DOCUMENTS: Record<string, string> = {
+  "103": "Driver's license",
+  "106": "Passport",
+  "108": "Social security number",
+};
 
 interface Field {
   id: string;
@@ -79,19 +87,35 @@ function sectionFields(details: JsonObject): Field[] {
   );
 }
 
-function take(fields: Field[], match: (field: Field) => boolean): string | undefined {
+function take(fields: Field[], match: (field: Field) => boolean): Field | undefined {
   const index = fields.findIndex(match);
-  if (index < 0) return undefined;
-  const [field] = fields.splice(index, 1);
-  return field?.value;
+  return index < 0 ? undefined : fields.splice(index, 1)[0];
 }
 
-function byId(fields: Field[], id: string): string | undefined {
-  return take(fields, (field) => field.id === id);
+function byId(fields: Field[], ...ids: string[]): string | undefined {
+  return take(fields, (field) => ids.includes(field.id))?.value;
 }
 
-function rest(fields: Field[]): string {
-  return lines(fields.map((field): [string, string] => [field.title, field.value]));
+function rest(fields: Field[], extra: FieldEntry[] = []): CustomField[] | undefined {
+  return customFields([
+    ...extra,
+    ...fields.map((field) => ({
+      label: field.title,
+      value: field.value,
+      hidden: field.kind === "concealed",
+    })),
+  ]);
+}
+
+function passwordHistory(details: JsonObject) {
+  const changes = list(details.passwordHistory)
+    .map(object)
+    .flatMap((change) => {
+      const password = text(change.value);
+      const time = change.time;
+      return password ? [{ password, changedAt: typeof time === "number" ? time : 0 }] : [];
+    });
+  return changes.length > 0 ? changes : undefined;
 }
 
 function loginDraft(item: JsonObject, details: JsonObject, fields: Field[]): ItemDraft {
@@ -104,12 +128,13 @@ function loginDraft(item: JsonObject, details: JsonObject, fields: Field[]): Ite
     .filter((url, index, all) => url && all.indexOf(url) === index);
 
   const username =
-    designated("username") ?? take(fields, (field) => field.title.toLowerCase() === "username");
+    designated("username") ??
+    take(fields, (field) => field.title.toLowerCase() === "username")?.value;
   const password =
     designated("password") ??
     (text(details.password) || undefined) ??
-    take(fields, (field) => field.title.toLowerCase() === "password");
-  const url = urls[0] ?? take(fields, (field) => field.id === "url" || field.kind === "url");
+    take(fields, (field) => field.title.toLowerCase() === "password")?.value;
+  const url = urls[0] ?? take(fields, (field) => field.id === "url" || field.kind === "url")?.value;
   const title = text(overview.title) || (url && registrableDomain(url)) || username || "Login";
   const totpCandidates = fields.filter(
     (field) => field.kind === "totp" || field.id.startsWith("TOTP_"),
@@ -123,21 +148,20 @@ function loginDraft(item: JsonObject, details: JsonObject, fields: Field[]): Ite
   return {
     title,
     url,
+    urls: urls.length > 1 ? urls.slice(1) : undefined,
     username,
     password,
     totp,
-    note: joinNote([
-      text(details.notesPlain),
-      urls.length > 1 && `Websites:\n${urls.slice(1).join("\n")}`,
-      rest(fields),
-      ...unreadable.map((uri) => `2FA: ${uri}`),
-    ]),
+    passwordHistory: passwordHistory(details),
+    fields: rest(
+      fields,
+      unreadable.map((uri) => ({ label: "2FA", value: uri, hidden: true })),
+    ),
   };
 }
 
-function cardDraft(title: string, details: JsonObject, fields: Field[]): ItemDraft {
-  const expiry = byId(fields, "expiry") ?? "";
-  const [month = "", year = ""] = expiry.split("/");
+function cardDraft(title: string, fields: Field[]): ItemDraft {
+  const [month = "", year = ""] = (byId(fields, "expiry") ?? "").split("/");
   return {
     type: "card",
     title: title || "Card",
@@ -146,14 +170,12 @@ function cardDraft(title: string, details: JsonObject, fields: Field[]): ItemDra
     cardExpiry: cardExpiry(month, year),
     cardCvv: byId(fields, "cvv"),
     cardPin: byId(fields, "pin"),
-    note: joinNote([text(details.notesPlain), rest(fields)]),
+    fields: rest(fields),
   };
 }
 
-function identityDraft(title: string, details: JsonObject, fields: Field[]): ItemDraft {
-  const addressField = fields.find((field) => field.kind === "address");
-  if (addressField) fields.splice(fields.indexOf(addressField), 1);
-  const address = object(addressField?.raw);
+function identityDraft(title: string, fields: Field[]): ItemDraft {
+  const address = object(take(fields, (field) => field.kind === "address")?.raw);
   const fullName = [byId(fields, "firstname"), byId(fields, "initial"), byId(fields, "lastname")]
     .filter(Boolean)
     .join(" ");
@@ -170,7 +192,7 @@ function identityDraft(title: string, details: JsonObject, fields: Field[]): Ite
     region: part("state"),
     postalCode: part("zip"),
     country: part("country"),
-    note: joinNote([text(details.notesPlain), rest(fields)]),
+    fields: rest(fields),
   };
 }
 
@@ -179,28 +201,86 @@ function itemDraft(item: JsonObject): ItemDraft | null {
   const details = object(item.details);
   const fields = sectionFields(details);
   const title = text(object(item.overview).title);
+  const documentKind = ID_DOCUMENTS[category];
 
   let draft: ItemDraft;
   if (LOGIN_LIKE.has(category)) draft = loginDraft(item, details, fields);
-  else if (category === CREDIT_CARD) draft = cardDraft(title, details, fields);
-  else if (category === IDENTITY) draft = identityDraft(title, details, fields);
+  else if (category === CREDIT_CARD) draft = cardDraft(title, fields);
+  else if (category === IDENTITY) draft = identityDraft(title, fields);
   else if (category === WIRELESS_ROUTER) {
     draft = {
       type: "wifi",
       title: title || "Wi-Fi",
       ssid: byId(fields, "network_name"),
       password: byId(fields, "wireless_password"),
-      note: joinNote([text(details.notesPlain), rest(fields)]),
+      fields: rest(fields),
     };
-  } else if (category === DOCUMENT) return null;
-  else {
+  } else if (category === BANK_ACCOUNT) {
     draft = {
-      type: "note",
-      title: title || "Note",
-      note: joinNote([text(details.notesPlain), category === SECURE_NOTE ? "" : rest(fields)]),
+      type: "bank",
+      title: title || "Bank account",
+      bankName: byId(fields, "bankName"),
+      fullName: byId(fields, "owner"),
+      accountNumber: byId(fields, "accountNo"),
+      routingNumber: byId(fields, "routingNo"),
+      swift: byId(fields, "swift"),
+      iban: byId(fields, "iban"),
+      pin: byId(fields, "telephonePin"),
+      fields: rest(fields),
     };
-  }
-  return { ...draft, createdAt: typeof item.createdAt === "number" ? item.createdAt : undefined };
+  } else if (documentKind) {
+    draft = {
+      type: "document",
+      title: title || documentKind,
+      documentKind,
+      fullName: byId(fields, "fullname", "name"),
+      documentNumber: byId(fields, "number"),
+      issuedOn: byId(fields, "issue_date"),
+      expiresOn: byId(fields, "expiry_date"),
+      issuer: byId(fields, "issuing_authority"),
+      country: byId(fields, "issuing_country", "country"),
+      fields: rest(fields),
+    };
+  } else if (category === SOFTWARE_LICENSE) {
+    draft = {
+      type: "license",
+      title: title || "License",
+      licenseKey: byId(fields, "reg_code"),
+      version: byId(fields, "product_version"),
+      fullName: byId(fields, "reg_name"),
+      email: byId(fields, "reg_email"),
+      expiresOn: byId(fields, "expiry_date"),
+      fields: rest(fields),
+    };
+  } else if (category === API_CREDENTIAL) {
+    draft = {
+      type: "api",
+      title: title || "API key",
+      url: byId(fields, "hostname"),
+      username: byId(fields, "username"),
+      password: byId(fields, "credential"),
+      expiresOn: byId(fields, "expires"),
+      fields: rest(fields),
+    };
+  } else if (category === SSH_KEY) {
+    const key = take(fields, (field) => field.kind === "sshKey");
+    const metadata = object(object(key?.raw).metadata);
+    draft = {
+      type: "ssh",
+      title: title || "SSH key",
+      sshPrivateKey: key?.value,
+      sshPublicKey: text(metadata.publicKey) || undefined,
+      sshFingerprint: text(metadata.fingerprint) || undefined,
+      fields: rest(fields),
+    };
+  } else if (category === DOCUMENT_FILE) return null;
+  else draft = { type: "note", title: title || "Note", fields: rest(fields) };
+
+  return {
+    ...draft,
+    note: text(details.notesPlain) || undefined,
+    createdAt: typeof item.createdAt === "number" ? item.createdAt : undefined,
+  };
 }
 
 export function onePasswordFromExport(parsed: JsonObject): ImportSource {

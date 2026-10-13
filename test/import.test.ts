@@ -170,10 +170,14 @@ describe("Proton Pass import", () => {
       createdAt: 1700000000,
     });
     expect(github.totp?.secret).toBe("JBSWY3DPEHPK3PXP");
-    expect(github.note).toContain("work account");
-    expect(github.note).toContain("Email: me@example.com");
-    expect(github.note).toContain("https://gist.github.com");
-    expect(github.note).toContain("PIN: 4242");
+    expect(github).toMatchObject({
+      note: "work account",
+      urls: ["https://gist.github.com"],
+      fields: [
+        { label: "Email", value: "me@example.com" },
+        { label: "PIN", value: "4242", hidden: true },
+      ],
+    });
     expect(plan.items[1]).toMatchObject({ url: "https://bank.example", username: "0123" });
     expect(plan.items[2]).toMatchObject({
       cardholder: "Jane Doe",
@@ -188,7 +192,10 @@ describe("Proton Pass import", () => {
       city: "Hanoi",
       country: "Vietnam",
     });
-    expect(plan.items[3]!.note).toBe("Passport number: B1234567\n\nGate: 4");
+    expect(plan.items[3]!.fields).toEqual([
+      { label: "Passport number", value: "B1234567" },
+      { label: "Gate", value: "4" },
+    ]);
     expect(plan.items[5]).toMatchObject({ ssid: "home-5g", password: "wifi-pass" });
   });
 

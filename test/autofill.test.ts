@@ -133,6 +133,31 @@ describe("suggest and fill", () => {
     });
   });
 
+  it("suggests a login on any of its websites", async () => {
+    const login = { ...GITHUB, urls: ["gitlab.com"] };
+    await unlockWith([login]);
+    const response = await handleAutofill(
+      { type: "autofill:suggest" },
+      sender("https://gitlab.com/users/sign_in")!,
+    );
+    expect(response).toMatchObject({ suggestions: [{ id: GITHUB.id }] });
+  });
+
+  it("keeps a host-only login to its exact host", async () => {
+    const login = { ...GITHUB, url: "https://gist.github.com", urlMatch: "host" as const };
+    await unlockWith([login]);
+    const elsewhere = await handleAutofill(
+      { type: "autofill:suggest" },
+      sender("https://github.com/")!,
+    );
+    expect(elsewhere).toMatchObject({ suggestions: [] });
+    const exact = await handleAutofill(
+      { type: "autofill:suggest" },
+      sender("https://gist.github.com/login")!,
+    );
+    expect(exact).toMatchObject({ suggestions: [{ id: GITHUB.id }] });
+  });
+
   it("never fills an item that is not a login, even on its site", async () => {
     const wifi = { ...GITHUB, id: "00000000-0000-4000-8000-0000000000f1", type: "wifi" as const };
     await unlockWith([wifi]);
@@ -229,6 +254,9 @@ describe("capture and save", () => {
     expect(puts).toEqual([GITHUB.id]);
     const [updated] = await decryptAll(key);
     expect(updated).toMatchObject({ id: GITHUB.id, password: "rotated-password" });
+    expect(updated?.passwordHistory).toEqual([
+      { password: GITHUB.password, changedAt: expect.any(Number) },
+    ]);
   });
 
   it("does not carry a pending save over to a different site", async () => {
