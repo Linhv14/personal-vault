@@ -10,6 +10,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Password health in Settings: weak and reused passwords, and, on request,
+  passwords exposed in breaches via Have I Been Pwned's k-anonymity range API.
+  Change opens the item in the popup.
 - More item types: API keys, SSH keys, bank accounts, documents (passport, ID,
   licence) and software licenses. Every item can hold custom fields, shown or
   hidden.

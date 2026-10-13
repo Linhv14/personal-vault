@@ -365,3 +365,53 @@ main > .notice {
     min-width: 0;
   }
 }
+
+.lead {
+  margin: -12px 0 24px;
+  color: var(--muted);
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.stat.bad .stat-number {
+  color: var(--danger);
+}
+.stat-label {
+  color: var(--muted);
+  font-size: 14px;
+}
+.breach-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.card.links {
+  padding: 4px 20px;
+}
+#health-ok {
+  margin-top: 16px;
+}
+@media (max-width: 760px) {
+  .breach-check {
+    flex-wrap: wrap;
+  }
+}

@@ -149,3 +149,15 @@ describe("describeError", () => {
     }
   });
 });
+
+describe("plural numbers", () => {
+  it("formats the count the way the locale writes numbers", async () => {
+    const { createTranslator } = await import("../src/i18n/index.js");
+    expect(createTranslator("en")("health.breached_hint", { count: 9643893 })).toBe(
+      "Seen 9,643,893 times in data breaches",
+    );
+    expect(createTranslator("vi")("health.breached_hint", { count: 9643893 })).toBe(
+      "Xuất hiện 9.643.893 lần trong các vụ rò rỉ",
+    );
+  });
+});

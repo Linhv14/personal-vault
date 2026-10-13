@@ -21,6 +21,7 @@
           <a href="#security"
             ><i data-icon="shield"></i><span data-i18n="settings.section_security"></span
           ></a>
+          <a href="#health"><i data-icon="pulse"></i><span data-i18n="health.title"></span></a>
           <a href="#data"
             ><i data-icon="database"></i><span data-i18n="settings.section_data"></span
           ></a>
@@ -93,6 +94,38 @@
                 data-i18n="settings.change_submit"
               ></button>
             </form>
+          </div>
+        </section>
+
+        <section class="page" id="page-health" hidden>
+          <h1 data-i18n="health.title"></h1>
+          <p class="lead" data-i18n="health.lead"></p>
+          <p class="notice" data-locked data-i18n="settings.locked_hint" hidden></p>
+          <div data-unlocked>
+            <div class="stats">
+              <div class="stat" id="stat-weak">
+                <span class="stat-number"></span
+                ><span class="stat-label" data-i18n="health.weak"></span>
+              </div>
+              <div class="stat" id="stat-reused">
+                <span class="stat-number"></span
+                ><span class="stat-label" data-i18n="health.reused"></span>
+              </div>
+              <div class="stat" id="stat-breached">
+                <span class="stat-number"></span
+                ><span class="stat-label" data-i18n="health.breached"></span>
+              </div>
+            </div>
+            <div class="card breach-check">
+              <div class="row-text">
+                <span data-i18n="health.check_breaches"></span>
+                <span class="row-hint" data-i18n="health.breach_privacy"></span>
+              </div>
+              <button class="button" id="check-breaches" data-i18n="health.check"></button>
+            </div>
+            <p class="error" id="health-error" role="alert" hidden></p>
+            <p class="notice" id="health-ok" data-i18n="health.all_good" hidden></p>
+            <div id="health-lists"></div>
           </div>
         </section>
 

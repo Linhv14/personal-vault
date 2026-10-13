@@ -38,12 +38,14 @@ import {
   getUnlocked,
   lock,
   LOCK_ON_BROWSER_CLOSE,
+  requestItemFocus,
   setLocal,
   touch,
 } from "../lib/storage.js";
-import { importKey } from "../lib/vault.js";
+import { breachCounts, reusedGroups, weakItems } from "../lib/health.js";
+import { decryptAll, importKey, type VaultItem } from "../lib/vault.js";
 
-const PAGES = ["general", "security", "data", "account"] as const;
+const PAGES = ["general", "security", "health", "data", "account"] as const;
 type Page = (typeof PAGES)[number];
 
 let t = createTranslator(resolveLocale((await getLocal()).locale));
@@ -63,6 +65,7 @@ function showPage(): void {
   }
   document.title = `${t("settings.title")} · 1PW`;
   if (page === "data") void renderLinks();
+  if (page === "health") void renderHealth();
 }
 
 let toastTimer: number | undefined;
@@ -227,6 +230,100 @@ async function renderLinks(): Promise<void> {
   }
 }
 
+let breaches: Map<string, number> | null = null;
+
+function healthRow(item: VaultItem, detail: string): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "link-row";
+  const text = document.createElement("div");
+  text.className = "link-text";
+  const title = document.createElement("div");
+  title.className = "link-title";
+  title.textContent = item.title;
+  const sub = document.createElement("div");
+  sub.className = "row-hint";
+  sub.textContent = [item.username, detail].filter(Boolean).join(" · ");
+  text.append(title, sub);
+  const fix = document.createElement("button");
+  fix.className = "button";
+  fix.textContent = t("health.fix");
+  fix.addEventListener("click", async () => {
+    await requestItemFocus(item.id);
+    try {
+      await chrome.action.openPopup();
+    } catch {
+      toast(t("health.open_failed"));
+    }
+  });
+  row.append(text, fix);
+  return row;
+}
+
+function healthList(title: string, rows: HTMLElement[]): HTMLElement[] {
+  if (rows.length === 0) return [];
+  const heading = document.createElement("h2");
+  heading.textContent = title;
+  const card = document.createElement("div");
+  card.className = "card links";
+  card.append(...rows);
+  return [heading, card];
+}
+
+function setStat(id: string, value: number | null): void {
+  const node = $(id);
+  const number = node.querySelector(".stat-number");
+  if (number) number.textContent = value === null ? t("health.not_checked") : String(value);
+  node.classList.toggle("bad", (value ?? 0) > 0);
+}
+
+async function renderHealth(): Promise<void> {
+  setError("health-error", null);
+  if (!vaultKey) return;
+  const items = await decryptAll(vaultKey, document.documentElement.lang);
+  const weak = weakItems(items);
+  const reusedRows = reusedGroups(items).flatMap((group) =>
+    group.map((item) => healthRow(item, t("health.reused_hint", { count: group.length - 1 }))),
+  );
+  const known = breaches;
+  const exposed = known ? items.filter((item) => item.password && known.has(item.password)) : [];
+
+  setStat("stat-weak", weak.length);
+  setStat("stat-reused", reusedRows.length);
+  setStat("stat-breached", known ? exposed.length : null);
+  $("health-lists").replaceChildren(
+    ...healthList(
+      t("health.breached"),
+      exposed.map((item) =>
+        healthRow(item, t("health.breached_hint", { count: known?.get(item.password ?? "") ?? 0 })),
+      ),
+    ),
+    ...healthList(
+      t("health.weak"),
+      weak.map((item) => healthRow(item, t("health.weak_hint"))),
+    ),
+    ...healthList(t("health.reused"), reusedRows),
+  );
+  $("health-ok").hidden = !known || weak.length + reusedRows.length + exposed.length > 0;
+}
+
+$("check-breaches").addEventListener("click", async () => {
+  if (!vaultKey) return;
+  const button = $<HTMLButtonElement>("check-breaches");
+  button.disabled = true;
+  button.textContent = t("health.checking");
+  setError("health-error", null);
+  try {
+    const items = await decryptAll(vaultKey, document.documentElement.lang);
+    breaches = await breachCounts(items.flatMap((item) => (item.password ? [item.password] : [])));
+    await renderHealth();
+  } catch (error) {
+    setError("health-error", describeError(error, t));
+  } finally {
+    button.disabled = false;
+    button.textContent = t("health.check");
+  }
+});
+
 async function currentAuthKey(password: string): Promise<string | null> {
   const local = await getLocal();
   if (!local.email || !local.kdf || !local.wrappedVaultKey) return null;
@@ -328,7 +425,9 @@ addEventListener("hashchange", showPage);
 chrome.storage.onChanged.addListener((_changes, area) => {
   if (area !== "session") return;
   void refreshUnlocked().then(async () => {
+    if (vaultKey === null) breaches = null;
     if (currentPage() === "data") await renderLinks();
+    if (currentPage() === "health") await renderHealth();
   });
 });
 

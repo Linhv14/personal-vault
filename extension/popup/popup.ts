@@ -62,6 +62,7 @@ import {
   lock,
   savePendingSignup,
   setLocal,
+  takeItemFocus,
   touch,
   unlock,
 } from "../lib/storage.js";
@@ -242,6 +243,9 @@ async function enterVault(rawBase64: string): Promise<void> {
   void notePasskeys(items.some((item) => item.passkey));
   renderList();
   show("list");
+  const focus = await takeItemFocus();
+  const focused = items.find((item) => item.id === focus);
+  if (focused) openEditor(focused);
   void backgroundSync();
   void refreshAutofillPromo();
 }

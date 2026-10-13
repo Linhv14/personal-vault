@@ -353,6 +353,26 @@ export const en = {
   "settings.logout_short": "Sign out",
   "settings.danger_zone": "Danger zone",
   "settings.saved": "Saved",
+  "health.title": "Password health",
+  "health.lead":
+    "Find passwords that are weak, used in more than one place, or exposed in a data breach.",
+  "health.weak": "Weak",
+  "health.reused": "Reused",
+  "health.breached": "Exposed",
+  "health.weak_hint": "Short or easy to guess",
+  "health.reused_hint":
+    "{count, plural, one {Same password as # other item} other {Same password as # other items}}",
+  "health.breached_hint":
+    "{count, plural, one {Seen once in data breaches} other {Seen # times in data breaches}}",
+  "health.check_breaches": "Check for exposed passwords",
+  "health.breach_privacy":
+    "1PW sends the first 5 characters of each password's SHA-1 hash to Have I Been Pwned. Passwords and full hashes never leave this device.",
+  "health.check": "Check",
+  "health.checking": "Checking…",
+  "health.not_checked": "–",
+  "health.all_good": "No problems found.",
+  "health.fix": "Change",
+  "health.open_failed": "Open 1PW from the toolbar to change this item.",
   "settings.title": "Settings",
   "list.import": "Import from another app",
   "settings.section_security": "Security",

@@ -21,20 +21,22 @@ enforce them are listed at the end.
 | Database thief        | Holds a copy of D1, nothing else                       |
 | Malicious website     | Runs script in a page the user visits                  |
 | Link carrier          | The chat or email service that transports a share link |
+| Breach-check service  | Have I Been Pwned, when the user runs the check        |
 | Device thief          | Holds a powered-off or locked device                   |
 | Malware on the device | Runs code as the user while the vault is unlocked      |
 
 ## What each party can learn
 
-| Party             | Vault contents                                                           | Master password                                          | Metadata                                                 |
-| ----------------- | ------------------------------------------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------- |
-| Network attacker  | No: TLS, and the payload is ciphertext anyway                            | No                                                       | Timing and size of requests                              |
-| Database thief    | No                                                                       | No offline guessing without `AT_REST_SECRET`             | Emails, item counts, timestamps                          |
-| Server operator   | No, as long as the extension is honest (see below)                       | Can guess offline at 600,000 PBKDF2 iterations per guess | Everything the database holds, plus IP addresses in logs |
-| Malicious website | Only a login the user explicitly fills there, and only on its own domain | No                                                       | Whether autofill is on                                   |
-| Link carrier      | The shared item, unless a passphrase was set and sent separately         | No                                                       | That something was shared                                |
-| Device thief      | No, while locked: the local copy is ciphertext                           | Can guess offline against the cached wrapped key         | Email, item count                                        |
-| Malware on device | Yes, once unlocked                                                       | Yes, if it logs keystrokes                               | Yes                                                      |
+| Party                | Vault contents                                                                                          | Master password                                          | Metadata                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| Network attacker     | No: TLS, and the payload is ciphertext anyway                                                           | No                                                       | Timing and size of requests                              |
+| Database thief       | No                                                                                                      | No offline guessing without `AT_REST_SECRET`             | Emails, item counts, timestamps                          |
+| Server operator      | No, as long as the extension is honest (see below)                                                      | Can guess offline at 600,000 PBKDF2 iterations per guess | Everything the database holds, plus IP addresses in logs |
+| Malicious website    | Only a login the user explicitly fills there, and only on its own domain                                | No                                                       | Whether autofill is on                                   |
+| Link carrier         | The shared item, unless a passphrase was set and sent separately                                        | No                                                       | That something was shared                                |
+| Breach-check service | No: it receives 5-character SHA-1 prefixes, each shared by hundreds of passwords, with padded responses | No                                                       | The user's IP address and that a check ran               |
+| Device thief         | No, while locked: the local copy is ciphertext                                                          | Can guess offline against the cached wrapped key         | Email, item count                                        |
+| Malware on device    | Yes, once unlocked                                                                                      | Yes, if it logs keystrokes                               | Yes                                                      |
 
 ## What the server learns
 

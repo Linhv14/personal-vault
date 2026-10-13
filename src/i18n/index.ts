@@ -52,6 +52,7 @@ export function createTranslator(locale: Locale): Translate {
   const catalogue = CATALOGUES[locale];
 
   const plurals = new Intl.PluralRules(locale);
+  const numbers = new Intl.NumberFormat(locale);
 
   return (key, params) => {
     const template = catalogue[key];
@@ -67,7 +68,7 @@ export function createTranslator(locale: Locale): Translate {
           [...body.matchAll(/(=?\w+)\s*\{([^{}]*)\}/g)].map(([, form, text]) => [form, text]),
         );
         const text = forms[`=${count}`] ?? forms[plurals.select(count)] ?? forms.other ?? match;
-        return text.replace(/#/g, String(count));
+        return text.replace(/#/g, numbers.format(count));
       })
       .replace(/\{(\w+)\}/g, (match, name: string) =>
         name in params ? String(params[name]) : match,

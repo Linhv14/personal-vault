@@ -44,6 +44,7 @@ interface SessionState {
   vaultKeyRaw?: string; // base64
   token?: string;
   lockAt?: number; // epoch ms
+  focusItem?: string;
 }
 
 export const DEFAULT_AUTO_LOCK_MINUTES = 15;
@@ -133,6 +134,16 @@ export async function unlock(vaultKeyRaw: string, token: string | undefined): Pr
 }
 
 /** Extend the deadline on activity so the vault never locks mid-use. */
+export async function requestItemFocus(id: string): Promise<void> {
+  await chrome.storage.session.set({ focusItem: id });
+}
+
+export async function takeItemFocus(): Promise<string | undefined> {
+  const { focusItem } = await getSession();
+  if (focusItem) await chrome.storage.session.remove("focusItem");
+  return focusItem;
+}
+
 export async function touch(): Promise<void> {
   const session = await getSession();
   if (!session.vaultKeyRaw) return;
