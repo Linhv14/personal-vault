@@ -42,6 +42,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Settings open as a page in a tab, with Preferences, Security, Data and
+  Account sections, instead of a screen inside the popup. It is also the
+  extension's options page. Shared links are managed there.
 - Update the extension on every device before editing a card, address or other
   typed item: older versions edit every item as a login and drop its other
   fields.

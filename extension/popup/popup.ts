@@ -12,12 +12,10 @@ import {
   deriveMasterKey,
   deriveWrappingKey,
   open as openSealed,
-  rewrapVaultKey,
   type KdfParams,
   type SealedData,
 } from "../../src/core/crypto.js";
 import { fromBase64, toBase64 } from "../../src/core/bytes.js";
-import type { Bytes } from "../../src/core/bytes.js";
 import {
   generatePassphrase,
   generatePassword,
@@ -37,39 +35,26 @@ import { buildShareUrl, createShare } from "../../src/core/share.js";
 import {
   createTranslator,
   describeError,
-  LOCALE_NAMES,
-  LOCALES,
   resolveLocale,
   type Locale,
-  type LocalePreference,
   type MessageKey,
   type Translate,
 } from "../../src/i18n/index.js";
 import * as api from "../lib/api.js";
 import {
   autofillSupported,
-  disableAutofill,
   enableAutofill,
   isAutofillEnabled,
 } from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
-import {
-  forgetSharedLink,
-  loadSharedLinks,
-  rememberSharedLink,
-  saveSharedLinks,
-  type SharedLink,
-} from "../lib/shared-links.js";
+import { rememberSharedLink } from "../lib/shared-links.js";
 import { APP_NAME } from "../../src/core/brand.js";
 import { hydrateIcons, icon, iconButton, type IconName } from "../../src/ui/icons.js";
 import { addRecipients, MAX_SHARE_RECIPIENTS, singleViewAllowed } from "../lib/recipients.js";
-import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
+import { hydrateBrand } from "../../src/ui/logo.js";
 import {
   clearAccountData,
   clearPendingSignup,
-  AUTO_LOCK_CHOICES,
-  DEFAULT_AUTO_LOCK_MINUTES,
-  LOCK_ON_BROWSER_CLOSE,
   notePasskeys,
   getLocal,
   getUnlocked,
@@ -128,16 +113,7 @@ const $ = <T extends HTMLElement>(id: string): T => {
   return node as T;
 };
 
-const SCREENS = [
-  "setup",
-  "unlock",
-  "list",
-  "edit",
-  "generator",
-  "share",
-  "links",
-  "settings",
-] as const;
+const SCREENS = ["setup", "unlock", "list", "edit", "generator", "share"] as const;
 type Screen = (typeof SCREENS)[number];
 
 function show(screen: Screen): void {
@@ -197,7 +173,6 @@ async function copy(value: string, what: string): Promise<void> {
 }
 
 let vaultKey: CryptoKey | null = null;
-let vaultKeyRaw: Bytes | null = null;
 let items: VaultItem[] = [];
 let tabUrl: string | undefined;
 let clockSkew = 0;
@@ -257,7 +232,6 @@ async function boot(): Promise<void> {
 }
 
 async function enterVault(rawBase64: string): Promise<void> {
-  vaultKeyRaw = fromBase64(rawBase64);
   vaultKey = await importKey(rawBase64);
   items = await decryptAll(vaultKey, locale);
   void notePasskeys(items.some((item) => item.passkey));
@@ -626,7 +600,7 @@ $("btn-add").addEventListener("click", (event) => {
   toggleAddMenu();
 });
 $("btn-generator").addEventListener("click", () => openGenerator());
-$("btn-settings").addEventListener("click", () => void openSettings());
+$("btn-settings").addEventListener("click", () => openSettings());
 $("btn-lock").addEventListener("click", async () => {
   await lock();
   location.reload();
@@ -1738,178 +1712,11 @@ $("share-copy").addEventListener("click", async () => {
   await copy($<HTMLInputElement>("share-url").value, t("share.link").toLowerCase());
 });
 
-async function openSettings(): Promise<void> {
-  clearTimers();
-  setError("settings-error", null);
-  $("form-change-password").hidden = true;
-
-  const local = await getLocal();
-
-  const minutes = local.autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES;
-  const choices = AUTO_LOCK_CHOICES.includes(minutes)
-    ? AUTO_LOCK_CHOICES
-    : [...AUTO_LOCK_CHOICES, minutes].sort((a, b) => (a || Infinity) - (b || Infinity));
-  const lockSelect = $<HTMLSelectElement>("settings-lock");
-  lockSelect.replaceChildren(
-    ...choices.map((choice) => new Option(lockLabel(choice), String(choice))),
-  );
-  lockSelect.value = String(minutes);
-
-  const select = $<HTMLSelectElement>("settings-locale");
-  select.replaceChildren(
-    new Option(t("settings.language_auto"), "auto"),
-    ...LOCALES.map((code) => new Option(LOCALE_NAMES[code], code)),
-  );
-  select.value = local.locale ?? "auto";
-  $("settings-autofill").closest("label")!.hidden = !autofillSupported();
-  $<HTMLInputElement>("settings-autofill").checked = await isAutofillEnabled();
-
-  $("settings-about").replaceChildren(
-    logo(16),
-    wordmark(),
-    ` · v${chrome.runtime.getManifest().version}`,
-  );
-  $("settings-email").textContent = local.email ?? "";
-  $("settings-email").title = local.email ?? "";
-  $("settings-count").textContent = String(items.length);
-  $("settings-last-sync").textContent = local.lastSync
-    ? formatExpiry(local.lastSync)
-    : t("settings.never_synced");
-
-  show("settings");
-}
-
-$("settings-back").addEventListener("click", () => {
-  renderList();
-  show("list");
-});
-
-function lockLabel(minutes: number): string {
-  if (minutes === LOCK_ON_BROWSER_CLOSE) return t("settings.lock_on_close");
-  return minutes % 60 === 0
-    ? t("settings.hours", { count: minutes / 60 })
-    : t("settings.minutes", { count: minutes });
-}
-
-$("settings-lock").addEventListener("change", async (event) => {
-  await setLocal({ autoLockMinutes: Number((event.target as HTMLSelectElement).value) });
-  await touch();
-});
-
-$("settings-locale").addEventListener("change", async (event) => {
-  const preference = (event.target as HTMLSelectElement).value as LocalePreference;
-  await setLocal({ locale: preference });
-  locale = resolveLocale(preference);
-  t = createTranslator(locale);
-  applyStaticText();
-  renderSetupForm();
-  if (vaultKey) items = await decryptAll(vaultKey, locale);
-  await openSettings();
-});
-
-$("settings-autofill").addEventListener("change", async (event) => {
-  const checkbox = event.target as HTMLInputElement;
-  if (checkbox.checked) {
-    checkbox.checked = await turnOnAutofill();
-  } else {
-    await disableAutofill();
-  }
-});
-
-$("settings-change-password").addEventListener("click", () => {
-  $("form-change-password").hidden = !$("form-change-password").hidden;
-});
-
-$<HTMLFormElement>("form-change-password").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setError("settings-error", null);
-
-  const data = new FormData(event.target as HTMLFormElement);
-  const next = String(data.get("next"));
-  if (next !== String(data.get("confirm"))) {
-    setError("settings-error", t("setup.password_mismatch"));
-    return;
-  }
-  if (!vaultKeyRaw) {
-    setError("settings-error", t("settings.need_relock"));
-    return;
-  }
-
-  const local = await getLocal();
-
-  let currentAuthKey: string;
-  try {
-    const masterKey = await deriveMasterKey(local.email!, String(data.get("current")), local.kdf!);
-    await openSealed(await deriveWrappingKey(masterKey), local.wrappedVaultKey!);
-    currentAuthKey = toBase64(await deriveAuthKey(masterKey));
-  } catch {
-    setError("settings-error", t("settings.wrong_current"));
-    return;
-  }
-
-  try {
-    const record = await rewrapVaultKey(local.email!, next, vaultKeyRaw);
-    await api.changePassword(currentAuthKey, record);
-    await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
-    await lock();
-    alert(t("settings.changed"));
-    location.reload();
-  } catch (error) {
-    showError("settings-error", error);
-  }
-});
-
-$("settings-delete-account").addEventListener("click", () => {
-  $("form-delete-account").hidden = !$("form-delete-account").hidden;
-});
-
-$<HTMLFormElement>("form-delete-account").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  setError("settings-error", null);
-  const local = await getLocal();
-  const password = String(new FormData(event.target as HTMLFormElement).get("current"));
-
-  let currentAuthKey: string;
-  try {
-    const masterKey = await deriveMasterKey(local.email!, password, local.kdf!);
-    await openSealed(await deriveWrappingKey(masterKey), local.wrappedVaultKey!);
-    currentAuthKey = toBase64(await deriveAuthKey(masterKey));
-  } catch {
-    setError("settings-error", t("settings.wrong_current"));
-    return;
-  }
-  if (!confirm(t("settings.delete_confirm", { email: local.email ?? "" }))) return;
-
-  try {
-    await api.deleteAccount(currentAuthKey);
-    await clearAccountData();
-    await lock();
-    alert(t("settings.deleted"));
-    location.reload();
-  } catch (error) {
-    showError("settings-error", error);
-  }
-});
-
 function openImport(): void {
   void chrome.tabs.create({ url: chrome.runtime.getURL("import/import.html") });
 }
 
-$("settings-import").addEventListener("click", openImport);
 $("list-import").addEventListener("click", openImport);
-
-$("settings-privacy").addEventListener("click", async () => {
-  const { apiUrl } = await getLocal();
-  if (apiUrl) await chrome.tabs.create({ url: `${apiUrl}/privacy` });
-});
-
-$("settings-logout").addEventListener("click", async () => {
-  if (!confirm(t("settings.logout_confirm"))) return;
-  await api.logout();
-  await clearAccountData();
-  await lock();
-  location.reload();
-});
 
 void boot();
 
@@ -1924,86 +1731,8 @@ function formatExpiry(epochSeconds: number): string {
   });
 }
 
-function sharedLinkRow(link: SharedLink, viewsLeft: number | null, expiresAt: number): HTMLElement {
-  const row = document.createElement("div");
-  row.className = "link-row";
-
-  const text = document.createElement("div");
-  text.className = "item-name";
-  const title = document.createElement("div");
-  title.className = "item-title";
-  title.textContent = link.title;
-  const sub = document.createElement("div");
-  sub.className = "item-sub";
-  sub.textContent = [
-    t("links.expires", { expiry: formatExpiry(expiresAt) }),
-    ...(viewsLeft === null ? [] : [t("links.views_left", { views: viewsLeft })]),
-    ...(link.recipients.length > 0
-      ? [t("links.restricted", { count: link.recipients.length })]
-      : []),
-  ].join(" · ");
-  sub.title = sub.textContent;
-  text.append(title, sub);
-
-  const revoke = iconButton("link-off", t("links.revoke"), async () => {
-    if (!vaultKey || !confirm(t("links.revoke_confirm", { title: link.title }))) return;
-    setError("links-error", null);
-    try {
-      await api.revokeShareLink(link.id, link.revokeToken);
-      await forgetSharedLink(vaultKey, link.id);
-      row.remove();
-      $("links-empty").hidden = $("links-list").childElementCount > 0;
-      toast(t("links.revoked"));
-    } catch (error) {
-      showError("links-error", error);
-    }
-  });
-  revoke.classList.add("revoke");
-
-  row.append(
-    avatar(link.title),
-    text,
-    iconButton("copy", t("links.copy"), () => copy(link.url, t("share.link").toLowerCase())),
-    revoke,
-  );
-  return row;
+function openSettings(page = ""): void {
+  void chrome.tabs.create({ url: chrome.runtime.getURL(`settings/settings.html${page}`) });
 }
 
-async function openLinks(): Promise<void> {
-  clearTimers();
-  setError("links-error", null);
-  $("links-list").replaceChildren();
-  $("links-empty").hidden = true;
-  show("links");
-  if (!vaultKey) return;
-
-  try {
-    const links = await loadSharedLinks(vaultKey);
-    const statuses = new Map(
-      (await api.shareStatuses(links.map(({ id, revokeToken }) => ({ id, revokeToken })))).map(
-        (status) => [status.id, status],
-      ),
-    );
-    const active = links.filter((link) => statuses.get(link.id)?.active);
-    if (active.length !== links.length) await saveSharedLinks(vaultKey, active);
-
-    $("links-list").replaceChildren(
-      ...active.map((link) => {
-        const status = statuses.get(link.id);
-        return status?.active
-          ? sharedLinkRow(link, status.viewsLeft, status.expiresAt)
-          : sharedLinkRow(link, 0, link.expiresAt);
-      }),
-    );
-    $("links-empty").hidden = active.length > 0;
-  } catch (error) {
-    showError("links-error", error);
-  }
-}
-
-$("share-manage").addEventListener("click", () => void openLinks());
-$("settings-links").addEventListener("click", () => void openLinks());
-$("links-back").addEventListener("click", () => {
-  renderList();
-  show("list");
-});
+$("share-manage").addEventListener("click", () => openSettings("#data"));
