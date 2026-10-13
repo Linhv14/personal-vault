@@ -4,7 +4,6 @@ import {
   itemType,
   lastFour,
   normalizeExpiry,
-  parseCodes,
   searchableText,
 } from "../extension/lib/item-types.js";
 import { matchingItems, searchItems, type VaultItem } from "../extension/lib/vault.js";
@@ -33,10 +32,6 @@ describe("item types", () => {
     expect(formatCardNumber("378282246310005")).toBe("3782 8224 6310 005");
     expect(lastFour("4242 4242 4242 1234")).toBe("1234");
     expect(lastFour(undefined)).toBe("");
-  });
-
-  it("splits recovery codes by line, dropping blanks", () => {
-    expect(parseCodes(" abcd-1234 \r\n\n efgh-5678\n")).toEqual(["abcd-1234", "efgh-5678"]);
   });
 
   it("searches the fields that identify each type, never secrets", () => {

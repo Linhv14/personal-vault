@@ -1,29 +1,21 @@
-import { parseTotpInput } from "../../../src/core/totp.js";
-import { duplicateKey, registrableDomain, type ItemDraft, type VaultItem } from "../vault.js";
 import type { StoredPasskey } from "../passkey/authenticator.js";
 import { cardDigits, normalizeExpiry } from "../item-types.js";
-import { csvRecords } from "./csv.js";
-import { readProtonPasskey, type ProtonPasskeyFields } from "./proton-passkey.js";
+import { registrableDomain, type ItemDraft } from "../vault.js";
 import { decryptWithPassphrase, OpenPgpError, type OpenPgpErrorCode } from "./openpgp.js";
-import { readZip, ZipError } from "./zip.js";
-
-export type ImportErrorCode =
-  "needs_passphrase" | "wrong_passphrase" | "unsupported_encryption" | "unrecognized" | "damaged";
-
-export class ImportError extends Error {
-  constructor(readonly code: ImportErrorCode) {
-    super(code);
-    this.name = "ImportError";
-  }
-}
-
-export type SkipReason = "duplicate" | "trashed" | "alias" | "other" | "passkey";
-
-export interface ImportPlan {
-  items: ItemDraft[];
-  passkeysForExisting: VaultItem[];
-  skipped: Partial<Record<SkipReason, number>>;
-}
+import { readProtonPasskey, type ProtonPasskeyFields } from "./proton-passkey.js";
+import {
+  countSkip,
+  firstTotp,
+  ImportError,
+  joinNote,
+  list,
+  object,
+  text,
+  type ImportErrorCode,
+  type ImportSource,
+  type JsonObject,
+  type SkipReason,
+} from "./source.js";
 
 interface ExtraField {
   name: string;
@@ -51,23 +43,6 @@ interface ProtonEntry {
 }
 
 const TRASHED = 2;
-const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
-
-type JsonObject = Record<string, unknown>;
-
-function text(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-function object(value: unknown): JsonObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as JsonObject)
-    : {};
-}
-
-function list(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
 
 function extraFields(value: unknown): ExtraField[] {
   return list(value).map((raw): ExtraField => {
@@ -122,52 +97,54 @@ function fromJsonItem(raw: unknown): ProtonEntry {
   };
 }
 
-function fromJson(json: string): ProtonEntry[] {
-  let parsed: JsonObject;
-  try {
-    parsed = object(JSON.parse(json));
-  } catch {
-    throw new ImportError("damaged");
-  }
-  if (parsed.encrypted === true) throw new ImportError("unsupported_encryption");
-  if (typeof parsed.vaults !== "object" || parsed.vaults === null) {
-    throw new ImportError("unrecognized");
-  }
-  return Object.values(object(parsed.vaults)).flatMap((vault) =>
-    list(object(vault).items).map(fromJsonItem),
+export function isProtonJson(parsed: JsonObject): boolean {
+  return (
+    typeof parsed.vaults === "object" && parsed.vaults !== null && !Array.isArray(parsed.vaults)
   );
 }
 
-function fromCsv(csv: string): ProtonEntry[] {
-  const records = csvRecords(csv);
-  const [first] = records;
-  if (first && !("type" in first && "name" in first)) {
-    throw new ImportError("unrecognized");
-  }
-  return records.map((row) => {
-    const structured = STRUCTURED_IN_CSV.has(row.type ?? "") ? parseObject(row.note) : null;
-    return {
-      type: row.type ?? "",
-      name: row.name ?? "",
-      urls: (row.url ?? "")
-        .split(",")
-        .map((url) => url.trim())
-        .filter(Boolean),
-      email: row.email ?? "",
-      username: row.username ?? "",
-      password: row.password ?? "",
-      note: structured ? text(structured.note) : (row.note ?? ""),
-      totp: row.totp ?? "",
-      ssid: "",
-      content: structured ?? {},
-      extraFields: [],
-      createTime: Number(row.createTime) || undefined,
-      trashed: false,
-      passkeyFields: [],
-      passkeys: [],
-      unreadablePasskeys: 0,
-    };
-  });
+export async function protonFromJson(parsed: JsonObject): Promise<ImportSource> {
+  if (parsed.encrypted === true) throw new ImportError("unsupported_encryption");
+  return toSource(
+    Object.values(object(parsed.vaults)).flatMap((vault) =>
+      list(object(vault).items).map(fromJsonItem),
+    ),
+  );
+}
+
+export function isProtonCsv(header: string[]): boolean {
+  return ["type", "name", "url", "email", "username", "password", "note", "totp", "vault"].every(
+    (column) => header.includes(column),
+  );
+}
+
+export async function protonFromCsv(records: Record<string, string>[]): Promise<ImportSource> {
+  return toSource(
+    records.map((row) => {
+      const structured = STRUCTURED_IN_CSV.has(row.type ?? "") ? parseObject(row.note) : null;
+      return {
+        type: row.type ?? "",
+        name: row.name ?? "",
+        urls: (row.url ?? "")
+          .split(",")
+          .map((url) => url.trim())
+          .filter(Boolean),
+        email: row.email ?? "",
+        username: row.username ?? "",
+        password: row.password ?? "",
+        note: structured ? text(structured.note) : (row.note ?? ""),
+        totp: row.totp ?? "",
+        ssid: "",
+        content: structured ?? {},
+        extraFields: [],
+        createTime: Number(row.createtime) || undefined,
+        trashed: false,
+        passkeyFields: [],
+        passkeys: [],
+        unreadablePasskeys: 0,
+      };
+    }),
+  );
 }
 
 const STRUCTURED_IN_CSV = new Set(["creditCard", "identity"]);
@@ -180,10 +157,6 @@ function parseObject(json: string | undefined): JsonObject | null {
   }
 }
 
-function startsWith(bytes: Uint8Array, signature: number[]): boolean {
-  return signature.every((byte, index) => bytes[index] === byte);
-}
-
 async function withPasskeys(entries: ProtonEntry[]): Promise<ProtonEntry[]> {
   return Promise.all(
     entries.map(async (entry) => {
@@ -194,20 +167,16 @@ async function withPasskeys(entries: ProtonEntry[]): Promise<ProtonEntry[]> {
   );
 }
 
-export async function readProtonPassExport(
-  bytes: Uint8Array,
-  passphrase?: string,
-): Promise<ProtonEntry[]> {
-  return withPasskeys(await readEntries(bytes, passphrase));
-}
-
 const OPENPGP_ERRORS: Record<OpenPgpErrorCode, ImportErrorCode> = {
   wrong_passphrase: "wrong_passphrase",
   unsupported: "unsupported_encryption",
   damaged: "damaged",
 };
 
-async function decrypted(message: Uint8Array, passphrase: string | undefined): Promise<string> {
+export async function decryptProtonPgp(
+  message: Uint8Array,
+  passphrase: string | undefined,
+): Promise<string> {
   if (!passphrase) throw new ImportError("needs_passphrase");
   try {
     return new TextDecoder().decode(await decryptWithPassphrase(message, passphrase));
@@ -217,46 +186,7 @@ async function decrypted(message: Uint8Array, passphrase: string | undefined): P
   }
 }
 
-async function readEntries(bytes: Uint8Array, passphrase?: string): Promise<ProtonEntry[]> {
-  if (startsWith(bytes, ZIP_SIGNATURE)) {
-    let entries;
-    try {
-      entries = readZip(bytes);
-    } catch (error) {
-      if (error instanceof ZipError) throw new ImportError("damaged");
-      throw error;
-    }
-    const encrypted = entries.find((entry) => entry.name.endsWith("data.pgp"));
-    if (encrypted) return fromJson(await decrypted(await encrypted.read(), passphrase));
-    const data = entries.find((entry) => entry.name.endsWith("data.json"));
-    if (!data) throw new ImportError("unrecognized");
-    return fromJson(new TextDecoder().decode(await data.read()));
-  }
-
-  const content = new TextDecoder().decode(bytes).trim();
-  if (content.startsWith("-----BEGIN PGP")) return fromJson(await decrypted(bytes, passphrase));
-  if (content.startsWith("{")) return fromJson(content);
-  return fromCsv(content);
-}
-
-function totpFrom(entry: ProtonEntry, title: string) {
-  const candidates = [entry.totp, ...entry.extraFields.filter((f) => f.totp).map((f) => f.value)];
-  for (const candidate of candidates.filter(Boolean)) {
-    try {
-      return { totp: parseTotpInput(candidate, title), unreadable: [] };
-    } catch {
-      continue;
-    }
-  }
-  return { totp: undefined, unreadable: candidates.filter(Boolean) };
-}
-
-function joinNote(parts: (string | false | undefined)[]): string | undefined {
-  const note = parts.filter((part): part is string => Boolean(part && part.trim())).join("\n\n");
-  return note || undefined;
-}
-
-function cardExpiry(raw: string): string | undefined {
+function protonExpiry(raw: string): string | undefined {
   const iso = /^(\d{4})-(\d{2})$/.exec(raw);
   return (
     (iso?.[1] && iso[2] && normalizeExpiry(`${iso[2]}/${iso[1]}`)) ||
@@ -268,7 +198,7 @@ function cardExpiry(raw: string): string | undefined {
 function cardDraft(entry: ProtonEntry): ItemDraft {
   const { content } = entry;
   const rawExpiry = text(content.expirationDate);
-  const expiry = cardExpiry(rawExpiry);
+  const expiry = protonExpiry(rawExpiry);
   return {
     type: "card",
     title: entry.name || "Card",
@@ -367,7 +297,13 @@ function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
       const title = entry.name || (url && registrableDomain(url)) || entry.username || entry.email;
       if (!title && !entry.password) return "other";
       const username = entry.username || entry.email || undefined;
-      const { totp, unreadable } = totpFrom(entry, title);
+      const { totp, unreadable } = firstTotp(
+        [
+          entry.totp,
+          ...entry.extraFields.filter((field) => field.totp).map((field) => field.value),
+        ],
+        title,
+      );
       const fields = entry.extraFields.filter((field) => !field.totp && field.value);
       const [passkey, ...otherPasskeys] = entry.passkeys;
       const login: ItemDraft = {
@@ -432,44 +368,13 @@ function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
   }
 }
 
-export function planImport(entries: ProtonEntry[], existing: VaultItem[]): ImportPlan {
-  const plan: ImportPlan = { items: [], passkeysForExisting: [], skipped: {} };
-  const skip = (reason: SkipReason, count = 1) => {
-    if (count > 0) plan.skipped[reason] = (plan.skipped[reason] ?? 0) + count;
-  };
-  const inVault = new Map(existing.map((item) => [duplicateKey(item), item]));
-  const planned = new Map<string, ItemDraft>();
-  const knownPasskeys = new Set(existing.flatMap((item) => item.passkey?.credentialId ?? []));
-
-  for (const entry of entries) {
-    skip("passkey", entry.unreadablePasskeys);
+async function toSource(entries: ProtonEntry[]): Promise<ImportSource> {
+  const source: ImportSource = { format: "proton", drafts: [], skipped: {} };
+  for (const entry of await withPasskeys(entries)) {
+    countSkip(source.skipped, "passkey", entry.unreadablePasskeys);
     const drafts = toDrafts(entry);
-    if (typeof drafts === "string") {
-      skip(drafts);
-      continue;
-    }
-    for (const found of drafts) {
-      const passkey =
-        found.passkey && !knownPasskeys.has(found.passkey.credentialId) ? found.passkey : undefined;
-      if (passkey) knownPasskeys.add(passkey.credentialId);
-      const draft = { ...found, passkey };
-      const key = duplicateKey(draft);
-      const saved = inVault.get(key);
-      const pending = planned.get(key);
-
-      if (saved && passkey && !saved.passkey) {
-        const updated = { ...saved, passkey };
-        inVault.set(key, updated);
-        plan.passkeysForExisting.push(updated);
-      } else if (pending && passkey && !pending.passkey) {
-        pending.passkey = passkey;
-      } else if (saved || pending) {
-        skip("duplicate");
-      } else {
-        planned.set(key, draft);
-        plan.items.push(draft);
-      }
-    }
+    if (typeof drafts === "string") countSkip(source.skipped, drafts);
+    else source.drafts.push(...drafts);
   }
-  return plan;
+  return source;
 }

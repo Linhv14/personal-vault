@@ -12,15 +12,15 @@ it teaches, instructs, describes or explains.
 
 ## How-to guides: a goal, the steps to reach it
 
-| Page                                                                     | Goal                                                           |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| [Add another device](how-to/add-another-device.md)                       | Use the same vault on a second computer or browser profile     |
-| [Import from Proton Pass](how-to/import-from-proton-pass.md)             | Bring existing logins, notes and 2FA secrets into 1PW          |
-| [Run a shared server](how-to/run-a-shared-server.md)                     | Let other people sign up, with email verification and a domain |
-| [Back up and restore](how-to/back-up-and-restore.md)                     | Survive a lost database, a bad deploy or a lost secret         |
-| [Rotate secrets](how-to/rotate-secrets.md)                               | Replace a leaked token or API key without locking anyone out   |
-| [Upgrade a deployment](how-to/upgrade.md)                                | Move to a newer release safely                                 |
-| [Publish to the Chrome Web Store](how-to/publish-to-chrome-web-store.md) | Ship the extension to people who will not build it             |
+| Page                                                                     | Goal                                                                                   |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| [Add another device](how-to/add-another-device.md)                       | Use the same vault on a second computer or browser profile                             |
+| [Import passwords](how-to/import-passwords.md)                           | Bring items from Proton Pass, Bitwarden, 1Password, a browser or a recovery codes file |
+| [Run a shared server](how-to/run-a-shared-server.md)                     | Let other people sign up, with email verification and a domain                         |
+| [Back up and restore](how-to/back-up-and-restore.md)                     | Survive a lost database, a bad deploy or a lost secret                                 |
+| [Rotate secrets](how-to/rotate-secrets.md)                               | Replace a leaked token or API key without locking anyone out                           |
+| [Upgrade a deployment](how-to/upgrade.md)                                | Move to a newer release safely                                                         |
+| [Publish to the Chrome Web Store](how-to/publish-to-chrome-web-store.md) | Ship the extension to people who will not build it                                     |
 
 ## Reference: facts to look up
 

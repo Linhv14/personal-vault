@@ -1,67 +1,13 @@
 import { describe, expect, it } from "vitest";
 import * as openpgp from "openpgp";
-import { csvRecords, parseCsv } from "../extension/lib/import/csv.js";
+import { parseCsv } from "../extension/lib/import/csv.js";
 import { readZip } from "../extension/lib/import/zip.js";
-import { planImport, readProtonPassExport } from "../extension/lib/import/protonpass.js";
+import { planImport } from "../extension/lib/import/plan.js";
+import { readExport } from "../extension/lib/import/read-export.js";
 import type { VaultItem } from "../extension/lib/vault.js";
+import { makeZip } from "./zip-fixture.js";
 
 const TOTP_URI = "otpauth://totp/GitHub:me@example.com?secret=JBSWY3DPEHPK3PXP&issuer=GitHub";
-
-async function deflateRaw(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([new Uint8Array(data)])
-    .stream()
-    .pipeThrough(new CompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function makeZip(files: Record<string, string>, method: 0 | 8): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  const locals: Uint8Array[] = [];
-  const centrals: Uint8Array[] = [];
-  let offset = 0;
-  for (const [name, content] of Object.entries(files)) {
-    const nameBytes = encoder.encode(name);
-    const raw = encoder.encode(content);
-    const data = method === 8 ? await deflateRaw(raw) : raw;
-    const local = new Uint8Array(30 + nameBytes.length + data.length);
-    const lv = new DataView(local.buffer);
-    lv.setUint32(0, 0x04034b50, true);
-    lv.setUint16(8, method, true);
-    lv.setUint32(18, data.length, true);
-    lv.setUint32(22, raw.length, true);
-    lv.setUint16(26, nameBytes.length, true);
-    local.set(nameBytes, 30);
-    local.set(data, 30 + nameBytes.length);
-    const central = new Uint8Array(46 + nameBytes.length);
-    const cv = new DataView(central.buffer);
-    cv.setUint32(0, 0x02014b50, true);
-    cv.setUint16(10, method, true);
-    cv.setUint32(20, data.length, true);
-    cv.setUint32(24, raw.length, true);
-    cv.setUint16(28, nameBytes.length, true);
-    cv.setUint32(42, offset, true);
-    central.set(nameBytes, 46);
-    locals.push(local);
-    centrals.push(central);
-    offset += local.length;
-  }
-  const directorySize = centrals.reduce((sum, part) => sum + part.length, 0);
-  const end = new Uint8Array(22);
-  const ev = new DataView(end.buffer);
-  ev.setUint32(0, 0x06054b50, true);
-  ev.setUint16(8, centrals.length, true);
-  ev.setUint16(10, centrals.length, true);
-  ev.setUint32(12, directorySize, true);
-  ev.setUint32(16, offset, true);
-  const parts = [...locals, ...centrals, end];
-  const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
-  let position = 0;
-  for (const part of parts) {
-    out.set(part, position);
-    position += part.length;
-  }
-  return out;
-}
 
 const protonJson = JSON.stringify({
   version: "1.30.0",
@@ -183,11 +129,13 @@ describe("parseCsv", () => {
       ["x, y", 'he said "hi"\nbye'],
     ]);
   });
-
-  it("maps rows to the header", () => {
-    expect(csvRecords("name,password\nGitHub,pw\n")).toEqual([{ name: "GitHub", password: "pw" }]);
-  });
 });
+
+function read(bytes: Uint8Array, passphrase?: string, name = "export") {
+  return readExport({ name, bytes, passphrase, recoveryTitle: "Recovery codes" });
+}
+
+const encode = (content: string) => new TextEncoder().encode(content);
 
 describe("readZip", () => {
   it.each([0, 8] as const)("reads entries stored with method %i", async (method) => {
@@ -201,9 +149,7 @@ describe("readZip", () => {
 
 describe("Proton Pass import", () => {
   it("reads the JSON inside an unencrypted export archive", async () => {
-    const entries = await readProtonPassExport(
-      await makeZip({ "Proton Pass/data.json": protonJson }, 0),
-    );
+    const entries = await read(await makeZip({ "Proton Pass/data.json": protonJson }, 0));
     const plan = planImport(entries, []);
 
     expect(plan.items.map((item) => [item.type ?? "login", item.title])).toEqual([
@@ -247,7 +193,7 @@ describe("Proton Pass import", () => {
   });
 
   it("reads a plain JSON export", async () => {
-    const entries = await readProtonPassExport(new TextEncoder().encode(protonJson));
+    const entries = await read(new TextEncoder().encode(protonJson));
     expect(planImport(entries, []).items).toHaveLength(6);
   });
 
@@ -258,7 +204,7 @@ describe("Proton Pass import", () => {
       "alias,Alias,,x@alias.example,,,,,1,1,Personal",
       `creditCard,Visa,,,,,"${JSON.stringify({ number: "4111111111111111", expirationDate: "2027-04", note: "travel" }).replaceAll('"', '""')}",,1,1,Personal`,
     ].join("\n");
-    const plan = planImport(await readProtonPassExport(new TextEncoder().encode(csv)), []);
+    const plan = planImport(await read(new TextEncoder().encode(csv)), []);
     expect(plan.items).toHaveLength(2);
     expect(plan.items[1]).toMatchObject({
       type: "card",
@@ -286,8 +232,8 @@ describe("Proton Pass import", () => {
         password: "hunter2",
       },
     ] as VaultItem[];
-    const entries = await readProtonPassExport(new TextEncoder().encode(protonJson));
-    const plan = planImport([...entries, ...entries], existing);
+    const source = await read(encode(protonJson));
+    const plan = planImport({ ...source, drafts: [...source.drafts, ...source.drafts] }, existing);
     expect(plan.items.map((item) => item.title)).toEqual([
       "Bank",
       "Visa",
@@ -306,17 +252,17 @@ describe("Proton Pass import", () => {
     })) as string;
     const archive = await makeZip({ "Proton Pass/data.pgp": armored }, 0);
 
-    await expect(readProtonPassExport(archive)).rejects.toMatchObject({ code: "needs_passphrase" });
-    await expect(readProtonPassExport(archive, "wrong")).rejects.toMatchObject({
+    await expect(read(archive)).rejects.toMatchObject({ code: "needs_passphrase" });
+    await expect(read(archive, "wrong")).rejects.toMatchObject({
       code: "wrong_passphrase",
     });
-    const entries = await readProtonPassExport(archive, "export password");
+    const entries = await read(archive, "export password");
     expect(planImport(entries, []).items).toHaveLength(6);
   });
 
-  it("rejects files that are not a Proton Pass export", async () => {
-    await expect(
-      readProtonPassExport(new TextEncoder().encode("url,user,pass\na,b,c")),
-    ).rejects.toMatchObject({ code: "unrecognized" });
+  it("rejects files it does not recognize", async () => {
+    await expect(read(encode("Nothing to see here."))).rejects.toMatchObject({
+      code: "unrecognized",
+    });
   });
 });

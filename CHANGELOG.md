@@ -14,6 +14,12 @@ version may change the API or storage format; such releases list the steps in
   with its own fields. The list shows logins for the current site first, then
   filters by type; **+** asks which type to create. Items saved earlier stay
   logins.
+- Import from Bitwarden (JSON, password-protected JSON with PBKDF2, CSV),
+  1Password (1PUX, CSV) and browser CSV files, alongside Proton Pass. The file
+  type is recognised automatically; passkeys come over from Bitwarden too.
+- Import a file of recovery codes as one item. Pasting codes into a recovery
+  codes item splits them whatever the layout: columns, numbering, commas or a
+  header.
 - Import keeps Proton Pass credit cards and identities as cards and addresses
   instead of skipping them.
 - Import reads Proton Pass's PGP-encrypted export after asking for its

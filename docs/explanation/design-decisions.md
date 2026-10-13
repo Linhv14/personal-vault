@@ -118,6 +118,14 @@ how many cards an account holds, and an item without one is a login, so
 existing vaults need no migration. Autofill, passkeys and sharing stay
 login-only: a page should never be able to ask for a card or an address.
 
+**Import recognises the file instead of asking where it came from.** Each
+source has a reader that turns its export into the same drafts
+(`extension/lib/import/`), and `read-export.ts` picks the reader from the
+file's shape: a zip's entries, a JSON's top-level keys, a CSV's columns. One
+planner then skips duplicates and attaches passkeys for every source. A file
+that is none of these is searched for recovery codes, so the same button
+handles a GitHub codes file and a Bitwarden vault.
+
 **`src/core` throws codes, not sentences.** The UI turns `VaultError` codes
 into text in the user's language; core code never needs to know which.
 

@@ -102,7 +102,6 @@ import {
   lastFour,
   NEW_LABEL,
   normalizeExpiry,
-  parseCodes,
   TYPE_FIELDS,
   TYPE_ICON,
   TYPE_LABEL,
@@ -110,6 +109,7 @@ import {
   type TextFieldKey,
   type ItemType,
 } from "../lib/item-types.js";
+import { parseRecoveryCodes } from "../lib/recovery-codes.js";
 
 /**
  * Replaced at build time with the Worker URL of the last deployment, so someone
@@ -772,35 +772,30 @@ function itemSubtitle(item: VaultItem): string {
   }
 }
 
+function copyAction(name: IconName, label: MessageKey, what: string, value: string): HTMLElement {
+  return iconButton(name, t(label), () => copy(value, what.toLowerCase()));
+}
+
 function quickAction(item: VaultItem): HTMLElement[] {
+  const password = item.password
+    ? [copyAction("key", "item.copy_password", t("common.password"), item.password)]
+    : [];
   switch (itemType(item)) {
     case "login":
-      return [
-        ...(item.totp ? [totpChip(item.totp)] : []),
-        ...(item.password
-          ? [
-              iconButton("copy", t("common.copy"), () =>
-                copy(item.password ?? "", t("common.password").toLowerCase()),
-              ),
-            ]
-          : []),
-      ];
+      return [...(item.totp ? [totpChip(item.totp)] : []), ...password];
     case "card":
       return item.cardNumber
         ? [
-            iconButton("copy", t("common.copy"), () =>
-              copy(cardDigits(item.cardNumber), t("field.card_number").toLowerCase()),
+            copyAction(
+              "card",
+              "item.copy_card_number",
+              t("field.card_number"),
+              cardDigits(item.cardNumber),
             ),
           ]
         : [];
     case "wifi":
-      return item.password
-        ? [
-            iconButton("copy", t("common.copy"), () =>
-              copy(item.password ?? "", t("common.password").toLowerCase()),
-            ),
-          ]
-        : [];
+      return password;
     default:
       return [];
   }
@@ -996,7 +991,8 @@ function totpChip(config: TotpConfig): HTMLElement {
   const chip = document.createElement("button");
   chip.type = "button";
   chip.className = "totp-chip";
-  chip.title = t("common.totp");
+  chip.title = t("item.copy_totp");
+  chip.setAttribute("aria-label", chip.title);
   chip.append(live.node);
   chip.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -1068,7 +1064,15 @@ function editInput(
     area.name = spec.key;
     area.rows = spec.kind === "codes" ? 6 : editingType === "note" ? 8 : 2;
     area.value = value();
-    if (spec.kind === "codes") area.className = "mono";
+    if (spec.kind === "codes") {
+      area.className = "mono";
+      area.addEventListener("paste", () => {
+        setTimeout(() => {
+          const codes = parseRecoveryCodes(area.value);
+          if (codes.length > 0) area.value = codes.join("\n");
+        });
+      });
+    }
     return area;
   }
 
@@ -1297,7 +1301,7 @@ function readEditedFields(data: FormData): EditedFields {
       continue;
     }
     if (key === "codes") {
-      const codes = parseCodes(String(data.get(key) ?? ""));
+      const codes = parseRecoveryCodes(String(data.get(key) ?? ""));
       fields.codes = codes.length > 0 ? codes : undefined;
       continue;
     }

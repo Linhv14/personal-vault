@@ -31,9 +31,3 @@ export function parseCsv(text: string): string[][] {
   }
   return rows.filter((cells) => cells.some((cell) => cell !== ""));
 }
-
-export function csvRecords(text: string): Record<string, string>[] {
-  const [header = [], ...rows] = parseCsv(text);
-  const names = header.map((name) => name.trim());
-  return rows.map((cells) => Object.fromEntries(names.map((name, i) => [name, cells[i] ?? ""])));
-}

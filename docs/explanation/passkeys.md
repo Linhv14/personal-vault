@@ -59,8 +59,9 @@ Attestation is `none`.
 ## Limits
 
 - Chrome desktop only. Mobile browsers do not let extensions do this.
-- Passkeys can be imported from a Proton Pass JSON export. Other providers do
-  not export passkeys, so on those sites add a new passkey with 1PW.
+- Passkeys can be imported from Proton Pass and Bitwarden JSON exports.
+  1Password and browsers do not export passkeys, so on those sites add a new
+  passkey with 1PW.
 - A synced passkey is protected by the master password and the devices that
   hold the vault, not by a hardware-bound key. That is the usual trade-off of
   password-manager passkeys.

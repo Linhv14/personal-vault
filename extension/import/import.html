@@ -22,14 +22,20 @@
       </section>
 
       <section id="state-pick" class="card" hidden>
-        <ol class="steps">
-          <li data-i18n="import.step_export"></li>
-          <li data-i18n="import.step_format"></li>
-          <li data-i18n="import.step_choose"></li>
-        </ol>
+        <p data-i18n="import.pick"></p>
+        <dl class="sources">
+          <dt>Proton Pass</dt>
+          <dd data-i18n="import.source_proton"></dd>
+          <dt>Bitwarden</dt>
+          <dd data-i18n="import.source_bitwarden"></dd>
+          <dt>1Password</dt>
+          <dd data-i18n="import.source_1password"></dd>
+          <dt data-i18n="import.source_other"></dt>
+          <dd data-i18n="import.source_other_hint"></dd>
+        </dl>
         <label class="button primary file">
           <span data-i18n="import.choose_file"></span>
-          <input id="file" type="file" accept=".zip,.json,.csv" />
+          <input id="file" type="file" accept=".zip,.pgp,.json,.1pux,.csv,.txt" />
         </label>
         <p class="error" id="error" role="alert" hidden></p>
       </section>

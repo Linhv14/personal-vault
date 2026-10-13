@@ -130,13 +130,6 @@ export function normalizeExpiry(input: string): string | null {
   return `${String(month).padStart(2, "0")}/${match[2].slice(-2)}`;
 }
 
-export function parseCodes(input: string): string[] {
-  return input
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
 export function searchableText(item: VaultItem): string[] {
   const base = [item.title];
   switch (itemType(item)) {

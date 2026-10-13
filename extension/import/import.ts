@@ -4,13 +4,9 @@ import {
   resolveLocale,
   type MessageKey,
 } from "../../src/i18n/index.js";
-import {
-  ImportError,
-  planImport,
-  readProtonPassExport,
-  type ImportPlan,
-  type SkipReason,
-} from "../lib/import/protonpass.js";
+import { planImport, type ImportPlan } from "../lib/import/plan.js";
+import { readExport } from "../lib/import/read-export.js";
+import { ImportError, type ImportFormat, type SkipReason } from "../lib/import/source.js";
 import { ApiError } from "../lib/api.js";
 import { getLocal, getUnlocked, notePasskeys } from "../lib/storage.js";
 import {
@@ -68,7 +64,7 @@ function showError(message: string): void {
   node.hidden = false;
 }
 
-let selected: Uint8Array | null = null;
+let selected: { name: string; bytes: Uint8Array } | null = null;
 
 function importErrorText(error: unknown): string {
   return error instanceof ImportError
@@ -76,14 +72,49 @@ function importErrorText(error: unknown): string {
     : describeError(error, t);
 }
 
-async function review(bytes: Uint8Array, passphrase?: string): Promise<void> {
+const SOURCE_NAMES: Record<Exclude<ImportFormat, "recovery">, string> = {
+  proton: "Proton Pass",
+  bitwarden: "Bitwarden",
+  "1password": "1Password",
+  csv: "CSV",
+};
+
+function sourceLines(current: ImportPlan): string[] {
+  if (current.format === "recovery") {
+    return current.items.map((item) =>
+      t("import.recovery_file", {
+        title: item.title,
+        codes: t("item.codes_count", { count: item.codes?.length ?? 0 }),
+      }),
+    );
+  }
+  const byType = ITEM_TYPES.map((type) => ({
+    type,
+    count: current.items.filter((item) => itemType(item) === type).length,
+  })).filter(({ count }) => count > 0);
+  return [
+    t("import.from", { source: SOURCE_NAMES[current.format] }),
+    ...(byType.length > 1
+      ? byType.map(({ type, count }) => t("import.of_type", { type: t(TYPE_LABEL[type]), count }))
+      : []),
+  ];
+}
+
+async function review(
+  file: { name: string; bytes: Uint8Array },
+  passphrase?: string,
+): Promise<void> {
   const key = await vaultKey();
   if (!key) return show("locked");
 
   try {
     await sync().catch(() => null);
-    const entries = await readProtonPassExport(bytes, passphrase);
-    plan = planImport(entries, await decryptAll(key, locale));
+    const source = await readExport({
+      ...file,
+      passphrase,
+      recoveryTitle: t("type.recovery"),
+    });
+    plan = planImport(source, await decryptAll(key, locale));
   } catch (error) {
     if (error instanceof ImportError && error.code === "needs_passphrase") {
       $("passphrase-error").hidden = true;
@@ -105,16 +136,9 @@ async function review(bytes: Uint8Array, passphrase?: string): Promise<void> {
   const newPasskeys = plan.items.filter((item) => item.passkey).length;
   const total = plan.items.length + plan.passkeysForExisting.length;
   $("review-title").textContent = t("import.ready", { count: plan.items.length });
-  const planned = plan.items;
-  const byType = ITEM_TYPES.map((type) => ({
-    type,
-    count: planned.filter((item) => itemType(item) === type).length,
-  })).filter(({ count }) => count > 0);
   $("review-added").replaceChildren(
     ...[
-      ...(byType.length > 1
-        ? byType.map(({ type, count }) => t("import.of_type", { type: t(TYPE_LABEL[type]), count }))
-        : []),
+      ...sourceLines(plan),
       newPasskeys > 0 && t("import.passkeys_new", { count: newPasskeys }),
       plan.passkeysForExisting.length > 0 &&
         t("import.passkeys_existing", { count: plan.passkeysForExisting.length }),
@@ -141,7 +165,7 @@ $<HTMLInputElement>("file").addEventListener("change", async (event) => {
   input.value = "";
   $("error").hidden = true;
   if (!file) return;
-  selected = new Uint8Array(await file.arrayBuffer());
+  selected = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
   $<HTMLInputElement>("passphrase").value = "";
   await review(selected);
 });

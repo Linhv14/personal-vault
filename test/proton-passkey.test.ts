@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 import { decodeMsgpack } from "../extension/lib/import/msgpack.js";
-import { planImport, readProtonPassExport } from "../extension/lib/import/protonpass.js";
+import { planImport } from "../extension/lib/import/plan.js";
+import { readExport } from "../extension/lib/import/read-export.js";
 import { readProtonPasskey } from "../extension/lib/import/proton-passkey.js";
 import { signAssertion } from "../extension/lib/passkey/authenticator.js";
 import { fromBase64Url, toBase64Url } from "../extension/lib/passkey/base64url.js";
@@ -193,7 +194,11 @@ describe("Proton Pass passkeys", () => {
         password: "hunter2",
       },
     ] as VaultItem[];
-    const entries = await readProtonPassExport(new TextEncoder().encode(exported));
+    const entries = await readExport({
+      name: "data.json",
+      bytes: new TextEncoder().encode(exported),
+      recoveryTitle: "Recovery codes",
+    });
 
     const plan = planImport(entries, existing);
     expect(plan.items).toEqual([]);

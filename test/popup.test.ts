@@ -267,6 +267,10 @@ describe("extension popup", () => {
     await waitFor(() => !el("matching-section").hidden, "the domain match section");
     expect(el("matching-title").textContent).toContain("github.com");
     expect(el("matching-list").textContent).toContain("GitHub");
+    const labels = [...el("matching-list").querySelectorAll(".item-head button")].map((button) =>
+      button.getAttribute("aria-label"),
+    );
+    expect(labels).toEqual(["Copy 2FA code", "Copy password"]);
   });
 
   it("renders a live 2FA code that matches an independent computation", async () => {
