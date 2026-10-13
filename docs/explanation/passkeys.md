@@ -1,8 +1,8 @@
 # Passkeys
 
 1PW can create and use passkeys on websites, so signing in needs neither a
-password nor a phone. It is part of **Settings → Autofill and passkeys on
-websites** and is off until that is turned on.
+password nor a phone. It is part of **Settings → Preferences → Autofill and
+passkeys on websites** and is off until that is turned on.
 
 ## How a passkey is made and used
 

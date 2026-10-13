@@ -63,11 +63,11 @@ checkout that never deployed has no default and asks for a server.
 
 Per-device settings live in `chrome.storage.local` and survive sign-out:
 
-| Setting                    | Default                                               | Where to change it                    |
-| -------------------------- | ----------------------------------------------------- | ------------------------------------- |
-| Language                   | Match the browser                                     | Settings → Language                   |
-| Auto-lock                  | 15 minutes (5 min to 4 h, or when the browser closes) | Settings → Auto-lock                  |
-| Suggest logins on websites | Off                                                   | Settings → Suggest logins on websites |
+| Setting               | Default                                               | Where to change it                 |
+| --------------------- | ----------------------------------------------------- | ---------------------------------- |
+| Language              | Match the browser                                     | Settings → Preferences → Language  |
+| Auto-lock             | 15 minutes (5 min to 4 h, or when the browser closes) | Settings → Preferences → Auto-lock |
+| Autofill and passkeys | Off                                                   | Settings → Preferences → Autofill  |
 
 ## Local files
 

@@ -31,11 +31,11 @@ button and enter your Worker URL. `npm run status` prints it.
 
 ## Removing a device
 
-Choose **Settings → Sign out of this device** on it. That ends its session and
+Choose **Settings → Account → Sign out** on it. That ends its session and
 erases the encrypted copy of the vault from the device, keeping only language,
 auto-lock and autofill preferences.
 
-For a device you no longer have, **Settings → Change master password** on any
+For a device you no longer have, **Settings → Security → Change master password** on any
 other device revokes every session, so the lost device can no longer sync or
 reach the server. It does not erase the encrypted copy already on that device:
 someone holding the device and the **old** master password can still open what

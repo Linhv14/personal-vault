@@ -75,7 +75,7 @@ afterwards would let two people open a single-view link at the same moment.
 the database does not record who shared with whom. Creating a share returns a
 random revoke token; the server keeps its hash. The extension keeps its list of
 created links, with their tokens, sealed under the vault key. Settings →
-Shared links shows each link's views left and expiry, and revokes it. Because
+Data → Shared links shows each link's views left and expiry, and revokes it. Because
 the list lives where it was created, a link made on one device is not listed on
 another.
 
