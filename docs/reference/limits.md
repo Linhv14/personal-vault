@@ -50,18 +50,18 @@ Bold marks the extension's default.
 
 ## Lifetimes and timers
 
-| Timer                              | Value                            | Defined in                                                        |
-| ---------------------------------- | -------------------------------- | ----------------------------------------------------------------- |
-| Session                            | 30 days                          | `src/worker/session.ts`                                           |
-| Sign-up verification code          | 6 digits, 15 minutes, 5 attempts | `src/worker/email-verification.ts`, `src/worker/one-time-code.ts` |
-| Share access code                  | 6 digits, 10 minutes, 5 attempts | `src/worker/share-access.ts`, `src/worker/one-time-code.ts`       |
-| Code resend cooldown               | 60 seconds                       | `src/worker/one-time-code.ts`                                     |
-| Expired-row purge                  | Hourly, at minute 17             | `wrangler.toml`                                                   |
-| Auto-lock                          | 15 minutes (1 – 120)             | `extension/lib/storage.ts`                                        |
-| Clipboard clear after copy         | 30 seconds                       | `extension/lib/clipboard.ts`                                      |
-| Clock drift warning                | More than 10 seconds             | `extension/popup/popup.ts`                                        |
-| Unfinished sign-up remembered      | 15 minutes                       | `extension/lib/storage.ts`                                        |
-| Submitted login offered for saving | 5 minutes                        | `extension/lib/autofill-service.ts`                               |
+| Timer                              | Value                                                   | Defined in                                                        |
+| ---------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------- |
+| Session                            | 30 days                                                 | `src/worker/session.ts`                                           |
+| Sign-up verification code          | 6 digits, 15 minutes, 5 attempts                        | `src/worker/email-verification.ts`, `src/worker/one-time-code.ts` |
+| Share access code                  | 6 digits, 10 minutes, 5 attempts                        | `src/worker/share-access.ts`, `src/worker/one-time-code.ts`       |
+| Code resend cooldown               | 60 seconds                                              | `src/worker/one-time-code.ts`                                     |
+| Expired-row purge                  | Hourly, at minute 17                                    | `wrangler.toml`                                                   |
+| Auto-lock                          | 5 min, **15 min**, 1 h, 4 h, or when the browser closes | `extension/lib/storage.ts`                                        |
+| Clipboard clear after copy         | 30 seconds                                              | `extension/lib/clipboard.ts`                                      |
+| Clock drift warning                | More than 10 seconds                                    | `extension/popup/popup.ts`                                        |
+| Unfinished sign-up remembered      | 15 minutes                                              | `extension/lib/storage.ts`                                        |
+| Submitted login offered for saving | 5 minutes                                               | `extension/lib/autofill-service.ts`                               |
 
 ## Cloudflare free tier
 

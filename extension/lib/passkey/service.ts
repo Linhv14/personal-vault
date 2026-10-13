@@ -1,4 +1,5 @@
 import type { TrustedSender } from "../autofill-service.js";
+import { getLocal, notePasskeys } from "../storage.js";
 import { newItemId, openVault, registrableDomain, saveItem, type VaultItem } from "../vault.js";
 import { createPasskey, signAssertion, type StoredPasskey } from "./authenticator.js";
 import type {
@@ -42,7 +43,10 @@ async function query(
   const rpId = resolveRpId(origin, requested);
   if (!rpId) return { ok: false, error: "invalid_rp" };
   const vault = await openVault();
-  if (!vault) return { ok: true, state: "locked" };
+  if (!vault) {
+    const { hasPasskeys = true } = await getLocal();
+    return { ok: true, state: "locked", hasPasskeys };
+  }
   const passkeys = passkeysFor(vault.items, rpId, allowCredentialIds).map(({ item, passkey }) => ({
     credentialId: passkey.credentialId,
     title: item.title,
@@ -85,6 +89,7 @@ async function create(
           passkey,
         },
   );
+  await notePasskeys(true);
   return { ok: true, registration };
 }
 

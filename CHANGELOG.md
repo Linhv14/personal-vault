@@ -24,6 +24,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Auto-lock offers 5 minutes, 15 minutes, 1 hour, 4 hours or "when the browser
+  closes", instead of a slider.
+- Passkey sign-in while 1PW is locked asks to unlock only if the vault holds
+  passkeys, and continues by itself once it is unlocked.
 - Share screen: shows the item and what the recipient will see; a share
   holds the website, username, password and 2FA secret if any, never the
   note; recipients and the link password sit under "Extra protection";

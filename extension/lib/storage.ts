@@ -34,6 +34,7 @@ export interface LocalState {
   autofillPromoDismissed?: boolean;
   sharedLinks?: SealedData;
   autoLockMinutes?: number;
+  hasPasskeys?: boolean;
   /** Offset of this machine's clock against the server, in seconds. */
   clockSkew?: number;
   locale?: LocalePreference;
@@ -46,6 +47,15 @@ interface SessionState {
 }
 
 export const DEFAULT_AUTO_LOCK_MINUTES = 15;
+export const LOCK_ON_BROWSER_CLOSE = 0;
+export const AUTO_LOCK_CHOICES = [5, 15, 60, 240, LOCK_ON_BROWSER_CLOSE];
+
+async function lockDeadline(): Promise<{ lockAt?: number }> {
+  const { autoLockMinutes = DEFAULT_AUTO_LOCK_MINUTES } = await getLocal();
+  return autoLockMinutes === LOCK_ON_BROWSER_CLOSE
+    ? {}
+    : { lockAt: Date.now() + autoLockMinutes * 60_000 };
+}
 
 export interface PendingSignup {
   apiUrl: string;
@@ -117,12 +127,8 @@ export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: stri
 }
 
 export async function unlock(vaultKeyRaw: string, token: string | undefined): Promise<void> {
-  const { autoLockMinutes = DEFAULT_AUTO_LOCK_MINUTES } = await getLocal();
-  await chrome.storage.session.set({
-    vaultKeyRaw,
-    token,
-    lockAt: Date.now() + autoLockMinutes * 60_000,
-  });
+  await chrome.storage.session.remove("lockAt");
+  await chrome.storage.session.set({ vaultKeyRaw, token, ...(await lockDeadline()) });
   await scheduleLockAlarm();
 }
 
@@ -130,8 +136,13 @@ export async function unlock(vaultKeyRaw: string, token: string | undefined): Pr
 export async function touch(): Promise<void> {
   const session = await getSession();
   if (!session.vaultKeyRaw) return;
-  const { autoLockMinutes = DEFAULT_AUTO_LOCK_MINUTES } = await getLocal();
-  await chrome.storage.session.set({ lockAt: Date.now() + autoLockMinutes * 60_000 });
+  const deadline = await lockDeadline();
+  if (deadline.lockAt) await chrome.storage.session.set(deadline);
+  else await chrome.storage.session.remove("lockAt");
+}
+
+export async function notePasskeys(present: boolean): Promise<void> {
+  await setLocal({ hasPasskeys: present });
 }
 
 export async function lock(): Promise<void> {

@@ -15,11 +15,17 @@ function area(store: Map<string, unknown>) {
     set: async (patch: Record<string, unknown>) => {
       for (const [key, value] of Object.entries(patch)) store.set(key, value);
     },
+    remove: async (keys: string | string[]) => {
+      for (const key of typeof keys === "string" ? [keys] : keys) store.delete(key);
+    },
     clear: async () => store.clear(),
   };
 }
 
-vi.stubGlobal("chrome", { storage: { local: area(localArea), session: area(sessionArea) } });
+vi.stubGlobal("chrome", {
+  storage: { local: area(localArea), session: area(sessionArea) },
+  alarms: { create: async () => {}, clear: async () => true },
+});
 
 const puts: { id: string; ciphertext: string; nonce: string }[] = [];
 vi.stubGlobal(
@@ -137,5 +143,34 @@ describe("clearAccountData", () => {
       autoLockMinutes: 30,
       autofillPromoDismissed: true,
     });
+  });
+});
+
+describe("auto-lock", () => {
+  beforeEach(() => {
+    localArea.clear();
+    sessionArea.clear();
+    vi.useRealTimers();
+  });
+
+  it("locks once the chosen idle time has passed", async () => {
+    const { getUnlocked, unlock } = await import("../extension/lib/storage.js");
+    localArea.set("autoLockMinutes", 15);
+    await unlock("key", "token");
+    expect(await getUnlocked()).not.toBeNull();
+    vi.useFakeTimers({ now: Date.now() + 16 * 60_000 });
+    expect(await getUnlocked()).toBeNull();
+  });
+
+  it("stays unlocked until the browser closes when that is chosen", async () => {
+    const { LOCK_ON_BROWSER_CLOSE, getUnlocked, touch, unlock } =
+      await import("../extension/lib/storage.js");
+    localArea.set("autoLockMinutes", 15);
+    await unlock("key", "token");
+    localArea.set("autoLockMinutes", LOCK_ON_BROWSER_CLOSE);
+    await touch();
+    expect(sessionArea.has("lockAt")).toBe(false);
+    vi.useFakeTimers({ now: Date.now() + 24 * 60 * 60_000 });
+    expect(await getUnlocked()).not.toBeNull();
   });
 });

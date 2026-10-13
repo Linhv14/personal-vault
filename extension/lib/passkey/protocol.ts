@@ -42,7 +42,7 @@ export interface AssertionJSON {
 type Failure<E extends string> = { ok: false; error: E | "invalid_rp" | "unavailable" };
 
 export type QueryResponse =
-  | { ok: true; state: "locked" }
+  | { ok: true; state: "locked"; hasPasskeys: boolean }
   | { ok: true; state: "ready"; rpId: string; passkeys: PasskeyOption[] }
   | Failure<never>;
 export type CreateResponse =

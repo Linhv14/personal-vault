@@ -115,16 +115,22 @@ function button(label: string, primary: boolean, action: () => void): HTMLButton
   return node;
 }
 
-function showLocked(id: string, site: string, retry: () => void): void {
+const UNLOCK_POLL_MS = 1000;
+
+function showLocked(id: string, site: string, resume: () => void): void {
   const body = dialog(t("passkey.locked_title"), site, () => reply(id, NOT_ALLOWED));
   body.append(
     element("p", "hint", t("passkey.locked_hint")),
-    actions(
-      button(t("passkey.unlock"), true, () => void send("passkey:open-popup", {})),
-      button(t("passkey.continue"), false, retry),
-    ),
+    actions(button(t("passkey.unlock"), true, () => void send("passkey:open-popup", {}))),
     other(id),
   );
+  const timer = setInterval(async () => {
+    if (activeId !== id) return clearInterval(timer);
+    const query = await send("passkey:query", { allowCredentialIds: [] });
+    if (activeId !== id || (query.ok && query.state === "locked")) return;
+    clearInterval(timer);
+    resume();
+  }, UNLOCK_POLL_MS);
 }
 
 function other(id: string): HTMLElement {
@@ -198,6 +204,7 @@ async function handleGet(id: string, request: GetRequest): Promise<void> {
   if (activeId !== id) return;
   if (!query.ok) return reply(id, { kind: "fallback" });
   if (query.state === "locked") {
+    if (!query.hasPasskeys) return reply(id, { kind: "fallback" });
     return showLocked(id, location.hostname, () => void handleGet(id, request));
   }
   if (query.passkeys.length === 0) return reply(id, { kind: "fallback" });

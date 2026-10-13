@@ -67,7 +67,10 @@ import { hydrateBrand, logo, wordmark } from "../../src/ui/logo.js";
 import {
   clearAccountData,
   clearPendingSignup,
+  AUTO_LOCK_CHOICES,
   DEFAULT_AUTO_LOCK_MINUTES,
+  LOCK_ON_BROWSER_CLOSE,
+  notePasskeys,
   getLocal,
   getUnlocked,
   loadPendingSignup,
@@ -240,6 +243,7 @@ async function enterVault(rawBase64: string): Promise<void> {
   vaultKeyRaw = fromBase64(rawBase64);
   vaultKey = await importKey(rawBase64);
   items = await decryptAll(vaultKey, locale);
+  void notePasskeys(items.some((item) => item.passkey));
   renderList();
   show("list");
   void backgroundSync();
@@ -287,6 +291,7 @@ async function backgroundSync(): Promise<void> {
       const changed = synced + (vaultKey ? await migrateUnboundItems(vaultKey) : 0);
       if (changed > 0 && vaultKey) {
         items = await decryptAll(vaultKey, locale);
+        void notePasskeys(items.some((item) => item.passkey));
         renderList();
       }
     }
@@ -1394,9 +1399,15 @@ async function openSettings(): Promise<void> {
 
   const local = await getLocal();
 
-  const slider = $<HTMLInputElement>("settings-lock");
-  slider.value = String(local.autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES);
-  $("settings-lock-out").textContent = t("settings.minutes", { count: slider.value });
+  const minutes = local.autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES;
+  const choices = AUTO_LOCK_CHOICES.includes(minutes)
+    ? AUTO_LOCK_CHOICES
+    : [...AUTO_LOCK_CHOICES, minutes].sort((a, b) => (a || Infinity) - (b || Infinity));
+  const lockSelect = $<HTMLSelectElement>("settings-lock");
+  lockSelect.replaceChildren(
+    ...choices.map((choice) => new Option(lockLabel(choice), String(choice))),
+  );
+  lockSelect.value = String(minutes);
 
   const select = $<HTMLSelectElement>("settings-locale");
   select.replaceChildren(
@@ -1427,10 +1438,15 @@ $("settings-back").addEventListener("click", () => {
   show("list");
 });
 
-$("settings-lock").addEventListener("input", async (event) => {
-  const minutes = Number((event.target as HTMLInputElement).value);
-  $("settings-lock-out").textContent = t("settings.minutes", { count: minutes });
-  await setLocal({ autoLockMinutes: minutes });
+function lockLabel(minutes: number): string {
+  if (minutes === LOCK_ON_BROWSER_CLOSE) return t("settings.lock_on_close");
+  return minutes % 60 === 0
+    ? t("settings.hours", { count: minutes / 60 })
+    : t("settings.minutes", { count: minutes });
+}
+
+$("settings-lock").addEventListener("change", async (event) => {
+  await setLocal({ autoLockMinutes: Number((event.target as HTMLSelectElement).value) });
   await touch();
 });
 

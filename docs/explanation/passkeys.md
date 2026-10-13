@@ -50,7 +50,11 @@ Attestation is `none`.
   requests go straight to the browser.
 - A sign-in on a site where 1PW has no passkey goes straight to the browser
   without a dialog.
-- If 1PW is locked, the dialog offers to unlock it or to use another device.
+- If 1PW is locked and the vault holds no passkeys, the browser handles the
+  request without a dialog. The only thing stored to decide this is one
+  yes-or-no flag per device, never the list of sites.
+- If 1PW is locked and the vault holds passkeys, the dialog asks to unlock it
+  and continues on its own once the vault opens.
 
 ## Limits
 
