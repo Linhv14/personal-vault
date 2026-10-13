@@ -273,7 +273,8 @@ export const en = {
     "Bring your logins, notes and Wi-Fi passwords into 1PW. The file is read on this device; only encrypted items are sent to the server.",
   "import.locked": "Unlock 1PW from the toolbar, then reload this page.",
   "import.step_export": "In Proton Pass, open Settings → Export.",
-  "import.step_format": "Choose JSON or CSV. Encrypted (PGP) exports can't be read here.",
+  "import.step_format":
+    "Choose JSON, which keeps passkeys, or CSV. Encrypted (PGP) exports can't be read here.",
   "import.step_choose": "Select the exported file below.",
   "import.choose_file": "Choose file",
   "import.choose_other": "Choose another file",
@@ -288,6 +289,11 @@ export const en = {
   "import.skipped_card": "Credit cards, not supported: {count}",
   "import.skipped_identity": "Identities, not supported: {count}",
   "import.skipped_other": "Other items, not supported: {count}",
+  "import.passkeys_new": "{count, plural, one {Includes # passkey} other {Includes # passkeys}}",
+  "import.passkeys_existing":
+    "{count, plural, one {Adds a passkey to # item already in your vault} other {Adds passkeys to # items already in your vault}}",
+  "import.skipped_passkey": "Passkeys that couldn't be read: {count}",
+  "import.waiting": "Waiting for the server to accept more changes…",
   "import.error_encrypted":
     "This export is encrypted. Export again as JSON or CSV without encryption.",
   "import.error_unrecognized": "This file is not a Proton Pass export.",
@@ -321,8 +327,8 @@ export const en = {
   "item.passkey_saved": "Saved for {site}",
   "autofill.trigger": APP_NAME,
   "autofill.unavailable": `Can't reach ${APP_NAME}. Reload the page.`,
-  "autofill.locked": "Vault is locked",
-  "autofill.locked_hint": `Click to open ${APP_NAME}`,
+  "autofill.locked": "1PW is locked",
+  "autofill.locked_hint": "Click to unlock",
   "autofill.generate": "Use a strong password",
   "autofill.generate_hint": "Generate and fill a random password",
   "autofill.no_match": "No logins for {domain} yet",

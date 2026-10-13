@@ -10,6 +10,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Import passkeys from a Proton Pass JSON export, including onto logins
+  imported earlier without them.
+- Clicking into a login field opens the list of matching logins when there is
+  one to offer; ↓, Enter and Esc work in the list.
 - Passkeys: 1PW can create passkeys on websites and sign in with them, stored
   end-to-end encrypted in the login item and synced like passwords. Turned on
   with autofill; "Use another device" hands any request back to the browser.

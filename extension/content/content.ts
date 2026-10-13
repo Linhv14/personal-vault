@@ -192,10 +192,18 @@ async function fillGenerated(password: HTMLInputElement): Promise<void> {
   for (const field of targets) setValue(field, response.password);
 }
 
-async function openMenu(): Promise<void> {
+async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<void> {
   if (!activeInput) return;
-  const password = findPasswordFor(activeInput) ?? activeInput;
+  const input = activeInput;
+  const password = findPasswordFor(input) ?? input;
   const response = await send({ type: "autofill:suggest" });
+  if (activeInput !== input) return;
+  const nothingToOffer =
+    response.ok &&
+    "suggestions" in response &&
+    response.suggestions.length === 0 &&
+    !wantsNewPassword(password);
+  if (onlyIfUseful && (!response.ok || nothingToOffer)) return;
   menu.replaceChildren();
 
   const heading = document.createElement("div");
@@ -319,9 +327,45 @@ function onFocusIn(event: FocusEvent): void {
 trigger.addEventListener("mousedown", (event) => event.preventDefault());
 trigger.addEventListener("click", (event) => {
   if (!event.isTrusted) return;
-  if (menu.hidden) void openMenu();
+  if (menu.hidden) void openMenu({ onlyIfUseful: false });
   else closeMenu();
 });
+
+function menuRows(): HTMLButtonElement[] {
+  return [...menu.querySelectorAll<HTMLButtonElement>("button.row")];
+}
+
+menu.addEventListener("keydown", (event) => {
+  const rows = menuRows();
+  const index = rows.indexOf(shadow.activeElement as HTMLButtonElement);
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    rows[(index + step + rows.length) % rows.length]?.focus();
+  } else if (event.key === "Escape") {
+    closeMenu();
+    activeInput?.focus();
+  }
+});
+
+document.addEventListener(
+  "click",
+  (event) => {
+    const target = event.target;
+    if (!event.isTrusted || !(target instanceof HTMLInputElement) || !isDecoratable(target)) return;
+    activeInput = target;
+    placeTrigger();
+    if (menu.hidden) void openMenu({ onlyIfUseful: true });
+  },
+  true,
+);
+document.addEventListener(
+  "input",
+  (event) => {
+    if (event.isTrusted && event.target === activeInput) closeMenu();
+  },
+  true,
+);
 
 document.addEventListener("focusin", onFocusIn, true);
 document.addEventListener(
@@ -338,6 +382,10 @@ document.addEventListener(
 );
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeMenu();
+  if (event.key === "ArrowDown" && event.target === activeInput && !menu.hidden) {
+    event.preventDefault();
+    menuRows()[0]?.focus();
+  }
   const target = event.target;
   if (event.key === "Enter" && target instanceof HTMLInputElement && target.type === "password") {
     void capture(scopeOf(target));

@@ -1,9 +1,17 @@
 # Autofill
 
-"Suggest logins on websites" adds an icon to login forms, fills a saved login
-on click, generates passwords in sign-up forms, and offers to save what you
-type. It is off by default, because it is the one feature that runs code inside
-the pages you visit.
+"Autofill and passkeys on websites" adds an icon to login forms, fills a saved
+login on click, generates passwords in sign-up forms, offers to save what you
+type, and handles passkeys (see [Passkeys](passkeys.md)). It is off by default,
+because it is the one feature that runs code inside the pages you visit.
+
+## Picking a login
+
+Clicking into a login field opens the list of matching logins by itself when
+there is something to offer: a matching login, a strong password for a sign-up
+form, or a prompt to unlock 1PW. It stays closed when a page focuses the field
+on load, and when nothing matches; the icon in the field opens it on demand.
+Typing closes it, ↓ moves into it, Enter picks a login and Esc closes it.
 
 ## What turning it on grants
 

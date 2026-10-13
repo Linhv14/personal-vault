@@ -59,8 +59,8 @@ Attestation is `none`.
 ## Limits
 
 - Chrome desktop only. Mobile browsers do not let extensions do this.
-- Passkeys already saved with another provider cannot be moved into 1PW; sites
-  let you add a new one.
+- Passkeys can be imported from a Proton Pass JSON export. Other providers do
+  not export passkeys, so on those sites add a new passkey with 1PW.
 - A synced passkey is protected by the master password and the devices that
   hold the vault, not by a hardware-bound key. That is the usual trade-off of
   password-manager passkeys.

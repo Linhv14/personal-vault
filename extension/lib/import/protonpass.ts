@@ -1,6 +1,8 @@
 import { parseTotpInput } from "../../../src/core/totp.js";
 import { duplicateKey, registrableDomain, type ItemDraft, type VaultItem } from "../vault.js";
+import type { StoredPasskey } from "../passkey/authenticator.js";
 import { csvRecords } from "./csv.js";
+import { readProtonPasskey, type ProtonPasskeyFields } from "./proton-passkey.js";
 import { readZip, ZipError } from "./zip.js";
 
 export type ImportErrorCode = "encrypted" | "unrecognized" | "damaged";
@@ -12,10 +14,12 @@ export class ImportError extends Error {
   }
 }
 
-export type SkipReason = "duplicate" | "trashed" | "alias" | "card" | "identity" | "other";
+export type SkipReason =
+  "duplicate" | "trashed" | "alias" | "card" | "identity" | "other" | "passkey";
 
 export interface ImportPlan {
   items: ItemDraft[];
+  passkeysForExisting: VaultItem[];
   skipped: Partial<Record<SkipReason, number>>;
 }
 
@@ -38,6 +42,9 @@ interface ProtonEntry {
   extraFields: ExtraField[];
   createTime?: number;
   trashed: boolean;
+  passkeyFields: ProtonPasskeyFields[];
+  passkeys: StoredPasskey[];
+  unreadablePasskeys: number;
 }
 
 const TRASHED = 2;
@@ -89,6 +96,22 @@ function fromJsonItem(raw: unknown): ProtonEntry {
     extraFields,
     createTime: typeof item.createTime === "number" ? item.createTime : undefined,
     trashed: item.state === TRASHED,
+    passkeyFields: list(content.passkeys).flatMap((raw): ProtonPasskeyFields[] => {
+      const passkey = object(raw);
+      const fields = text(passkey.content);
+      return fields
+        ? [
+            {
+              content: fields,
+              userName: text(passkey.userName),
+              userDisplayName: text(passkey.userDisplayName),
+              createTime: typeof passkey.createTime === "number" ? passkey.createTime : undefined,
+            },
+          ]
+        : [];
+    }),
+    passkeys: [],
+    unreadablePasskeys: 0,
   };
 }
 
@@ -130,6 +153,9 @@ function fromCsv(csv: string): ProtonEntry[] {
     extraFields: [],
     createTime: Number(row.createTime) || undefined,
     trashed: false,
+    passkeyFields: [],
+    passkeys: [],
+    unreadablePasskeys: 0,
   }));
 }
 
@@ -137,7 +163,21 @@ function startsWith(bytes: Uint8Array, signature: number[]): boolean {
   return signature.every((byte, index) => bytes[index] === byte);
 }
 
+async function withPasskeys(entries: ProtonEntry[]): Promise<ProtonEntry[]> {
+  return Promise.all(
+    entries.map(async (entry) => {
+      const read = await Promise.all(entry.passkeyFields.map(readProtonPasskey));
+      const passkeys = read.filter((passkey): passkey is StoredPasskey => passkey !== null);
+      return { ...entry, passkeys, unreadablePasskeys: read.length - passkeys.length };
+    }),
+  );
+}
+
 export async function readProtonPassExport(bytes: Uint8Array): Promise<ProtonEntry[]> {
+  return withPasskeys(await readEntries(bytes));
+}
+
+async function readEntries(bytes: Uint8Array): Promise<ProtonEntry[]> {
   if (startsWith(bytes, ZIP_SIGNATURE)) {
     let entries;
     try {
@@ -177,7 +217,7 @@ function joinNote(parts: (string | false | undefined)[]): string | undefined {
   return note || undefined;
 }
 
-function toDraft(entry: ProtonEntry): ItemDraft | SkipReason {
+function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
   if (entry.trashed) return "trashed";
   switch (entry.type) {
     case "login": {
@@ -187,7 +227,8 @@ function toDraft(entry: ProtonEntry): ItemDraft | SkipReason {
       const username = entry.username || entry.email || undefined;
       const { totp, unreadable } = totpFrom(entry, title);
       const fields = entry.extraFields.filter((field) => !field.totp && field.value);
-      return {
+      const [passkey, ...otherPasskeys] = entry.passkeys;
+      const login: ItemDraft = {
         title: title || "Login",
         url,
         username,
@@ -203,24 +244,35 @@ function toDraft(entry: ProtonEntry): ItemDraft | SkipReason {
           ...fields.map((field) => `${field.name}: ${field.value}`),
           ...unreadable.map((uri) => `2FA: ${uri}`),
         ]),
+        passkey,
         createdAt: entry.createTime,
       };
+      return [
+        login,
+        ...otherPasskeys.map((extra) => ({
+          title: login.title,
+          url: extra.rpId,
+          username: extra.userName || undefined,
+          passkey: extra,
+          createdAt: extra.createdAt,
+        })),
+      ];
     }
     case "note":
       if (!entry.name && !entry.note) return "other";
-      return {
-        title: entry.name || "Note",
-        note: entry.note || undefined,
-        createdAt: entry.createTime,
-      };
+      return [
+        { title: entry.name || "Note", note: entry.note || undefined, createdAt: entry.createTime },
+      ];
     case "wifi":
-      return {
-        title: entry.name || entry.ssid || "Wi-Fi",
-        username: entry.ssid || undefined,
-        password: entry.password || undefined,
-        note: joinNote([entry.note]),
-        createdAt: entry.createTime,
-      };
+      return [
+        {
+          title: entry.name || entry.ssid || "Wi-Fi",
+          username: entry.ssid || undefined,
+          password: entry.password || undefined,
+          note: joinNote([entry.note]),
+          createdAt: entry.createTime,
+        },
+      ];
     case "alias":
       return "alias";
     case "creditCard":
@@ -233,24 +285,43 @@ function toDraft(entry: ProtonEntry): ItemDraft | SkipReason {
 }
 
 export function planImport(entries: ProtonEntry[], existing: VaultItem[]): ImportPlan {
-  const seen = new Set(existing.map(duplicateKey));
-  const plan: ImportPlan = { items: [], skipped: {} };
-  const skip = (reason: SkipReason) => {
-    plan.skipped[reason] = (plan.skipped[reason] ?? 0) + 1;
+  const plan: ImportPlan = { items: [], passkeysForExisting: [], skipped: {} };
+  const skip = (reason: SkipReason, count = 1) => {
+    if (count > 0) plan.skipped[reason] = (plan.skipped[reason] ?? 0) + count;
   };
+  const inVault = new Map(existing.map((item) => [duplicateKey(item), item]));
+  const planned = new Map<string, ItemDraft>();
+  const knownPasskeys = new Set(existing.flatMap((item) => item.passkey?.credentialId ?? []));
+
   for (const entry of entries) {
-    const draft = toDraft(entry);
-    if (typeof draft === "string") {
-      skip(draft);
+    skip("passkey", entry.unreadablePasskeys);
+    const drafts = toDrafts(entry);
+    if (typeof drafts === "string") {
+      skip(drafts);
       continue;
     }
-    const key = duplicateKey(draft);
-    if (seen.has(key)) {
-      skip("duplicate");
-      continue;
+    for (const found of drafts) {
+      const passkey =
+        found.passkey && !knownPasskeys.has(found.passkey.credentialId) ? found.passkey : undefined;
+      if (passkey) knownPasskeys.add(passkey.credentialId);
+      const draft = { ...found, passkey };
+      const key = duplicateKey(draft);
+      const saved = inVault.get(key);
+      const pending = planned.get(key);
+
+      if (saved && passkey && !saved.passkey) {
+        const updated = { ...saved, passkey };
+        inVault.set(key, updated);
+        plan.passkeysForExisting.push(updated);
+      } else if (pending && passkey && !pending.passkey) {
+        pending.passkey = passkey;
+      } else if (saved || pending) {
+        skip("duplicate");
+      } else {
+        planned.set(key, draft);
+        plan.items.push(draft);
+      }
     }
-    seen.add(key);
-    plan.items.push(draft);
   }
   return plan;
 }

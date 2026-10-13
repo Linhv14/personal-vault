@@ -11,8 +11,16 @@ import {
   type ImportPlan,
   type SkipReason,
 } from "../lib/import/protonpass.js";
-import { getLocal, getUnlocked } from "../lib/storage.js";
-import { decryptAll, importItems, importKey, sync } from "../lib/vault.js";
+import { ApiError } from "../lib/api.js";
+import { getLocal, getUnlocked, notePasskeys } from "../lib/storage.js";
+import {
+  decryptAll,
+  importItems,
+  importKey,
+  saveItem,
+  sync,
+  type VaultItem,
+} from "../lib/vault.js";
 
 const local = await getLocal();
 const locale = resolveLocale(local.locale);
@@ -43,7 +51,10 @@ const SKIP_KEYS: Record<SkipReason, MessageKey> = {
   card: "import.skipped_card",
   identity: "import.skipped_identity",
   other: "import.skipped_other",
+  passkey: "import.skipped_passkey",
 };
+
+const RATE_LIMIT_PAUSE_MS = 20_000;
 
 let plan: ImportPlan | null = null;
 
@@ -81,7 +92,18 @@ $<HTMLInputElement>("file").addEventListener("change", async (event) => {
     return;
   }
 
+  const newPasskeys = plan.items.filter((item) => item.passkey).length;
+  const total = plan.items.length + plan.passkeysForExisting.length;
   $("review-title").textContent = t("import.ready", { count: plan.items.length });
+  $("review-added").replaceChildren(
+    ...[
+      newPasskeys > 0 && t("import.passkeys_new", { count: newPasskeys }),
+      plan.passkeysForExisting.length > 0 &&
+        t("import.passkeys_existing", { count: plan.passkeysForExisting.length }),
+    ]
+      .filter((line): line is string => Boolean(line))
+      .map((line) => Object.assign(document.createElement("li"), { textContent: line })),
+  );
   $("review-skipped").replaceChildren(
     ...Object.entries(plan.skipped).map(([reason, count]) => {
       const item = document.createElement("li");
@@ -90,8 +112,8 @@ $<HTMLInputElement>("file").addEventListener("change", async (event) => {
     }),
   );
   const confirmButton = $<HTMLButtonElement>("confirm");
-  confirmButton.textContent = t("import.confirm", { count: plan.items.length });
-  confirmButton.disabled = plan.items.length === 0;
+  confirmButton.textContent = t("import.confirm", { count: total });
+  confirmButton.disabled = total === 0;
   show("review");
 });
 
@@ -104,7 +126,8 @@ $("confirm").addEventListener("click", async () => {
   const key = await vaultKey();
   if (!key) return show("locked");
   if (!plan) return;
-  const total = plan.items.length;
+  const { items: drafts, passkeysForExisting } = plan;
+  const total = drafts.length + passkeysForExisting.length;
   const progress = $<HTMLProgressElement>("progress");
   const report = (saved: number) => {
     $("progress-title").textContent = t("import.progress", { saved, total });
@@ -114,7 +137,14 @@ $("confirm").addEventListener("click", async () => {
   show("progress");
 
   try {
-    const saved = await importItems(key, plan.items, report);
+    let saved = await importItems(key, drafts, report);
+    for (const item of passkeysForExisting) {
+      await saveRespectingRateLimit(key, item);
+      report(++saved);
+    }
+    if (drafts.some((item) => item.passkey) || passkeysForExisting.length > 0) {
+      await notePasskeys(true);
+    }
     $("done-title").textContent = t("import.done", { count: saved });
     show("done");
   } catch (error) {
@@ -122,5 +152,18 @@ $("confirm").addEventListener("click", async () => {
     showError(describeError(error, t));
   }
 });
+
+async function saveRespectingRateLimit(key: CryptoKey, item: VaultItem): Promise<void> {
+  for (;;) {
+    try {
+      await saveItem(key, item);
+      return;
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 429) throw error;
+      $("progress-title").textContent = t("import.waiting");
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_PAUSE_MS));
+    }
+  }
+}
 
 show((await vaultKey()) ? "pick" : "locked");

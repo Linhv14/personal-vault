@@ -10,8 +10,8 @@ Move logins, notes and Wi-Fi passwords from Proton Pass into 1PW.
 3. Choose **JSON** or **CSV**. Do not choose the PGP-encrypted export: 1PW
    cannot read it without bundling an OpenPGP library into the extension.
 
-JSON keeps more: extra fields, every website of a login, and whether an item
-is in the trash. CSV is fine if you only use the standard fields.
+JSON keeps more: **passkeys**, extra fields, every website of a login, and
+whether an item is in the trash. CSV has no passkeys.
 
 ## Import into 1PW
 
@@ -40,4 +40,9 @@ batches of up to 100.
 | Items in the trash                        | Skipped and counted (JSON only; CSV does not mark them)                             |
 
 An item already in the vault, with the same website (or title), username and
-password, is skipped, so importing the same file twice adds nothing.
+password, is skipped, so importing the same file twice adds nothing. If that
+item has no passkey and the export has one, the passkey is added to it: after
+importing a CSV, import the JSON export to bring the passkeys over.
+
+Passkeys keep their credential id, site and user handle, so the sites they
+belong to accept them without signing up again.
