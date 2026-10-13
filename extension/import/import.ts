@@ -38,7 +38,7 @@ function $<T extends HTMLElement = HTMLElement>(id: string): T {
   return node as T;
 }
 
-const STATES = ["locked", "pick", "review", "progress", "done"] as const;
+const STATES = ["locked", "pick", "passphrase", "review", "progress", "done"] as const;
 
 function show(state: (typeof STATES)[number]): void {
   for (const name of STATES) $(`state-${name}`).hidden = name !== state;
@@ -69,29 +69,40 @@ function showError(message: string): void {
   node.hidden = false;
 }
 
-$<HTMLInputElement>("file").addEventListener("change", async (event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = "";
-  $("error").hidden = true;
-  if (!file) return;
+let selected: Uint8Array | null = null;
 
+function importErrorText(error: unknown): string {
+  return error instanceof ImportError
+    ? t(`import.error_${error.code}` as MessageKey)
+    : describeError(error, t);
+}
+
+async function review(bytes: Uint8Array, passphrase?: string): Promise<void> {
   const key = await vaultKey();
   if (!key) return show("locked");
 
   try {
     await sync().catch(() => null);
-    const entries = await readProtonPassExport(new Uint8Array(await file.arrayBuffer()));
+    const entries = await readProtonPassExport(bytes, passphrase);
     plan = planImport(entries, await decryptAll(key, locale));
   } catch (error) {
-    showError(
-      error instanceof ImportError
-        ? t(`import.error_${error.code}` as MessageKey)
-        : describeError(error, t),
-    );
+    if (error instanceof ImportError && error.code === "needs_passphrase") {
+      $("passphrase-error").hidden = true;
+      show("passphrase");
+      $("passphrase").focus();
+      return;
+    }
+    if (error instanceof ImportError && error.code === "wrong_passphrase") {
+      const node = $("passphrase-error");
+      node.textContent = importErrorText(error);
+      node.hidden = false;
+      $<HTMLInputElement>("passphrase").select();
+      return;
+    }
+    show("pick");
+    showError(importErrorText(error));
     return;
   }
-
   const newPasskeys = plan.items.filter((item) => item.passkey).length;
   const total = plan.items.length + plan.passkeysForExisting.length;
   $("review-title").textContent = t("import.ready", { count: plan.items.length });
@@ -115,10 +126,41 @@ $<HTMLInputElement>("file").addEventListener("change", async (event) => {
   confirmButton.textContent = t("import.confirm", { count: total });
   confirmButton.disabled = total === 0;
   show("review");
+}
+
+$<HTMLInputElement>("file").addEventListener("change", async (event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  $("error").hidden = true;
+  if (!file) return;
+  selected = new Uint8Array(await file.arrayBuffer());
+  $<HTMLInputElement>("passphrase").value = "";
+  await review(selected);
+});
+
+$<HTMLFormElement>("passphrase-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!selected) return show("pick");
+  const submit = $<HTMLButtonElement>("passphrase-submit");
+  submit.disabled = true;
+  submit.textContent = t("import.opening");
+  try {
+    await review(selected, $<HTMLInputElement>("passphrase").value);
+  } finally {
+    submit.disabled = false;
+    submit.textContent = t("import.open");
+  }
+});
+
+$("passphrase-cancel").addEventListener("click", () => {
+  selected = null;
+  show("pick");
 });
 
 $("cancel").addEventListener("click", () => {
   plan = null;
+  selected = null;
   show("pick");
 });
 

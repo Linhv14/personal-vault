@@ -7,11 +7,12 @@ Move logins, notes and Wi-Fi passwords from Proton Pass into 1PW.
 1. Open Proton Pass in the browser extension or the web app. The mobile apps
    cannot export.
 2. Go to **Settings → Export**.
-3. Choose **JSON** or **CSV**. Do not choose the PGP-encrypted export: 1PW
-   cannot read it without bundling an OpenPGP library into the extension.
+3. Choose the **PGP-encrypted** export and set a password for it. Plain JSON
+   and CSV work too, but they leave every password readable in your Downloads
+   folder.
 
-JSON keeps more: **passkeys**, extra fields, every website of a login, and
-whether an item is in the trash. CSV has no passkeys.
+The encrypted export and plain JSON keep **passkeys**, extra fields, every
+website of a login, and whether an item is in the trash. CSV has no passkeys.
 
 ## Import into 1PW
 
@@ -19,12 +20,20 @@ whether an item is in the trash. CSV has no passkeys.
 2. Open **Settings → Data → Import passwords**, or press **Import from
    Proton Pass** on an empty vault. A page opens in a new tab;
    browsers close the popup when a file picker opens, so the import runs there.
-3. Choose the exported file (`.zip`, `.json` or `.csv`).
-4. Review the summary and press **Import**.
-5. **Delete the export file.** It contains every password in plain text.
+3. Choose the exported file (`.zip`, `.pgp`, `.json` or `.csv`).
+4. For an encrypted export, enter the password you set when exporting.
+5. Review the summary and press **Import**.
+6. Delete the export file. This matters most for JSON and CSV, which hold every
+   password in plain text.
 
-The file is read in the browser. Only encrypted items leave the device, in
-batches of up to 100.
+The file is read and, if encrypted, decrypted in the browser. Only encrypted
+items leave the device, in batches of up to 100.
+
+1PW reads the OpenPGP format Proton Pass uses for this export: a password-based
+key (iterated and salted S2K), AES with an integrity check (SEIPD v1), optional
+compression. It does this with the browser's own cryptography rather than an
+OpenPGP library. Other OpenPGP variants are reported as unsupported instead of
+being guessed at.
 
 ## What is imported
 

@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
+import * as openpgp from "openpgp";
 import { csvRecords, parseCsv } from "../extension/lib/import/csv.js";
 import { readZip } from "../extension/lib/import/zip.js";
-import {
-  ImportError,
-  planImport,
-  readProtonPassExport,
-} from "../extension/lib/import/protonpass.js";
+import { planImport, readProtonPassExport } from "../extension/lib/import/protonpass.js";
 import type { VaultItem } from "../extension/lib/vault.js";
 
 const TOTP_URI = "otpauth://totp/GitHub:me@example.com?secret=JBSWY3DPEHPK3PXP&issuer=GitHub";
@@ -249,13 +246,20 @@ describe("Proton Pass import", () => {
     expect(plan.skipped.duplicate).toBe(5);
   });
 
-  it("explains an encrypted export instead of failing on it", async () => {
-    await expect(
-      readProtonPassExport(await makeZip({ "Proton Pass/data.pgp": "x" }, 0)),
-    ).rejects.toMatchObject({ code: "encrypted" });
-    await expect(
-      readProtonPassExport(new TextEncoder().encode("-----BEGIN PGP MESSAGE-----")),
-    ).rejects.toBeInstanceOf(ImportError);
+  it("opens the PGP-encrypted export with the export password", async () => {
+    const armored = (await openpgp.encrypt({
+      message: await openpgp.createMessage({ text: protonJson }),
+      passwords: ["export password"],
+      config: { aeadProtect: false, s2kIterationCountByte: 96 },
+    })) as string;
+    const archive = await makeZip({ "Proton Pass/data.pgp": armored }, 0);
+
+    await expect(readProtonPassExport(archive)).rejects.toMatchObject({ code: "needs_passphrase" });
+    await expect(readProtonPassExport(archive, "wrong")).rejects.toMatchObject({
+      code: "wrong_passphrase",
+    });
+    const entries = await readProtonPassExport(archive, "export password");
+    expect(planImport(entries, []).items).toHaveLength(4);
   });
 
   it("rejects files that are not a Proton Pass export", async () => {

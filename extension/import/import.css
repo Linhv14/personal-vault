@@ -130,3 +130,26 @@ progress {
   height: 8px;
   accent-color: var(--accent);
 }
+.hint {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+.passphrase {
+  display: flex;
+  gap: 10px;
+}
+.passphrase input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.passphrase input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-halo);
+}

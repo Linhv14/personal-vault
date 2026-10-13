@@ -10,6 +10,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Import reads Proton Pass's PGP-encrypted export after asking for its
+  password, decrypting in the browser without an OpenPGP library.
 - Import passkeys from a Proton Pass JSON export, including onto logins
   imported earlier without them.
 - Clicking into a login field opens the list of matching logins when there is

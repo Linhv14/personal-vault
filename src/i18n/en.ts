@@ -273,8 +273,7 @@ export const en = {
     "Bring your logins, notes and Wi-Fi passwords into 1PW. The file is read on this device; only encrypted items are sent to the server.",
   "import.locked": "Unlock 1PW from the toolbar, then reload this page.",
   "import.step_export": "In Proton Pass, open Settings → Export.",
-  "import.step_format":
-    "Choose JSON, which keeps passkeys, or CSV. Encrypted (PGP) exports can't be read here.",
+  "import.step_format": "Choose any format. JSON keeps passkeys, encrypted or not; CSV has none.",
   "import.step_choose": "Select the exported file below.",
   "import.choose_file": "Choose file",
   "import.choose_other": "Choose another file",
@@ -294,10 +293,17 @@ export const en = {
     "{count, plural, one {Adds a passkey to # item already in your vault} other {Adds passkeys to # items already in your vault}}",
   "import.skipped_passkey": "Passkeys that couldn't be read: {count}",
   "import.waiting": "Waiting for the server to accept more changes…",
-  "import.error_encrypted":
-    "This export is encrypted. Export again as JSON or CSV without encryption.",
   "import.error_unrecognized": "This file is not a Proton Pass export.",
   "import.error_damaged": "The file is damaged or incomplete. Export it again.",
+  "import.error_unsupported_encryption":
+    "This file uses encryption 1PW can't read yet. Export again as JSON.",
+  "import.error_wrong_passphrase": "That password doesn't open this file.",
+  "import.error_needs_passphrase": "Enter the export password.",
+  "import.opening": "Opening…",
+  "import.open": "Open",
+  "import.passphrase_hint":
+    "The password you chose when exporting from Proton Pass. The file is decrypted on this device.",
+  "import.passphrase_title": "Enter the export password",
   "settings.logout": "Sign out of this device",
   "settings.delete_account": "Delete account",
   "settings.delete_hint": "Erases this vault and every item on the server. This cannot be undone.",

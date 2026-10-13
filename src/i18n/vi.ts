@@ -269,7 +269,7 @@ export const vi: Catalogue = {
   "import.locked": "Mở khoá 1PW trên thanh công cụ, rồi tải lại trang này.",
   "import.step_export": "Trong Proton Pass, mở Settings → Export.",
   "import.step_format":
-    "Chọn JSON (giữ được passkey) hoặc CSV. Bản export mã hoá (PGP) không đọc được ở đây.",
+    "Chọn định dạng nào cũng được. Bản JSON, có mã hoá hay không, giữ được passkey; CSV thì không.",
   "import.step_choose": "Chọn file vừa export ở dưới.",
   "import.choose_file": "Chọn file",
   "import.choose_other": "Chọn file khác",
@@ -288,10 +288,17 @@ export const vi: Catalogue = {
   "import.passkeys_existing": "Thêm passkey vào {count} mục đã có trong vault",
   "import.skipped_passkey": "Passkey không đọc được: {count}",
   "import.waiting": "Đang chờ server cho ghi tiếp…",
-  "import.error_encrypted":
-    "File export này đã được mã hoá. Hãy export lại dạng JSON hoặc CSV không mã hoá.",
   "import.error_unrecognized": "File này không phải bản export của Proton Pass.",
   "import.error_damaged": "File bị hỏng hoặc không đầy đủ. Hãy export lại.",
+  "import.error_unsupported_encryption":
+    "File này dùng kiểu mã hoá 1PW chưa đọc được. Hãy export lại dạng JSON.",
+  "import.error_wrong_passphrase": "Mật khẩu này không mở được file.",
+  "import.error_needs_passphrase": "Hãy nhập mật khẩu của file export.",
+  "import.opening": "Đang mở…",
+  "import.open": "Mở file",
+  "import.passphrase_hint":
+    "Mật khẩu bạn đặt khi export từ Proton Pass. File được giải mã ngay trên máy này.",
+  "import.passphrase_title": "Nhập mật khẩu của file export",
   "settings.logout": "Đăng xuất khỏi máy này",
   "settings.delete_account": "Xoá tài khoản",
   "settings.delete_hint": "Xoá vĩnh viễn vault và mọi mục trên server. Không khôi phục được.",

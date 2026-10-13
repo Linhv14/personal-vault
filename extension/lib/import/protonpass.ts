@@ -3,9 +3,11 @@ import { duplicateKey, registrableDomain, type ItemDraft, type VaultItem } from 
 import type { StoredPasskey } from "../passkey/authenticator.js";
 import { csvRecords } from "./csv.js";
 import { readProtonPasskey, type ProtonPasskeyFields } from "./proton-passkey.js";
+import { decryptWithPassphrase, OpenPgpError, type OpenPgpErrorCode } from "./openpgp.js";
 import { readZip, ZipError } from "./zip.js";
 
-export type ImportErrorCode = "encrypted" | "unrecognized" | "damaged";
+export type ImportErrorCode =
+  "needs_passphrase" | "wrong_passphrase" | "unsupported_encryption" | "unrecognized" | "damaged";
 
 export class ImportError extends Error {
   constructor(readonly code: ImportErrorCode) {
@@ -122,7 +124,7 @@ function fromJson(json: string): ProtonEntry[] {
   } catch {
     throw new ImportError("damaged");
   }
-  if (parsed.encrypted === true) throw new ImportError("encrypted");
+  if (parsed.encrypted === true) throw new ImportError("unsupported_encryption");
   if (typeof parsed.vaults !== "object" || parsed.vaults === null) {
     throw new ImportError("unrecognized");
   }
@@ -173,11 +175,30 @@ async function withPasskeys(entries: ProtonEntry[]): Promise<ProtonEntry[]> {
   );
 }
 
-export async function readProtonPassExport(bytes: Uint8Array): Promise<ProtonEntry[]> {
-  return withPasskeys(await readEntries(bytes));
+export async function readProtonPassExport(
+  bytes: Uint8Array,
+  passphrase?: string,
+): Promise<ProtonEntry[]> {
+  return withPasskeys(await readEntries(bytes, passphrase));
 }
 
-async function readEntries(bytes: Uint8Array): Promise<ProtonEntry[]> {
+const OPENPGP_ERRORS: Record<OpenPgpErrorCode, ImportErrorCode> = {
+  wrong_passphrase: "wrong_passphrase",
+  unsupported: "unsupported_encryption",
+  damaged: "damaged",
+};
+
+async function decrypted(message: Uint8Array, passphrase: string | undefined): Promise<string> {
+  if (!passphrase) throw new ImportError("needs_passphrase");
+  try {
+    return new TextDecoder().decode(await decryptWithPassphrase(message, passphrase));
+  } catch (error) {
+    if (error instanceof OpenPgpError) throw new ImportError(OPENPGP_ERRORS[error.code]);
+    throw error;
+  }
+}
+
+async function readEntries(bytes: Uint8Array, passphrase?: string): Promise<ProtonEntry[]> {
   if (startsWith(bytes, ZIP_SIGNATURE)) {
     let entries;
     try {
@@ -186,16 +207,15 @@ async function readEntries(bytes: Uint8Array): Promise<ProtonEntry[]> {
       if (error instanceof ZipError) throw new ImportError("damaged");
       throw error;
     }
-    if (entries.some((entry) => entry.name.endsWith("data.pgp"))) {
-      throw new ImportError("encrypted");
-    }
+    const encrypted = entries.find((entry) => entry.name.endsWith("data.pgp"));
+    if (encrypted) return fromJson(await decrypted(await encrypted.read(), passphrase));
     const data = entries.find((entry) => entry.name.endsWith("data.json"));
     if (!data) throw new ImportError("unrecognized");
     return fromJson(new TextDecoder().decode(await data.read()));
   }
 
   const content = new TextDecoder().decode(bytes).trim();
-  if (content.startsWith("-----BEGIN PGP")) throw new ImportError("encrypted");
+  if (content.startsWith("-----BEGIN PGP")) return fromJson(await decrypted(bytes, passphrase));
   if (content.startsWith("{")) return fromJson(content);
   return fromCsv(content);
 }

@@ -34,6 +34,24 @@
         <p class="error" id="error" role="alert" hidden></p>
       </section>
 
+      <section id="state-passphrase" class="card" hidden>
+        <h2 data-i18n="import.passphrase_title"></h2>
+        <p class="hint" data-i18n="import.passphrase_hint"></p>
+        <form id="passphrase-form" class="passphrase">
+          <input id="passphrase" type="password" autocomplete="off" required />
+          <button
+            class="button primary"
+            type="submit"
+            id="passphrase-submit"
+            data-i18n="import.open"
+          ></button>
+        </form>
+        <p class="error" id="passphrase-error" role="alert" hidden></p>
+        <div class="actions">
+          <button class="button" id="passphrase-cancel" data-i18n="import.choose_other"></button>
+        </div>
+      </section>
+
       <section id="state-review" class="card" hidden>
         <h2 id="review-title"></h2>
         <ul class="summary added" id="review-added"></ul>
