@@ -62,8 +62,9 @@ are what every client reads after decrypting.
 | `codes`                                              | recovery    | Array of one-time recovery codes                                     |
 | `ssid`                                               | wifi        | Network name                                                         |
 
-An item without `type` is a login: items saved before types existed keep
-working without a migration. Empty fields are left out. Editing an item keeps
+An item without `type` is a login, or a note when it holds nothing but a
+title and a note: items saved before types existed keep working without a
+migration. Empty fields are left out. Editing an item keeps
 the fields the editor does not show. Extensions older than item types edit
 every item as a login and drop the other fields, so update every device before
 editing a card, address or other typed item.

@@ -391,8 +391,19 @@ describe("extension popup", () => {
     expect(server.items.size).toBe(2);
 
     const chips = [...el("type-filter").querySelectorAll<HTMLButtonElement>(".type-chip")];
-    expect(chips.map((chip) => chip.textContent)).toEqual(["All2", "Logins1", "Cards1"]);
-    chips[2]!.click();
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "All2",
+      "Logins1",
+      "Notes0",
+      "Cards1",
+      "Addresses0",
+      "Recovery codes0",
+      "Wi-Fi0",
+    ]);
+    chips.find((chip) => chip.textContent === "Wi-Fi0")!.click();
+    expect(el("list-empty-type").hidden).toBe(false);
+    expect(el("list-add-type").textContent).toBe("New Wi-Fi network");
+    el("type-filter").querySelectorAll<HTMLButtonElement>(".type-chip")[3]!.click();
     expect(el("matching-section").hidden).toBe(true);
     expect(el("all-list").querySelectorAll(".item")).toHaveLength(1);
     expect(el("all-list").textContent).toContain("Ending in 4242");

@@ -106,8 +106,14 @@ export const TYPE_ICON: Record<ItemType, IconName> = {
   wifi: "wifi",
 };
 
-export function itemType(item: Pick<VaultItem, "type">): ItemType {
-  return item.type ?? "login";
+type TypeEvidence = Partial<
+  Pick<VaultItem, "type" | "url" | "username" | "password" | "totp" | "passkey" | "note">
+>;
+
+export function itemType(item: TypeEvidence): ItemType {
+  if (item.type) return item.type;
+  const loginFields = item.url || item.username || item.password || item.totp || item.passkey;
+  return !loginFields && item.note ? "note" : "login";
 }
 
 export function cardDigits(number: string | undefined): string {

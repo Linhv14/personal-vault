@@ -12,6 +12,12 @@ describe("item types", () => {
   it("treats items saved before types existed as logins", () => {
     expect(itemType({})).toBe("login");
     expect(itemType({ type: "card" })).toBe("card");
+    expect(itemType({ url: "github.com", note: "work" })).toBe("login");
+  });
+
+  it("treats an untyped item holding only a note as a note", () => {
+    expect(itemType({ note: "Wi-Fi at the office" })).toBe("note");
+    expect(itemType({ note: "x", type: "login" })).toBe("login");
   });
 
   it.each([

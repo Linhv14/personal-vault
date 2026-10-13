@@ -627,6 +627,14 @@ button.primary.danger-fill:hover:not(:disabled) {
   background: var(--text);
   color: var(--bg);
 }
+.type-chip.empty:not([aria-selected="true"]) {
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  border-style: dashed;
+}
+.center-button {
+  align-self: center;
+  margin-top: 8px;
+}
 .type-count {
   font-variant-numeric: tabular-nums;
   opacity: 0.7;

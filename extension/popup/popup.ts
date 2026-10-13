@@ -637,11 +637,10 @@ let typeFilter: ItemType | "all" = "all";
 function renderTypeFilter(): void {
   const counts = new Map<ItemType, number>();
   for (const item of items) counts.set(itemType(item), (counts.get(itemType(item)) ?? 0) + 1);
-  const shown = ITEM_TYPES.filter((type) => (counts.get(type) ?? 0) > 0 || type === typeFilter);
   const chip = (value: ItemType | "all", label: string, count: number) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "type-chip";
+    button.className = count === 0 ? "type-chip empty" : "type-chip";
     button.setAttribute("role", "tab");
     button.setAttribute("aria-selected", String(typeFilter === value));
     const name = document.createElement("span");
@@ -658,9 +657,9 @@ function renderTypeFilter(): void {
   };
   $("type-filter").replaceChildren(
     chip("all", t("type.all"), items.length),
-    ...shown.map((type) => chip(type, t(TYPE_LABEL[type]), counts.get(type) ?? 0)),
+    ...ITEM_TYPES.map((type) => chip(type, t(TYPE_LABEL[type]), counts.get(type) ?? 0)),
   );
-  $("type-filter").hidden = shown.length < 2 && typeFilter === "all";
+  $("type-filter").hidden = items.length === 0;
 }
 
 function renderList(): void {
@@ -694,7 +693,11 @@ function renderList(): void {
   renderInto($("all-list"), rest);
 
   $("list-empty").hidden = items.length > 0;
-  $("list-empty-type").hidden = items.length === 0 || visible.length > 0;
+  const emptyType = items.length > 0 && visible.length === 0;
+  $("list-empty-type").hidden = !emptyType;
+  const addOfType = $("list-add-type");
+  addOfType.hidden = !emptyType || typeFilter === "all" || query !== "";
+  if (typeFilter !== "all") addOfType.textContent = t(NEW_LABEL[typeFilter]);
 }
 
 function toggleAddMenu(): void {
@@ -723,6 +726,9 @@ function toggleAddMenu(): void {
 
 document.addEventListener("click", (event) => {
   if (!$("add-menu").contains(event.target as Node)) $("add-menu").hidden = true;
+});
+$("list-add-type").addEventListener("click", () => {
+  if (typeFilter !== "all") openEditor(null, typeFilter);
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") $("add-menu").hidden = true;
