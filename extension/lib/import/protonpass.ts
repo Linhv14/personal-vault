@@ -43,33 +43,47 @@ interface ProtonEntry {
 const TRASHED = 2;
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
 
+type JsonObject = Record<string, unknown>;
+
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function fromJsonItem(item: Record<string, any>): ProtonEntry {
-  const data = item.data ?? {};
-  const content = data.content ?? {};
-  const urls: string[] = Array.isArray(content.urls)
+function object(value: unknown): JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as JsonObject)
+    : {};
+}
+
+function list(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function fromJsonItem(raw: unknown): ProtonEntry {
+  const item = object(raw);
+  const data = object(item.data);
+  const content = object(data.content);
+  const metadata = object(data.metadata);
+  const urls = Array.isArray(content.urls)
     ? content.urls.map(text)
-    : Array.isArray(content.autofillUrls)
-      ? content.autofillUrls.map((entry: { url?: unknown }) => text(entry?.url))
-      : [];
-  const extraFields: ExtraField[] = (Array.isArray(data.extraFields) ? data.extraFields : []).map(
-    (field: Record<string, any>) => ({
+    : list(content.autofillUrls).map((entry) => text(object(entry).url));
+  const extraFields = list(data.extraFields).map((raw): ExtraField => {
+    const field = object(raw);
+    const value = object(field.data);
+    return {
       name: text(field.fieldName),
-      value: text(field.data?.content ?? field.data?.totpUri ?? field.data?.timestamp),
+      value: text(value.content ?? value.totpUri ?? value.timestamp),
       totp: field.type === "totp",
-    }),
-  );
+    };
+  });
   return {
     type: text(data.type),
-    name: text(data.metadata?.name),
+    name: text(metadata.name),
     urls: urls.filter(Boolean),
     email: text(content.itemEmail),
     username: text(content.itemUsername),
     password: text(content.password),
-    note: text(data.metadata?.note),
+    note: text(metadata.note),
     totp: text(content.totpUri),
     ssid: text(content.ssid),
     extraFields,
@@ -79,9 +93,9 @@ function fromJsonItem(item: Record<string, any>): ProtonEntry {
 }
 
 function fromJson(json: string): ProtonEntry[] {
-  let parsed: Record<string, any>;
+  let parsed: JsonObject;
   try {
-    parsed = JSON.parse(json);
+    parsed = object(JSON.parse(json));
   } catch {
     throw new ImportError("damaged");
   }
@@ -89,10 +103,8 @@ function fromJson(json: string): ProtonEntry[] {
   if (typeof parsed.vaults !== "object" || parsed.vaults === null) {
     throw new ImportError("unrecognized");
   }
-  return Object.values(parsed.vaults as Record<string, { items?: unknown[] }>).flatMap((vault) =>
-    (Array.isArray(vault.items) ? vault.items : []).map((item) =>
-      fromJsonItem((item ?? {}) as Record<string, any>),
-    ),
+  return Object.values(object(parsed.vaults)).flatMap((vault) =>
+    list(object(vault).items).map(fromJsonItem),
   );
 }
 

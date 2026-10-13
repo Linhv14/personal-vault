@@ -1,14 +1,6 @@
 import { generatePassword } from "../../src/core/generator.js";
 import type { AutofillRequest, AutofillResponse, PendingPrompt } from "./autofill-protocol.js";
-import { getUnlocked } from "./storage.js";
-import {
-  decryptAll,
-  importKey,
-  newItemId,
-  registrableDomain,
-  saveItem,
-  type VaultItem,
-} from "./vault.js";
+import { newItemId, openVault, registrableDomain, saveItem, type VaultItem } from "./vault.js";
 
 const PENDING_TTL_MS = 5 * 60_000;
 
@@ -52,13 +44,6 @@ function itemMatches(item: VaultItem, domain: string): boolean {
   return Boolean(item.url) && registrableDomain(item.url!) === domain;
 }
 
-async function unlocked(): Promise<{ key: CryptoKey; items: VaultItem[] } | null> {
-  const session = await getUnlocked();
-  if (!session) return null;
-  const key = await importKey(session.vaultKeyRaw);
-  return { key, items: await decryptAll(key) };
-}
-
 function pendingKey(tabId: number): string {
   return `autofill:pending:${tabId}`;
 }
@@ -92,7 +77,7 @@ export async function handleAutofill(
 ): Promise<AutofillResponse> {
   switch (request.type) {
     case "autofill:suggest": {
-      const vault = await unlocked();
+      const vault = await openVault();
       if (!vault) return { ok: true, locked: true };
       const suggestions = vault.items
         .filter((item) => itemMatches(item, sender.domain))
@@ -101,7 +86,7 @@ export async function handleAutofill(
     }
 
     case "autofill:fill": {
-      const vault = await unlocked();
+      const vault = await openVault();
       if (!vault) return { ok: true, locked: true };
       const item = vault.items.find((candidate) => candidate.id === request.id);
       if (!item?.password || !itemMatches(item, sender.domain)) {
@@ -121,7 +106,7 @@ export async function handleAutofill(
         password: request.password,
         at: Date.now(),
       };
-      const vault = await unlocked();
+      const vault = await openVault();
       const prompt = promptFor(pending, vault?.items ?? null);
       if (prompt) await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
       return { ok: true, prompt };
@@ -130,14 +115,14 @@ export async function handleAutofill(
     case "autofill:pending": {
       const pending = await readPending(sender);
       if (!pending) return { ok: true, prompt: null };
-      const vault = await unlocked();
+      const vault = await openVault();
       return { ok: true, prompt: promptFor(pending, vault?.items ?? null) };
     }
 
     case "autofill:save": {
       const pending = await readPending(sender);
       if (!pending) return { ok: true, saved: false };
-      const vault = await unlocked();
+      const vault = await openVault();
       if (!vault) {
         await chrome.action.openPopup?.().catch(() => {});
         return { ok: true, saved: false, locked: true };

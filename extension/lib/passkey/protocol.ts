@@ -22,13 +22,6 @@ export interface GetOptions {
   allowCredentialIds: string[];
 }
 
-export type PasskeyRequest =
-  | { type: "passkey:query-create"; options: CreateOptions }
-  | { type: "passkey:query-get"; options: GetOptions }
-  | { type: "passkey:create"; options: CreateOptions }
-  | { type: "passkey:get"; options: GetOptions; credentialId: string }
-  | { type: "passkey:open-popup" };
-
 export interface RegistrationJSON {
   credentialId: string;
   clientDataJSON: string;
@@ -46,15 +39,31 @@ export interface AssertionJSON {
   userHandle: string;
 }
 
-export type PasskeyError = "locked" | "invalid_rp" | "excluded" | "not_found" | "unsupported";
+type Failure<E extends string> = { ok: false; error: E | "invalid_rp" | "unavailable" };
 
-export type PasskeyResponse =
-  | { ok: true; locked: true }
-  | { ok: true; locked: false; rpId: string; passkeys: PasskeyOption[] }
-  | { ok: true; registration: RegistrationJSON }
-  | { ok: true; assertion: AssertionJSON }
-  | { ok: true }
-  | { ok: false; error: PasskeyError | string };
+export type QueryResponse =
+  | { ok: true; state: "locked" }
+  | { ok: true; state: "ready"; rpId: string; passkeys: PasskeyOption[] }
+  | Failure<never>;
+export type CreateResponse =
+  { ok: true; registration: RegistrationJSON } | Failure<"locked" | "excluded">;
+export type GetResponse = { ok: true; assertion: AssertionJSON } | Failure<"locked" | "not_found">;
+
+export interface PasskeyMessages {
+  "passkey:query": {
+    request: { rpId?: string; allowCredentialIds: string[] };
+    response: QueryResponse;
+  };
+  "passkey:create": { request: { options: CreateOptions }; response: CreateResponse };
+  "passkey:get": { request: { options: GetOptions; credentialId: string }; response: GetResponse };
+  "passkey:open-popup": { request: Record<never, never>; response: { ok: true } };
+}
+
+export type PasskeyRequest = {
+  [K in keyof PasskeyMessages]: { type: K } & PasskeyMessages[K]["request"];
+}[keyof PasskeyMessages];
+
+export type PasskeyResponse = PasskeyMessages[keyof PasskeyMessages]["response"];
 
 export function isPasskeyRequest(message: unknown): message is PasskeyRequest {
   const type = (message as { type?: unknown } | null)?.type;
@@ -71,5 +80,5 @@ export type PageRequest =
 export type PageReply =
   | { kind: "fallback" }
   | { kind: "error"; name: string; message: string }
-  | { kind: "registration"; registration: RegistrationJSON; credProps: boolean }
+  | { kind: "registration"; registration: RegistrationJSON }
   | { kind: "assertion"; assertion: AssertionJSON };

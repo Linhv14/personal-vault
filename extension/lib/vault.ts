@@ -12,7 +12,7 @@ import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
 import type { StoredPasskey } from "./passkey/authenticator.js";
 import * as api from "./api.js";
-import { getLocal, setLocal, type CachedItem } from "./storage.js";
+import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
 
 export interface VaultItem {
   id: string;
@@ -54,6 +54,13 @@ async function openItem(
 
 function isLive(row: CachedItem): row is CachedItem & { ciphertext: string; nonce: string } {
   return !row.deletedAt && Boolean(row.ciphertext) && Boolean(row.nonce);
+}
+
+export async function openVault(): Promise<{ key: CryptoKey; items: VaultItem[] } | null> {
+  const session = await getUnlocked();
+  if (!session) return null;
+  const key = await importKey(session.vaultKeyRaw);
+  return { key, items: await decryptAll(key) };
 }
 
 export async function decryptAll(key: CryptoKey, locale = "en"): Promise<VaultItem[]> {
@@ -292,9 +299,9 @@ export function searchItems(items: VaultItem[], query: string): VaultItem[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return items;
   return items.filter((item) =>
-    [item.title, item.username, item.url, item.totp?.issuer]
-      .filter(Boolean)
-      .some((field) => field!.toLowerCase().includes(needle)),
+    [item.title, item.username, item.url, item.totp?.issuer].some((field) =>
+      field?.toLowerCase().includes(needle),
+    ),
   );
 }
 

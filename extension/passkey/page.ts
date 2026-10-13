@@ -59,8 +59,8 @@ function ask(request: PageRequest, signal?: AbortSignal | null): Promise<PageRep
   });
 }
 
-function registrationCredential(json: RegistrationJSON, credProps: boolean): Credential {
-  const extensions = credProps ? { credProps: { rk: true } } : {};
+function registrationCredential(json: RegistrationJSON, wantsCredProps: boolean): Credential {
+  const extensions = wantsCredProps ? { credProps: { rk: true } } : {};
   const response = define(Object.create(AuthenticatorAttestationResponse.prototype), {
     clientDataJSON: buffer(json.clientDataJSON),
     attestationObject: buffer(json.attestationObject),

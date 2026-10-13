@@ -11,9 +11,8 @@ import {
   PAGE_REQUEST,
   type PageReply,
   type PageRequest,
+  type PasskeyMessages,
   type PasskeyOption,
-  type PasskeyRequest,
-  type PasskeyResponse,
 } from "../lib/passkey/protocol.js";
 import { PASSKEY_STYLES } from "./styles.js";
 
@@ -27,9 +26,15 @@ let t: Translate = createTranslator("en");
 let activeId: string | null = null;
 let closeDialog: (() => void) | null = null;
 
-async function send(request: PasskeyRequest): Promise<PasskeyResponse> {
+type CreateRequest = Extract<PageRequest, { kind: "create" }>;
+type GetRequest = Extract<PageRequest, { kind: "get" }>;
+
+async function send<K extends keyof PasskeyMessages>(
+  type: K,
+  request: PasskeyMessages[K]["request"],
+): Promise<PasskeyMessages[K]["response"] | { ok: false; error: "unavailable" }> {
   try {
-    return (await chrome.runtime.sendMessage(request)) as PasskeyResponse;
+    return await chrome.runtime.sendMessage({ type, ...request });
   } catch {
     return { ok: false, error: "unavailable" };
   }
@@ -115,7 +120,7 @@ function showLocked(id: string, site: string, retry: () => void): void {
   body.append(
     element("p", "hint", t("passkey.locked_hint")),
     actions(
-      button(t("passkey.unlock"), true, () => void send({ type: "passkey:open-popup" })),
+      button(t("passkey.unlock"), true, () => void send("passkey:open-popup", {})),
       button(t("passkey.continue"), false, retry),
     ),
     other(id),
@@ -134,30 +139,24 @@ function failed(id: string, site: string): void {
   body.append(element("p", "hint", t("passkey.failed")), other(id));
 }
 
-async function handleCreate(id: string, request: Extract<PageRequest, { kind: "create" }>) {
-  const query = await send({ type: "passkey:query-create", options: request.options });
+async function handleCreate(id: string, request: CreateRequest): Promise<void> {
+  const query = await send("passkey:query", { rpId: request.options.rpId, allowCredentialIds: [] });
   if (activeId !== id) return;
   if (!query.ok) return reply(id, { kind: "fallback" });
-  const site = request.options.rpId ?? location.hostname;
-  if ("locked" in query && query.locked) {
-    return showLocked(id, site, () => void handleCreate(id, request));
+  if (query.state === "locked") {
+    return showLocked(id, location.hostname, () => void handleCreate(id, request));
   }
 
+  const site = query.rpId;
   const body = dialog(t("passkey.save_title", { site }), request.options.userName, () =>
     reply(id, NOT_ALLOWED),
   );
   const save = button(t("passkey.save_action"), true, async () => {
     save.disabled = true;
-    const result = await send({ type: "passkey:create", options: request.options });
+    const result = await send("passkey:create", { options: request.options });
     if (activeId !== id) return;
-    if (result.ok && "registration" in result) {
-      return reply(id, {
-        kind: "registration",
-        registration: result.registration,
-        credProps: true,
-      });
-    }
-    if (!result.ok && result.error === "excluded") {
+    if (result.ok) return reply(id, { kind: "registration", registration: result.registration });
+    if (result.error === "excluded") {
       return reply(id, {
         kind: "error",
         name: "InvalidStateError",
@@ -169,11 +168,7 @@ async function handleCreate(id: string, request: Extract<PageRequest, { kind: "c
   body.append(actions(save), other(id));
 }
 
-function accountRow(
-  id: string,
-  passkey: PasskeyOption,
-  request: Extract<PageRequest, { kind: "get" }>,
-) {
+function accountRow(id: string, site: string, passkey: PasskeyOption, request: GetRequest) {
   const row = element("button", "account");
   row.type = "button";
   const text = element("span", "account-text");
@@ -184,36 +179,35 @@ function accountRow(
   row.append(element("span", "avatar", (passkey.title.trim()[0] ?? "?").toUpperCase()), text);
   trustedClick(row, async () => {
     row.disabled = true;
-    const result = await send({
-      type: "passkey:get",
+    const result = await send("passkey:get", {
       options: request.options,
       credentialId: passkey.credentialId,
     });
     if (activeId !== id) return;
-    if (result.ok && "assertion" in result) {
-      return reply(id, { kind: "assertion", assertion: result.assertion });
-    }
-    failed(id, request.options.rpId ?? location.hostname);
+    if (result.ok) return reply(id, { kind: "assertion", assertion: result.assertion });
+    failed(id, site);
   });
   return row;
 }
 
-async function handleGet(id: string, request: Extract<PageRequest, { kind: "get" }>) {
-  const query = await send({ type: "passkey:query-get", options: request.options });
+async function handleGet(id: string, request: GetRequest): Promise<void> {
+  const query = await send("passkey:query", {
+    rpId: request.options.rpId,
+    allowCredentialIds: request.options.allowCredentialIds,
+  });
   if (activeId !== id) return;
   if (!query.ok) return reply(id, { kind: "fallback" });
-  const site = request.options.rpId ?? location.hostname;
-  if ("locked" in query && query.locked) {
-    return showLocked(id, site, () => void handleGet(id, request));
+  if (query.state === "locked") {
+    return showLocked(id, location.hostname, () => void handleGet(id, request));
   }
-  if (!("passkeys" in query) || query.passkeys.length === 0) {
-    return reply(id, { kind: "fallback" });
-  }
+  if (query.passkeys.length === 0) return reply(id, { kind: "fallback" });
+
+  const site = query.rpId;
   const body = dialog(t("passkey.signin_title", { site }), t("passkey.choose_account"), () =>
     reply(id, NOT_ALLOWED),
   );
   const list = element("div", "accounts");
-  list.append(...query.passkeys.map((passkey) => accountRow(id, passkey, request)));
+  list.append(...query.passkeys.map((passkey) => accountRow(id, site, passkey, request)));
   body.append(list, other(id));
 }
 

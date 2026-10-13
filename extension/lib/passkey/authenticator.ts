@@ -1,6 +1,6 @@
 import { fromBase64Url, toBase64Url } from "./base64url.js";
 import { encodeCbor, type CborValue } from "./cbor.js";
-import { ES256 } from "./protocol.js";
+import { ES256, type AssertionJSON, type RegistrationJSON } from "./protocol.js";
 
 const FLAG_USER_PRESENT = 0x01;
 const FLAG_USER_VERIFIED = 0x04;
@@ -28,22 +28,9 @@ export interface ClientData {
   origin: string;
 }
 
-export interface RegistrationResult {
-  credentialId: string;
-  clientDataJSON: string;
-  attestationObject: string;
-  authenticatorData: string;
-  publicKey: string;
-  publicKeyAlgorithm: number;
+export interface CreatedPasskey {
+  registration: RegistrationJSON;
   passkey: StoredPasskey;
-}
-
-export interface AssertionResult {
-  credentialId: string;
-  clientDataJSON: string;
-  authenticatorData: string;
-  signature: string;
-  userHandle: string;
 }
 
 function concat(...parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
@@ -117,7 +104,7 @@ export async function createPasskey(input: {
   userName: string;
   userDisplayName?: string;
   now?: number;
-}): Promise<RegistrationResult> {
+}): Promise<CreatedPasskey> {
   const keys = await crypto.subtle.generateKey(EC_ALGORITHM, true, ["sign", "verify"]);
   const rawPublicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keys.publicKey));
   const credentialId = crypto.getRandomValues(new Uint8Array(16));
@@ -142,12 +129,14 @@ export async function createPasskey(input: {
   });
 
   return {
-    credentialId: toBase64Url(credentialId),
-    clientDataJSON: toBase64Url(clientData),
-    attestationObject: toBase64Url(attestationObject),
-    authenticatorData: toBase64Url(authData),
-    publicKey: toBase64Url(new Uint8Array(await crypto.subtle.exportKey("spki", keys.publicKey))),
-    publicKeyAlgorithm: ES256,
+    registration: {
+      credentialId: toBase64Url(credentialId),
+      clientDataJSON: toBase64Url(clientData),
+      attestationObject: toBase64Url(attestationObject),
+      authenticatorData: toBase64Url(authData),
+      publicKey: toBase64Url(new Uint8Array(await crypto.subtle.exportKey("spki", keys.publicKey))),
+      publicKeyAlgorithm: ES256,
+    },
     passkey: {
       credentialId: toBase64Url(credentialId),
       rpId: input.rpId,
@@ -165,7 +154,7 @@ export async function createPasskey(input: {
 export async function signAssertion(
   passkey: StoredPasskey,
   input: { origin: string; challenge: string },
-): Promise<AssertionResult> {
+): Promise<AssertionJSON> {
   const authData = await authenticatorData(passkey.rpId, SYNCED_PASSKEY_FLAGS);
   const clientData = clientDataJson({
     type: "webauthn.get",

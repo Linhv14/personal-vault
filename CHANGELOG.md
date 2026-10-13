@@ -56,6 +56,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Scripts injected into web pages are built in their own scope. Before, the
+  autofill and passkey scripts could overwrite each other's functions, and the
+  passkey script exposed its variables to the page.
+- Vietnamese text uses "mục" and "khoá 2FA" throughout.
 - Creating an account right after switching to your own server could ask for
   an email code the server never sends, because the previous server's
   settings were still in use.

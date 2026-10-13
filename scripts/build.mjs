@@ -9,6 +9,7 @@
 import { build } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.mjs";
 import { localizePage } from "./localize-page.mjs";
+import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.mjs";
 import { spawnSync } from "node:child_process";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -100,26 +101,24 @@ async function buildExtension() {
 
   await mkdir(outExtension, { recursive: true });
 
-  const entryPoints = [
-    "popup/popup.ts",
-    "background.ts",
-    "offscreen/offscreen.ts",
-    "content/content.ts",
-    "import/import.ts",
-    "passkey/page.ts",
-    "passkey/bridge.ts",
-  ]
-    .map((file) => path.join(source, file))
-    .filter((file) => existsSync(file));
+  const entries = (files) =>
+    files.map((file) => path.join(source, file)).filter((file) => existsSync(file));
 
   await build({
     ...common,
-    entryPoints,
+    entryPoints: entries(EXTENSION_PAGES),
     outdir: outExtension,
     outbase: source,
     // An MV3 service worker runs in its own module scope; code splitting would
     // emit shared chunks the manifest cannot declare.
     splitting: false,
+  });
+  await build({
+    ...common,
+    format: "iife",
+    entryPoints: entries(INJECTED_SCRIPTS),
+    outdir: outExtension,
+    outbase: source,
   });
 
   for (const entry of await readdir(source, { recursive: true, withFileTypes: true })) {

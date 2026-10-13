@@ -1,5 +1,6 @@
 /**
- * Service worker. Its only job is auto-lock.
+ * Service worker: auto-lock, clipboard clearing, and the trusted side of
+ * autofill and passkeys.
  *
  * Deliberately thin: MV3 terminates the service worker after roughly 30 seconds
  * idle, so any state held in a variable here disappears without warning. All

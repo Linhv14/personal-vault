@@ -34,75 +34,74 @@ describe("encodeCbor", () => {
   });
 });
 
+function registrationResponse({ registration }: Awaited<ReturnType<typeof register>>) {
+  return {
+    id: registration.credentialId,
+    rawId: registration.credentialId,
+    type: "public-key" as const,
+    clientExtensionResults: {},
+    response: {
+      clientDataJSON: registration.clientDataJSON,
+      attestationObject: registration.attestationObject,
+    },
+  };
+}
+
+async function verifyRegistration(created: Awaited<ReturnType<typeof register>>) {
+  return verifyRegistrationResponse({
+    response: registrationResponse(created),
+    expectedChallenge: challenge,
+    expectedOrigin: origin,
+    expectedRPID: "example.com",
+    requireUserVerification: true,
+  });
+}
+
+function assertionResponse(assertion: Awaited<ReturnType<typeof signAssertion>>) {
+  return {
+    id: assertion.credentialId,
+    rawId: assertion.credentialId,
+    type: "public-key" as const,
+    clientExtensionResults: {},
+    response: {
+      clientDataJSON: assertion.clientDataJSON,
+      authenticatorData: assertion.authenticatorData,
+      signature: assertion.signature,
+      userHandle: assertion.userHandle,
+    },
+  };
+}
+
 describe("passkey authenticator", () => {
   it("produces a registration an independent WebAuthn server accepts", async () => {
-    const result = await register();
-    const verification = await verifyRegistrationResponse({
-      response: {
-        id: result.credentialId,
-        rawId: result.credentialId,
-        type: "public-key",
-        clientExtensionResults: {},
-        response: {
-          clientDataJSON: result.clientDataJSON,
-          attestationObject: result.attestationObject,
-        },
-      },
-      expectedChallenge: challenge,
-      expectedOrigin: origin,
-      expectedRPID: "example.com",
-      requireUserVerification: true,
-    });
+    const created = await register();
+    const verification = await verifyRegistration(created);
     expect(verification.verified).toBe(true);
     expect(verification.registrationInfo?.credentialBackedUp).toBe(true);
-    expect(verification.registrationInfo?.credential.id).toBe(result.credentialId);
+    expect(verification.registrationInfo?.credential.id).toBe(created.registration.credentialId);
   });
 
   it("signs assertions that verify against the registered public key", async () => {
-    const result = await register();
-    const registration = await verifyRegistrationResponse({
-      response: {
-        id: result.credentialId,
-        rawId: result.credentialId,
-        type: "public-key",
-        clientExtensionResults: {},
-        response: {
-          clientDataJSON: result.clientDataJSON,
-          attestationObject: result.attestationObject,
-        },
-      },
-      expectedChallenge: challenge,
-      expectedOrigin: origin,
-      expectedRPID: "example.com",
-    });
+    const created = await register();
+    const { registrationInfo } = await verifyRegistration(created);
     const loginChallenge = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-    const assertion = await signAssertion(result.passkey, { origin, challenge: loginChallenge });
+    const assertion = await signAssertion(created.passkey, { origin, challenge: loginChallenge });
 
     const verification = await verifyAuthenticationResponse({
-      response: {
-        id: assertion.credentialId,
-        rawId: assertion.credentialId,
-        type: "public-key",
-        clientExtensionResults: {},
-        response: {
-          clientDataJSON: assertion.clientDataJSON,
-          authenticatorData: assertion.authenticatorData,
-          signature: assertion.signature,
-          userHandle: assertion.userHandle,
-        },
-      },
+      response: assertionResponse(assertion),
       expectedChallenge: loginChallenge,
       expectedOrigin: origin,
       expectedRPID: "example.com",
       requireUserVerification: true,
-      credential: registration.registrationInfo!.credential,
+      credential: registrationInfo!.credential,
     });
     expect(verification.verified).toBe(true);
   });
 
-  it("rejects an assertion replayed to another site", async () => {
-    const result = await register();
-    const assertion = await signAssertion(result.passkey, {
+  it("binds a signature to the origin it was made for", async () => {
+    const created = await register();
+    const { registrationInfo } = await verifyRegistration(created);
+    const assertion = await signAssertion(created.passkey, {
       origin: "https://evil.example",
       challenge,
     });
@@ -112,29 +111,18 @@ describe("passkey authenticator", () => {
     expect(clientData.origin).toBe("https://evil.example");
     await expect(
       verifyAuthenticationResponse({
-        response: {
-          id: assertion.credentialId,
-          rawId: assertion.credentialId,
-          type: "public-key",
-          clientExtensionResults: {},
-          response: {
-            clientDataJSON: assertion.clientDataJSON,
-            authenticatorData: assertion.authenticatorData,
-            signature: assertion.signature,
-          },
-        },
+        response: assertionResponse(assertion),
         expectedChallenge: challenge,
         expectedOrigin: origin,
         expectedRPID: "example.com",
-        credential: { id: result.credentialId, publicKey: new Uint8Array(65), counter: 0 },
+        credential: registrationInfo!.credential,
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/origin/i);
   });
 
-  it("keeps the private key only in the stored passkey", async () => {
-    const result = await register();
-    const { passkey, ...publicParts } = result;
-    expect(JSON.stringify(publicParts)).not.toContain(passkey.privateKey);
+  it("never puts the private key in what goes back to the page", async () => {
+    const { registration, passkey } = await register();
+    expect(JSON.stringify(registration)).not.toContain(passkey.privateKey);
   });
 });
 

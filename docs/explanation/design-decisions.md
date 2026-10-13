@@ -127,6 +127,13 @@ accent vibrates against a dark background.
 
 ## Platform traps
 
+- **Scripts injected into pages share a scope.** All of an extension's content
+  scripts run in one isolated world, and a MAIN-world script runs in the page's
+  own global scope. Built as plain scripts, a top-level `send` in one replaced
+  the `send` in another, and the passkey script exposed its variables to the
+  page. Every injected script is therefore built as an IIFE; the list lives in
+  `scripts/extension-entries.mjs`, and a test checks it matches the scripts the
+  extension registers.
 - **`@cloudflare/workers-types` declares its own `Element`**, for
   HTMLRewriter, which conflicts with the DOM's. Worker and browser code use
   separate `tsconfig` files.

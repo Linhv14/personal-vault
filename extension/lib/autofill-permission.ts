@@ -5,7 +5,7 @@ import {
   PASSKEY_PAGE_SCRIPT_ID,
 } from "./autofill-protocol.js";
 
-const SCRIPTS: chrome.scripting.RegisteredContentScript[] = [
+export const SCRIPTS: chrome.scripting.RegisteredContentScript[] = [
   {
     id: AUTOFILL_SCRIPT_ID,
     matches: AUTOFILL_ORIGINS,

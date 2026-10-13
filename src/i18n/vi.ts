@@ -10,11 +10,11 @@ import type { Catalogue } from "./en.js";
 
 export const vi: Catalogue = {
   // --- Errors thrown by src/core -------------------------------------------
-  "error.base32.invalid_character": 'Ký tự không hợp lệ trong secret base32: "{char}"',
-  "error.totp.empty_secret": "Secret 2FA đang rỗng",
+  "error.base32.invalid_character": 'Ký tự không hợp lệ trong khoá 2FA: "{char}"',
+  "error.totp.empty_secret": "Khoá 2FA đang trống",
   "error.totp.invalid_uri": "Đây không phải một URI hợp lệ",
   "error.totp.not_totp": "Chỉ hỗ trợ TOTP, không hỗ trợ HOTP",
-  "error.totp.missing_secret": "Thiếu hoặc sai tham số secret",
+  "error.totp.missing_secret": "Link otpauth thiếu hoặc sai khoá 2FA",
   "error.totp.unsupported_algorithm": "Thuật toán không hỗ trợ: {algorithm}",
   "error.totp.unrecognized_input": "Không phải URI otpauth:// cũng không phải chuỗi base32 hợp lệ",
   "error.crypto.unsupported_kdf": "Hàm dẫn xuất khoá không hỗ trợ: {kdf}",
@@ -58,11 +58,11 @@ export const vi: Catalogue = {
   "error.auth.invalid_credentials": "Email hoặc master password không đúng",
   "error.auth.rate_limited": "Sai quá nhiều lần. Thử lại sau {seconds} giây.",
   "error.auth.unauthorized": "Chưa đăng nhập, hoặc session đã hết hạn",
-  "error.items.invalid_id": "Id item không hợp lệ",
+  "error.items.invalid_id": "Id mục không hợp lệ",
   "error.items.invalid_payload": "Dữ liệu mã hoá không hợp lệ",
-  "error.items.forbidden": "Bạn không có quyền với item đó",
-  "error.items.not_found": "Không tìm thấy item",
-  "error.items.quota_exceeded": "Vault đã đầy (5.000 item).",
+  "error.items.forbidden": "Bạn không có quyền với mục đó",
+  "error.items.not_found": "Không tìm thấy mục",
+  "error.items.quota_exceeded": "Vault đã đầy (5.000 mục).",
   "error.shares.invalid_payload": "Dữ liệu mã hoá không hợp lệ",
   "error.shares.invalid_ttl": "Thời hạn nằm ngoài khoảng cho phép",
   "error.shares.invalid_max_views": "Số lượt xem nằm ngoài khoảng cho phép",
@@ -130,7 +130,7 @@ export const vi: Catalogue = {
 
   // --- Item list -----------------------------------------------------------
   "list.search": "Tìm…",
-  "list.add": "Thêm item",
+  "list.add": "Thêm mục",
   "list.generator": "Sinh mật khẩu",
   "list.settings": "Cài đặt",
   "list.lock_now": "Khoá ngay",
@@ -151,7 +151,7 @@ export const vi: Catalogue = {
   "edit.totp_secret": "Khoá 2FA",
   "edit.totp_placeholder": "Dán khoá hoặc link otpauth://",
   "edit.save": "Lưu",
-  "edit.delete": "Xoá item",
+  "edit.delete": "Xoá mục",
   "edit.delete_confirm": 'Xoá "{title}"? Không khôi phục được.',
   "edit.reveal": "Hiện mật khẩu",
   "edit.regenerate": "Sinh mật khẩu",
@@ -165,7 +165,7 @@ export const vi: Catalogue = {
   "edit.scan_ok_issuer": " của {issuer}",
   "edit.totp_parse_failed": "Không đọc được khoá 2FA đó: {reason}",
   "edit.saved": "Đã lưu",
-  "edit.added": "Đã thêm item",
+  "edit.added": "Đã thêm mục",
   "edit.deleted": "Đã xoá",
 
   // --- Generator -----------------------------------------------------------
@@ -287,7 +287,7 @@ export const vi: Catalogue = {
   "import.error_damaged": "File bị hỏng hoặc không đầy đủ. Hãy export lại.",
   "settings.logout": "Đăng xuất khỏi máy này",
   "settings.delete_account": "Xoá tài khoản",
-  "settings.delete_hint": "Xoá vĩnh viễn vault và mọi item trên server. Không khôi phục được.",
+  "settings.delete_hint": "Xoá vĩnh viễn vault và mọi mục trên server. Không khôi phục được.",
   "settings.delete_submit": "Xoá vĩnh viễn",
   "settings.delete_confirm": "Xoá vĩnh viễn vault của {email}?",
   "settings.deleted": "Đã xoá tài khoản và vault.",
