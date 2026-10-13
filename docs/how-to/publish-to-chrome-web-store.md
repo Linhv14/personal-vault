@@ -61,15 +61,15 @@ codes, end-to-end encrypted.
 
 **Permission justifications:**
 
-| Permission                                       | Justification                                                                                                                      |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `storage`                                        | Keeps the encrypted vault on the device for offline use, and the unlocked key in session memory only.                              |
-| `alarms`                                         | Locks the vault after the chosen idle time and clears copied secrets from the clipboard after 30 seconds.                          |
-| `activeTab`                                      | Reads the address of the current tab to list matching logins, and captures it when the user asks to scan a 2FA QR code.            |
-| `offscreen`                                      | Clears the clipboard after 30 seconds even when the popup has closed.                                                              |
-| `clipboardWrite`                                 | Writes the empty value that clears a copied password from the clipboard.                                                           |
-| `scripting`                                      | Registers the autofill script only after the user turns on "Suggest logins on websites".                                           |
-| Optional host access `https://*/*`, `http://*/*` | Requested only when the user turns on autofill, to show the fill icon in login forms and offer to save new logins. Off by default. |
+| Permission                                       | Justification                                                                                                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `storage`                                        | Keeps the encrypted vault on the device for offline use, and the unlocked key in session memory only.                                                                                      |
+| `alarms`                                         | Locks the vault after the chosen idle time and clears copied secrets from the clipboard after 30 seconds.                                                                                  |
+| `activeTab`                                      | Reads the address of the current tab to list matching logins, and captures it when the user asks to scan a 2FA QR code.                                                                    |
+| `offscreen`                                      | Clears the clipboard after 30 seconds even when the popup has closed.                                                                                                                      |
+| `clipboardWrite`                                 | Writes the empty value that clears a copied password from the clipboard.                                                                                                                   |
+| `scripting`                                      | Registers the autofill and passkey scripts only after the user turns on "Autofill and passkeys on websites".                                                                               |
+| Optional host access `https://*/*`, `http://*/*` | Requested only when the user turns on autofill and passkeys, to show the fill icon in login forms, offer to save new logins, and create or use passkeys the user approves. Off by default. |
 
 **Remote code:** No. All code ships in the package.
 

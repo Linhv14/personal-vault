@@ -10,6 +10,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Passkeys: 1PW can create passkeys on websites and sign in with them, stored
+  end-to-end encrypted in the login item and synced like passwords. Turned on
+  with autofill; "Use another device" hands any request back to the browser.
 - Import from Proton Pass (JSON, CSV or the export archive) from Settings →
   Data, or from an empty vault, with a summary before anything is saved and
   duplicates skipped.
@@ -53,6 +56,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Creating an account right after switching to your own server could ask for
+  an email code the server never sends, because the previous server's
+  settings were still in use.
 - Emails show the 1PW logo, attached inline so nothing is loaded from a
   server when the message is opened.
 - Every popup screen scrolls inside one frame with the same padding on all

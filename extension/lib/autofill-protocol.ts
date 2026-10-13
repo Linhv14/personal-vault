@@ -1,4 +1,6 @@
 export const AUTOFILL_SCRIPT_ID = "personal-vault-autofill";
+export const PASSKEY_PAGE_SCRIPT_ID = "personal-vault-passkey-page";
+export const PASSKEY_BRIDGE_SCRIPT_ID = "personal-vault-passkey-bridge";
 export const AUTOFILL_ORIGINS = ["https://*/*", "http://*/*"];
 
 export interface Suggestion {

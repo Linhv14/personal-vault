@@ -10,6 +10,7 @@
 import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
 import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
+import type { StoredPasskey } from "./passkey/authenticator.js";
 import * as api from "./api.js";
 import { getLocal, setLocal, type CachedItem } from "./storage.js";
 
@@ -21,6 +22,7 @@ export interface VaultItem {
   password?: string;
   totp?: TotpConfig;
   note?: string;
+  passkey?: StoredPasskey;
   createdAt: number;
   updatedAt: number;
 }

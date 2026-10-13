@@ -82,26 +82,27 @@ hiding who uses the server or when matters to you, this design is not enough.
 
 ## Specific defences
 
-| Threat                                            | Defence                                                                                                                                        |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Login request reveals the vault key               | Auth key and wrapping key are separate HKDF outputs                                                                                            |
-| Leaked database used to guess passwords           | Auth hash and wrapped key keyed by `AT_REST_SECRET`, which is not in D1                                                                        |
-| Online password guessing                          | 10 failures per email per 15 minutes, then a 15-minute lock; 30 requests per minute per IP                                                     |
-| Finding out which emails have accounts            | `prelogin` returns stable decoy parameters for unknown addresses; login timing is uniform; sign-up sends a different email instead of an error |
-| Strangers using a personal server                 | Account creation needs `REGISTRATION_TOKEN` unless open registration is chosen                                                                 |
-| Flooding a shared server                          | Per-network daily account limit, per-account item and write limits                                                                             |
-| Server swaps ciphertext between items or accounts | Item id and account id are AES-GCM associated data                                                                                             |
-| Stolen session token replaces the password        | Changing the password or deleting the account needs the current auth key                                                                       |
-| Stolen session token survives a password change   | Changing the password revokes every session                                                                                                    |
-| Leaked database yields usable tokens              | Only SHA-256 hashes of session and revoke tokens are stored                                                                                    |
-| Two people opening a single-view link at once     | The view is claimed in one conditional `UPDATE … RETURNING`                                                                                    |
-| Probing a share's recipient list                  | Requesting a code returns the same answer for every address                                                                                    |
-| A page impersonating another site to autofill     | The service worker uses the URL Chrome reports for the sender's top frame                                                                      |
-| A page clicking autofill on the user's behalf     | Every action requires a trusted user event; the UI is in a closed shadow root                                                                  |
-| Copied password left on the clipboard             | Cleared after 30 seconds by the service worker, even after the popup closes                                                                    |
-| Vault key written to disk                         | Kept only in `chrome.storage.session`, which is memory-backed                                                                                  |
-| Script injection or framing on the share page     | Strict CSP, `frame-ancestors 'none'`, password never placed in the DOM                                                                         |
-| Supply-chain attack through dependencies          | No dependencies in `src/core`; QR codes read with the browser's built-in `BarcodeDetector`                                                     |
+| Threat                                            | Defence                                                                                                                                            |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login request reveals the vault key               | Auth key and wrapping key are separate HKDF outputs                                                                                                |
+| Leaked database used to guess passwords           | Auth hash and wrapped key keyed by `AT_REST_SECRET`, which is not in D1                                                                            |
+| Online password guessing                          | 10 failures per email per 15 minutes, then a 15-minute lock; 30 requests per minute per IP                                                         |
+| Finding out which emails have accounts            | `prelogin` returns stable decoy parameters for unknown addresses; login timing is uniform; sign-up sends a different email instead of an error     |
+| Strangers using a personal server                 | Account creation needs `REGISTRATION_TOKEN` unless open registration is chosen                                                                     |
+| Flooding a shared server                          | Per-network daily account limit, per-account item and write limits                                                                                 |
+| Server swaps ciphertext between items or accounts | Item id and account id are AES-GCM associated data                                                                                                 |
+| Stolen session token replaces the password        | Changing the password or deleting the account needs the current auth key                                                                           |
+| Stolen session token survives a password change   | Changing the password revokes every session                                                                                                        |
+| Leaked database yields usable tokens              | Only SHA-256 hashes of session and revoke tokens are stored                                                                                        |
+| Two people opening a single-view link at once     | The view is claimed in one conditional `UPDATE … RETURNING`                                                                                        |
+| Probing a share's recipient list                  | Requesting a code returns the same answer for every address                                                                                        |
+| A page impersonating another site to autofill     | The service worker uses the URL Chrome reports for the sender's top frame                                                                          |
+| A page clicking autofill on the user's behalf     | Every action requires a trusted user event; the UI is in a closed shadow root                                                                      |
+| A page using another site's passkey               | The RP ID is checked against the top-frame origin Chrome reports, no broader than its registrable domain; `clientDataJSON` carries the real origin |
+| Copied password left on the clipboard             | Cleared after 30 seconds by the service worker, even after the popup closes                                                                        |
+| Vault key written to disk                         | Kept only in `chrome.storage.session`, which is memory-backed                                                                                      |
+| Script injection or framing on the share page     | Strict CSP, `frame-ancestors 'none'`, password never placed in the DOM                                                                             |
+| Supply-chain attack through dependencies          | No dependencies in `src/core`; QR codes read with the browser's built-in `BarcodeDetector`                                                         |
 
 ## Verifying the claims
 

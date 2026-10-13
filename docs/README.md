@@ -41,6 +41,7 @@ it teaches, instructs, describes or explains.
 | [Threat model](explanation/threat-model.md)         | What each party can and cannot learn, and what is out of reach |
 | [Share links](explanation/share-links.md)           | How a link carries its own key, and the controls on it         |
 | [Autofill](explanation/autofill.md)                 | How the page script decides what to show and where             |
+| [Passkeys](explanation/passkeys.md)                 | How 1PW creates and uses passkeys, and what it refuses         |
 | [Design decisions](explanation/design-decisions.md) | Choices that look odd, platform traps, tooling                 |
 
 ## Elsewhere in the repository

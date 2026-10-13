@@ -106,6 +106,8 @@ async function buildExtension() {
     "offscreen/offscreen.ts",
     "content/content.ts",
     "import/import.ts",
+    "passkey/page.ts",
+    "passkey/bridge.ts",
   ]
     .map((file) => path.join(source, file))
     .filter((file) => existsSync(file));

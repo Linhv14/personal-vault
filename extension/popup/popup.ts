@@ -446,6 +446,15 @@ $<HTMLFormElement>("form-setup").addEventListener("submit", async (event) => {
   event.preventDefault();
   setError("setup-error", null);
 
+  if (!codeSentTo) {
+    const required = verificationRequired;
+    await applyServerConfig();
+    if (verificationRequired !== required) {
+      renderSetupForm();
+      return;
+    }
+  }
+
   const data = new FormData(event.target as HTMLFormElement);
   const apiUrl = String(data.get("apiUrl")).trim().replace(/\/$/, "");
   const email = String(data.get("email")).trim().toLowerCase();
@@ -697,6 +706,12 @@ function fillItemBody(body: HTMLElement, item: VaultItem): void {
   if (item.username) body.append(valueRow(t("common.username"), item.username, false));
   if (item.password) body.append(valueRow(t("common.password"), item.password, true));
   if (item.totp) body.append(totpRow(item.totp));
+  if (item.passkey) {
+    const value = document.createElement("span");
+    value.className = "v";
+    value.textContent = t("item.passkey_saved", { site: item.passkey.rpId });
+    body.append(fieldBlock(t("common.passkey"), value));
+  }
   if (item.url) body.append(valueRow(t("common.url"), item.url, false));
   if (item.note) body.append(valueRow(t("common.note"), item.note, false));
 
@@ -1000,6 +1015,7 @@ $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
       password: String(data.get("password")) || undefined,
       note: String(data.get("note")).trim() || undefined,
       totp,
+      passkey: editing?.passkey,
     });
     items = await decryptAll(vaultKey, locale);
     renderList();

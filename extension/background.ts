@@ -12,12 +12,19 @@ import {
   revokesAutofill,
   unregisterAutofillScript,
 } from "./lib/autofill-permission.js";
-import { isAutofillRequest } from "./lib/autofill-protocol.js";
-import { handleAutofill, trustedSender } from "./lib/autofill-service.js";
+import { AUTOFILL_ORIGINS, isAutofillRequest } from "./lib/autofill-protocol.js";
+import { handleAutofill, trustedSender, type TrustedSender } from "./lib/autofill-service.js";
+import { isPasskeyRequest } from "./lib/passkey/protocol.js";
+import { handlePasskey } from "./lib/passkey/service.js";
 import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
 
-chrome.runtime.onInstalled.addListener(() => void scheduleLockAlarm());
+chrome.runtime.onInstalled.addListener(() => {
+  void scheduleLockAlarm();
+  void chrome.permissions.contains({ origins: AUTOFILL_ORIGINS }).then((granted) => {
+    if (granted) return registerAutofillScript();
+  });
+});
 
 chrome.runtime.onStartup.addListener(() => {
   void lock();
@@ -37,13 +44,18 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (!isAutofillRequest(message)) return false;
+  const handle: ((trusted: TrustedSender) => Promise<unknown>) | null = isAutofillRequest(message)
+    ? (trusted) => handleAutofill(message, trusted)
+    : isPasskeyRequest(message)
+      ? (trusted) => handlePasskey(message, trusted)
+      : null;
+  if (!handle) return false;
   const trusted = trustedSender(sender, chrome.runtime.id);
   if (!trusted) {
     sendResponse({ ok: false, error: "untrusted_sender" });
     return false;
   }
-  handleAutofill(message, trusted)
+  handle(trusted)
     .then(sendResponse)
     .catch((error: unknown) => sendResponse({ ok: false, error: String(error) }));
   return true;
