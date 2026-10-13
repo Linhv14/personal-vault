@@ -127,7 +127,30 @@ const protonJson = JSON.stringify({
             type: "creditCard",
             metadata: { name: "Visa", note: "" },
             extraFields: [],
-            content: { number: "4111" },
+            content: {
+              cardholderName: "Jane Doe",
+              number: "4111 1111 1111 1111",
+              verificationNumber: "123",
+              expirationDate: "2027-04",
+              pin: "0000",
+            },
+          },
+        },
+        {
+          state: 1,
+          data: {
+            type: "identity",
+            metadata: { name: "Home address", note: "" },
+            extraFields: [],
+            content: {
+              firstName: "Jane",
+              lastName: "Doe",
+              streetAddress: "1 Main St",
+              city: "Hanoi",
+              countryOrRegion: "Vietnam",
+              passportNumber: "B1234567",
+              extraAddressDetails: [{ fieldName: "Gate", type: "text", data: { content: "4" } }],
+            },
           },
         },
         {
@@ -183,13 +206,15 @@ describe("Proton Pass import", () => {
     );
     const plan = planImport(entries, []);
 
-    expect(plan.items.map((item) => item.title)).toEqual([
-      "GitHub",
-      "Bank",
-      "Recovery codes",
-      "Home",
+    expect(plan.items.map((item) => [item.type ?? "login", item.title])).toEqual([
+      ["login", "GitHub"],
+      ["login", "Bank"],
+      ["card", "Visa"],
+      ["identity", "Home address"],
+      ["note", "Recovery codes"],
+      ["wifi", "Home"],
     ]);
-    expect(plan.skipped).toEqual({ trashed: 1, alias: 1, card: 1 });
+    expect(plan.skipped).toEqual({ trashed: 1, alias: 1 });
 
     const github = plan.items[0]!;
     expect(github).toMatchObject({
@@ -204,12 +229,26 @@ describe("Proton Pass import", () => {
     expect(github.note).toContain("https://gist.github.com");
     expect(github.note).toContain("PIN: 4242");
     expect(plan.items[1]).toMatchObject({ url: "https://bank.example", username: "0123" });
-    expect(plan.items[3]).toMatchObject({ username: "home-5g", password: "wifi-pass" });
+    expect(plan.items[2]).toMatchObject({
+      cardholder: "Jane Doe",
+      cardNumber: "4111111111111111",
+      cardExpiry: "04/27",
+      cardCvv: "123",
+      cardPin: "0000",
+    });
+    expect(plan.items[3]).toMatchObject({
+      fullName: "Jane Doe",
+      address: "1 Main St",
+      city: "Hanoi",
+      country: "Vietnam",
+    });
+    expect(plan.items[3]!.note).toBe("Passport number: B1234567\n\nGate: 4");
+    expect(plan.items[5]).toMatchObject({ ssid: "home-5g", password: "wifi-pass" });
   });
 
   it("reads a plain JSON export", async () => {
     const entries = await readProtonPassExport(new TextEncoder().encode(protonJson));
-    expect(planImport(entries, []).items).toHaveLength(4);
+    expect(planImport(entries, []).items).toHaveLength(6);
   });
 
   it("reads the CSV export", async () => {
@@ -217,9 +256,16 @@ describe("Proton Pass import", () => {
       "type,name,url,email,username,password,note,totp,createTime,modifyTime,vault",
       `login,GitHub,"https://github.com, https://gist.github.com",me@example.com,,hunter2,"multi\nline",${TOTP_URI},1700000000,1700000000,Personal`,
       "alias,Alias,,x@alias.example,,,,,1,1,Personal",
+      `creditCard,Visa,,,,,"${JSON.stringify({ number: "4111111111111111", expirationDate: "2027-04", note: "travel" }).replaceAll('"', '""')}",,1,1,Personal`,
     ].join("\n");
     const plan = planImport(await readProtonPassExport(new TextEncoder().encode(csv)), []);
-    expect(plan.items).toHaveLength(1);
+    expect(plan.items).toHaveLength(2);
+    expect(plan.items[1]).toMatchObject({
+      type: "card",
+      cardNumber: "4111111111111111",
+      cardExpiry: "04/27",
+      note: "travel",
+    });
     expect(plan.items[0]).toMatchObject({
       title: "GitHub",
       url: "https://github.com",
@@ -242,8 +288,14 @@ describe("Proton Pass import", () => {
     ] as VaultItem[];
     const entries = await readProtonPassExport(new TextEncoder().encode(protonJson));
     const plan = planImport([...entries, ...entries], existing);
-    expect(plan.items.map((item) => item.title)).toEqual(["Bank", "Recovery codes", "Home"]);
-    expect(plan.skipped.duplicate).toBe(5);
+    expect(plan.items.map((item) => item.title)).toEqual([
+      "Bank",
+      "Visa",
+      "Home address",
+      "Recovery codes",
+      "Home",
+    ]);
+    expect(plan.skipped.duplicate).toBe(7);
   });
 
   it("opens the PGP-encrypted export with the export password", async () => {
@@ -259,7 +311,7 @@ describe("Proton Pass import", () => {
       code: "wrong_passphrase",
     });
     const entries = await readProtonPassExport(archive, "export password");
-    expect(planImport(entries, []).items).toHaveLength(4);
+    expect(planImport(entries, []).items).toHaveLength(6);
   });
 
   it("rejects files that are not a Proton Pass export", async () => {

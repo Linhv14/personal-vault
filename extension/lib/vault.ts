@@ -11,11 +11,13 @@ import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/c
 import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
 import type { StoredPasskey } from "./passkey/authenticator.js";
+import { cardDigits, itemType, searchableText, type ItemType } from "./item-types.js";
 import * as api from "./api.js";
 import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
 
 export interface VaultItem {
   id: string;
+  type?: ItemType;
   title: string;
   url?: string;
   username?: string;
@@ -23,6 +25,22 @@ export interface VaultItem {
   totp?: TotpConfig;
   note?: string;
   passkey?: StoredPasskey;
+  cardholder?: string;
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvv?: string;
+  cardPin?: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  codes?: string[];
+  ssid?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -144,9 +162,24 @@ export type ItemDraft = Omit<VaultItem, "id" | "createdAt" | "updatedAt"> & { cr
 
 const IMPORT_BATCH_SIZE = 100;
 
-export function duplicateKey(item: Pick<VaultItem, "title" | "url" | "username" | "password">) {
-  const site = (item.url && registrableDomain(item.url)) || item.title.trim().toLowerCase();
-  return [site, item.username ?? "", item.password ?? ""].join("\n");
+export function duplicateKey(item: ItemDraft): string {
+  const title = item.title.trim().toLowerCase();
+  switch (itemType(item)) {
+    case "login": {
+      const site = (item.url && registrableDomain(item.url)) || title;
+      return [site, item.username ?? "", item.password ?? ""].join("\n");
+    }
+    case "card":
+      return ["card", cardDigits(item.cardNumber) || title].join("\n");
+    case "identity":
+      return ["identity", title, item.fullName ?? "", item.email ?? ""].join("\n");
+    case "wifi":
+      return ["wifi", item.ssid ?? title, item.password ?? ""].join("\n");
+    case "note":
+      return ["note", title, item.note ?? ""].join("\n");
+    case "recovery":
+      return ["recovery", title, (item.codes ?? []).join("\n")].join("\n");
+  }
 }
 
 export async function importItems(
@@ -292,16 +325,19 @@ export function matchingItems(items: VaultItem[], tabUrl: string | undefined): V
   if (!tabUrl) return [];
   const target = registrableDomain(tabUrl);
   if (!target) return [];
-  return items.filter((item) => item.url && registrableDomain(item.url) === target);
+  return items.filter(
+    (item) =>
+      itemType(item) === "login" &&
+      item.url !== undefined &&
+      registrableDomain(item.url) === target,
+  );
 }
 
 export function searchItems(items: VaultItem[], query: string): VaultItem[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return items;
   return items.filter((item) =>
-    [item.title, item.username, item.url, item.totp?.issuer].some((field) =>
-      field?.toLowerCase().includes(needle),
-    ),
+    searchableText(item).some((field) => field.toLowerCase().includes(needle)),
   );
 }
 

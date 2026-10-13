@@ -1,4 +1,5 @@
 import type { TrustedSender } from "../autofill-service.js";
+import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
 import { newItemId, openVault, registrableDomain, saveItem, type VaultItem } from "../vault.js";
 import { createPasskey, signAssertion, type StoredPasskey } from "./authenticator.js";
@@ -30,6 +31,7 @@ function itemFor(items: VaultItem[], origin: string, userName: string): VaultIte
   return items.find(
     (item) =>
       !item.passkey &&
+      itemType(item) === "login" &&
       item.url !== undefined &&
       registrableDomain(item.url) === site &&
       (item.username ?? "") === userName,

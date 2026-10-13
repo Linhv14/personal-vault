@@ -1,6 +1,7 @@
 # Import from Proton Pass
 
-Move logins, notes and Wi-Fi passwords from Proton Pass into 1PW.
+Move logins, notes, cards, addresses and Wi-Fi networks from Proton Pass into
+1PW.
 
 ## Export from Proton Pass
 
@@ -37,19 +38,22 @@ being guessed at.
 
 ## What is imported
 
-| Proton Pass                               | Becomes in 1PW                                                                      |
-| ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| Login                                     | Item with title, first website, username (or email), password and 2FA secret        |
-| Extra websites                            | Listed in the note                                                                  |
-| Email and username both set               | Username as the username, email in the note                                         |
-| Extra fields                              | `name: value` lines in the note; an extra 2FA field is used if there is no main one |
-| Note                                      | Item with only a title and note                                                     |
-| Wi-Fi                                     | Item with the network name as username and its password                             |
-| Alias, credit card, identity, other types | Skipped and counted                                                                 |
-| Items in the trash                        | Skipped and counted (JSON only; CSV does not mark them)                             |
+| Proton Pass                 | Becomes in 1PW                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| Login                       | Item with title, first website, username (or email), password and 2FA secret        |
+| Extra websites              | Listed in the note                                                                  |
+| Email and username both set | Username as the username, email in the note                                         |
+| Extra fields                | `name: value` lines in the note; an extra 2FA field is used if there is no main one |
+| Note                        | Note                                                                                |
+| Credit card                 | Card with name, number, expiry (`YYYY-MM` becomes `MM/YY`), security code and PIN   |
+| Identity                    | Address with name, contact details and postal address; other details in the note    |
+| Wi-Fi                       | Wi-Fi item with the network name and password                                       |
+| Alias, other types          | Skipped and counted                                                                 |
+| Items in the trash          | Skipped and counted (JSON only; CSV does not mark them)                             |
 
-An item already in the vault, with the same website (or title), username and
-password, is skipped, so importing the same file twice adds nothing. If that
+An item already in the vault is skipped: a login with the same website (or
+title), username and password, a card with the same number, or another item of
+the same type with the same content, so importing the same file twice adds nothing. If that
 item has no passkey and the export has one, the passkey is added to it: after
 importing a CSV, import the JSON export to bring the passkeys over.
 

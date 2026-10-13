@@ -1,4 +1,5 @@
 import { generatePassword } from "../../src/core/generator.js";
+import { itemType } from "./item-types.js";
 import type { AutofillRequest, AutofillResponse, PendingPrompt } from "./autofill-protocol.js";
 import { newItemId, openVault, registrableDomain, saveItem, type VaultItem } from "./vault.js";
 
@@ -41,7 +42,9 @@ export function trustedSender(
 }
 
 function itemMatches(item: VaultItem, domain: string): boolean {
-  return Boolean(item.url) && registrableDomain(item.url!) === domain;
+  return (
+    itemType(item) === "login" && item.url !== undefined && registrableDomain(item.url) === domain
+  );
 }
 
 function pendingKey(tabId: number): string {

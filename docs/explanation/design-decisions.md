@@ -109,6 +109,15 @@ extension origins, so the popup can reach any server without one. Asking would
 open Chrome's permission prompt, which closes the popup in the middle of
 sign-up.
 
+**Item types are one schema, not one screen each.** `TYPE_FIELDS` in
+`extension/lib/item-types.ts` lists each type's fields and how they behave
+(secret, card number, expiry, 2FA, codes). The editor, the detail view, search
+and import all read it, so a new type is a new entry rather than four new
+screens. The type lives inside the encrypted item, so the server cannot count
+how many cards an account holds, and an item without one is a login, so
+existing vaults need no migration. Autofill, passkeys and sharing stay
+login-only: a page should never be able to ask for a card or an address.
+
 **`src/core` throws codes, not sentences.** The UI turns `VaultError` codes
 into text in the user's language; core code never needs to know which.
 

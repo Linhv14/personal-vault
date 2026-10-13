@@ -3,7 +3,9 @@
 "Autofill and passkeys on websites" adds an icon to login forms, fills a saved
 login on click, generates passwords in sign-up forms, offers to save what you
 type, and handles passkeys (see [Passkeys](passkeys.md)). It is off by default,
-because it is the one feature that runs code inside the pages you visit.
+because it is the one feature that runs code inside the pages you visit. Only
+login items take part; cards, addresses and the other types are never offered
+to a page.
 
 ## Picking a login
 

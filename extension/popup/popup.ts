@@ -93,6 +93,23 @@ import {
   sync,
   type VaultItem,
 } from "../lib/vault.js";
+import {
+  cardDigits,
+  formatCardNumber,
+  ITEM_TYPES,
+  itemType,
+  KIND_LABEL,
+  lastFour,
+  NEW_LABEL,
+  normalizeExpiry,
+  parseCodes,
+  TYPE_FIELDS,
+  TYPE_ICON,
+  TYPE_LABEL,
+  type FieldSpec,
+  type TextFieldKey,
+  type ItemType,
+} from "../lib/item-types.js";
 
 /**
  * Replaced at build time with the Worker URL of the last deployment, so someone
@@ -604,7 +621,10 @@ $("unlock-reset").addEventListener("click", async () => {
 });
 
 $("search").addEventListener("input", () => renderList());
-$("btn-add").addEventListener("click", () => openEditor(null));
+$("btn-add").addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleAddMenu();
+});
 $("btn-generator").addEventListener("click", () => openGenerator());
 $("btn-settings").addEventListener("click", () => void openSettings());
 $("btn-lock").addEventListener("click", async () => {
@@ -612,15 +632,50 @@ $("btn-lock").addEventListener("click", async () => {
   location.reload();
 });
 
+let typeFilter: ItemType | "all" = "all";
+
+function renderTypeFilter(): void {
+  const counts = new Map<ItemType, number>();
+  for (const item of items) counts.set(itemType(item), (counts.get(itemType(item)) ?? 0) + 1);
+  const shown = ITEM_TYPES.filter((type) => (counts.get(type) ?? 0) > 0 || type === typeFilter);
+  const chip = (value: ItemType | "all", label: string, count: number) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "type-chip";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", String(typeFilter === value));
+    const name = document.createElement("span");
+    name.textContent = label;
+    const total = document.createElement("span");
+    total.className = "type-count";
+    total.textContent = String(count);
+    button.append(name, total);
+    button.addEventListener("click", () => {
+      typeFilter = value;
+      renderList();
+    });
+    return button;
+  };
+  $("type-filter").replaceChildren(
+    chip("all", t("type.all"), items.length),
+    ...shown.map((type) => chip(type, t(TYPE_LABEL[type]), counts.get(type) ?? 0)),
+  );
+  $("type-filter").hidden = shown.length < 2 && typeFilter === "all";
+}
+
 function renderList(): void {
   clearTimers();
   void touch();
 
   const query = $<HTMLInputElement>("search").value;
-  const visible = searchItems(items, query);
-  const matched = query ? [] : matchingItems(visible, tabUrl);
+  const ofType =
+    typeFilter === "all" ? items : items.filter((item) => itemType(item) === typeFilter);
+  const visible = searchItems(ofType, query);
+  const showMatches = !query && (typeFilter === "all" || typeFilter === "login");
+  const matched = showMatches ? matchingItems(visible, tabUrl) : [];
   const matchedIds = new Set(matched.map((item) => item.id));
 
+  renderTypeFilter();
   if (matched.length > 0) {
     $("matching-title").textContent = t("list.matching_for", {
       domain: registrableDomain(tabUrl ?? "") ?? "",
@@ -633,11 +688,45 @@ function renderList(): void {
 
   const rest = visible.filter((item) => !matchedIds.has(item.id));
   $("all-title").hidden = rest.length === 0 || (!query && matched.length === 0);
-  $("all-title").textContent = query ? t("list.results", { count: rest.length }) : t("list.all");
+  $("all-title").textContent = query
+    ? t("list.results", { count: rest.length })
+    : t(typeFilter === "all" ? "list.all" : TYPE_LABEL[typeFilter]);
   renderInto($("all-list"), rest);
 
   $("list-empty").hidden = items.length > 0;
+  $("list-empty-type").hidden = items.length === 0 || visible.length > 0;
 }
+
+function toggleAddMenu(): void {
+  const menu = $("add-menu");
+  if (!menu.hidden) {
+    menu.hidden = true;
+    return;
+  }
+  menu.replaceChildren(
+    ...ITEM_TYPES.map((type) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "add-option";
+      option.setAttribute("role", "menuitem");
+      option.append(typeBadge(type), t(KIND_LABEL[type]));
+      option.addEventListener("click", () => {
+        menu.hidden = true;
+        openEditor(null, type);
+      });
+      return option;
+    }),
+  );
+  menu.hidden = false;
+  menu.querySelector("button")?.focus();
+}
+
+document.addEventListener("click", (event) => {
+  if (!$("add-menu").contains(event.target as Node)) $("add-menu").hidden = true;
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") $("add-menu").hidden = true;
+});
 
 function renderInto(container: HTMLElement, list: VaultItem[]): void {
   container.replaceChildren(...list.map(renderItem));
@@ -655,6 +744,68 @@ function avatar(title: string): HTMLElement {
   return node;
 }
 
+function typeBadge(type: ItemType): HTMLElement {
+  const node = document.createElement("span");
+  node.className = `avatar type-badge type-${type}`;
+  node.append(icon(TYPE_ICON[type]));
+  return node;
+}
+
+function itemSubtitle(item: VaultItem): string {
+  switch (itemType(item)) {
+    case "login":
+      return item.username || (item.url ? (registrableDomain(item.url) ?? item.url) : "");
+    case "card": {
+      const digits = lastFour(item.cardNumber);
+      return [item.cardholder, digits && t("item.card_ending", { digits })]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    case "identity":
+      return [item.fullName, item.city].filter(Boolean).join(" · ");
+    case "recovery":
+      return t("item.codes_count", { count: item.codes?.length ?? 0 });
+    case "wifi":
+      return item.ssid ?? "";
+    case "note":
+      return (item.note ?? "").split("\n")[0] ?? "";
+  }
+}
+
+function quickAction(item: VaultItem): HTMLElement[] {
+  switch (itemType(item)) {
+    case "login":
+      return [
+        ...(item.totp ? [totpChip(item.totp)] : []),
+        ...(item.password
+          ? [
+              iconButton("copy", t("common.copy"), () =>
+                copy(item.password ?? "", t("common.password").toLowerCase()),
+              ),
+            ]
+          : []),
+      ];
+    case "card":
+      return item.cardNumber
+        ? [
+            iconButton("copy", t("common.copy"), () =>
+              copy(cardDigits(item.cardNumber), t("field.card_number").toLowerCase()),
+            ),
+          ]
+        : [];
+    case "wifi":
+      return item.password
+        ? [
+            iconButton("copy", t("common.copy"), () =>
+              copy(item.password ?? "", t("common.password").toLowerCase()),
+            ),
+          ]
+        : [];
+    default:
+      return [];
+  }
+}
+
 function renderItem(item: VaultItem): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "item";
@@ -670,18 +821,10 @@ function renderItem(item: VaultItem): HTMLElement {
   title.textContent = item.title;
   const sub = document.createElement("div");
   sub.className = "item-sub";
-  sub.textContent = item.username || (item.url ? (registrableDomain(item.url) ?? item.url) : "");
+  sub.textContent = itemSubtitle(item);
   name.append(title, sub);
-  head.append(avatar(item.title), name);
-
-  if (item.totp) head.append(totpChip(item.totp));
-  if (item.password) {
-    head.append(
-      iconButton("copy", t("common.copy"), () =>
-        copy(item.password!, t("common.password").toLowerCase()),
-      ),
-    );
-  }
+  const type = itemType(item);
+  head.append(type === "login" ? avatar(item.title) : typeBadge(type), name, ...quickAction(item));
 
   const body = document.createElement("div");
   body.className = "item-body";
@@ -707,25 +850,57 @@ function actionButton(name: "pencil" | "share", label: string, onClick: () => vo
   return button;
 }
 
+function detailRows(spec: FieldSpec, item: VaultItem): HTMLElement[] {
+  const label = t(spec.label);
+  if (spec.key === "totp") return item.totp ? [totpRow(item.totp)] : [];
+  if (spec.key === "codes") return item.codes?.length ? [codesGrid(item.codes)] : [];
+  const value = item[spec.key];
+  if (!value) return [];
+  switch (spec.kind) {
+    case "password":
+    case "secret":
+      return [valueRow(label, value, true)];
+    case "cardNumber":
+      return [valueRow(label, formatCardNumber(value), true, `•••• ${lastFour(value)}`)];
+    default:
+      return [valueRow(label, value, false)];
+  }
+}
+
+function codesGrid(codes: string[]): HTMLElement {
+  const grid = document.createElement("div");
+  grid.className = "codes-grid";
+  codes.forEach((code, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "code mono";
+    button.title = `${t("item.code", { number: index + 1 })} · ${t("common.copy")}`;
+    button.textContent = code;
+    button.addEventListener(
+      "click",
+      () => void copy(code, t("item.code", { number: index + 1 }).toLowerCase()),
+    );
+    grid.append(button);
+  });
+  return grid;
+}
+
 function fillItemBody(body: HTMLElement, item: VaultItem): void {
-  if (item.username) body.append(valueRow(t("common.username"), item.username, false));
-  if (item.password) body.append(valueRow(t("common.password"), item.password, true));
-  if (item.totp) body.append(totpRow(item.totp));
+  const type = itemType(item);
+  for (const spec of TYPE_FIELDS[type]) body.append(...detailRows(spec, item));
   if (item.passkey) {
     const value = document.createElement("span");
     value.className = "v";
     value.textContent = t("item.passkey_saved", { site: item.passkey.rpId });
     body.append(fieldBlock(t("common.passkey"), value));
   }
-  if (item.url) body.append(valueRow(t("common.url"), item.url, false));
-  if (item.note) body.append(valueRow(t("common.note"), item.note, false));
 
   const actions = document.createElement("div");
   actions.className = "item-actions";
-  actions.append(
-    actionButton("pencil", t("edit.edit_title"), () => openEditor(item)),
-    actionButton("share", t("share.title"), () => void openShare(item)),
-  );
+  actions.append(actionButton("pencil", t("edit.edit_title"), () => openEditor(item)));
+  if (type === "login") {
+    actions.append(actionButton("share", t("share.title"), () => void openShare(item)));
+  }
   body.append(actions);
 }
 
@@ -748,10 +923,14 @@ function copyableRow(label: string, valueNode: HTMLElement, onCopy: () => void):
   return row;
 }
 
-function valueRow(label: string, value: string, secret: boolean): HTMLElement {
+function valueRow(
+  label: string,
+  value: string,
+  secret: boolean,
+  masked = "•".repeat(Math.min(value.length, 12)),
+): HTMLElement {
   const valueNode = document.createElement("span");
   valueNode.className = secret ? "v mono" : "v";
-  const masked = "•".repeat(Math.min(value.length, 12));
   valueNode.textContent = secret ? masked : value;
   const row = copyableRow(label, valueNode, () => copy(value, label.toLowerCase()));
 
@@ -868,33 +1047,137 @@ function createRing(
 }
 
 let editing: VaultItem | null = null;
+let editingType: ItemType = "login";
 
-function openEditor(item: VaultItem | null): void {
+function editInput(
+  spec: FieldSpec,
+  item: VaultItem | null,
+): HTMLInputElement | HTMLTextAreaElement {
+  const value = (): string => {
+    if (!item) {
+      return spec.key === "url" && tabUrl ? (registrableDomain(tabUrl) ?? "") : "";
+    }
+    if (spec.key === "totp") return item.totp ? totpFieldValue(item.totp) : "";
+    if (spec.key === "codes") return (item.codes ?? []).join("\n");
+    const raw = item[spec.key] ?? "";
+    return spec.kind === "cardNumber" ? formatCardNumber(raw) : raw;
+  };
+
+  if (spec.kind === "multiline" || spec.kind === "codes") {
+    const area = document.createElement("textarea");
+    area.name = spec.key;
+    area.rows = spec.kind === "codes" ? 6 : editingType === "note" ? 8 : 2;
+    area.value = value();
+    if (spec.kind === "codes") area.className = "mono";
+    return area;
+  }
+
+  const input = document.createElement("input");
+  input.name = spec.key;
+  input.autocomplete = "off";
+  input.value = value();
+  switch (spec.kind) {
+    case "email":
+    case "tel":
+      input.type = spec.kind;
+      break;
+    case "url":
+      input.placeholder = "example.com";
+      break;
+    case "password":
+    case "secret":
+      input.type = "password";
+      break;
+    case "totp":
+      input.placeholder = t("edit.totp_placeholder");
+      break;
+    case "cardNumber":
+      input.inputMode = "numeric";
+      input.className = "mono";
+      break;
+    case "expiry":
+      input.inputMode = "numeric";
+      input.placeholder = "MM/YY";
+      break;
+    case "text":
+      break;
+  }
+  return input;
+}
+
+function fieldAction(action: string, name: IconName, title: MessageKey): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "icon-button";
+  button.dataset["action"] = action;
+  button.title = t(title);
+  button.append(icon(name));
+  return button;
+}
+
+function editField(spec: FieldSpec, item: VaultItem | null): HTMLElement[] {
+  const label = document.createElement("label");
+  const caption = document.createElement("span");
+  caption.textContent = t(spec.label);
+  const input = editInput(spec, item);
+
+  const actions: HTMLButtonElement[] = [];
+  if (spec.kind === "password" || spec.kind === "secret") {
+    actions.push(fieldAction("reveal", "eye", "common.show"));
+  }
+  if (spec.kind === "password") actions.push(fieldAction("generate", "refresh", "edit.regenerate"));
+  if (spec.kind === "totp") actions.push(fieldAction("scan", "scan", "edit.scan"));
+
+  if (actions.length === 0) {
+    label.append(caption, input);
+  } else {
+    const wrap = document.createElement("span");
+    wrap.className = "field-with-actions";
+    wrap.append(input, ...actions);
+    label.append(caption, wrap);
+  }
+
+  const extra: HTMLElement[] = [];
+  if (spec.kind === "totp") {
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.id = "edit-totp-hint";
+    hint.hidden = true;
+    extra.push(hint);
+  }
+  if (spec.kind === "codes") {
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = t("field.codes_hint");
+    extra.push(hint);
+  }
+  return [label, ...extra];
+}
+
+function openEditor(
+  item: VaultItem | null,
+  type: ItemType = item ? itemType(item) : "login",
+): void {
   clearTimers();
   editing = item;
+  editingType = type;
   setError("edit-error", null);
-  setScanHint("");
 
   const form = $<HTMLFormElement>("form-edit");
   form.reset();
-  $("edit-title").textContent = t(item ? "edit.edit_title" : "edit.add_title");
+  $("edit-title").textContent = t(item ? "edit.edit_title" : NEW_LABEL[type]);
   $("edit-delete").hidden = !item;
-
-  const set = (name: string, value: string) => {
-    form.querySelector<HTMLInputElement>(`[name="${name}"]`)!.value = value;
-  };
-
-  set("title", item?.title ?? "");
-  // Prefill the current tab's domain for a new item.
-  set("url", item?.url ?? (item ? "" : tabUrl ? (registrableDomain(tabUrl) ?? "") : ""));
-  set("username", item?.username ?? "");
-  set("password", item?.password ?? "");
-  set("totp", item?.totp ? totpFieldValue(item.totp) : "");
-  set("note", item?.note ?? "");
-  form.querySelector<HTMLInputElement>('[name="password"]')!.type = "password";
-  $("edit-reveal").replaceChildren(icon("eye"));
+  editInputNamed("title").value = item?.title ?? "";
+  $("edit-fields").replaceChildren(...TYPE_FIELDS[type].flatMap((spec) => editField(spec, item)));
 
   show("edit");
+  editInputNamed("title").focus();
+}
+
+function editInputNamed(name: string): HTMLInputElement {
+  const field = $<HTMLFormElement>("form-edit").elements.namedItem(name);
+  if (!(field instanceof HTMLInputElement)) throw new Error(`Missing field ${name}`);
+  return field;
 }
 
 function totpFieldValue(config: TotpConfig): string {
@@ -910,20 +1193,29 @@ $("edit-back").addEventListener("click", () => {
   show("list");
 });
 
-$("edit-reveal").addEventListener("click", () => {
-  const field =
-    $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
-  field.type = field.type === "password" ? "text" : "password";
-  $("edit-reveal").replaceChildren(icon(field.type === "password" ? "eye" : "eye-off"));
-});
-
-$("edit-generate").addEventListener("click", () => {
-  const field =
-    $<HTMLFormElement>("form-edit").querySelector<HTMLInputElement>('[name="password"]')!;
-  const generated = generatePassword({ length: 20 });
-  field.value = generated.value;
-  field.type = "text";
-  toast(formatEntropy(generated));
+$("edit-fields").addEventListener("click", (event) => {
+  const button = (event.target as Element).closest<HTMLButtonElement>("button[data-action]");
+  const field = button?.parentElement?.querySelector("input");
+  if (!button || !field) return;
+  switch (button.dataset["action"]) {
+    case "reveal": {
+      field.type = field.type === "password" ? "text" : "password";
+      const hidden = field.type === "password";
+      button.replaceChildren(icon(hidden ? "eye" : "eye-off"));
+      button.title = t(hidden ? "common.show" : "common.hide");
+      break;
+    }
+    case "generate": {
+      const generated = generatePassword({ length: 20 });
+      field.value = generated.value;
+      field.type = "text";
+      toast(formatEntropy(generated));
+      break;
+    }
+    case "scan":
+      void scanTotp(field);
+      break;
+  }
 });
 
 /**
@@ -935,7 +1227,8 @@ $("edit-generate").addEventListener("click", () => {
  * missing, pasting by hand still works and always will.
  */
 function setScanHint(text: string, failed = false): void {
-  const hint = $("edit-totp-hint");
+  const hint = document.getElementById("edit-totp-hint");
+  if (!hint) return;
   hint.textContent = text;
   hint.hidden = text === "";
   hint.classList.toggle("error-text", failed);
@@ -945,7 +1238,7 @@ function pngFromDataUrl(dataUrl: string): Blob {
   return new Blob([fromBase64(dataUrl.slice(dataUrl.indexOf(",") + 1))], { type: "image/png" });
 }
 
-$("edit-scan").addEventListener("click", async () => {
+async function scanTotp(field: HTMLInputElement): Promise<void> {
   if (!("BarcodeDetector" in self)) {
     setScanHint(t("edit.scan_unsupported"), true);
     return;
@@ -971,11 +1264,9 @@ $("edit-scan").addEventListener("click", async () => {
       return;
     }
 
-    const form = $<HTMLFormElement>("form-edit");
-    form.querySelector<HTMLInputElement>('[name="totp"]')!.value = otpauth.rawValue;
+    field.value = otpauth.rawValue;
     const config = parseTotpInput(otpauth.rawValue);
-
-    const titleField = form.querySelector<HTMLInputElement>('[name="title"]')!;
+    const titleField = editInputNamed("title");
     if (config.issuer && !titleField.value) titleField.value = config.issuer;
 
     setScanHint(
@@ -988,23 +1279,72 @@ $("edit-scan").addEventListener("click", async () => {
     console.warn("QR scan failed:", error);
     setScanHint(t("edit.scan_capture_failed"), true);
   }
-});
+}
+
+type EditedFields = Partial<Pick<VaultItem, TextFieldKey | "totp" | "codes">>;
+
+function readEditedFields(data: FormData): EditedFields {
+  const text = (key: string, trim = true): string | undefined => {
+    const raw = String(data.get(key) ?? "");
+    return (trim ? raw.trim() : raw) || undefined;
+  };
+  const fields: EditedFields = {};
+  for (const spec of TYPE_FIELDS[editingType]) {
+    const { key } = spec;
+    if (key === "totp") {
+      const raw = text(key);
+      fields.totp = raw ? parseTotpInput(raw, text("username")) : undefined;
+      continue;
+    }
+    if (key === "codes") {
+      const codes = parseCodes(String(data.get(key) ?? ""));
+      fields.codes = codes.length > 0 ? codes : undefined;
+      continue;
+    }
+    switch (spec.kind) {
+      case "cardNumber":
+        fields[key] = cardDigits(text(key)) || undefined;
+        break;
+      case "expiry": {
+        const raw = text(key);
+        const expiry = raw ? normalizeExpiry(raw) : undefined;
+        if (expiry === null) throw new InvalidField("edit.expiry_invalid");
+        fields[key] = expiry;
+        break;
+      }
+      case "password":
+      case "secret":
+        fields[key] = text(key, false);
+        break;
+      default:
+        fields[key] = text(key);
+    }
+  }
+  return fields;
+}
+
+class InvalidField extends Error {
+  constructor(readonly messageKey: MessageKey) {
+    super(messageKey);
+  }
+}
 
 $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
   event.preventDefault();
   setError("edit-error", null);
 
   const data = new FormData(event.target as HTMLFormElement);
-  const totpRaw = String(data.get("totp")).trim();
-
-  let totp: TotpConfig | undefined;
-  if (totpRaw) {
-    try {
-      totp = parseTotpInput(totpRaw, String(data.get("username")) || undefined);
-    } catch (error) {
-      setError("edit-error", t("edit.totp_parse_failed", { reason: describeError(error, t) }));
-      return;
-    }
+  let fields: EditedFields;
+  try {
+    fields = readEditedFields(data);
+  } catch (error) {
+    setError(
+      "edit-error",
+      error instanceof InvalidField
+        ? t(error.messageKey)
+        : t("edit.totp_parse_failed", { reason: describeError(error, t) }),
+    );
+    return;
   }
 
   if (!vaultKey) return;
@@ -1012,15 +1352,11 @@ $<HTMLFormElement>("form-edit").addEventListener("submit", async (event) => {
   try {
     const wasEditing = editing !== null;
     await saveItem(vaultKey, {
+      ...editing,
       id: editing?.id ?? newItemId(),
-      createdAt: editing?.createdAt,
+      type: editingType,
       title: String(data.get("title")).trim(),
-      url: String(data.get("url")).trim() || undefined,
-      username: String(data.get("username")).trim() || undefined,
-      password: String(data.get("password")) || undefined,
-      note: String(data.get("note")).trim() || undefined,
-      totp,
-      passkey: editing?.passkey,
+      ...fields,
     });
     items = await decryptAll(vaultKey, locale);
     renderList();

@@ -230,8 +230,17 @@ describe("extension popup", () => {
     expect(sessionArea.get("token")).toBe("session-token");
   });
 
-  it("saves an item with a 2FA secret, sending only ciphertext", async () => {
+  function addItemOfKind(kind: string): void {
     el("btn-add").dispatchEvent(new Event("click", { bubbles: true }));
+    const option = [...el("add-menu").querySelectorAll<HTMLButtonElement>(".add-option")].find(
+      (button) => button.textContent === kind,
+    );
+    if (!option) throw new Error(`No "${kind}" in the add menu`);
+    option.click();
+  }
+
+  it("saves an item with a 2FA secret, sending only ciphertext", async () => {
+    addItemOfKind("Login");
     await waitFor(() => visibleScreen() === "screen-edit", "the editor");
 
     const form = el<HTMLFormElement>("form-edit");
@@ -355,6 +364,38 @@ describe("extension popup", () => {
       recipients: ["a@example.com", "b@example.com"],
     });
     server.emailVerification = false;
+  });
+
+  it("saves a card under its own type, checking the expiry", async () => {
+    el("share-back").click();
+    await waitFor(() => visibleScreen() === "screen-list", "the list");
+    addItemOfKind("Card");
+    await waitFor(() => visibleScreen() === "screen-edit", "the card editor");
+    expect(el("edit-title").textContent).toBe("New card");
+
+    const form = el<HTMLFormElement>("form-edit");
+    expect(form.querySelector('[name="password"]')).toBeNull();
+    setField(form, "title", "Visa");
+    setField(form, "cardNumber", "4242 4242 4242 4242");
+    setField(form, "cardExpiry", "13/27");
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    expect(el("edit-error").textContent).toBe("Write the expiry as MM/YY.");
+
+    setField(form, "cardExpiry", "4/2027");
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
+    expect(server.items.size).toBe(2);
+
+    const chips = [...el("type-filter").querySelectorAll<HTMLButtonElement>(".type-chip")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(["All2", "Logins1", "Cards1"]);
+    chips[2]!.click();
+    expect(el("matching-section").hidden).toBe(true);
+    expect(el("all-list").querySelectorAll(".item")).toHaveLength(1);
+    expect(el("all-list").textContent).toContain("Ending in 4242");
+
+    el("all-list").querySelector<HTMLElement>(".item-head")!.click();
+    expect(el("all-list").querySelector(".item-body")!.textContent).toContain("04/27");
+    el("type-filter").querySelector<HTMLButtonElement>(".type-chip")!.click();
   });
 
   it("clears session storage when locked, keeping the offline cache", async () => {

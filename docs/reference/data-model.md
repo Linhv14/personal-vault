@@ -39,6 +39,35 @@ Index `(account_id, updated_at)` serves delta sync. Deleted rows stay as
 tombstones so offline devices learn about the deletion; they are removed only
 with the account.
 
+### Inside `ciphertext`
+
+The sealed item is a JSON object. The server never sees it; the fields below
+are what every client reads after decrypting.
+
+| Field                                                | Types       | Content                                                              |
+| ---------------------------------------------------- | ----------- | -------------------------------------------------------------------- |
+| `id`, `title`                                        | all         | Same id as the row; the name shown in lists                          |
+| `type`                                               | all         | `login`, `note`, `card`, `identity`, `recovery` or `wifi`            |
+| `createdAt`, `updatedAt`                             | all         | Unix seconds                                                         |
+| `note`                                               | all         | Free text                                                            |
+| `url`, `username`                                    | login       | Website and user name                                                |
+| `password`                                           | login, wifi | Password                                                             |
+| `totp`                                               | login       | `{ secret, algorithm, digits, period, issuer? }`                     |
+| `passkey`                                            | login       | Private key and metadata, see [Passkeys](../explanation/passkeys.md) |
+| `cardholder`, `cardNumber`                           | card        | Name on card; digits only                                            |
+| `cardExpiry`                                         | card        | `MM/YY`                                                              |
+| `cardCvv`, `cardPin`                                 | card        | Security code and PIN                                                |
+| `fullName`, `email`, `phone`, `company`              | identity    | Contact details                                                      |
+| `address`, `city`, `region`, `postalCode`, `country` | identity    | Postal address                                                       |
+| `codes`                                              | recovery    | Array of one-time recovery codes                                     |
+| `ssid`                                               | wifi        | Network name                                                         |
+
+An item without `type` is a login: items saved before types existed keep
+working without a migration. Empty fields are left out. Editing an item keeps
+the fields the editor does not show. Extensions older than item types edit
+every item as a login and drop the other fields, so update every device before
+editing a card, address or other typed item.
+
 ## `sessions`
 
 | Column       | Content                     | Reveals                     |

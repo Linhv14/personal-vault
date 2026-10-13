@@ -21,6 +21,7 @@ import {
   sync,
   type VaultItem,
 } from "../lib/vault.js";
+import { ITEM_TYPES, itemType, TYPE_LABEL } from "../lib/item-types.js";
 
 const local = await getLocal();
 const locale = resolveLocale(local.locale);
@@ -48,8 +49,6 @@ const SKIP_KEYS: Record<SkipReason, MessageKey> = {
   duplicate: "import.skipped_duplicate",
   trashed: "import.skipped_trashed",
   alias: "import.skipped_alias",
-  card: "import.skipped_card",
-  identity: "import.skipped_identity",
   other: "import.skipped_other",
   passkey: "import.skipped_passkey",
 };
@@ -106,8 +105,16 @@ async function review(bytes: Uint8Array, passphrase?: string): Promise<void> {
   const newPasskeys = plan.items.filter((item) => item.passkey).length;
   const total = plan.items.length + plan.passkeysForExisting.length;
   $("review-title").textContent = t("import.ready", { count: plan.items.length });
+  const planned = plan.items;
+  const byType = ITEM_TYPES.map((type) => ({
+    type,
+    count: planned.filter((item) => itemType(item) === type).length,
+  })).filter(({ count }) => count > 0);
   $("review-added").replaceChildren(
     ...[
+      ...(byType.length > 1
+        ? byType.map(({ type, count }) => t("import.of_type", { type: t(TYPE_LABEL[type]), count }))
+        : []),
       newPasskeys > 0 && t("import.passkeys_new", { count: newPasskeys }),
       plan.passkeysForExisting.length > 0 &&
         t("import.passkeys_existing", { count: plan.passkeysForExisting.length }),

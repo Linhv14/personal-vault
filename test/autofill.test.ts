@@ -50,9 +50,7 @@ function sender(url: string, overrides: Partial<chrome.runtime.MessageSender> = 
 
 let key: CryptoKey;
 
-async function unlockWith(
-  items: { id: string; title: string; url: string; username?: string; password?: string }[],
-) {
+async function unlockWith(items: Parameters<typeof saveItem>[1][]) {
   const raw = createVaultKey();
   key = await importVaultKey(raw);
   localArea.set("apiUrl", "https://vault.test");
@@ -133,6 +131,16 @@ describe("suggest and fill", () => {
       domain: "github.com",
       suggestions: [{ id: GITHUB.id, title: "GitHub", username: GITHUB.username }],
     });
+  });
+
+  it("never fills an item that is not a login, even on its site", async () => {
+    const wifi = { ...GITHUB, id: "00000000-0000-4000-8000-0000000000f1", type: "wifi" as const };
+    await unlockWith([wifi]);
+    const response = await handleAutofill(
+      { type: "autofill:fill", id: wifi.id },
+      sender("https://github.com/login")!,
+    );
+    expect(response).toEqual({ ok: false, error: "no_match" });
   });
 
   it("refuses to fill another domain's login even when asked for its id", async () => {

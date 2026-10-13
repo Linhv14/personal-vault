@@ -10,6 +10,12 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Item types: notes, cards, addresses, recovery codes and Wi-Fi networks, each
+  with its own fields. The list shows logins for the current site first, then
+  filters by type; **+** asks which type to create. Items saved earlier stay
+  logins.
+- Import keeps Proton Pass credit cards and identities as cards and addresses
+  instead of skipping them.
 - Import reads Proton Pass's PGP-encrypted export after asking for its
   password, decrypting in the browser without an OpenPGP library.
 - Import passkeys from a Proton Pass JSON export, including onto logins
@@ -30,6 +36,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Update the extension on every device before editing a card, address or other
+  typed item: older versions edit every item as a login and drop its other
+  fields.
 - Auto-lock offers 5 minutes, 15 minutes, 1 hour, 4 hours or "when the browser
   closes", instead of a slider.
 - Passkey sign-in while 1PW is locked asks to unlock only if the vault holds

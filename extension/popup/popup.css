@@ -459,6 +459,7 @@ button.primary.danger-fill:hover:not(:disabled) {
 }
 
 .toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -542,6 +543,136 @@ button.primary.danger-fill:hover:not(:disabled) {
   color: #fff;
   flex-shrink: 0;
 }
+.type-badge {
+  background: var(--surface);
+  color: var(--muted);
+}
+.type-badge .icon {
+  width: 17px;
+  height: 17px;
+}
+.type-card {
+  background: color-mix(in srgb, #2563eb 12%, transparent);
+  color: #2563eb;
+}
+.type-identity {
+  background: color-mix(in srgb, #9333ea 12%, transparent);
+  color: #9333ea;
+}
+.type-note {
+  background: color-mix(in srgb, #ca8a04 14%, transparent);
+  color: #a16207;
+}
+.type-recovery {
+  background: color-mix(in srgb, #dc2626 10%, transparent);
+  color: #dc2626;
+}
+.type-wifi {
+  background: color-mix(in srgb, #0891b2 12%, transparent);
+  color: #0891b2;
+}
+.type-login {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.codes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 4px 0;
+}
+.code {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 13px;
+  text-align: center;
+}
+.code:hover {
+  border-color: var(--accent);
+}
+
+.type-filter {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+  margin: 4px -16px 6px;
+  padding: 0 16px 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.type-filter[hidden] {
+  display: none;
+}
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.type-chip:hover {
+  background: var(--surface-hover);
+}
+.type-chip[aria-selected="true"] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+.type-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.add-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 12%);
+}
+.add-menu[hidden] {
+  display: none;
+}
+.add-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+}
+.add-option:hover,
+.add-option:focus-visible {
+  background: var(--surface-hover);
+}
+.add-option .avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+.add-option .icon {
+  width: 15px;
+  height: 15px;
+}
+
 .item-name {
   flex: 1;
   min-width: 0;

@@ -155,6 +155,7 @@
         <button class="icon-button" id="btn-lock" data-i18n-title="list.lock_now">
           <i data-icon="lock"></i>
         </button>
+        <div class="add-menu" id="add-menu" role="menu" hidden></div>
       </header>
       <div class="sync-bar" id="sync-bar" hidden></div>
       <p class="sync-notice" id="sync-notice" hidden></p>
@@ -167,12 +168,14 @@
           <i data-icon="plus"></i>
         </button>
       </div>
+      <div class="type-filter" id="type-filter" role="tablist"></div>
       <div id="matching-section" hidden>
         <h2 id="matching-title"></h2>
         <div class="list" id="matching-list"></div>
       </div>
       <h2 id="all-title"></h2>
       <div class="list" id="all-list"></div>
+      <p class="hint center" id="list-empty-type" data-i18n="list.empty_type" hidden></p>
       <div class="empty" id="list-empty" hidden>
         <span data-logo="44"></span>
         <p data-i18n="list.empty"></p>
@@ -191,48 +194,7 @@
         <label
           ><span data-i18n="edit.name"></span><input name="title" required autocomplete="off"
         /></label>
-        <label
-          ><span data-i18n="common.url"></span
-          ><input name="url" placeholder="example.com" autocomplete="off"
-        /></label>
-        <label
-          ><span data-i18n="common.username"></span><input name="username" autocomplete="off"
-        /></label>
-        <label>
-          <span data-i18n="common.password"></span>
-          <span class="field-with-actions">
-            <input name="password" type="password" autocomplete="off" />
-            <button
-              type="button"
-              class="icon-button"
-              id="edit-reveal"
-              data-i18n-title="edit.reveal"
-            >
-              <i data-icon="eye"></i>
-            </button>
-            <button
-              type="button"
-              class="icon-button"
-              id="edit-generate"
-              data-i18n-title="edit.regenerate"
-            >
-              <i data-icon="refresh"></i>
-            </button>
-          </span>
-        </label>
-        <label>
-          <span data-i18n="edit.totp_secret"></span>
-          <span class="field-with-actions">
-            <input name="totp" autocomplete="off" data-i18n-placeholder="edit.totp_placeholder" />
-            <button type="button" class="icon-button" id="edit-scan" data-i18n-title="edit.scan">
-              <i data-icon="scan"></i>
-            </button>
-          </span>
-        </label>
-        <p class="hint" id="edit-totp-hint" hidden></p>
-        <label
-          ><span data-i18n="common.note"></span><textarea name="note" rows="2"></textarea>
-        </label>
+        <div class="stack" id="edit-fields"></div>
         <button class="primary" type="submit" data-i18n="edit.save"></button>
         <button
           type="button"
