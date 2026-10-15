@@ -37,8 +37,15 @@ enforce them are listed at the end.
 | Link carrier         | The shared item, unless a passphrase was set and sent separately                                        | No                                                       | That something was shared                                |
 | Breach-check service | No: it receives 5-character SHA-1 prefixes, each shared by hundreds of passwords, with padded responses | No                                                       | The user's IP address and that a check ran               |
 | Icon service         | No                                                                                                      | No                                                       | Domain names, from the Worker's address, not the user's  |
-| Device thief         | No, while locked: the local copy is ciphertext                                                          | Can guess offline against the cached wrapped key         | Email, item count                                        |
+| Device thief         | With auto-lock on "Never", yes while the session is valid; otherwise no, the local copy is ciphertext   | Can guess offline against the cached wrapped key         | Email, item count                                        |
 | Malware on device    | Yes, once unlocked                                                                                      | Yes, if it logs keystrokes                               | Yes                                                      |
+
+## Exported files
+
+An encrypted export is as strong as its passphrase: PBKDF2-SHA-256 with 600,000
+iterations and AES-256-GCM, with a fresh salt per file. Anyone holding the file
+can guess the passphrase offline at that cost, so 1PW requires at least 10
+characters. A CSV export is plain text and offers no protection once copied.
 
 ## What the server learns
 
@@ -107,7 +114,7 @@ hiding who uses the server or when matters to you, this design is not enough.
 | A page clicking autofill on the user's behalf     | Every action requires a trusted user event; the UI is in a closed shadow root                                                                      |
 | A page using another site's passkey               | The RP ID is checked against the top-frame origin Chrome reports, no broader than its registrable domain; `clientDataJSON` carries the real origin |
 | Copied password left on the clipboard             | Cleared after 30 seconds by the service worker, even after the popup closes                                                                        |
-| Vault key written to disk                         | Kept only in `chrome.storage.session`, which is memory-backed                                                                                      |
+| Vault key written to disk                         | Only sealed under a key the server holds per session, and only with auto-lock on "Never"; deleted on lock, sign-out or a revoked session           |
 | Script injection or framing on the share page     | Strict CSP, `frame-ancestors 'none'`, password never placed in the DOM                                                                             |
 | Supply-chain attack through dependencies          | No dependencies in `src/core`; QR codes read with the browser's built-in `BarcodeDetector`                                                         |
 
@@ -124,8 +131,9 @@ npm test
   fresh nonce; items open only with the associated data they were sealed with.
 - `test/at-rest.test.ts`: stored hashes and wrapped keys cannot be checked or
   opened without `AT_REST_SECRET`, and rows cannot be moved between accounts.
-- `test/popup.test.ts`: the vault key reaches `storage.session` and never
-  `storage.local`; no plaintext appears in any request.
+- `test/popup.test.ts`: the vault key reaches `storage.session` and only a
+  sealed copy reaches `storage.local`, which a revoked session or "Lock now"
+  deletes; no plaintext appears in any request.
 - `test/autofill.test.ts`: suggestions carry no secrets; only matching domains
   are filled; shared-hosting tenants are kept apart.
 - `test/e2e.test.ts`, against a real Worker and D1: no plaintext in any

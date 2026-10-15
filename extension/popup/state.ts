@@ -11,17 +11,22 @@ import {
 import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { getLocal, lock, notePasskeys, setLocal, takeItemFocus, touch } from "../lib/storage.js";
 import {
-  decryptAll,
+  decryptEverything,
+  newItemId,
   importKey,
   migrateUnboundItems,
   removeItem,
   saveItem,
+  saveItemPatiently,
   sync,
+  type VaultDef,
   type VaultItem,
 } from "../lib/vault.js";
 import { itemType, type ItemType } from "../lib/item-types.js";
+import { DEFAULT_VAULT_ID, vaultList, vaultOf, withoutVault, withVault } from "../lib/vaults.js";
 
-export type Screen = "loading" | "setup" | "unlock" | "list" | "edit" | "generator" | "share";
+export type Screen =
+  "loading" | "setup" | "unlock" | "list" | "edit" | "generator" | "share" | "vault";
 export type Scope = "all" | "favorites" | "trash" | `tag:${string}`;
 export type SortOrder = "recent" | "name";
 export type SyncProblem = { kind: "offline" | "failed"; message: string } | null;
@@ -33,6 +38,8 @@ export const tabUrl = signal<string | undefined>(undefined);
 export const clockSkew = signal(0);
 export const toastMessage = signal<string | null>(null);
 
+export const vaults = signal<VaultDef[]>([]);
+export const currentVault = signal<string>("all");
 export const scope = signal<Scope>("all");
 export const typeFilter = signal<ItemType | "all">("all");
 export const sortOrder = signal<SortOrder>("recent");
@@ -50,6 +57,11 @@ export const editing = signal<{ item: VaultItem | null; type: ItemType; session:
   type: "login",
   session: 0,
 });
+export const editingVault = signal<{
+  vault: VaultDef | null;
+  moveFrom: VaultDef | null;
+  session: number;
+}>({ vault: null, moveFrom: null, session: 0 });
 export const sharing = signal<{ item: VaultItem; emailAccess: boolean } | null>(null);
 
 export function translator(): Translate {
@@ -79,9 +91,113 @@ function setItems(next: VaultItem[]): void {
   void notePasskeys(next.some((item) => item.passkey && !item.trashedAt));
 }
 
+let vaultRecords: VaultItem[] = [];
+
 export async function reloadItems(): Promise<void> {
   if (!vaultKey.value) return;
-  setItems(await decryptAll(vaultKey.value, localeSignal.value, true));
+  const { items: next, system } = await decryptEverything(vaultKey.value, localeSignal.value, true);
+  vaultRecords = system;
+  vaults.value = vaultList(system, translator()("vault.personal"));
+  if (currentVault.value !== "all" && !vaults.value.some((v) => v.id === currentVault.value)) {
+    currentVault.value = "all";
+  }
+  setItems(next);
+}
+
+export function switchVault(id: string): void {
+  currentVault.value = id;
+  scope.value = "all";
+  typeFilter.value = "all";
+}
+
+export function newItemVault(): string {
+  return currentVault.value === "all" ? DEFAULT_VAULT_ID : currentVault.value;
+}
+
+async function storeVaults(next: VaultDef[]): Promise<void> {
+  const key = vaultKey.value;
+  if (!key) return;
+  const [newest, ...older] = [...vaultRecords].sort((a, b) => b.updatedAt - a.updatedAt);
+  await saveItem(key, {
+    id: newest?.id ?? newItemId(),
+    title: "",
+    system: "vaults",
+    vaults: next,
+    createdAt: newest?.createdAt,
+  });
+  for (const record of older) await removeItem(record.id);
+  await reloadItems();
+}
+
+export function openVaultEditor(vault: VaultDef | null, moveFrom: VaultDef | null = null): void {
+  editingVault.value = { vault, moveFrom, session: editingVault.value.session + 1 };
+  screen.value = "vault";
+}
+
+export async function saveVault(vault: VaultDef): Promise<void> {
+  const isNew = !vaults.value.some((entry) => entry.id === vault.id);
+  const { moveFrom } = editingVault.value;
+  await storeVaults(withVault(vaults.value, vault));
+  if (isNew && moveFrom) {
+    await moveVaultItems(moveFrom, vault);
+    return;
+  }
+  switchVault(vault.id);
+  showList();
+  toast(translator()(isNew ? "vault.created" : "vault.saved"));
+}
+
+export const vaultBusy = signal(false);
+
+async function rewriteItems(
+  vaultId: string,
+  change: (item: VaultItem) => Omit<VaultItem, "createdAt" | "updatedAt">,
+): Promise<number> {
+  const key = vaultKey.value;
+  if (!key) return 0;
+  const affected = items.value.filter((item) => vaultOf(item) === vaultId);
+  vaultBusy.value = true;
+  try {
+    for (const item of affected) {
+      await saveItemPatiently(key, change(item), () => toast(translator()("import.waiting")));
+    }
+  } finally {
+    vaultBusy.value = false;
+  }
+  return affected.length;
+}
+
+export async function moveVaultItems(from: VaultDef, to: VaultDef): Promise<void> {
+  const t = translator();
+  try {
+    const moved = await rewriteItems(from.id, (item) => ({
+      ...withoutTimestamps(item),
+      vault: to.id === DEFAULT_VAULT_ID ? undefined : to.id,
+    }));
+    await reloadItems();
+    switchVault(to.id);
+    showList();
+    toast(t("vault.moved", { count: moved, name: to.name }));
+  } catch (error) {
+    toast(describeError(error, t));
+  }
+}
+
+export async function deleteVault(vault: VaultDef): Promise<void> {
+  const t = translator();
+  const key = vaultKey.value;
+  if (!key || vault.id === DEFAULT_VAULT_ID) return;
+  if (!confirm(t("vault.delete_confirm", { name: vault.name }))) return;
+  const now = Math.floor(nowMs() / 1000);
+  await rewriteItems(vault.id, (item) => ({
+    ...withoutTimestamps(item),
+    vault: undefined,
+    trashedAt: item.trashedAt ?? now,
+  }));
+  await storeVaults(withoutVault(vaults.value, vault.id));
+  switchVault("all");
+  showList();
+  toast(t("vault.deleted"));
 }
 
 export function showList(): void {

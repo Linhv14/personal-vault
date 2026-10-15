@@ -13,6 +13,7 @@ import {
 } from "../../lib/item-types.js";
 import { parseRecoveryCodes } from "../../lib/recovery-codes.js";
 import { newItemId, saveItem, type VaultItem } from "../../lib/vault.js";
+import { DEFAULT_VAULT_ID, vaultOf } from "../../lib/vaults.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
 import {
@@ -24,6 +25,7 @@ import {
 import { initialValue, InvalidField, readEditedFields, type EditedFields } from "../edit-fields.js";
 import { scanTotpFromTab, type ScanHint } from "../qr-scan.js";
 import {
+  newItemVault,
   nowMs,
   reloadItems,
   setTrashed,
@@ -32,6 +34,7 @@ import {
   toast,
   translator,
   vaultKey,
+  vaults,
 } from "../state.js";
 import { formatEntropy } from "../strength.js";
 
@@ -166,6 +169,10 @@ function EditField({
   );
 }
 
+function storedVault(id: string): string | undefined {
+  return id === DEFAULT_VAULT_ID ? undefined : id;
+}
+
 export function Editor({ item, type }: { item: VaultItem | null; type: ItemType }) {
   const t = useT();
   const form = useRef<HTMLFormElement>(null);
@@ -182,6 +189,8 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
   useEffect(() => {
     form.current?.querySelector<HTMLInputElement>('[name="title"]')?.focus();
   }, []);
+
+  const initialVault = item ? vaultOf(item) : newItemVault();
 
   const titleField = () => form.current?.querySelector<HTMLInputElement>('[name="title"]');
 
@@ -213,6 +222,7 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
         id: item?.id ?? newItemId(),
         type,
         title: String(data.get("title")).trim(),
+        vault: storedVault(String(data.get("vault") ?? initialVault)),
         ...fields,
         usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
         passwordHistory: HAS_PASSWORD_HISTORY.has(type)
@@ -247,6 +257,18 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
           <span>{t("edit.name")}</span>
           <input name="title" required autoComplete="off" defaultValue={item?.title ?? ""} />
         </label>
+        {vaults.value.length > 1 && (
+          <label>
+            <span>{t("vault.field")}</span>
+            <select name="vault">
+              {vaults.value.map((vault) => (
+                <option value={vault.id} key={vault.id} selected={vault.id === initialVault}>
+                  {vault.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="stack">
           {TYPE_FIELDS[type].map((spec) => (
             <Fragment key={spec.key}>

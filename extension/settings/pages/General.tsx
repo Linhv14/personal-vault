@@ -14,19 +14,29 @@ import {
 import {
   AUTO_LOCK_CHOICES,
   DEFAULT_AUTO_LOCK_MINUTES,
+  getUnlocked,
+  LOCK_NEVER,
   LOCK_ON_BROWSER_CLOSE,
   setLocal,
   touch,
 } from "../../lib/storage.js";
+import { rememberUnlock } from "../../lib/resume.js";
 import { Card } from "../../ui/components/Card.js";
 import { useT } from "../../ui/i18n.js";
 import { localState, reloadLocal, showToast } from "../state.js";
 
 function lockLabel(minutes: number, t: Translate): string {
   if (minutes === LOCK_ON_BROWSER_CLOSE) return t("settings.lock_on_close");
+  if (minutes === LOCK_NEVER) return t("settings.lock_never");
   return minutes % 60 === 0
     ? t("settings.hours", { count: minutes / 60 })
     : t("settings.minutes", { count: minutes });
+}
+
+function lockOrder(minutes: number): number {
+  if (minutes === LOCK_ON_BROWSER_CLOSE) return Number.MAX_SAFE_INTEGER - 1;
+  if (minutes === LOCK_NEVER) return Number.MAX_SAFE_INTEGER;
+  return minutes;
 }
 
 export function General() {
@@ -46,6 +56,8 @@ export function General() {
   const handleAutoLock = async (value: string) => {
     await setLocal({ autoLockMinutes: Number(value) });
     await touch();
+    const session = await getUnlocked();
+    if (session) await rememberUnlock(session.vaultKeyRaw, session.token);
     await reloadLocal();
     showToast(t("settings.saved"));
   };
@@ -69,7 +81,7 @@ export function General() {
   const minutes = local.autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES;
   const choices = AUTO_LOCK_CHOICES.includes(minutes)
     ? AUTO_LOCK_CHOICES
-    : [...AUTO_LOCK_CHOICES, minutes].sort((a, b) => (a || Infinity) - (b || Infinity));
+    : [...AUTO_LOCK_CHOICES, minutes].sort((a, b) => lockOrder(a) - lockOrder(b));
 
   return (
     <section className="page">

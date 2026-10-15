@@ -9,7 +9,13 @@ import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
 import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
-import { createSession, isBase64, revokeAllSessions, revokeSession } from "../session.js";
+import {
+  createSession,
+  isBase64,
+  revokeAllSessions,
+  revokeSession,
+  sessionResumeKey,
+} from "../session.js";
 import type { AppBindings, Env } from "../types.js";
 
 const auth = new Hono<AppBindings>();
@@ -279,6 +285,13 @@ auth.post("/delete-account", async (c) => {
     c.env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(accountId),
   ]);
   return c.json({ ok: true });
+});
+
+auth.get("/resume-key", async (c) => {
+  const resumeKey = await sessionResumeKey(c.env, c.get("session").tokenHash);
+  if (!resumeKey) return c.json(apiError("auth.unauthorized"), 401);
+  c.header("Cache-Control", "no-store");
+  return c.json({ resumeKey });
 });
 
 auth.post("/logout", async (c) => {

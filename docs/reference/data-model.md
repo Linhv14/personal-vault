@@ -49,6 +49,7 @@ are what every client reads after decrypting.
 | `id`, `title`                                                        | all                                | Same id as the row; the name shown in lists                                                            |
 | `type`                                                               | all                                | `login`, `note`, `card`, `identity`, `recovery`, `wifi`, `api`, `ssh`, `bank`, `document` or `license` |
 | `createdAt`, `updatedAt`                                             | all                                | Unix seconds                                                                                           |
+| `vault`                                                              | all                                | Id of the vault holding the item; absent means the personal vault                                      |
 | `favorite`                                                           | all                                | Whether the item is pinned to Favorites                                                                |
 | `tags`                                                               | all                                | Optional list of user-defined labels                                                                   |
 | `trashedAt`                                                          | all                                | Unix seconds when the item was moved to Trash; absent for live items                                   |
@@ -81,6 +82,12 @@ the fields the editor does not show. Extensions older than item types edit
 every item as a login and drop the other fields, so update every device before
 editing a card, address or other typed item.
 
+One item per account carries `system: "vaults"` and a `vaults` array of
+`{ id, name, color, icon }` instead of user data. It is encrypted and synced like
+any item, so the server never sees vault names, and it is left out of every
+list, search, autofill and import. When two devices write it at once, the
+popup merges both by vault id and keeps the newest definition.
+
 The normal decrypted list and autofill paths exclude items with `trashedAt`.
 The popup requests trashed items explicitly so they can be restored or deleted
 forever; deleting forever is the server tombstone delete.
@@ -93,6 +100,7 @@ forever; deleting forever is the server tombstone delete.
 | `account_id` | Owner                       | Number of signed-in devices |
 | `created_at` | Unix seconds                | Sign-in times               |
 | `expires_at` | Unix seconds                | Nothing                     |
+| `resume_key` | Random key for this session | Nothing without the device  |
 
 ## `shares`
 

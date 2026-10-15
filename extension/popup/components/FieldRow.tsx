@@ -34,13 +34,21 @@ export function CopyRow({
   return (
     <div
       className={multiline ? "field-row multiline" : "field-row"}
+      role="button"
+      tabIndex={0}
       title={t("common.copy")}
       onClick={onCopy}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onCopy();
+        }
+      }}
     >
       {icon ? <Icon name={icon} className="field-icon" /> : <span className="field-icon" />}
       <Field label={label}>{children}</Field>
       {actions}
-      <IconButton icon="copy" className="field-copy" label={t("common.copy")} onClick={onCopy} />
     </div>
   );
 }

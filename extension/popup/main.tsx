@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { useEffect } from "preact/hooks";
+import { resumeUnlock } from "../lib/resume.js";
 import { getLocal, getUnlocked, loadPendingSignup } from "../lib/storage.js";
 import { Toast } from "../ui/components/Toast.js";
 import { localeSignal, setUiLocale } from "../ui/i18n.js";
@@ -10,7 +11,17 @@ import { Vault } from "./screens/Vault.js";
 import { Setup, type SetupProps } from "./screens/Setup.js";
 import { Share } from "./screens/Share.js";
 import { Unlock } from "./screens/Unlock.js";
-import { clockSkew, editing, enterVault, screen, sharing, tabUrl, toastMessage } from "./state.js";
+import { VaultEditor } from "./screens/VaultEditor.js";
+import {
+  clockSkew,
+  editing,
+  editingVault,
+  enterVault,
+  screen,
+  sharing,
+  tabUrl,
+  toastMessage,
+} from "./state.js";
 
 declare const __VAULT_DEFAULT_SERVER__: string | undefined;
 
@@ -35,8 +46,7 @@ function App() {
 
   const edit = editing.value;
   const share = sharing.value;
-  const inVault =
-    current === "list" || current === "edit" || current === "generator" || current === "share";
+  const inVault = ["list", "edit", "generator", "share", "vault"].includes(current);
   return (
     <>
       {current === "setup" && <Setup {...setupProps} />}
@@ -46,6 +56,8 @@ function App() {
           pane={
             current === "edit" ? (
               <Editor key={edit.session} item={edit.item} type={edit.type} />
+            ) : current === "vault" ? (
+              <VaultEditor key={editingVault.value.session} vault={editingVault.value.vault} />
             ) : current === "generator" ? (
               <Generator />
             ) : current === "share" && share ? (
@@ -78,7 +90,7 @@ async function boot(): Promise<void> {
     return;
   }
 
-  const session = await getUnlocked();
+  const session = (await resumeUnlock()) ? await getUnlocked() : null;
   if (!session) {
     unlockEmail = local.email;
     screen.value = "unlock";

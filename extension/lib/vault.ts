@@ -22,9 +22,19 @@ import {
 import * as api from "./api.js";
 import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
 
+export interface VaultDef {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
 export interface VaultItem {
   id: string;
   type?: ItemType;
+  vault?: string;
+  system?: "vaults";
+  vaults?: VaultDef[];
   favorite?: boolean;
   tags?: string[];
   trashedAt?: number;
@@ -112,28 +122,37 @@ export async function openVault(): Promise<{ key: CryptoKey; items: VaultItem[] 
   return { key, items: await decryptAll(key) };
 }
 
-export async function decryptAll(
+export async function decryptEverything(
   key: CryptoKey,
   locale = "en",
   includeTrashed = false,
-): Promise<VaultItem[]> {
+): Promise<{ items: VaultItem[]; system: VaultItem[] }> {
   const { items = [], unboundItemsMigrated = false } = await getLocal();
   const output: VaultItem[] = [];
+  const system: VaultItem[] = [];
 
   for (const row of items) {
     if (!isLive(row)) continue;
     try {
       const { item } = await openItem(key, row, !unboundItemsMigrated);
       const resolved = { ...item, id: row.id, updatedAt: row.updatedAt };
-      if (resolved.trashedAt && !includeTrashed) continue;
-      output.push(resolved);
+      if (resolved.system) system.push(resolved);
+      else if (!resolved.trashedAt || includeTrashed) output.push(resolved);
     } catch {
       // One corrupt item must not take down the whole list.
       console.warn("Skipping item that failed to decrypt:", row.id);
     }
   }
 
-  return output.sort((a, b) => a.title.localeCompare(b.title, locale));
+  return { items: output.sort((a, b) => a.title.localeCompare(b.title, locale)), system };
+}
+
+export async function decryptAll(
+  key: CryptoKey,
+  locale = "en",
+  includeTrashed = false,
+): Promise<VaultItem[]> {
+  return (await decryptEverything(key, locale, includeTrashed)).items;
 }
 
 /** Returns the number of changed items, or `null` when offline. */
@@ -193,6 +212,25 @@ export async function saveItem(
   });
 
   return { ...payload, updatedAt };
+}
+
+export const RATE_LIMIT_PAUSE_MS = 20_000;
+
+export async function saveItemPatiently(
+  key: CryptoKey,
+  item: Omit<VaultItem, "createdAt" | "updatedAt"> & { createdAt?: number },
+  onWait: () => void = () => {},
+  pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<VaultItem> {
+  for (;;) {
+    try {
+      return await saveItem(key, item);
+    } catch (error) {
+      if (!(error instanceof api.ApiError) || error.status !== 429) throw error;
+      onWait();
+      await pause(RATE_LIMIT_PAUSE_MS);
+    }
+  }
 }
 
 export type ItemDraft = Omit<VaultItem, "id" | "createdAt" | "updatedAt"> & { createdAt?: number };

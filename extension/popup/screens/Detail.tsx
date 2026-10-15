@@ -12,6 +12,7 @@ import {
   type FieldSpec,
 } from "../../lib/item-types.js";
 import type { VaultItem } from "../../lib/vault.js";
+import { vaultOf } from "../../lib/vaults.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { Logo } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
@@ -29,6 +30,7 @@ import {
   setFavorite,
   setTrashed,
   setUsedCodes,
+  vaults,
   toast,
 } from "../state.js";
 
@@ -294,7 +296,17 @@ export function Detail({ item }: { item: VaultItem | null }) {
         <ItemIcon item={item} />
         <div className="detail-title">
           <h1>{item.title}</h1>
-          <p>{[t(KIND_LABEL[type]), ...(item.tags ?? [])].join(" · ")}</p>
+          <p>
+            {[
+              t(KIND_LABEL[type]),
+              ...(vaults.value.length > 1
+                ? [vaults.value.find((vault) => vault.id === vaultOf(item))?.name ?? ""]
+                : []),
+              ...(item.tags ?? []),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         </div>
         <Actions item={item} />
       </header>

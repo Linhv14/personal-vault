@@ -16,6 +16,7 @@ it teaches, instructs, describes or explains.
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
 | [Add another device](how-to/add-another-device.md)                       | Use the same vault on a second computer or browser profile                             |
 | [Import passwords](how-to/import-passwords.md)                           | Bring items from Proton Pass, Bitwarden, 1Password, a browser or a recovery codes file |
+| [Export your vault](how-to/export-your-vault.md)                         | Save an encrypted 1PW file or a CSV for another app                                    |
 | [Run a shared server](how-to/run-a-shared-server.md)                     | Let other people sign up, with email verification and a domain                         |
 | [Back up and restore](how-to/back-up-and-restore.md)                     | Survive a lost database, a bad deploy or a lost secret                                 |
 | [Rotate secrets](how-to/rotate-secrets.md)                               | Replace a leaked token or API key without locking anyone out                           |

@@ -66,6 +66,16 @@ export async function resolveSession(
   return row ? { accountId: row.account_id, tokenHash } : null;
 }
 
+export async function sessionResumeKey(env: Env, tokenHash: string): Promise<string | null> {
+  const [, row] = await env.DB.batch<{ resume_key: string | null }>([
+    env.DB.prepare(
+      "UPDATE sessions SET resume_key = COALESCE(resume_key, ?) WHERE token_hash = ?",
+    ).bind(toBase64(randomBytes(32)), tokenHash),
+    env.DB.prepare("SELECT resume_key FROM sessions WHERE token_hash = ?").bind(tokenHash),
+  ]);
+  return row?.results[0]?.resume_key ?? null;
+}
+
 export async function revokeSession(env: Env, tokenHash: string): Promise<void> {
   await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
 }

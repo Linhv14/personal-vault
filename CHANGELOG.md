@@ -60,12 +60,27 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The share screen fits the popup: the item sits in the title bar, expiry and
+  view limit are compact rows, and "Create link" stays pinned at the bottom.
 - The popup, Settings and the import page render from Preact components
   instead of hand-written DOM code.
 - The popup is redesigned as two panes (600 × 430): the item list on the left,
   the selected item on the right with grouped, click-to-copy fields. Types are
   filtered from a dropdown, favorites, tags and trash from the scope switcher,
   app actions sit in the menu, and the list sorts by most recent or by name.
+- Export: an encrypted 1PW file (every item type, sealed under a passphrase
+  with PBKDF2 and AES-256-GCM, importable back into 1PW) or a CSV of logins for
+  other apps. Import and export share one page, opened from **Import / Export**
+  in the popup menu, with drag and drop for import files.
+- The vault stays unlocked across popup opens and browser restarts by default,
+  as Proton Pass does: auto-lock gains "Never" (the new default), and the vault
+  key is kept sealed under a per-session key the server holds
+  (`GET /api/auth/resume-key`, migration `0005`). Lock now, sign-out, a timed
+  auto-lock or a revoked session require the master password again.
+- Personal vaults: create, rename, recolour and delete vaults, or move all of a
+  vault's items into another, from each vault's ⋯ menu in the popup header, pick an item's vault in the editor, and browse
+  one vault or all of them. Vault names stay inside the encrypted data.
+  Favorites, tags and the trash move to the side menu.
 - Website icons in the popup, fetched through your own server from DuckDuckGo
   or Google (`GET /api/logo`), held in memory only, and switchable off in
   Settings → Preferences. Servers without the endpoint fall back to letters.
@@ -117,6 +132,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- The passkey prompt opens as a panel in the top-right corner instead of a
+  modal over the page, confirms after saving, and says when the passkey is
+  already saved instead of failing silently. Registrations that ask for a
+  security key go to the browser, and sites see 1PW as a platform
+  authenticator.
+- The save-password banner waits until a sign-in succeeds. A wrong password, a
+  login page that reloads with the form, or revealing the password no longer
+  offers to save.
 - Scripts injected into web pages are built in their own scope. Before, the
   autofill and passkey scripts could overwrite each other's functions, and the
   passkey script exposed its variables to the page.

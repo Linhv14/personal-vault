@@ -1,11 +1,16 @@
 import { ITEM_TYPES, itemType, type ItemType } from "../lib/item-types.js";
 import { matchingItems, searchItems, type VaultItem } from "../lib/vault.js";
+import { vaultOf } from "../lib/vaults.js";
 import type { Scope, SortOrder } from "./state.js";
 
 export interface ListView {
   matched: VaultItem[];
   rest: VaultItem[];
   scoped: VaultItem[];
+}
+
+export function inVault(vault: string, items: VaultItem[]): VaultItem[] {
+  return vault === "all" ? items : items.filter((item) => vaultOf(item) === vault);
 }
 
 export function live(items: VaultItem[]): VaultItem[] {

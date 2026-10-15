@@ -36,6 +36,11 @@ does not export passkeys.
 Export passwords as CSV. 1PW reads any CSV with a password column and a name or
 website column, which covers Chrome, Edge, Firefox and Safari.
 
+### Another 1PW account
+
+Export an **Encrypted 1PW file** from the other account (see
+[Export your vault](export-your-vault.md)) and enter its passphrase when asked.
+
 ### Recovery codes
 
 Choose the file a site lets you download, such as `github-recovery-codes.txt`,
@@ -47,8 +52,8 @@ codes as the site shows them.
 ## Import into 1PW
 
 1. Unlock 1PW.
-2. Open **Settings → Data → Import passwords**, or press **Import from another
-   app** on an empty vault. A page opens in a new tab; browsers close the popup
+2. Open **Import / Export** from the popup menu (☰) or **Settings → Data**, or
+   press **Import from another app** on an empty vault. A page opens in a new tab; browsers close the popup
    when a file picker opens, so the import runs there.
 3. Choose the file (`.zip`, `.pgp`, `.json`, `.1pux`, `.csv` or `.txt`). 1PW
    recognises where it came from.

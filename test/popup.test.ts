@@ -19,6 +19,7 @@ const API_URL = "https://vault.test";
 const REGISTRATION_TOKEN = "test-registration-token";
 const TOTP_SECRET = "JBSWY3DPEHPK3PXP";
 const ITEM_PASSWORD = "a-very-secret-password-123";
+const RESUME_KEY = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
 
 const localArea = new Map<string, unknown>();
 const sessionArea = new Map<string, unknown>();
@@ -70,6 +71,7 @@ const server = {
   emailVerification: false,
   shareRequests: [] as Record<string, any>[],
   logoRequests: [] as { domain: string; auth: string | null }[],
+  sessionRevoked: false,
 };
 
 function json(body: unknown, status = 200): Response {
@@ -113,6 +115,16 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   }
 
   if (url.pathname === "/api/time") return json({ serverTime: now });
+
+  if (url.pathname === "/api/auth/resume-key") {
+    if (
+      server.sessionRevoked ||
+      new Headers(init?.headers).get("Authorization") !== "Bearer session-token"
+    ) {
+      return json({ code: "auth.unauthorized", error: "Not signed in" }, 401);
+    }
+    return json({ resumeKey: RESUME_KEY });
+  }
 
   if (url.pathname === "/api/logo") {
     server.logoRequests.push({
@@ -233,15 +245,25 @@ describe("extension popup", () => {
     expect(chromeMock.permissions.request).not.toHaveBeenCalled();
   });
 
-  it("keeps the vault key in session storage, never in local storage", () => {
+  it("keeps the vault key in session storage, never in local storage", async () => {
     // The central invariant: storage.local is on disk in the clear.
     expect(sessionArea.get("vaultKeyRaw")).toBeTypeOf("string");
     expect(localArea.has("vaultKeyRaw")).toBe(false);
+    expect(sessionArea.get("token")).toBe("session-token");
 
+    await waitFor(() => localArea.has("resume"), "the sealed resume copy");
     const localDump = JSON.stringify(Object.fromEntries(localArea));
     expect(localDump).not.toContain(PASSWORD);
     expect(localDump).not.toContain(sessionArea.get("vaultKeyRaw"));
-    expect(localArea.has("token")).toBe(false);
+    expect(localDump).not.toContain(RESUME_KEY);
+  });
+
+  it("reopens the vault after a browser restart without the master password", async () => {
+    const { resumeUnlock } = await import("../extension/lib/resume.js");
+    const vaultKeyRaw = sessionArea.get("vaultKeyRaw");
+    sessionArea.clear();
+    expect(await resumeUnlock()).toBe(true);
+    expect(sessionArea.get("vaultKeyRaw")).toBe(vaultKeyRaw);
     expect(sessionArea.get("token")).toBe("session-token");
   });
 
@@ -302,31 +324,28 @@ describe("extension popup", () => {
     option.click();
   }
 
-  function scopeMenu(): HTMLButtonElement[] {
-    if (!document.querySelector(".scope .menu")) el("scope-menu").click();
-    return [...document.querySelectorAll<HTMLButtonElement>(".scope .menu-item")];
+  function drawerLinks(): HTMLButtonElement[] {
+    if (!document.querySelector(".drawer")) el("btn-menu").click();
+    return [...document.querySelectorAll<HTMLButtonElement>(".drawer-scopes .drawer-link")];
   }
 
   function scopes(): string[] {
-    const labels = scopeMenu().map((item) => item.textContent ?? "");
-    el("scope-menu").click();
+    const labels = drawerLinks().map((link) => link.textContent ?? "");
+    document.querySelector<HTMLElement>(".drawer-backdrop")?.click();
     return labels;
   }
 
   function openScope(label: string): void {
-    const item = scopeMenu().find((candidate) => candidate.textContent?.startsWith(label));
-    if (!item) throw new Error(`No "${label}" in the scope menu`);
-    item.click();
+    const link = drawerLinks().find((candidate) => candidate.textContent?.startsWith(label));
+    if (!link) throw new Error(`No "${label}" in the menu`);
+    link.click();
   }
 
   it("surfaces the item under the matching-domain heading", async () => {
     await waitFor(() => rows("matching-list").length > 0, "the domain match section");
     expect(el("matching-title").textContent).toContain("github.com");
     expect(el("matching-list").textContent).toContain("GitHub");
-    const labels = [...rows("matching-list")[0]!.querySelectorAll("button")].map((button) =>
-      button.getAttribute("aria-label"),
-    );
-    expect(labels).toEqual(["Copy 2FA code", "Copy password"]);
+    expect(rows("matching-list")[0]!.querySelectorAll("button")).toHaveLength(0);
   });
 
   it("shows site logos fetched through the signed-in server", async () => {
@@ -545,12 +564,121 @@ describe("extension popup", () => {
     expect(rows("all-list")[0]!.textContent).toContain("1 of 2 left");
   });
 
+  function vaultMenuItem(label: string): HTMLButtonElement {
+    if (!document.querySelector(".vault-menu")) el("vault-menu").click();
+    const item = [...document.querySelectorAll<HTMLButtonElement>(".vault-menu .menu-item")].find(
+      (candidate) => candidate.textContent?.startsWith(label),
+    );
+    if (!item) throw new Error(`No "${label}" in the vault menu`);
+    return item;
+  }
+
+  function vaultActions(name: string): void {
+    if (!document.querySelector(".vault-menu")) el("vault-menu").click();
+    const row = [...document.querySelectorAll<HTMLElement>(".vault-row")].find((candidate) =>
+      candidate.textContent?.startsWith(name),
+    );
+    if (!row) throw new Error(`No vault "${name}"`);
+    row.querySelector<HTMLButtonElement>(".vault-more")!.click();
+  }
+
+  async function addNote(title: string): Promise<void> {
+    addItemOfKind("Note");
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
+    const form = el<HTMLFormElement>("form-edit");
+    setField(form, "title", title);
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => el("all-list").textContent!.includes(title), `the note ${title}`);
+  }
+
+  it("keeps items in separate vaults", async () => {
+    vaultMenuItem("New vault").click();
+    await waitFor(() => visibleScreen() === "screen-vault", "the vault editor");
+    setField(el<HTMLFormElement>("form-vault"), "name", "Work");
+    el<HTMLFormElement>("form-vault").dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => el("vault-menu").textContent === "Work", "the new vault");
+    expect(rows("all-list")).toHaveLength(0);
+
+    addItemOfKind("Note");
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
+    const form = el<HTMLFormElement>("form-edit");
+    expect(form.querySelector<HTMLSelectElement>('[name="vault"]')!.selectedOptions[0]!.text).toBe(
+      "Work",
+    );
+    setField(form, "title", "Office wifi");
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => rows("all-list").length === 1, "the note in Work");
+    expect(el("detail").textContent).toContain("Note · Work");
+
+    vaultMenuItem("Personal").click();
+    expect(el("all-list").textContent).not.toContain("Office wifi");
+  });
+
+  it("moves every item of one vault into another", async () => {
+    vaultActions("Work");
+    vaultMenuItem("Move all items to").click();
+    vaultMenuItem("Personal").click();
+    await waitFor(() => el("vault-menu").textContent === "Personal", "the target vault");
+    await waitFor(() => el("all-list").textContent!.includes("Office wifi"), "the moved note");
+    vaultMenuItem("Work").click();
+    expect(rows("all-list")).toHaveLength(0);
+  });
+
+  it("moves a deleted vault's items to the trash", async () => {
+    await addNote("Badge PIN");
+    vaultActions("Work");
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    vaultMenuItem("Delete vault").click();
+    await waitFor(() => el("vault-menu").textContent === "All vaults", "the deleted vault");
+    confirm.mockRestore();
+    openScope("Trash");
+    expect(el("all-list").textContent).toContain("Badge PIN");
+    expect(el("all-list").textContent).not.toContain("Office wifi");
+  });
+
+  it("moves the only vault's items into a vault created on the way", async () => {
+    vaultMenuItem("Personal").click();
+    const before = rows("all-list").length + rows("matching-list").length;
+    vaultActions("Personal");
+    vaultMenuItem("Move all items to").click();
+    vaultMenuItem("New vault").click();
+    await waitFor(() => visibleScreen() === "screen-vault", "the vault editor");
+    setField(el<HTMLFormElement>("form-vault"), "name", "Archive");
+    el<HTMLFormElement>("form-vault").dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    await waitFor(() => el("vault-menu").textContent === "Archive", "the new vault");
+    await waitFor(
+      () => rows("all-list").length + rows("matching-list").length === before,
+      "the moved items",
+    );
+    vaultMenuItem("Personal").click();
+    expect(rows("all-list").length + rows("matching-list").length).toBe(0);
+  });
+
+  it("forgets the resume copy once the server revokes the session", async () => {
+    const { rememberUnlock, resumeUnlock } = await import("../extension/lib/resume.js");
+    const vaultKeyRaw = String(sessionArea.get("vaultKeyRaw"));
+    server.sessionRevoked = true;
+    sessionArea.clear();
+    expect(await resumeUnlock()).toBe(false);
+    expect(localArea.has("resume")).toBe(false);
+    server.sessionRevoked = false;
+    const { unlock } = await import("../extension/lib/storage.js");
+    await unlock(vaultKeyRaw, "session-token");
+    await rememberUnlock(vaultKeyRaw, "session-token");
+    expect(localArea.has("resume")).toBe(true);
+  });
+
   it("clears session storage when locked, keeping the offline cache", async () => {
     if (!document.querySelector(".drawer")) el("btn-menu").click();
-    [...document.querySelectorAll<HTMLButtonElement>(".drawer-link")]
+    [...document.querySelectorAll<HTMLButtonElement>(".drawer-actions .drawer-link")]
       .find((link) => link.textContent === "Lock now")!
       .click();
     await waitFor(() => sessionArea.size === 0, "session storage to be cleared");
     expect(localArea.has("items")).toBe(true);
+    expect(localArea.has("resume")).toBe(false);
   });
 });

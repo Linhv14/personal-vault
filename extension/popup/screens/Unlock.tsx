@@ -1,9 +1,9 @@
 import { useState } from "preact/hooks";
 import { describeError } from "../../../src/i18n/index.js";
 import { clearAccountData, lock } from "../../lib/storage.js";
-import { Logo, Wordmark } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
 import { signIn } from "../auth.js";
+import { AuthLayout } from "../components/AuthLayout.js";
 
 export function Unlock({ email }: { email: string }) {
   const t = useT();
@@ -34,13 +34,10 @@ export function Unlock({ email }: { email: string }) {
   };
 
   return (
-    <section id="screen-unlock" className="screen">
-      <div className="brand">
-        <h1 className="lockup">
-          <Logo size={40} />
-          <Wordmark />
-        </h1>
-        <p className="tagline">{email}</p>
+    <AuthLayout id="screen-unlock">
+      <div className="auth-heading">
+        <h1>{t("unlock.submit")}</h1>
+        <p className="hint">{email}</p>
       </div>
       <form id="form-unlock" className="stack" onSubmit={(event) => void submit(event)}>
         <input
@@ -56,11 +53,9 @@ export function Unlock({ email }: { email: string }) {
         </button>
       </form>
       {error && <p className="error">{error}</p>}
-      <div className="screen-footer">
-        <button type="button" className="link quiet" onClick={() => void reset()}>
-          {t("unlock.reset")}
-        </button>
-      </div>
-    </section>
+      <button type="button" className="link quiet" onClick={() => void reset()}>
+        {t("unlock.reset")}
+      </button>
+    </AuthLayout>
   );
 }

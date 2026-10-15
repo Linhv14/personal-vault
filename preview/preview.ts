@@ -139,7 +139,11 @@ function area(store: Map<string, unknown>) {
 
 Object.assign(globalThis, {
   chrome: {
-    storage: { local: area(local), session: area(session) },
+    storage: {
+      local: area(local),
+      session: area(session),
+      onChanged: { addListener() {}, removeListener() {} },
+    },
     tabs: {
       // Pretend the user is on github.com so the "matching" section is visible.
       async query() {
@@ -268,4 +272,5 @@ async function seed(): Promise<void> {
 }
 
 await seed();
-await import("../extension/popup/main.js");
+if (location.pathname.startsWith("/import")) await import("../extension/import/main.js");
+else await import("../extension/popup/main.js");

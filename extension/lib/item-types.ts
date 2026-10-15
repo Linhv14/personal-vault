@@ -35,7 +35,10 @@ type TextKey = {
   [K in keyof VaultItem]-?: NonNullable<VaultItem[K]> extends string ? K : never;
 }[keyof VaultItem];
 
-export type TextFieldKey = Exclude<TextKey, "id" | "title" | "type" | "urlMatch">;
+export type TextFieldKey = Exclude<
+  TextKey,
+  "id" | "title" | "type" | "urlMatch" | "vault" | "system"
+>;
 export type FieldKey = TextFieldKey | "totp" | "codes";
 
 export interface FieldSpec {

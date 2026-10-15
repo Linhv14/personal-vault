@@ -97,6 +97,12 @@ stops after about 30 seconds idle. Forms stay uncontrolled and are read with
 `FormData` on submit, so the editor renders any `TYPE_FIELDS` entry without one
 piece of state per field.
 
+**Vaults are encrypted labels, not separate keys.** A vault is a name, colour
+and icon stored in one encrypted system record, and each item names its vault
+inside its own ciphertext. The server sees neither. Sharing a vault with
+another person needs per-vault keys wrapped to each member's public key; that
+comes as its own design, and this layout leaves room for it.
+
 **Creating a vault and signing in are two visible choices.** Signing in needs no
 registration token; hiding that path behind a link led people setting up a
 second machine to believe they needed a token they do not have.
@@ -113,6 +119,16 @@ worker after about 30 seconds, so a key held in a variable disappears and the
 popup asks for the master password again and again. Session storage is
 memory-backed and cleared when the browser exits, and auto-lock clears it
 earlier.
+
+**By default the vault reopens after a browser restart, as Proton Pass does.**
+Typing the master password on every browser start pushes people to weaker
+passwords. With auto-lock set to "Never" (the default), the extension seals the
+vault key under a random key that the server holds for that session and keeps
+the sealed copy and the session token in `storage.local`. On restart it asks
+the server for the session's key and opens the copy. The disk copy alone opens
+nothing; with the session revoked (sign-out, 30-day expiry, password change) it
+is useless and is deleted. "Lock now" and every timed or on-close auto-lock
+delete it too, so anyone who wants the old behaviour picks one of those.
 
 **`chrome.storage.local` holds only ciphertext and preferences.** The browser
 writes it to disk unencrypted.

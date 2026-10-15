@@ -11,9 +11,9 @@ import {
   type PendingSignup,
 } from "../../lib/storage.js";
 import { Icon } from "../../ui/components/Icon.js";
-import { Logo, Wordmark } from "../../ui/components/Logo.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { finishUnlock, signIn } from "../auth.js";
+import { AuthLayout } from "../components/AuthLayout.js";
 import { toast } from "../state.js";
 
 type Mode = "register" | "login";
@@ -170,15 +170,8 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   };
 
   return (
-    <section id="screen-setup" className="screen">
+    <AuthLayout id="screen-setup">
       <div id="setup-choice" hidden={!choosing}>
-        <div className="brand">
-          <h1 className="lockup">
-            <Logo size={44} />
-            <Wordmark />
-          </h1>
-          <p className="tagline">{t("setup.tagline")}</p>
-        </div>
         <div className="choices">
           <button className="choice" onClick={() => void openForm("register")}>
             <span className="choice-icon">
@@ -315,6 +308,6 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
         </form>
         {error && <p className="error">{error}</p>}
       </div>
-    </section>
+    </AuthLayout>
   );
 }

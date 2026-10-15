@@ -10,7 +10,7 @@ import { registrableDomain, type VaultItem } from "../../lib/vault.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
 import { IconButton } from "../../ui/components/IconButton.js";
-import { Avatar } from "../components/ItemIcons.js";
+import { ItemIcon } from "../components/ItemIcons.js";
 import { copy, formatDate, openSettings, showList, vaultKey } from "../state.js";
 
 const TTL_CHOICES: [string, MessageKey][] = [
@@ -88,7 +88,6 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
   const recipientCount = restricted ? recipients.length : 0;
   const allowOnce = singleViewAllowed(recipientCount);
   const maxViews = allowOnce ? views : "unlimited";
-  const ttlLabel = TTL_CHOICES.find(([value]) => value === ttl)?.[1] ?? "share.ttl_24h";
 
   const commitEntry = (): { ok: boolean; recipients: string[] } => {
     const input = entry.current;
@@ -159,12 +158,12 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
         url,
         passphrase: Boolean(secret),
         note: [
-          item.title,
           t("links.expires", { expiry: formatDate(created.expiresAt) }),
           t(viewLimit === 1 ? "share.result_once" : "share.result_unlimited"),
           ...(shareTo.length > 0 ? [t("links.restricted", { count: shareTo.length })] : []),
         ].join(" · "),
       });
+      document.getElementById("screen-share")?.scrollTo({ top: 0 });
     } catch (failure) {
       setError(describeError(failure, t));
     }
@@ -186,9 +185,17 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
 
   return (
     <section id="screen-share" className="screen">
-      <header className="title-bar">
+      <header className="title-bar share-title">
         <IconButton id="share-back" icon="back" label={t("common.back")} onClick={showList} />
-        <h1>{t("share.title")}</h1>
+        <ItemIcon item={item} />
+        <div className="title-text">
+          <h1>{t("share.title")}</h1>
+          <p>
+            {[item.title, item.url ? (registrableDomain(item.url) ?? item.url) : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
       </header>
       <form
         id="form-share"
@@ -196,41 +203,37 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
         hidden={result !== null}
         onSubmit={(event) => void submit(event)}
       >
-        <div className="share-subject">
-          <Avatar title={item.title} />
-          <div className="item-name">
-            <div className="item-title">{item.title}</div>
-            <div className="item-sub">
-              {item.url ? (registrableDomain(item.url) ?? item.url) : (item.username ?? "")}
-            </div>
-          </div>
-        </div>
         <section className="share-contents" aria-labelledby="share-contents-label">
           <span className="field-label" id="share-contents-label">
             {t("share.contents")}
           </span>
-          <div className="chips" id="share-fields">
+          <p className="share-includes" id="share-fields">
+            <Icon name="check" />
             {sharedFields
               .filter(([value]) => Boolean(value))
-              .map(([, key]) => (
-                <Chip icon="check" text={t(key)} key={key} />
-              ))}
-          </div>
-          <small className="hint warn-text" id="share-totp-hint" hidden={!item.totp}>
+              .map(([, key]) => t(key))
+              .join(" · ")}
+          </p>
+          <small className="hint share-note" id="share-totp-hint" hidden={!item.totp}>
+            <Icon name="alert" />
             {t("share.totp_hint")}
           </small>
         </section>
-        <fieldset className="choice-group">
-          <legend>{t("share.expires_in")}</legend>
+        <div className="option-row" role="group" aria-labelledby="share-ttl-label">
+          <span className="option-label" id="share-ttl-label">
+            {t("share.expires_in")}
+          </span>
           <Segmented
             name="ttl"
             value={ttl}
             choices={TTL_CHOICES.map(([value, label]) => [value, t(label)])}
             onChange={setTtl}
           />
-        </fieldset>
-        <fieldset className="choice-group">
-          <legend>{t("share.max_views")}</legend>
+        </div>
+        <div className="option-row" role="group" aria-labelledby="share-views-label">
+          <span className="option-label" id="share-views-label">
+            {t("share.max_views")}
+          </span>
           <Segmented
             name="maxViews"
             value={maxViews}
@@ -241,11 +244,17 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
             disabled={allowOnce ? [] : ["1"]}
             onChange={setViews}
           />
-          <small className="hint" id="share-views-hint" hidden={allowOnce}>
+          <small className="hint option-hint" id="share-views-hint" hidden={allowOnce}>
             {t("share.views_hint")}
           </small>
-        </fieldset>
-        <details className="disclosure">
+        </div>
+        <details
+          className="disclosure"
+          onToggle={(event) => {
+            const details = event.currentTarget as HTMLDetailsElement;
+            if (details.open) details.scrollIntoView({ block: "start", behavior: "smooth" });
+          }}
+        >
           <summary>
             <span>{t("share.protection")}</span>
             <span className="disclosure-state">{protections.join(" · ")}</span>
@@ -335,16 +344,10 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
             </label>
           </div>
         </details>
-        <div className="stack tight">
+        <div className="share-footer">
           <button className="primary" type="submit">
             {t("share.create")}
           </button>
-          <p className="hint center">
-            {[
-              t("share.summary_expiry", { duration: t(ttlLabel) }),
-              t(maxViews === "1" ? "share.result_once" : "share.result_unlimited"),
-            ].join(" · ")}
-          </p>
         </div>
       </form>
       <div id="share-result" className="share-result" hidden={result === null}>

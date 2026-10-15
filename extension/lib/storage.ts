@@ -4,7 +4,7 @@
  *
  * - `chrome.storage.local` is ON DISK in the clear. Ciphertext and settings only.
  * - `chrome.storage.session` is in memory and cleared when the browser closes.
- *   The vault key and session token live here.
+ *   The vault key and session token live here; see resume.ts for the disk copy.
  *
  * Mixing the two is a failure with no visible symptom: everything keeps working,
  * your keys are just sitting on disk.
@@ -39,6 +39,7 @@ export interface LocalState {
   clockSkew?: number;
   locale?: LocalePreference;
   showLogos?: boolean;
+  resume?: { token: string; sealed: SealedData };
 }
 
 interface SessionState {
@@ -48,15 +49,18 @@ interface SessionState {
   focusItem?: string;
 }
 
-export const DEFAULT_AUTO_LOCK_MINUTES = 15;
 export const LOCK_ON_BROWSER_CLOSE = 0;
-export const AUTO_LOCK_CHOICES = [5, 15, 60, 240, LOCK_ON_BROWSER_CLOSE];
+export const LOCK_NEVER = -1;
+export const DEFAULT_AUTO_LOCK_MINUTES = LOCK_NEVER;
+export const AUTO_LOCK_CHOICES = [5, 15, 60, 240, LOCK_ON_BROWSER_CLOSE, LOCK_NEVER];
+
+export async function autoLockMinutes(): Promise<number> {
+  return (await getLocal()).autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES;
+}
 
 async function lockDeadline(): Promise<{ lockAt?: number }> {
-  const { autoLockMinutes = DEFAULT_AUTO_LOCK_MINUTES } = await getLocal();
-  return autoLockMinutes === LOCK_ON_BROWSER_CLOSE
-    ? {}
-    : { lockAt: Date.now() + autoLockMinutes * 60_000 };
+  const minutes = await autoLockMinutes();
+  return minutes > 0 ? { lockAt: Date.now() + minutes * 60_000 } : {};
 }
 
 export interface PendingSignup {
@@ -161,6 +165,7 @@ export async function lock(): Promise<void> {
   // clear() rather than deleting named keys, so adding a field later cannot
   // leave a secret behind.
   await chrome.storage.session.clear();
+  await chrome.storage.local.remove("resume");
 }
 
 export async function setToken(token: string): Promise<void> {

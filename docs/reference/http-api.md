@@ -135,6 +135,13 @@ same on every call, so the response does not reveal whether an account exists.
 | 401    | `auth.invalid_credentials` (wrong email or key; the two are not distinguished) |
 | 429    | `auth.rate_limited` with `params.seconds` until the lock ends                  |
 
+### `GET /api/auth/resume-key`
+
+Authenticated. Returns `{ "resumeKey": "<base64>" }`, a random 32-byte key that
+belongs to this session and is created on first request. The extension seals
+the vault key under it so the vault reopens after a browser restart; deleting
+the session deletes the key.
+
 ### `POST /api/auth/logout`
 
 Authenticated. Revokes the current session. Returns `{ "ok": true }`.

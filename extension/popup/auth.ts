@@ -8,6 +8,7 @@ import {
 } from "../../src/core/crypto.js";
 import { toBase64 } from "../../src/core/bytes.js";
 import * as api from "../lib/api.js";
+import { rememberUnlock } from "../lib/resume.js";
 import { getLocal, setLocal, unlock } from "../lib/storage.js";
 import { enterVault, toast, translator } from "./state.js";
 
@@ -47,5 +48,6 @@ export async function finishUnlock(
   const raw = await openSealed(wrappingKey, wrapped);
 
   await unlock(toBase64(raw), token);
+  await rememberUnlock(toBase64(raw), token);
   await enterVault(toBase64(raw));
 }

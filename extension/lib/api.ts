@@ -72,6 +72,14 @@ async function request<T>(
   return body as T;
 }
 
+export async function resumeKey(token: string): Promise<string> {
+  const { resumeKey } = await request<{ resumeKey: string }>("/api/auth/resume-key", {
+    auth: false,
+    extraHeaders: { Authorization: `Bearer ${token}` },
+  });
+  return resumeKey;
+}
+
 export async function fetchLogo(domain: string): Promise<Blob | null> {
   const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
   if (!apiUrl || !session?.token) return null;

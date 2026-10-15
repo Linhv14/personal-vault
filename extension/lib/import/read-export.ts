@@ -1,3 +1,9 @@
+import {
+  decryptExport,
+  ExportPassphraseError,
+  isEncryptedExport,
+  type EncryptedExport,
+} from "../export.js";
 import { parseRecoveryCodes, titleFromFileName } from "../recovery-codes.js";
 import {
   bitwardenFromCsv,
@@ -48,7 +54,18 @@ function parseJson(content: string): JsonObject {
   }
 }
 
+async function from1pw(file: EncryptedExport, passphrase?: string): Promise<ImportSource> {
+  if (!passphrase) throw new ImportError("needs_passphrase");
+  try {
+    return { format: "1pw", drafts: await decryptExport(file, passphrase), skipped: {} };
+  } catch (error) {
+    if (error instanceof ExportPassphraseError) throw new ImportError("wrong_passphrase");
+    throw error;
+  }
+}
+
 async function fromJson(parsed: JsonObject, passphrase?: string): Promise<ImportSource> {
+  if (isEncryptedExport(parsed)) return from1pw(parsed, passphrase);
   if (isProtonJson(parsed)) return protonFromJson(parsed);
   if (isBitwardenJson(parsed)) return bitwardenFromJson(parsed, passphrase);
   if (isOnePasswordExport(parsed)) return onePasswordFromExport(parsed);

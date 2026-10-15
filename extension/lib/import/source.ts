@@ -20,7 +20,7 @@ export class ImportError extends Error {
 
 export type SkipReason = "duplicate" | "trashed" | "alias" | "other" | "passkey";
 
-export type ImportFormat = "proton" | "bitwarden" | "1password" | "csv" | "recovery";
+export type ImportFormat = "1pw" | "proton" | "bitwarden" | "1password" | "csv" | "recovery";
 
 export interface ImportSource {
   format: ImportFormat;

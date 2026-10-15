@@ -1,7 +1,8 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { itemType, TYPE_ICON, type ItemType } from "../../lib/item-types.js";
-import type { VaultItem } from "../../lib/vault.js";
+import type { IconName } from "../../../src/ui/icons.js";
+import type { VaultDef, VaultItem } from "../../lib/vault.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { knownLogo, logoDomainOf, logoFor, showLogos } from "../logos.js";
 
@@ -43,4 +44,12 @@ export function ItemIcon({ item }: { item: VaultItem }) {
   const domain =
     (type === "login" || type === "api") && showLogos.value ? logoDomainOf(item.url) : null;
   return domain ? <SiteLogo domain={domain} fallback={fallback} key={domain} /> : fallback;
+}
+
+export function VaultBadge({ vault }: { vault: VaultDef }) {
+  return (
+    <span className="vault-badge" data-color={vault.color}>
+      <Icon name={vault.icon as IconName} />
+    </span>
+  );
 }

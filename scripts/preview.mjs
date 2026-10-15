@@ -7,6 +7,7 @@
  *   node scripts/preview.mjs            http://127.0.0.1:8788
  *   ?screen=setup | ?screen=unlock      review the locked-out states
  *   ?locale=vi                          review a translation
+ *   /import.html                        the import and export page
  */
 
 import { build } from "esbuild";
@@ -51,6 +52,13 @@ const html = await readFile(path.join(root, "extension", "popup", "popup.html"),
 await writeFile(path.join(out, "index.html"), html.replace("main.js", "preview.js"));
 const css = path.join(root, "extension", "popup", "popup.css");
 await writeFile(path.join(out, "popup.css"), await injectTokens(await readFile(css, "utf8"), css));
+const transferHtml = await readFile(path.join(root, "extension", "import", "import.html"), "utf8");
+await writeFile(path.join(out, "import.html"), transferHtml.replace("main.js", "preview.js"));
+const transferCss = path.join(root, "extension", "import", "import.css");
+await writeFile(
+  path.join(out, "import.css"),
+  await injectTokens(await readFile(transferCss, "utf8"), transferCss),
+);
 
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css" };
 

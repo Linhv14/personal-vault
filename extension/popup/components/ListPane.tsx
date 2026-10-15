@@ -2,7 +2,7 @@ import { useEffect } from "preact/hooks";
 import { ITEM_TYPES, NEW_LABEL, TYPE_ICON, TYPE_LABEL } from "../../lib/item-types.js";
 import { registrableDomain } from "../../lib/vault.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { inScope, listView, live, scopeExists, typeCounts } from "../filters.js";
+import { inScope, inVault, listView, live, scopeExists, typeCounts } from "../filters.js";
 import { Dropdown } from "./Menu.js";
 import { Row } from "./Row.js";
 import {
@@ -15,10 +15,11 @@ import {
   sortOrder,
   tabUrl,
   typeFilter,
+  currentVault,
 } from "../state.js";
 
 export function currentView() {
-  const all = items.value;
+  const all = inVault(currentVault.value, items.value);
   const currentScope = scopeExists(scope.value, all) ? scope.value : "all";
   const view = listView({
     items: all,

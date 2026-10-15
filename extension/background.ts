@@ -18,6 +18,7 @@ import { handleAutofill, trustedSender, type TrustedSender } from "./lib/autofil
 import { isPasskeyRequest } from "./lib/passkey/protocol.js";
 import { handlePasskey } from "./lib/passkey/service.js";
 import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
+import { resumeUnlock } from "./lib/resume.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -28,7 +29,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  void lock();
+  void chrome.storage.session.clear().then(() => resumeUnlock());
   void scheduleLockAlarm();
 });
 

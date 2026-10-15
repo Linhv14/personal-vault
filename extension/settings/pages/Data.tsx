@@ -80,11 +80,11 @@ export function Data() {
       <Card className="rows">
         <div className="row">
           <span className="row-text">
-            <span>{t("settings.import")}</span>
+            <span>{t("transfer.title")}</span>
             <span className="row-hint">{t("settings.import_hint")}</span>
           </span>
           <a className="button" href="../import/import.html">
-            {t("settings.import_open")}
+            {t("settings.transfer_open")}
           </a>
         </div>
       </Card>

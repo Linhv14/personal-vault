@@ -59,6 +59,7 @@ app.use("/api/items", requireAuth);
 app.use("/api/items/*", requireAuth);
 app.use("/api/logo", requireAuth);
 app.use("/api/auth/logout", requireAuth);
+app.use("/api/auth/resume-key", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
 app.use("/api/auth/delete-account", requireAuth);
 

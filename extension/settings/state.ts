@@ -6,6 +6,7 @@ import {
   open as openSealed,
 } from "../../src/core/crypto.js";
 import { toBase64 } from "../../src/core/bytes.js";
+import { resumeUnlock } from "../lib/resume.js";
 import { getLocal, type LocalState } from "../lib/storage.js";
 import { setUiLocale } from "../ui/i18n.js";
 import { refreshSession } from "../ui/store/session.js";
@@ -29,7 +30,7 @@ export async function reloadLocal(): Promise<void> {
 
 export function watchStorage(): () => void {
   void reloadLocal();
-  void refreshSession();
+  void resumeUnlock().then(() => refreshSession());
   const onChanged = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
     if (area === "session") void refreshSession();
     if (area === "local" && Object.keys(changes).length > 0) void reloadLocal();

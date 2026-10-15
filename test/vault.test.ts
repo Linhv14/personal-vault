@@ -28,16 +28,22 @@ vi.stubGlobal("chrome", {
 });
 
 const puts: { id: string; ciphertext: string; nonce: string }[] = [];
+let rateLimited = 0;
 vi.stubGlobal(
   "fetch",
   vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (rateLimited > 0) {
+      rateLimited -= 1;
+      return new Response(JSON.stringify({ code: "server.rate_limited" }), { status: 429 });
+    }
     const id = new URL(String(input)).pathname.split("/").pop()!;
     puts.push({ id, ...JSON.parse(String(init?.body)) });
     return new Response(JSON.stringify({ id, updatedAt: 2_000 }), { status: 200 });
   }),
 );
 
-const { decryptAll, migrateUnboundItems, saveItem } = await import("../extension/lib/vault.js");
+const { decryptAll, migrateUnboundItems, saveItem, saveItemPatiently } =
+  await import("../extension/lib/vault.js");
 
 const ID_A = "00000000-0000-4000-8000-00000000000a";
 const ID_B = "00000000-0000-4000-8000-00000000000b";
@@ -177,6 +183,34 @@ describe("auto-lock", () => {
     await touch();
     expect(sessionArea.has("lockAt")).toBe(false);
     vi.useFakeTimers({ now: Date.now() + 24 * 60 * 60_000 });
+    expect(await getUnlocked()).not.toBeNull();
+  });
+});
+
+describe("saving under the write limit", () => {
+  it("waits out the server's rate limit and then saves", async () => {
+    localArea.set("apiUrl", "https://vault.test");
+    sessionArea.set("vaultKeyRaw", "x");
+    sessionArea.set("token", "t");
+    const key = await importVaultKey(createVaultKey());
+    rateLimited = 2;
+    let waits = 0;
+    const saved = await saveItemPatiently(
+      key,
+      { id: ID_B, title: "Patient" },
+      () => (waits += 1),
+      async () => {},
+    );
+    expect(waits).toBe(2);
+    expect(saved.title).toBe("Patient");
+  });
+
+  it("stays unlocked by default, with no idle deadline", async () => {
+    localArea.clear();
+    sessionArea.clear();
+    const { getUnlocked, unlock } = await import("../extension/lib/storage.js");
+    await unlock("key", "token");
+    expect(sessionArea.has("lockAt")).toBe(false);
     expect(await getUnlocked()).not.toBeNull();
   });
 });
