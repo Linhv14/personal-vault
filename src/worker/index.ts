@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { apiError } from "./errors.js";
 import account from "./routes/account.js";
 import auth from "./routes/auth.js";
+import deviceUnlock from "./routes/device-unlock.js";
 import items from "./routes/items.js";
 import orgs, { invites } from "./routes/orgs.js";
 import logos from "./routes/logos.js";
@@ -105,6 +106,7 @@ app.get("/api/config", (c) =>
 );
 
 app.route("/api/auth", auth);
+app.route("/api/auth", deviceUnlock);
 app.route("/api/account", account);
 app.route("/api/orgs", orgs);
 app.route("/api/invites", invites);
@@ -139,7 +141,7 @@ app.onError((error, c) => {
   return c.json(apiError("server.error"), 500);
 });
 
-export { OrgStore } from "./org-store.js";
+export { OrgStore } from "./orgs/store.js";
 export { UserStore } from "./user-store.js";
 
 export default {

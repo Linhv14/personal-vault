@@ -1,5 +1,6 @@
 import { randomBytes, toBase64, toBase64Url } from "../core/bytes.js";
 import type { Env } from "./types.js";
+import { isBase64Url } from "./validate.js";
 import { ES256, RS256, verifyAssertion, type AssertionInput } from "./webauthn.js";
 
 const BIOMETRIC_CHALLENGE_SECONDS = 120;
@@ -12,17 +13,7 @@ export interface BiometricRegistration {
   origin: string;
 }
 
-const BASE64URL = /^[A-Za-z0-9_-]+$/;
 const EXTENSION_ORIGIN = /^chrome-extension:\/\/([a-p]{32})$/;
-
-function isBase64Url(value: unknown, maxLength: number): value is string {
-  return (
-    typeof value === "string" &&
-    value.length > 0 &&
-    value.length <= maxLength &&
-    BASE64URL.test(value)
-  );
-}
 
 export function isRegistration(value: unknown): value is BiometricRegistration {
   if (typeof value !== "object" || value === null) return false;

@@ -3,9 +3,11 @@ import type { Context } from "hono";
 import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "../../core/bytes.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
+import { now } from "../http.js";
 import { createMailer } from "../mailer.js";
 import { isCode } from "../one-time-code.js";
-import { hashToken, isBase64 } from "../session.js";
+import { hashToken } from "../session.js";
+import { isBase64 } from "../validate.js";
 import { consumeShareCode, MAX_RECIPIENTS, recipientHash, sendShareCode } from "../share-access.js";
 import type { AppBindings } from "../types.js";
 
@@ -24,10 +26,6 @@ const VIEWABLE = "(max_views = 0 OR view_count < max_views)";
 
 function viewsLeft(row: { max_views: number; view_count: number }): number | null {
   return row.max_views === UNLIMITED_VIEWS ? null : row.max_views - row.view_count;
-}
-
-function now(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 interface ClaimedShare {

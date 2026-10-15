@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { fail, now, ok, type Result } from "./http.js";
 import type { Env } from "./types.js";
 
 export const MAX_ITEMS_PER_ACCOUNT = 5_000;
@@ -12,9 +13,6 @@ export interface StoredItem {
   deletedAt: number | null;
 }
 
-export type StoreResult<T> =
-  { ok: true; value: T } | { ok: false; status: 403 | 404 | 409; code: string };
-
 type Row = {
   id: string;
   ciphertext: string;
@@ -22,10 +20,6 @@ type Row = {
   updated_at: number;
   deleted_at: number | null;
 };
-
-function now(): number {
-  return Math.floor(Date.now() / 1000);
-}
 
 export class UserStore extends DurableObject<Env> {
   private readonly sql: SqlStorage;
@@ -87,8 +81,8 @@ export class UserStore extends DurableObject<Env> {
   async list(
     accountId: string,
     since: number,
-  ): Promise<StoreResult<{ serverTime: number; items: StoredItem[] }>> {
-    if (!(await this.open(accountId))) return { ok: false, status: 403, code: "items.forbidden" };
+  ): Promise<Result<{ serverTime: number; items: StoredItem[] }>> {
+    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
     const serverTime = now();
     const rows = this.sql
       .exec<Row>(
@@ -96,19 +90,16 @@ export class UserStore extends DurableObject<Env> {
         since,
       )
       .toArray();
-    return {
-      ok: true,
-      value: {
-        serverTime: serverTime - UPDATED_AT_RESOLUTION_SECONDS,
-        items: rows.map((row) => ({
-          id: row.id,
-          ciphertext: row.deleted_at ? null : row.ciphertext,
-          nonce: row.deleted_at ? null : row.nonce,
-          updatedAt: row.updated_at,
-          deletedAt: row.deleted_at,
-        })),
-      },
-    };
+    return ok({
+      serverTime: serverTime - UPDATED_AT_RESOLUTION_SECONDS,
+      items: rows.map((row) => ({
+        id: row.id,
+        ciphertext: row.deleted_at ? null : row.ciphertext,
+        nonce: row.deleted_at ? null : row.nonce,
+        updatedAt: row.updated_at,
+        deletedAt: row.deleted_at,
+      })),
+    });
   }
 
   async put(
@@ -116,8 +107,8 @@ export class UserStore extends DurableObject<Env> {
     id: string,
     sealed: { ciphertext: string; nonce: string },
     ifUpdatedAt?: number,
-  ): Promise<StoreResult<{ id: string; updatedAt: number }>> {
-    if (!(await this.open(accountId))) return { ok: false, status: 403, code: "items.forbidden" };
+  ): Promise<Result<{ id: string; updatedAt: number }>> {
+    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
     const updatedAt = now();
     if (ifUpdatedAt !== undefined) {
       const changed = this.sql.exec(
@@ -129,15 +120,13 @@ export class UserStore extends DurableObject<Env> {
         id,
         ifUpdatedAt,
       ).rowsWritten;
-      return changed
-        ? { ok: true, value: { id, updatedAt } }
-        : { ok: false, status: 409, code: "items.conflict" };
+      return changed ? ok({ id, updatedAt }) : fail(409, "items.conflict");
     }
     const existing = this.sql
       .exec("SELECT 1 FROM items WHERE id = ? AND deleted_at IS NULL", id)
       .toArray().length;
     if (!existing && this.liveCount() >= MAX_ITEMS_PER_ACCOUNT) {
-      return { ok: false, status: 403, code: "items.quota_exceeded" };
+      return fail(403, "items.quota_exceeded");
     }
     this.sql.exec(
       `INSERT INTO items (id, ciphertext, nonce, updated_at, deleted_at) VALUES (?, ?, ?, ?, NULL)
@@ -148,16 +137,16 @@ export class UserStore extends DurableObject<Env> {
       sealed.nonce,
       updatedAt,
     );
-    return { ok: true, value: { id, updatedAt } };
+    return ok({ id, updatedAt });
   }
 
   async createMany(
     accountId: string,
     rows: { id: string; ciphertext: string; nonce: string }[],
-  ): Promise<StoreResult<{ updatedAt: number; created: string[] }>> {
-    if (!(await this.open(accountId))) return { ok: false, status: 403, code: "items.forbidden" };
+  ): Promise<Result<{ updatedAt: number; created: string[] }>> {
+    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
     if (this.liveCount() + rows.length > MAX_ITEMS_PER_ACCOUNT) {
-      return { ok: false, status: 403, code: "items.quota_exceeded" };
+      return fail(403, "items.quota_exceeded");
     }
     const updatedAt = now();
     const created: string[] = [];
@@ -174,14 +163,11 @@ export class UserStore extends DurableObject<Env> {
         if (written) created.push(row.id);
       }
     });
-    return { ok: true, value: { updatedAt, created } };
+    return ok({ updatedAt, created });
   }
 
-  async remove(
-    accountId: string,
-    id: string,
-  ): Promise<StoreResult<{ id: string; deletedAt: number }>> {
-    if (!(await this.open(accountId))) return { ok: false, status: 403, code: "items.forbidden" };
+  async remove(accountId: string, id: string): Promise<Result<{ id: string; deletedAt: number }>> {
+    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
     const deletedAt = now();
     const changed = this.sql.exec(
       `UPDATE items SET deleted_at = ?, updated_at = ?, ciphertext = '', nonce = ''
@@ -190,9 +176,7 @@ export class UserStore extends DurableObject<Env> {
       deletedAt,
       id,
     ).rowsWritten;
-    return changed
-      ? { ok: true, value: { id, deletedAt } }
-      : { ok: false, status: 404, code: "items.not_found" };
+    return changed ? ok({ id, deletedAt }) : fail(404, "items.not_found");
   }
 
   async destroy(accountId: string): Promise<void> {

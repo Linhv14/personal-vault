@@ -1,16 +1,10 @@
 import { Hono } from "hono";
 import { isPublicKey } from "../../core/identity.js";
 import { apiError } from "../errors.js";
-import { isBase64 } from "../session.js";
+import { isSealed } from "../validate.js";
 import type { AppBindings } from "../types.js";
 
 const account = new Hono<AppBindings>();
-
-function isSealed(value: unknown): value is { ciphertext: string; nonce: string } {
-  if (typeof value !== "object" || value === null) return false;
-  const { ciphertext, nonce } = value as Record<string, unknown>;
-  return isBase64(ciphertext, 512) && isBase64(nonce, 12);
-}
 
 account.get("/identity", async (c) => {
   const row = await c.env.DB.prepare(
@@ -33,7 +27,7 @@ account.put("/identity", async (c) => {
     publicKey?: unknown;
     wrappedPrivateKey?: unknown;
   } | null;
-  if (!isPublicKey(body?.publicKey) || !isSealed(body?.wrappedPrivateKey)) {
+  if (!isPublicKey(body?.publicKey) || !isSealed(body?.wrappedPrivateKey, 512)) {
     return c.json(apiError("auth.invalid_body"), 400);
   }
   const { ciphertext, nonce } = body.wrappedPrivateKey;

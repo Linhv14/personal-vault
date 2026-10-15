@@ -63,7 +63,7 @@ Bold marks the extension's default.
 | Unfinished sign-up remembered      | 15 minutes                                                  | `extension/lib/storage.ts`                                        |
 | Submitted login offered for saving | 5 minutes                                                   | `extension/lib/autofill-service.ts`                               |
 | PIN length                         | 6 to 12 digits                                              | `extension/lib/pin.ts`                                            |
-| Wrong PIN tries before it is wiped | 5                                                           | `src/worker/session.ts`                                           |
+| Wrong PIN tries before it is wiped | 5                                                           | `src/worker/pin.ts`                                               |
 | Unconfirmed submitted login kept   | 1 minute                                                    | `extension/lib/autofill-service.ts`                               |
 | Wait for a sign-in to succeed      | 10 seconds, form gone for 1 second                          | `extension/content/content.ts`                                    |
 

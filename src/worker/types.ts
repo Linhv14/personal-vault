@@ -1,4 +1,4 @@
-import type { OrgStore } from "./org-store.js";
+import type { OrgStore } from "./orgs/store.js";
 import type { UserStore } from "./user-store.js";
 
 export interface Env {

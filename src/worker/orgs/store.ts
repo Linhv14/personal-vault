@@ -1,51 +1,19 @@
 import { DurableObject } from "cloudflare:workers";
-import { toBase64, utf8Encode } from "../core/bytes.js";
-import type { Env } from "./types.js";
-
-export type OrgRole = "owner" | "admin" | "member";
-
-export interface Principal {
-  accountId: string;
-  role: OrgRole;
-}
-
-export interface WrappedKey {
-  ephemeralPublicKey: string;
-  sealed: { ciphertext: string; nonce: string };
-}
-
-export interface TeamView {
-  id: string;
-  name: string;
-  members: string[];
-  rekeyNeeded: boolean;
-  wrappedKey: WrappedKey | null;
-}
-
-export type AuditEvent = {
-  seq: number;
-  at: number;
-  actor: string;
-  action: string;
-  target: string | null;
-  ip: string | null;
-  hash: string;
-};
-
-export type OrgResult<T> =
-  { ok: true; value: T } | { ok: false; status: 403 | 404 | 409; code: string };
+import { toBase64, utf8Encode } from "../../core/bytes.js";
+import {
+  isOrgAdmin,
+  type AuditEvent,
+  type OrgRole,
+  type Principal,
+  type TeamView,
+  type WrappedKey,
+} from "../../core/org-model.js";
+import { fail, now, ok, type Result } from "../http.js";
+import type { Env } from "../types.js";
 
 const MAX_TEAMS = 200;
 const AUDIT_PAGE = 100;
 const GENESIS = "genesis";
-
-function now(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-function isAdmin(principal: Principal): boolean {
-  return principal.role === "owner" || principal.role === "admin";
-}
 
 async function chainHash(
   previous: string,
@@ -153,8 +121,8 @@ export class OrgStore extends DurableObject<Env> {
     await this.record(actor, action, target, ip);
   }
 
-  async listTeams(principal: Principal): Promise<OrgResult<TeamView[]>> {
-    if (!this.confirmed(principal)) return { ok: false, status: 403, code: "orgs.forbidden" };
+  async listTeams(principal: Principal): Promise<Result<TeamView[]>> {
+    if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
     const teams = this.sql
       .exec<{ id: string; name: string; rekey_needed: number }>(
         "SELECT id, name, rekey_needed FROM teams ORDER BY created_at",
@@ -167,14 +135,13 @@ export class OrgStore extends DurableObject<Env> {
       .toArray();
     const visible = teams.filter(
       (team) =>
-        isAdmin(principal) ||
+        isOrgAdmin(principal.role) ||
         memberships.some(
           (entry) => entry.team_id === team.id && entry.account_id === principal.accountId,
         ),
     );
-    return {
-      ok: true,
-      value: visible.map((team) => {
+    return ok(
+      visible.map((team) => {
         const members = memberships.filter((entry) => entry.team_id === team.id);
         const mine = members.find((entry) => entry.account_id === principal.accountId);
         return {
@@ -185,20 +152,20 @@ export class OrgStore extends DurableObject<Env> {
           wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
         };
       }),
-    };
+    );
   }
 
   async createTeam(
     principal: Principal,
     team: { id: string; name: string; wrappedKey: WrappedKey },
     ip: string | null,
-  ): Promise<OrgResult<{ id: string }>> {
-    if (!this.confirmed(principal) || !isAdmin(principal)) {
-      return { ok: false, status: 403, code: "orgs.forbidden" };
+  ): Promise<Result<{ id: string }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
     }
     const count = this.sql.exec<{ n: number }>("SELECT count(*) AS n FROM teams").one().n;
-    if (count >= MAX_TEAMS) return { ok: false, status: 409, code: "orgs.limit_reached" };
-    if (this.teamExists(team.id)) return { ok: false, status: 409, code: "orgs.invalid_team" };
+    if (count >= MAX_TEAMS) return fail(409, "orgs.limit_reached");
+    if (this.teamExists(team.id)) return fail(409, "orgs.invalid_team");
     const at = now();
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
@@ -217,7 +184,7 @@ export class OrgStore extends DurableObject<Env> {
       );
     });
     await this.record(principal.accountId, "team.created", team.id, ip);
-    return { ok: true, value: { id: team.id } };
+    return ok({ id: team.id });
   }
 
   private inTeam(teamId: string, accountId: string): boolean {
@@ -237,15 +204,15 @@ export class OrgStore extends DurableObject<Env> {
     teamId: string,
     member: { accountId: string; wrappedKey: WrappedKey },
     ip: string | null,
-  ): Promise<OrgResult<{ ok: true }>> {
-    if (!this.confirmed(principal) || !isAdmin(principal)) {
-      return { ok: false, status: 403, code: "orgs.forbidden" };
+  ): Promise<Result<{ ok: true }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
     }
-    if (!this.teamExists(teamId)) return { ok: false, status: 404, code: "orgs.not_found" };
+    if (!this.teamExists(teamId)) return fail(404, "orgs.not_found");
     if (!this.inTeam(teamId, principal.accountId)) {
-      return { ok: false, status: 403, code: "orgs.not_in_team" };
+      return fail(403, "orgs.not_in_team");
     }
-    if (!this.role(member.accountId)) return { ok: false, status: 404, code: "orgs.not_found" };
+    if (!this.role(member.accountId)) return fail(404, "orgs.not_found");
     this.sql.exec(
       `INSERT INTO team_members (team_id, account_id, wrapped_key, added_by, added_at) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(team_id, account_id) DO UPDATE SET wrapped_key = excluded.wrapped_key,
@@ -262,7 +229,7 @@ export class OrgStore extends DurableObject<Env> {
       `${teamId}:${member.accountId}`,
       ip,
     );
-    return { ok: true, value: { ok: true } };
+    return ok({ ok: true as const });
   }
 
   async removeTeamMember(
@@ -270,11 +237,11 @@ export class OrgStore extends DurableObject<Env> {
     teamId: string,
     accountId: string,
     ip: string | null,
-  ): Promise<OrgResult<{ ok: true }>> {
-    if (!this.confirmed(principal) || !isAdmin(principal)) {
-      return { ok: false, status: 403, code: "orgs.forbidden" };
+  ): Promise<Result<{ ok: true }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
     }
-    if (!this.inTeam(teamId, accountId)) return { ok: false, status: 404, code: "orgs.not_found" };
+    if (!this.inTeam(teamId, accountId)) return fail(404, "orgs.not_found");
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
         "DELETE FROM team_members WHERE team_id = ? AND account_id = ?",
@@ -284,32 +251,32 @@ export class OrgStore extends DurableObject<Env> {
       this.sql.exec("UPDATE teams SET rekey_needed = 1 WHERE id = ?", teamId);
     });
     await this.record(principal.accountId, "team.member_removed", `${teamId}:${accountId}`, ip);
-    return { ok: true, value: { ok: true } };
+    return ok({ ok: true as const });
   }
 
   async deleteTeam(
     principal: Principal,
     teamId: string,
     ip: string | null,
-  ): Promise<OrgResult<{ ok: true }>> {
-    if (!this.confirmed(principal) || !isAdmin(principal)) {
-      return { ok: false, status: 403, code: "orgs.forbidden" };
+  ): Promise<Result<{ ok: true }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
     }
-    if (!this.teamExists(teamId)) return { ok: false, status: 404, code: "orgs.not_found" };
+    if (!this.teamExists(teamId)) return fail(404, "orgs.not_found");
     this.ctx.storage.transactionSync(() => {
       this.sql.exec("DELETE FROM team_members WHERE team_id = ?", teamId);
       this.sql.exec("DELETE FROM teams WHERE id = ?", teamId);
     });
     await this.record(principal.accountId, "team.deleted", teamId, ip);
-    return { ok: true, value: { ok: true } };
+    return ok({ ok: true as const });
   }
 
   async audit(
     principal: Principal,
     before?: number,
-  ): Promise<OrgResult<{ events: AuditEvent[]; verified: boolean }>> {
-    if (!this.confirmed(principal) || !isAdmin(principal)) {
-      return { ok: false, status: 403, code: "orgs.forbidden" };
+  ): Promise<Result<{ events: AuditEvent[]; verified: boolean }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
     }
     const events = this.sql
       .exec<AuditEvent>(
@@ -318,7 +285,7 @@ export class OrgStore extends DurableObject<Env> {
         AUDIT_PAGE,
       )
       .toArray();
-    return { ok: true, value: { events, verified: await this.verifyChain() } };
+    return ok({ events, verified: await this.verifyChain() });
   }
 
   async verifyChain(): Promise<boolean> {

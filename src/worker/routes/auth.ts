@@ -1,33 +1,20 @@
 import { Hono } from "hono";
 import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
-import { fromBase64, timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
+import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
-import {
-  checkBiometric,
-  clearBiometric,
-  isAssertion,
-  isRegistration,
-  issueBiometricChallenge,
-  setBiometric,
-} from "../biometric.js";
 import { apiError } from "../errors.js";
+import { now } from "../http.js";
 import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
 import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
 import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
 import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
-import {
-  checkSessionPin,
-  clearSessionPin,
-  createSession,
-  isBase64,
-  revokeAllSessions,
-  revokeSession,
-  sessionResumeKey,
-  setSessionPin,
-} from "../session.js";
+import { createSession, revokeAllSessions, revokeSession, sessionResumeKey } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
+import { isBase64 } from "../validate.js";
+import { OrgDirectory } from "../orgs/directory.js";
+import { orgStore, userStore } from "../stores.js";
 
 const auth = new Hono<AppBindings>();
 
@@ -35,10 +22,6 @@ const MAX_ACCOUNTS_PER_IP_PER_DAY = 5;
 const MAX_FAILURES = 10;
 const WINDOW_SECONDS = 15 * 60;
 const LOCK_SECONDS = 15 * 60;
-
-function now(): number {
-  return Math.floor(Date.now() / 1000);
-}
 
 interface SealedBody {
   ciphertext: string;
@@ -289,20 +272,10 @@ auth.post("/delete-account", async (c) => {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
 
-  const { USER_STORE, ORG_STORE } = c.env;
-  const { results: memberships } = await c.env.DB.prepare(
-    "SELECT org_id FROM org_members WHERE account_id = ?",
-  )
-    .bind(accountId)
-    .all<{ org_id: string }>();
-  for (const { org_id } of memberships) {
-    await ORG_STORE.get(ORG_STORE.idFromName(`org:${org_id}`)).removeMember(
-      accountId,
-      accountId,
-      null,
-    );
+  for (const orgId of await new OrgDirectory(c.env.DB).orgIdsOf(accountId)) {
+    await orgStore(c.env, orgId).removeMember(accountId, accountId, null);
   }
-  await USER_STORE.get(USER_STORE.idFromName(`user:${accountId}`)).destroy(accountId);
+  await userStore(c.env, accountId).destroy(accountId);
   await c.env.DB.batch([
     c.env.DB.prepare("DELETE FROM items WHERE account_id = ?").bind(accountId),
     c.env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(accountId),
@@ -317,77 +290,6 @@ auth.get("/resume-key", async (c) => {
   if (!resumeKey) return c.json(apiError("auth.unauthorized"), 401);
   c.header("Cache-Control", "no-store");
   return c.json({ resumeKey });
-});
-
-async function pinVerifier(c: { req: { json: () => Promise<unknown> } }): Promise<string | null> {
-  const body = (await c.req.json().catch(() => null)) as { verifier?: unknown } | null;
-  return isBase64(body?.verifier, 32) && fromBase64(body.verifier as string).length === 32
-    ? (body.verifier as string)
-    : null;
-}
-
-function verifierHash(env: Env, verifier: string): Promise<string> {
-  return keyedHash(env.EMAIL_PROBE_SECRET, `pin-verifier:${verifier}`);
-}
-
-auth.put("/pin", async (c) => {
-  const verifier = await pinVerifier(c);
-  if (!verifier) return c.json(apiError("auth.invalid_body"), 400);
-  const pinKey = await setSessionPin(
-    c.env,
-    c.get("session").tokenHash,
-    await verifierHash(c.env, verifier),
-  );
-  c.header("Cache-Control", "no-store");
-  return c.json({ pinKey });
-});
-
-auth.delete("/pin", async (c) => {
-  await clearSessionPin(c.env, c.get("session").tokenHash);
-  return c.json({ ok: true });
-});
-
-auth.post("/pin/unlock", async (c) => {
-  const verifier = await pinVerifier(c);
-  if (!verifier) return c.json(apiError("auth.invalid_body"), 400);
-  const result = await checkSessionPin(
-    c.env,
-    c.get("session").tokenHash,
-    await verifierHash(c.env, verifier),
-  );
-  c.header("Cache-Control", "no-store");
-  if (result.ok) return c.json({ pinKey: result.pinKey });
-  if (result.attemptsLeft === 0) return c.json(apiError("auth.pin_off"), 410);
-  return c.json(apiError("auth.pin_wrong", { count: result.attemptsLeft }), 403);
-});
-
-auth.put("/biometric", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!isRegistration(body)) return c.json(apiError("auth.invalid_body"), 400);
-  const bioKey = await setBiometric(c.env, c.get("session").tokenHash, body);
-  c.header("Cache-Control", "no-store");
-  return c.json({ bioKey });
-});
-
-auth.delete("/biometric", async (c) => {
-  await clearBiometric(c.env, c.get("session").tokenHash);
-  return c.json({ ok: true });
-});
-
-auth.post("/biometric/challenge", async (c) => {
-  const issued = await issueBiometricChallenge(c.env, c.get("session").tokenHash, now());
-  if (!issued) return c.json(apiError("auth.biometric_off"), 410);
-  c.header("Cache-Control", "no-store");
-  return c.json(issued);
-});
-
-auth.post("/biometric/unlock", async (c) => {
-  const body = await c.req.json().catch(() => null);
-  if (!isAssertion(body)) return c.json(apiError("auth.invalid_body"), 400);
-  const bioKey = await checkBiometric(c.env, c.get("session").tokenHash, body, now());
-  if (!bioKey) return c.json(apiError("auth.biometric_failed"), 403);
-  c.header("Cache-Control", "no-store");
-  return c.json({ bioKey });
 });
 
 auth.post("/logout", async (c) => {
