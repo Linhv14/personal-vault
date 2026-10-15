@@ -1673,3 +1673,22 @@ details.history .field-row {
   width: 18px;
   height: 18px;
 }
+.promo-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.promo-icon .icon {
+  width: 14px;
+  height: 14px;
+}
+.drawer-count.highlight {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+}

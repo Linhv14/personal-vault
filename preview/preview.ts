@@ -222,6 +222,26 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (pin.verifier && verifier === pin.verifier) return json({ pinKey: pin.key });
     return json({ code: "auth.pin_wrong", error: "Wrong PIN", params: { count: 4 } }, 403);
   }
+  if (url.pathname === "/api/orgs") return json({ orgs: [] });
+  if (url.pathname === "/api/invites") {
+    const invited = new URLSearchParams(location.search).has("invite");
+    return json({
+      invites: invited
+        ? [
+            {
+              id: "i1",
+              orgId: "o1",
+              orgName: "Acme Việt Nam",
+              role: "member",
+              expiresAt: now + 86_400,
+            },
+          ]
+        : [],
+    });
+  }
+  if (url.pathname === "/api/account/identity") {
+    return init?.method === "PUT" ? json({ ok: true }) : json({ identity: null });
+  }
   if (url.pathname === "/api/config") {
     return json({ registration: "open", emailVerification: true });
   }

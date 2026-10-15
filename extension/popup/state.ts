@@ -1,3 +1,4 @@
+import { listOrgs, myInvites, type MyInvite } from "../lib/orgs.js";
 import { ensureIdentity } from "../lib/identity.js";
 import { signal } from "@preact/signals";
 import { createTranslator, describeError, type Translate } from "../../src/i18n/index.js";
@@ -52,6 +53,9 @@ export const syncing = signal(false);
 export const syncProblem = signal<SyncProblem>(null);
 export const clockWarning = signal<string | null>(null);
 export const autofillPromo = signal(false);
+export const orgInvites = signal<MyInvite[]>([]);
+export const orgCount = signal(0);
+export const invitesDismissed = signal(false);
 
 export const editing = signal<{ item: VaultItem | null; type: ItemType; session: number }>({
   item: null,
@@ -216,6 +220,17 @@ export async function enterVault(rawBase64: string): Promise<void> {
   void backgroundSync();
   void refreshAutofillPromo();
   void ensureIdentity(vaultKey.value).catch(() => {});
+  void refreshOrgs();
+}
+
+async function refreshOrgs(): Promise<void> {
+  try {
+    const [orgs, invites] = await Promise.all([listOrgs(), myInvites()]);
+    orgCount.value = orgs.length;
+    orgInvites.value = invites;
+  } catch {
+    orgInvites.value = [];
+  }
 }
 
 async function refreshAutofillPromo(): Promise<void> {

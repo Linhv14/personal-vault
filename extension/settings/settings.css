@@ -505,78 +505,30 @@ main > .notice {
 .card + .card {
   margin-top: 16px;
 }
-.inline-form {
+
+.inline-form,
+.panel-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-.inline-form input {
-  flex: 1;
-  min-width: 200px;
-}
-.org-switch {
-  margin-bottom: 16px;
-}
-.org-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-.org-row {
-  display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
 }
-.org-row.pending {
-  opacity: 0.75;
+.inline-form {
+  margin-top: 16px;
 }
-.org-row-text {
-  display: flex;
+.inline-form input,
+.panel-form input {
   flex: 1;
-  flex-direction: column;
-  min-width: 0;
+  min-width: 220px;
 }
-.org-row-text small {
-  color: var(--muted);
-  font-size: 12.5px;
+.panel-form {
+  margin: 4px 0 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface);
 }
-.fingerprint {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-}
-.team {
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-.team summary {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  cursor: pointer;
-}
-.team > .button {
-  margin-top: 10px;
-}
-.audit-row {
-  display: grid;
-  grid-template-columns: 150px 1fr auto;
-  gap: 12px;
-  padding: 8px 0;
-  border-top: 1px solid var(--border);
-  font-size: 13.5px;
-}
-.audit-time,
-.audit-ip {
-  color: var(--muted);
-  font-size: 12.5px;
-}
-.ok-text {
-  color: var(--accent);
+.panel-form select {
+  width: auto;
 }
 .button.quiet {
   border-color: transparent;
@@ -584,5 +536,378 @@ main > .notice {
   color: var(--muted);
 }
 .button.quiet:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.button.danger-quiet:hover {
   color: var(--danger);
+}
+
+.org-switch {
+  width: auto;
+  margin-bottom: 16px;
+}
+.org-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.org-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 22px;
+  font-weight: 700;
+}
+.org-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+.org-hero-text h2 {
+  margin: 0 0 2px;
+  font-size: 20px;
+}
+.org-hero-text p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.key-chip .icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+.fingerprint {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.org-tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.org-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  padding: 10px 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.org-tab:hover {
+  color: var(--text);
+}
+.org-tab.active {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+.org-tab-count {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.section-head .row-hint {
+  margin: 0;
+  max-width: 460px;
+}
+.sub-head {
+  margin: 22px 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.empty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.people,
+.timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.people li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+.people li + li,
+.timeline li + li {
+  border-top: 1px solid var(--border);
+}
+.people.pending li {
+  opacity: 0.8;
+}
+.initial {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 650;
+}
+.person-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.person-text strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.person-text small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.you {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+select.compact {
+  width: auto;
+  min-height: 34px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 13px;
+}
+.role-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.role-chip.owner {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.icon-spacer {
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.teams {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.team {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.team[open] {
+  background: var(--card);
+}
+.team summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+.team summary::-webkit-details-marker {
+  display: none;
+}
+.team-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+}
+.team-mark .icon {
+  width: 17px;
+  height: 17px;
+}
+.team-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.team-text small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.team-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.team[open] .team-chevron {
+  transform: rotate(180deg);
+}
+.warn-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 600;
+}
+.team-body {
+  padding: 4px 14px 14px 60px;
+}
+.team-body .panel-form {
+  margin: 12px 0 0;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.member-chip button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.member-chip button:hover {
+  background: var(--card);
+  color: var(--danger);
+}
+.member-chip .icon {
+  width: 12px;
+  height: 12px;
+}
+.team-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.chain-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+.chain-status .icon {
+  width: 16px;
+  height: 16px;
+}
+.chain-status.ok {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.chain-status.broken {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.timeline li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+}
+.timeline .initial {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+.timeline-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+}
+.timeline-text small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.invite-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.invite-row + .invite-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.org-mark.small {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  font-size: 16px;
+}
+.team-body .panel-form {
+  padding: 0;
+  background: none;
 }

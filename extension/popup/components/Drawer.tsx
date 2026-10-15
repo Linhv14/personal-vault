@@ -11,6 +11,8 @@ import {
   openGenerator,
   openImport,
   openSettings,
+  orgCount,
+  orgInvites,
   scope,
   typeFilter,
   type Scope,
@@ -21,12 +23,14 @@ function DrawerLink({
   icon,
   label,
   count,
+  highlight = false,
   active = false,
   onSelect,
 }: {
   icon: IconName;
   label: string;
   count?: number;
+  highlight?: boolean;
   active?: boolean;
   onSelect: () => void;
 }) {
@@ -39,7 +43,9 @@ function DrawerLink({
     >
       <Icon name={icon} />
       <span className="drawer-label">{label}</span>
-      {count !== undefined && <span className="drawer-count">{count}</span>}
+      {count !== undefined && (
+        <span className={highlight ? "drawer-count highlight" : "drawer-count"}>{count}</span>
+      )}
     </button>
   );
 }
@@ -100,6 +106,16 @@ export function Drawer() {
         </div>
         <ScopeLinks onPick={close} />
         <div className="drawer-section drawer-actions">
+          <DrawerLink
+            icon="users"
+            label={t("orgs.title")}
+            count={orgInvites.value.length || orgCount.value || undefined}
+            highlight={orgInvites.value.length > 0}
+            onSelect={() => {
+              close();
+              openSettings("#teams");
+            }}
+          />
           <DrawerLink icon="wand" label={t("list.generator")} onSelect={openGenerator} />
           <DrawerLink
             icon="upload"

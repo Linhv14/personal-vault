@@ -6,6 +6,9 @@ import {
   autofillPromo,
   clockWarning,
   dismissAutofillPromo,
+  invitesDismissed,
+  openSettings,
+  orgInvites,
   syncing,
   syncProblem,
   turnOnAutofill,
@@ -24,6 +27,26 @@ export function Notices() {
         </p>
       )}
       {clockWarning.value && <p className="notice-line warn">{clockWarning.value}</p>}
+      {orgInvites.value.length > 0 && !invitesDismissed.value && (
+        <div className="promo">
+          <span className="promo-icon">
+            <Icon name="users" />
+          </span>
+          <span className="promo-text">
+            {orgInvites.value.length === 1
+              ? t("orgs.invited_to", { name: orgInvites.value[0]!.orgName })
+              : t("orgs.invited_many", { count: orgInvites.value.length })}
+          </span>
+          <button className="link" onClick={() => openSettings("#teams")}>
+            {t("orgs.review")}
+          </button>
+          <IconButton
+            icon="close"
+            label={t("common.close")}
+            onClick={() => (invitesDismissed.value = true)}
+          />
+        </div>
+      )}
       {autofillPromo.value && (
         <div className="promo">
           <Logo size={22} />

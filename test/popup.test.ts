@@ -72,6 +72,9 @@ const server = {
   shareRequests: [] as Record<string, any>[],
   logoRequests: [] as { domain: string; auth: string | null }[],
   sessionRevoked: false,
+  invites: [
+    { id: "invite-1", orgId: "org-1", orgName: "Acme", role: "member", expiresAt: 4_000_000_000 },
+  ],
 };
 
 function json(body: unknown, status = 200): Response {
@@ -115,6 +118,11 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   }
 
   if (url.pathname === "/api/time") return json({ serverTime: now });
+  if (url.pathname === "/api/orgs") return json({ orgs: [] });
+  if (url.pathname === "/api/invites") return json({ invites: server.invites });
+  if (url.pathname === "/api/account/identity") {
+    return init?.method === "PUT" ? json({ ok: true }) : json({ identity: null });
+  }
 
   if (url.pathname === "/api/auth/resume-key") {
     if (
@@ -238,6 +246,16 @@ describe("extension popup", () => {
 
     await waitFor(() => visibleScreen() === "screen-list", "the item list");
     expect(server.account).not.toBeNull();
+  });
+
+  it("points to a pending organization invitation", async () => {
+    await waitFor(
+      () =>
+        [...document.querySelectorAll(".promo")].some((promo) =>
+          promo.textContent?.includes("You're invited to Acme"),
+        ),
+      "the invitation banner",
+    );
   });
 
   it("signs up without asking for any browser permission", () => {
