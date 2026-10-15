@@ -46,7 +46,7 @@ export function AddSecretDialog({
         onSave({ name, values });
       }}
     >
-      <Field label={t("console.secret_name")} hint={t("console.secret_name_hint")}>
+      <Field label={t("console.secret_name")}>
         <input
           name="name"
           className="mono"
@@ -128,7 +128,7 @@ export function ImportDialog({
           ))}
         </select>
       </Field>
-      <Field label={t("console.dotenv")} hint={t("projects.import_hint")}>
+      <Field label={t("console.dotenv")}>
         <textarea
           className="mono"
           rows={8}

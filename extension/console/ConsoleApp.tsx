@@ -8,7 +8,7 @@ import { Icon } from "../ui/components/Icon.js";
 import { Toast } from "../ui/components/Toast.js";
 import { useT } from "../ui/i18n.js";
 import { Avatar } from "./components.js";
-import { ConsoleContext, toast$, useConsoleLoader, type ConsoleData } from "./data.js";
+import { ConsoleContext, failure$, toast$, useConsoleLoader, type ConsoleData } from "./data.js";
 import { ROLE_LABEL } from "./labels.js";
 import { ActivityPage } from "./pages/ActivityPage.js";
 import { MembersPage } from "./pages/MembersPage.js";
@@ -209,9 +209,9 @@ export function ConsoleApp({
         </aside>
         <main className="main">
           <Invitations data={data} />
-          {data.error && (
+          {(failure$.value ?? data.error) && (
             <p className="alert" role="alert">
-              {data.error}
+              {failure$.value ?? data.error}
             </p>
           )}
           <Page data={data} />

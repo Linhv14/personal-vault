@@ -26,6 +26,27 @@ export function toast(message: string): void {
   toastTimer = setTimeout(() => (toast$.value = null), 2400);
 }
 
+export const pending$ = signal(false);
+export const failure$ = signal<string | null>(null);
+
+export async function attempt(
+  work: () => Promise<unknown>,
+  describe: (failure: unknown) => string,
+): Promise<boolean> {
+  if (pending$.value) return false;
+  failure$.value = null;
+  pending$.value = true;
+  try {
+    await work();
+    return true;
+  } catch (failure) {
+    failure$.value = describe(failure);
+    return false;
+  } finally {
+    pending$.value = false;
+  }
+}
+
 export type Run = (work: () => Promise<unknown>, done?: MessageKey) => Promise<boolean>;
 
 export interface ConsoleData {
@@ -80,15 +101,15 @@ export function useConsoleLoader(identity: Identity) {
 
   const run: Run = async (work, done) => {
     setError(null);
-    try {
-      await work();
-      if (done) toast(t(done));
-      await reload();
-      return true;
-    } catch (failure) {
-      setError(describeError(failure, t));
-      return false;
-    }
+    const succeeded = await attempt(
+      async () => {
+        await work();
+        await reload();
+      },
+      (failure) => describeError(failure, t),
+    );
+    if (succeeded && done) toast(t(done));
+    return succeeded;
   };
 
   useEffect(() => {

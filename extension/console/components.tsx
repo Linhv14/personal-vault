@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { IconName } from "../../src/ui/icons.js";
 import { Icon } from "../ui/components/Icon.js";
 import { localeSignal, useT } from "../ui/i18n.js";
+import { failure$, pending$ } from "./data.js";
 
 export interface Crumb {
   label: string;
@@ -88,6 +89,7 @@ export function Dialog({
   const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
+    failure$.value = null;
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal();
   }, []);
@@ -123,6 +125,11 @@ export function Dialog({
         </header>
         {description && <div className="dialog-text">{description}</div>}
         {children && <div className="dialog-body">{children}</div>}
+        {failure$.value && (
+          <p className="dialog-error" role="alert">
+            {failure$.value}
+          </p>
+        )}
         <footer className="dialog-foot">
           <button type="button" className="btn" onClick={onClose}>
             {t("pin.cancel")}
@@ -130,7 +137,7 @@ export function Dialog({
           <button
             type="submit"
             className={danger ? "btn danger" : "btn primary"}
-            disabled={busy}
+            disabled={busy || pending$.value}
             autoFocus={!children}
           >
             {submitLabel}

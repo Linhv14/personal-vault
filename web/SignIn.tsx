@@ -2,7 +2,7 @@ import { useState } from "preact/hooks";
 import { describeError } from "../src/i18n/index.js";
 import { logoSvg } from "../src/ui/logo.js";
 import { useT } from "../extension/ui/i18n.js";
-import { IDLE_MINUTES, signIn } from "./session.js";
+import { signIn } from "./session.js";
 
 export function SignIn() {
   const t = useT();
@@ -58,7 +58,6 @@ export function SignIn() {
         <button className="btn primary" type="submit" disabled={working}>
           {t(working ? "web.signing_in" : "setup.sign_in")}
         </button>
-        <p className="field-hint">{t("web.sign_in_hint", { minutes: IDLE_MINUTES })}</p>
         <p className="field-hint">
           {t("web.no_account")} <a href="/">{t("web.get_extension")}</a>
         </p>

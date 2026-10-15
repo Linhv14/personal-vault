@@ -201,7 +201,6 @@ export function MembersPage() {
       {modal?.kind === "invite" && (
         <Dialog
           title={t("orgs.invite")}
-          description={t("console.invite_hint")}
           submitLabel={t("orgs.send_invite")}
           onClose={() => setModal(null)}
           onSubmit={(form) => {
@@ -216,7 +215,7 @@ export function MembersPage() {
           <Field label={t("orgs.invite_email")}>
             <input name="email" type="email" required autoFocus placeholder="name@company.com" />
           </Field>
-          <Field label={t("orgs.role")} hint={t("console.role_hint")}>
+          <Field label={t("orgs.role")}>
             <select name="role">
               <option value="member">{t("orgs.role_member")}</option>
               {canInvite(org.role, "admin") && (

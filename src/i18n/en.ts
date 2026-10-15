@@ -403,6 +403,10 @@ export const en = {
   "console.delete_environment": "Delete {env}",
   "console.delete_environment_text":
     "This deletes the environment and its {count, plural, one {# secret} other {# secrets}}. It cannot be undone.",
+  "console.remove_duplicates": "Remove {count, plural, one {# duplicate} other {# duplicates}}",
+  "console.duplicates_found":
+    "{count, plural, one {# secret has} other {# secrets have}} the same name as another in the same environment. The newest of each is kept.",
+  "console.duplicates_removed": "Duplicates removed",
   "error.orgs.not_found": "Not found, or you are not a member.",
   "error.orgs.forbidden": "Your role does not allow this.",
   "error.orgs.invalid_name": "Use 1 to 80 characters.",

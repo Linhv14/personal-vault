@@ -213,6 +213,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Console dialogs show their errors inside the dialog and lock their button
+  while working. Before, a failed import or add showed its error behind the
+  dialog, so it looked like the button did nothing, and every retry created the
+  same secrets again. Adding and importing now read the environment fresh from
+  the server and replace secrets by name. A project with duplicate names offers
+  to remove them, keeping the newest.
+- Fewer hints in dialogs and on the sign-in page.
+
 - The extension no longer offers to save, or fills, the master password on the
   vault's own server (the dashboard at `/app`), and the dashboard clears the
   password field before signing in so the browser has nothing to offer to save.

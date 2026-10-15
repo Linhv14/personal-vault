@@ -34,7 +34,6 @@ export function TeamsPage() {
       {creating && (
         <Dialog
           title={t("orgs.create_team")}
-          description={t("console.new_team_hint")}
           submitLabel={t("orgs.create")}
           onClose={() => setCreating(false)}
           onSubmit={(form) => {

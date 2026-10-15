@@ -28,7 +28,7 @@ import {
   PageHeader,
   SearchInput,
 } from "../components.js";
-import { toast, useConsole } from "../data.js";
+import { attempt, toast, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
 import {
   AddSecretDialog,
@@ -108,32 +108,39 @@ export function ProjectPage({
 
   const mutate = async (work: () => Promise<unknown>, done: Parameters<typeof t>[0]) => {
     setError(null);
-    try {
-      await work();
-      toast(t(done));
-      await Promise.all([load(), reload()]);
-      return true;
-    } catch (failure) {
-      setError(describeError(failure, t));
-      return false;
-    }
+    const succeeded = await attempt(work, (failure) => describeError(failure, t));
+    await Promise.all([load(), reload()]);
+    if (succeeded) toast(t(done));
+    return succeeded;
   };
 
   const addSecret = (draft: SecretDraft) =>
     void mutate(async () => {
       for (const [envId, value] of Object.entries(draft.values)) {
-        await saveSecret(orgId, project, envId, { name: draft.name, value });
+        const current = await listSecrets(orgId, project, envId);
+        const same = current.find((secret) => secret.name === draft.name);
+        await saveSecret(orgId, project, envId, { id: same?.id, name: draft.name, value });
       }
       setModal(null);
     }, "projects.saved");
 
   const importText = (envId: string, text: string) =>
     void mutate(async () => {
-      await importSecrets(orgId, project, envId, secrets?.[envId] ?? [], parseDotenv(text));
+      const current = await listSecrets(orgId, project, envId);
+      await importSecrets(orgId, project, envId, current, parseDotenv(text));
       setModal(null);
     }, "projects.imported");
 
   const all = secrets ? Object.values(secrets).flat() : [];
+  const duplicates = Object.values(secrets ?? {}).flatMap((list) =>
+    [...list]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .filter((secret, index, sorted) => sorted.findIndex((x) => x.name === secret.name) !== index),
+  );
+  const removeDuplicates = () =>
+    void mutate(async () => {
+      for (const secret of duplicates) await deleteSecret(orgId, project, secret.id);
+    }, "console.duplicates_removed");
   const names = [...new Set(all.map((secret) => secret.name))].sort();
   const missing = environments.map((env) => ({
     env,
@@ -162,6 +169,13 @@ export function ProjectPage({
             label={t("console.rename")}
             onSelect={() => setModal({ kind: "rename" })}
           />
+          {duplicates.length > 0 && (
+            <MenuItem
+              icon="trash"
+              label={t("console.remove_duplicates", { count: duplicates.length })}
+              onSelect={removeDuplicates}
+            />
+          )}
           <MenuItem
             icon="plus"
             label={t("console.add_environment")}
@@ -208,6 +222,14 @@ export function ProjectPage({
         actions={actions}
       />
 
+      {duplicates.length > 0 && editable && (
+        <div className="alert warn action">
+          <span>{t("console.duplicates_found", { count: duplicates.length })}</span>
+          <button type="button" className="btn" onClick={removeDuplicates}>
+            {t("console.remove_duplicates", { count: duplicates.length })}
+          </button>
+        </div>
+      )}
       {!editable && (
         <p className="alert warn">
           {t("projects.rekey_first")}{" "}

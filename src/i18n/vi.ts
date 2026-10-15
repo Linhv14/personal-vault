@@ -398,6 +398,10 @@ export const vi: Catalogue = {
   "console.delete_environment": "Xoá {env}",
   "console.delete_environment_text":
     "Xoá môi trường cùng {count} secret của nó. Không hoàn tác được.",
+  "console.remove_duplicates": "Xoá {count} bản trùng",
+  "console.duplicates_found":
+    "{count} secret trùng tên với secret khác trong cùng môi trường. Bản mới nhất của mỗi tên được giữ lại.",
+  "console.duplicates_removed": "Đã xoá bản trùng",
   "error.orgs.not_found": "Không tìm thấy, hoặc bạn không phải thành viên.",
   "error.orgs.forbidden": "Vai trò của bạn không cho phép thao tác này.",
   "error.orgs.invalid_name": "Dùng từ 1 đến 80 ký tự.",

@@ -39,13 +39,11 @@ export function SettingsPage() {
 
       <section className="panel">
         <h2 className="panel-title">{t("console.your_key")}</h2>
-        <p className="panel-text">{t("orgs.fingerprint_hint")}</p>
         <Fingerprint publicKey={identity.publicKey} />
       </section>
 
       <section className="panel">
         <h2 className="panel-title">{t("console.organizations")}</h2>
-        <p className="panel-text">{t("orgs.create_hint")}</p>
         <button type="button" className="btn" onClick={() => setModal("create")}>
           {t("orgs.create_title")}
         </button>
@@ -64,7 +62,6 @@ export function SettingsPage() {
       {modal === "create" && (
         <Dialog
           title={t("orgs.create_title")}
-          description={t("orgs.create_hint")}
           submitLabel={t("orgs.create")}
           onClose={() => setModal(null)}
           onSubmit={(form) => {

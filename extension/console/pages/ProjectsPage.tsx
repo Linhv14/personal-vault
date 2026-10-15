@@ -14,7 +14,6 @@ function NewProjectDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog
       title={t("projects.create")}
-      description={t("console.new_project_hint")}
       submitLabel={t("orgs.create")}
       onClose={onClose}
       onSubmit={(form) => {
@@ -36,7 +35,7 @@ function NewProjectDialog({ onClose }: { onClose: () => void }) {
       <Field label={t("projects.name")}>
         <input name="name" maxLength={80} required autoFocus placeholder="Payments API" />
       </Field>
-      <Field label={t("projects.team")} hint={t("console.project_team_hint")}>
+      <Field label={t("projects.team")}>
         <select name="team">
           {teams.map((team) => (
             <option value={team.id} key={team.id}>
