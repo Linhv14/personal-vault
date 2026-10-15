@@ -274,8 +274,7 @@ async function seed(): Promise<void> {
   const params = new URLSearchParams(location.search);
   if (params.get("locale")) local.set("locale", params.get("locale"));
 
-  // `?screen=setup` or `?screen=unlock` to review the locked-out states;
-  // add `&pin=123456` and `&bio=1` to review PIN and Touch ID unlock.
+  // `?screen=setup` or `?screen=unlock` to review the locked-out states.
   const screen = params.get("screen");
   if (screen === "setup") {
     local.delete("apiUrl");

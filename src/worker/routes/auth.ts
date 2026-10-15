@@ -289,6 +289,8 @@ auth.post("/delete-account", async (c) => {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
 
+  const { USER_STORE } = c.env;
+  await USER_STORE.get(USER_STORE.idFromName(`user:${accountId}`)).destroy(accountId);
   await c.env.DB.batch([
     c.env.DB.prepare("DELETE FROM items WHERE account_id = ?").bind(accountId),
     c.env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(accountId),

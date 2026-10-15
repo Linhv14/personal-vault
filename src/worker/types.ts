@@ -1,5 +1,8 @@
+import type { UserStore } from "./user-store.js";
+
 export interface Env {
   DB: D1Database;
+  USER_STORE: DurableObjectNamespace<UserStore>;
   ASSETS: Fetcher;
   ANONYMOUS_RATE_LIMITER: RateLimit;
   REGISTRATION_RATE_LIMITER: RateLimit;

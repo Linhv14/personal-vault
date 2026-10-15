@@ -1,55 +1,38 @@
-import { Hono } from "hono";
-import { apiError } from "../errors.js";
+import { Hono, type Context } from "hono";
+import { apiError, type ApiErrorCode } from "../errors.js";
 import { isBase64 } from "../session.js";
 import type { AppBindings } from "../types.js";
+import type { StoreResult } from "../user-store.js";
 
 const items = new Hono<AppBindings>();
 
 const MAX_ITEM_BYTES = 64 * 1024;
-const MAX_ITEMS_PER_ACCOUNT = 5_000;
 const MAX_BATCH_ITEMS = 100;
-const UPDATED_AT_RESOLUTION_SECONDS = 1;
-
-function now(): number {
-  return Math.floor(Date.now() / 1000);
-}
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
+function store(c: Context<AppBindings>) {
+  const { USER_STORE } = c.env;
+  return USER_STORE.get(USER_STORE.idFromName(`user:${c.get("session").accountId}`));
+}
+
+function respond<T>(c: Context<AppBindings>, result: StoreResult<T>) {
+  return result.ok
+    ? c.json(result.value as object)
+    : c.json(apiError(result.code as ApiErrorCode), result.status);
+}
+
 items.get("/", async (c) => {
   const since = Number.parseInt(c.req.query("since") ?? "0", 10);
-  const serverTime = now();
-
-  const { results } = await c.env.DB.prepare(
-    `SELECT id, ciphertext, nonce, updated_at, deleted_at
-       FROM items
-      WHERE account_id = ? AND updated_at > ?
-      ORDER BY updated_at ASC`,
-  )
-    .bind(c.get("session").accountId, Number.isFinite(since) && since > 0 ? since : 0)
-    .all<{
-      id: string;
-      ciphertext: string;
-      nonce: string;
-      updated_at: number;
-      deleted_at: number | null;
-    }>();
-
-  return c.json({
-    // Clients use this as the `since` cursor for their next call. It has to be
-    // the server clock: if each device used its own, a device running a few
-    // seconds fast would skip exactly the items it just changed.
-    serverTime: serverTime - UPDATED_AT_RESOLUTION_SECONDS,
-    items: results.map((row) => ({
-      id: row.id,
-      ciphertext: row.deleted_at ? null : row.ciphertext,
-      nonce: row.deleted_at ? null : row.nonce,
-      updatedAt: row.updated_at,
-      deletedAt: row.deleted_at,
-    })),
-  });
+  return respond(
+    c,
+    await store(c).list(
+      c.get("session").accountId,
+      Number.isFinite(since) && since > 0 ? since : 0,
+    ),
+  );
 });
 
 items.put("/:id", async (c) => {
@@ -62,53 +45,15 @@ items.put("/:id", async (c) => {
     return c.json(apiError("items.invalid_payload"), 400);
   }
 
-  const { accountId } = c.get("session");
-  const ifUpdatedAt = c.req.query("ifUpdatedAt");
-  if (ifUpdatedAt !== undefined) {
-    const base = Number(ifUpdatedAt);
-    if (!Number.isSafeInteger(base)) return c.json(apiError("items.invalid_payload"), 400);
-    const updatedAt = now();
-    const result = await c.env.DB.prepare(
-      `UPDATE items SET ciphertext = ?, nonce = ?, updated_at = ?
-        WHERE id = ? AND account_id = ? AND updated_at = ? AND deleted_at IS NULL`,
-    )
-      .bind(ciphertext, nonce, updatedAt, id, accountId, base)
-      .run();
-    if (!result.meta.changes) return c.json(apiError("items.conflict"), 409);
-    return c.json({ id, updatedAt });
+  const condition = c.req.query("ifUpdatedAt");
+  const ifUpdatedAt = condition === undefined ? undefined : Number(condition);
+  if (ifUpdatedAt !== undefined && !Number.isSafeInteger(ifUpdatedAt)) {
+    return c.json(apiError("items.invalid_payload"), 400);
   }
-
-  const usage = await c.env.DB.prepare(
-    `SELECT
-       (SELECT count(*) FROM items WHERE account_id = ? AND deleted_at IS NULL) AS live,
-       EXISTS(SELECT 1 FROM items WHERE id = ? AND account_id = ? AND deleted_at IS NULL)
-         AS existing`,
-  )
-    .bind(accountId, id, accountId)
-    .first<{ live: number; existing: number }>();
-  if (!usage?.existing && (usage?.live ?? 0) >= MAX_ITEMS_PER_ACCOUNT) {
-    return c.json(apiError("items.quota_exceeded"), 403);
-  }
-
-  const updatedAt = now();
-
-  const result = await c.env.DB.prepare(
-    `INSERT INTO items (id, account_id, ciphertext, nonce, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, NULL)
-     ON CONFLICT(id) DO UPDATE
-       SET ciphertext = excluded.ciphertext,
-           nonce = excluded.nonce,
-           updated_at = excluded.updated_at,
-           deleted_at = NULL
-     WHERE items.account_id = ?`,
-    // The WHERE on the UPDATE branch is load-bearing: without it, anyone who
-    // learns another account's item id can overwrite it.
-  )
-    .bind(id, accountId, ciphertext, nonce, updatedAt, accountId)
-    .run();
-
-  if (!result.meta.changes) return c.json(apiError("items.forbidden"), 403);
-  return c.json({ id, updatedAt });
+  return respond(
+    c,
+    await store(c).put(c.get("session").accountId, id, { ciphertext, nonce }, ifUpdatedAt),
+  );
 });
 
 items.post("/batch", async (c) => {
@@ -128,51 +73,23 @@ items.post("/batch", async (c) => {
   ) {
     return c.json(apiError("items.invalid_payload"), 400);
   }
-
-  const { accountId } = c.get("session");
-  const live = await c.env.DB.prepare(
-    "SELECT count(*) AS live FROM items WHERE account_id = ? AND deleted_at IS NULL",
-  )
-    .bind(accountId)
-    .first<{ live: number }>();
-  if ((live?.live ?? 0) + rows.length > MAX_ITEMS_PER_ACCOUNT) {
-    return c.json(apiError("items.quota_exceeded"), 403);
-  }
-
-  const updatedAt = now();
-  const results = await c.env.DB.batch(
-    rows.map(({ id, ciphertext, nonce }) =>
-      c.env.DB.prepare(
-        `INSERT INTO items (id, account_id, ciphertext, nonce, updated_at, deleted_at)
-         VALUES (?, ?, ?, ?, ?, NULL)
-         ON CONFLICT(id) DO NOTHING`,
-      ).bind(id, accountId, ciphertext, nonce, updatedAt),
+  return respond(
+    c,
+    await store(c).createMany(
+      c.get("session").accountId,
+      rows.map(({ id, ciphertext, nonce }) => ({
+        id: id as string,
+        ciphertext: ciphertext as string,
+        nonce: nonce as string,
+      })),
     ),
   );
-
-  return c.json({
-    updatedAt,
-    created: rows.filter((_, index) => (results[index]?.meta.changes ?? 0) > 0).map(({ id }) => id),
-  });
 });
 
 items.delete("/:id", async (c) => {
   const id = c.req.param("id");
   if (!isUuid(id)) return c.json(apiError("items.invalid_id"), 400);
-
-  const deletedAt = now();
-  // Soft delete. A real DELETE would let an offline device resurrect the item on
-  // its next sync, because it would never learn the item was removed.
-  const result = await c.env.DB.prepare(
-    `UPDATE items
-        SET deleted_at = ?, updated_at = ?, ciphertext = '', nonce = ''
-      WHERE id = ? AND account_id = ? AND deleted_at IS NULL`,
-  )
-    .bind(deletedAt, deletedAt, id, c.get("session").accountId)
-    .run();
-
-  if (!result.meta.changes) return c.json(apiError("items.not_found"), 404);
-  return c.json({ id, deletedAt });
+  return respond(c, await store(c).remove(c.get("session").accountId, id));
 });
 
 export default items;

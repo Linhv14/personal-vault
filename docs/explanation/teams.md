@@ -48,11 +48,74 @@ branch, environment), and the server checks that against the link's rules
 before returning ciphertext. Decrypting needs the repository key, kept as a
 GitHub secret. Either half alone is useless: the secret outside that
 repository's workflow, the OIDC token without the secret, the server without
-both.
+both. See "CI trust" below for what this does not protect against.
+
+## Architecture
+
+| Layer         | Runs on                                                                                                          | Holds                                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Clients       | Chrome extension (Preact), web dashboard (Preact, same UI kit), `1pw` CLI and GitHub Action (TypeScript on Node) | Keys and plaintext, only while unlocked                                                                     |
+| Edge API      | One Cloudflare Worker (Hono)                                                                                     | No state; authenticates, routes to the right store                                                          |
+| Control plane | D1, shared                                                                                                       | Accounts, sessions, organizations, memberships, invitations, plans and billing, one-time codes, share links |
+| Data plane    | One SQLite-backed Durable Object per tenant: `user:<accountId>` and `org:<orgId>`                                | Vault items; teams, projects, environments, secrets, wrapped keys, repository links, recent audit log       |
+| Archive       | Basin Pipelines into R2 (Iceberg), partitioned by organization and day                                           | Long-term audit log, kept per plan                                                                          |
+| Email         | Resend                                                                                                           | Codes and invitations                                                                                       |
+
+Why this split:
+
+- D1 caps a database at 10 GB and cannot be split later. The control plane
+  holds metadata only (about 1 KB per account plus sessions), so it stays far
+  below that; sessions move into the per-user object if it ever gets close.
+- A Durable Object gives each tenant its own SQLite database (up to 10 GB),
+  created on demand by name, with no binding per tenant. A query cannot reach
+  another tenant's data because it is another database. Each object runs one
+  request at a time, so re-keying a team or counting PIN tries needs no extra
+  locking.
+- Limits to design around: about 500 to 1,000 simple requests per second per
+  object, 128 MB of memory, 2 MB per row, one location per object. No object
+  serves everyone; there is no "global" object. Cross-tenant numbers live in the
+  control plane or the archive.
+
+The Worker authenticates against the control plane and passes the verified
+account and role to the object. The object checks membership again against its
+own table, so a routing bug in the Worker cannot hand one tenant's request to
+another tenant's data.
+
+## Audit log
+
+Two tiers, because an audit log for secrets must not lose a record:
+
+1. The organization's object appends every event in the same step as the action
+   it records, with each record carrying the hash of the previous one and the
+   object keeping the latest hash. Recent events (90 days) are served from here,
+   instantly.
+2. A copy goes to Basin Pipelines and lands in R2 as Iceberg tables, partitioned
+   by organization and day, under a retention lock. This is the long-term record,
+   queryable with SQL and exportable to a customer's SIEM. Pipelines can drop or
+   delay events; the hash chain shows any gap, and the object re-sends it.
+
+Events carry identifiers, never secret values or names (names are encrypted
+too): who (account, or repository and ref), what, which object, from where, when.
+
+## CI trust, without overtrusting OIDC
+
+GitHub's OIDC token is used to bind a request to a repository, ref and
+environment, as Vault, Infisical and 1Password's Workload Identity do. It is not
+treated as enough on its own:
+
+- Default deny. A link names one repository and exact refs or GitHub
+  environments; no wildcards, no `pull_request_target`.
+- Production environments require a GitHub environment with required reviewers.
+- Tokens are short-lived; every fetch is audited and unusual ones raise alerts.
+- Plain machine tokens remain for CI that is not GitHub.
+- Once secrets are in a runner, any step in that job can read them (the
+  `tj-actions/changed-files` compromise did exactly this). Pin actions to commit
+  SHAs and keep secret-using jobs small.
 
 ## Phases
 
-1. Account key pairs (done), companies, teams, invitations, roles, audit log.
+1. Account key pairs (done), per-tenant stores (vault items move to `user:<id>`),
+   companies, teams, invitations, roles, audit log.
 2. Projects, environments, secrets, re-keying on removal, fingerprints in the UI.
 3. Repository links, the `1pw` CLI and the GitHub Action.
 4. Other targets (Cloudflare, Vercel), SSO and SCIM, billing.

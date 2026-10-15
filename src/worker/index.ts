@@ -132,6 +132,8 @@ app.onError((error, c) => {
   return c.json(apiError("server.error"), 500);
 });
 
+export { UserStore } from "./user-store.js";
+
 export default {
   fetch: app.fetch,
 

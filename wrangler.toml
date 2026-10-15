@@ -22,6 +22,14 @@ migrations_dir = "migrations"
 # Per-IP limit on every endpoint reachable without a session (register,
 # prelogin, login, reading a share). The per-email lockout in auth.ts stops
 # password guessing; this stops one client from burning the free-tier quota.
+[[durable_objects.bindings]]
+name = "USER_STORE"
+class_name = "UserStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UserStore"]
+
 [[ratelimits]]
 name = "ANONYMOUS_RATE_LIMITER"
 namespace_id = "7301"

@@ -27,20 +27,26 @@ without the secret, the original value cannot be confirmed by guessing.
 Values without the `v2:` prefix come from before 0.2.0 and are rewritten on
 the account's next login.
 
-## `items`
+## Vault items: one Durable Object per account
 
-| Column       | Content                                                  | Reveals                     |
-| ------------ | -------------------------------------------------------- | --------------------------- |
-| `id`         | UUID chosen by the client                                | Nothing                     |
-| `account_id` | Owner                                                    | Which account owns the item |
-| `ciphertext` | Whole item sealed under the vault key, `''` once deleted | Approximate size            |
-| `nonce`      | AES-GCM nonce, `''` once deleted                         | Nothing                     |
-| `updated_at` | Unix seconds                                             | When it last changed        |
-| `deleted_at` | Unix seconds, or null                                    | When it was deleted         |
+Each account's items live in its own SQLite-backed Durable Object, named
+`user:<accountId>` (class `UserStore`), not in D1. Its `items` table:
 
-Index `(account_id, updated_at)` serves delta sync. Deleted rows stay as
-tombstones so offline devices learn about the deletion; they are removed only
-with the account.
+| Column       | Content                                                  | Reveals              |
+| ------------ | -------------------------------------------------------- | -------------------- |
+| `id`         | UUID chosen by the client                                | Nothing              |
+| `ciphertext` | Whole item sealed under the vault key, `''` once deleted | Approximate size     |
+| `nonce`      | AES-GCM nonce, `''` once deleted                         | Nothing              |
+| `updated_at` | Unix seconds                                             | When it last changed |
+| `deleted_at` | Unix seconds, or null                                    | When it was deleted  |
+
+A `meta` table records the owning account, checked on every call, and how many
+rows were copied from D1. Deleted rows stay as tombstones so offline devices
+learn about the deletion; the whole object is erased with the account.
+
+The D1 `items` table is the store from before 0.3.0. On an account's first
+request after the upgrade its rows are copied into the object once; from then
+on nothing reads or writes them, and they are deleted with the account.
 
 ### Inside `ciphertext`
 

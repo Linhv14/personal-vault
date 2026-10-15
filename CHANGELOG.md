@@ -74,6 +74,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Vault items move from the shared D1 database to one Durable Object per
+  account, copied over on the first request after the upgrade. Each account's
+  items now sit in their own database, and D1 keeps only accounts, sessions and
+  shares.
 - The threat model is published at 1pw.online/security. The landing and privacy
   pages no longer link to the source repository, which is now private.
 - The import and export page is redesigned: one drop zone with the export

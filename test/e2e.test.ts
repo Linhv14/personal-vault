@@ -234,7 +234,7 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect(row.ciphertext).toBeNull();
   });
 
-  it("does not let one account overwrite another's item", async () => {
+  it("keeps each account's items in its own store", async () => {
     const otherEmail = `other-${Date.now()}@example.com`;
     const other = await createAccount(otherEmail, "another master password", ITERATIONS);
     const registered = await api("/api/auth/register", {
@@ -243,14 +243,23 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       body: JSON.stringify({ email: otherEmail, ...other.record }),
     });
 
+    const before = await api("/api/items", { token });
+    const original = before.body.items.find((item: { id: string }) => item.id === itemId);
+    expect(original).toBeTruthy();
+
     const sealed = await sealJson(other.vaultKey, { title: "attempted overwrite" });
     const put = await api(`/api/items/${itemId}`, {
       method: "PUT",
       token: registered.body.token,
       body: JSON.stringify(sealed),
     });
-    expect(put.status).toBe(403);
-    expect(put.body.code).toBe("items.forbidden");
+    expect(put.status).toBe(200);
+
+    const after = await api("/api/items", { token });
+    expect(after.body.items.find((item: { id: string }) => item.id === itemId)).toEqual(original);
+    const theirs = await api("/api/items", { token: registered.body.token });
+    expect(theirs.body.items.map((item: { id: string }) => item.id)).toEqual([itemId]);
+    expect(theirs.body.items[0].ciphertext).toBe(sealed.ciphertext);
   });
 
   describe("batch import", () => {

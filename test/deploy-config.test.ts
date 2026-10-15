@@ -81,6 +81,10 @@ describe("renderConfig", () => {
       "ACCOUNT_RATE_LIMITER",
     ]);
     expect(config.triggers.crons).toEqual(["17 * * * *"]);
+    expect(config.durable_objects.bindings).toEqual([
+      { name: "USER_STORE", class_name: "UserStore" },
+    ]);
+    expect(config.migrations).toEqual([{ tag: "v1", new_sqlite_classes: ["UserStore"] }]);
     expect(config.vars).toEqual({ REGISTRATION_MODE: "token" });
     expect(config.routes).toBeUndefined();
     expect(config.send_email).toBeUndefined();
