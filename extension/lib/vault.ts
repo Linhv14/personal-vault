@@ -25,6 +25,9 @@ import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
 export interface VaultItem {
   id: string;
   type?: ItemType;
+  favorite?: boolean;
+  tags?: string[];
+  trashedAt?: number;
   title: string;
   url?: string;
   username?: string;
@@ -47,6 +50,7 @@ export interface VaultItem {
   postalCode?: string;
   country?: string;
   codes?: string[];
+  usedCodes?: string[];
   ssid?: string;
   urls?: string[];
   urlMatch?: "domain" | "host";
@@ -108,7 +112,11 @@ export async function openVault(): Promise<{ key: CryptoKey; items: VaultItem[] 
   return { key, items: await decryptAll(key) };
 }
 
-export async function decryptAll(key: CryptoKey, locale = "en"): Promise<VaultItem[]> {
+export async function decryptAll(
+  key: CryptoKey,
+  locale = "en",
+  includeTrashed = false,
+): Promise<VaultItem[]> {
   const { items = [], unboundItemsMigrated = false } = await getLocal();
   const output: VaultItem[] = [];
 
@@ -116,7 +124,9 @@ export async function decryptAll(key: CryptoKey, locale = "en"): Promise<VaultIt
     if (!isLive(row)) continue;
     try {
       const { item } = await openItem(key, row, !unboundItemsMigrated);
-      output.push({ ...item, id: row.id, updatedAt: row.updatedAt });
+      const resolved = { ...item, id: row.id, updatedAt: row.updatedAt };
+      if (resolved.trashedAt && !includeTrashed) continue;
+      output.push(resolved);
     } catch {
       // One corrupt item must not take down the whole list.
       console.warn("Skipping item that failed to decrypt:", row.id);

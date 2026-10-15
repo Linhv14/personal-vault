@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  keepUsedCodes,
+  toggleUsedCode,
+  unusedCodes,
   formatCardNumber,
   itemType,
   lastFour,
@@ -117,6 +120,19 @@ describe("item extras", () => {
     expect(searchItems([item], "9999")).toEqual([]);
   });
 
+  it("searches tags without indexing secret fields", () => {
+    const item: VaultItem = {
+      id: "tagged",
+      createdAt: 0,
+      updatedAt: 0,
+      title: "GitHub",
+      tags: ["work", "priority"],
+      password: "never-index-this",
+    };
+    expect(searchItems([item], "priority")).toEqual([item]);
+    expect(searchItems([item], "never-index-this")).toEqual([]);
+  });
+
   it("matches a login on its extra websites, or only its host when asked", () => {
     const base = { id: "1", createdAt: 0, updatedAt: 0, title: "Git" };
     const multi: VaultItem = { ...base, url: "github.com", urls: ["gitlab.com"] };
@@ -124,5 +140,15 @@ describe("item extras", () => {
     const hostOnly: VaultItem = { ...base, url: "gist.github.com", urlMatch: "host" };
     expect(matchingItems([hostOnly], "https://github.com")).toEqual([]);
     expect(matchingItems([hostOnly], "https://gist.github.com/x")).toEqual([hostOnly]);
+  });
+
+  it("marks recovery codes used and forgets marks for codes that were removed", () => {
+    const item = { codes: ["1111", "2222", "3333"] };
+    const once = { ...item, usedCodes: toggleUsedCode(item, "2222") };
+    expect(once.usedCodes).toEqual(["2222"]);
+    expect(unusedCodes(once)).toEqual(["1111", "3333"]);
+    expect(toggleUsedCode(once, "2222")).toBeUndefined();
+    expect(keepUsedCodes(["1111", "3333"], ["2222", "3333"])).toEqual(["3333"]);
+    expect(keepUsedCodes(["1111"], ["2222"])).toBeUndefined();
   });
 });

@@ -94,6 +94,12 @@ describe("item binding to its id", () => {
     expect(await decryptAll(key)).toEqual([]);
     expect(await migrateUnboundItems(key)).toBe(0);
   });
+
+  it("keeps trashed items out of normal reads but exposes them for recovery", async () => {
+    await saveItem(key, { id: ID_A, title: "Old login", tags: ["work"], trashedAt: 10 });
+    expect(await decryptAll(key)).toEqual([]);
+    expect((await decryptAll(key, "en", true)).map((item) => item.title)).toEqual(["Old login"]);
+  });
 });
 
 describe("registrableDomain", () => {

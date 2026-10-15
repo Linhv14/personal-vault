@@ -226,6 +226,26 @@ export function normalizeExpiry(input: string): string | null {
   return `${String(month).padStart(2, "0")}/${match[2].slice(-2)}`;
 }
 
+export function unusedCodes(item: Pick<VaultItem, "codes" | "usedCodes">): string[] {
+  const used = new Set(item.usedCodes ?? []);
+  return (item.codes ?? []).filter((code) => !used.has(code));
+}
+
+export function keepUsedCodes(codes: string[] | undefined, used: string[] | undefined) {
+  const kept = (used ?? []).filter((code) => codes?.includes(code));
+  return kept.length > 0 ? kept : undefined;
+}
+
+export function toggleUsedCode(
+  item: Pick<VaultItem, "codes" | "usedCodes">,
+  code: string,
+): string[] | undefined {
+  const used = new Set(item.usedCodes ?? []);
+  if (used.has(code)) used.delete(code);
+  else used.add(code);
+  return keepUsedCodes(item.codes, [...used]);
+}
+
 export function withPasswordHistory(
   previous: Pick<VaultItem, "password" | "passwordHistory"> | null,
   nextPassword: string | undefined,
@@ -280,7 +300,7 @@ export function searchableText(item: VaultItem): string[] {
   const custom = (item.fields ?? []).flatMap((field) =>
     field.hidden ? [field.label] : [field.label, field.value],
   );
-  return [item.title, ...typeText(item), ...custom].filter(present);
+  return [item.title, ...(item.tags ?? []), ...typeText(item), ...custom].filter(present);
 }
 
 function present(value: string | undefined): value is string {

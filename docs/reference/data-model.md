@@ -49,6 +49,9 @@ are what every client reads after decrypting.
 | `id`, `title`                                                        | all                                | Same id as the row; the name shown in lists                                                            |
 | `type`                                                               | all                                | `login`, `note`, `card`, `identity`, `recovery`, `wifi`, `api`, `ssh`, `bank`, `document` or `license` |
 | `createdAt`, `updatedAt`                                             | all                                | Unix seconds                                                                                           |
+| `favorite`                                                           | all                                | Whether the item is pinned to Favorites                                                                |
+| `tags`                                                               | all                                | Optional list of user-defined labels                                                                   |
+| `trashedAt`                                                          | all                                | Unix seconds when the item was moved to Trash; absent for live items                                   |
 | `note`                                                               | all                                | Free text                                                                                              |
 | `fields`                                                             | all                                | Custom fields: `{ label, value, hidden? }`                                                             |
 | `url`, `username`                                                    | login, api                         | Website (host for an API key) and user name or key id                                                  |
@@ -63,6 +66,7 @@ are what every client reads after decrypting.
 | `email`, `phone`, `company`                                          | identity (`email` also license)    | Contact details                                                                                        |
 | `address`, `city`, `region`, `postalCode`, `country`                 | identity (`country` also document) | Postal address                                                                                         |
 | `codes`                                                              | recovery                           | Array of one-time recovery codes                                                                       |
+| `usedCodes`                                                          | recovery                           | Codes from `codes` marked as used                                                                      |
 | `ssid`                                                               | wifi                               | Network name                                                                                           |
 | `sshPublicKey`, `sshPrivateKey`, `sshFingerprint`                    | ssh                                | Key pair and fingerprint                                                                               |
 | `bankName`, `accountNumber`, `routingNumber`, `swift`, `iban`, `pin` | bank                               | Account details                                                                                        |
@@ -76,6 +80,10 @@ migration. Empty fields are left out. Editing an item keeps
 the fields the editor does not show. Extensions older than item types edit
 every item as a login and drop the other fields, so update every device before
 editing a card, address or other typed item.
+
+The normal decrypted list and autofill paths exclude items with `trashedAt`.
+The popup requests trashed items explicitly so they can be restored or deleted
+forever; deleting forever is the server tombstone delete.
 
 ## `sessions`
 
