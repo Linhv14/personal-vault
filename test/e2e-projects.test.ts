@@ -16,7 +16,9 @@ import {
   listProjects,
   listSecrets,
   rekeyTeam,
+  deleteSecrets,
   saveSecret,
+  saveSecrets,
   type Project,
 } from "../extension/lib/projects.js";
 
@@ -214,6 +216,41 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
       ["DATABASE_URL", "postgres://prod"],
       ["STRIPE_KEY", "sk_live_456"],
     ]);
+  });
+
+  it("writes and deletes many secrets in one request each", async () => {
+    as(member);
+    const before = await listSecrets(orgId, project, development());
+    const fetches: string[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (input, init) => {
+      fetches.push(`${init?.method ?? "GET"} ${new URL(String(input)).pathname}`);
+      return original(input, init);
+    };
+    try {
+      await saveSecrets(
+        orgId,
+        project,
+        Array.from({ length: 30 }, (_, n) => ({
+          environmentId: development(),
+          name: `BULK_${n}`,
+          value: `v${n}`,
+        })),
+      );
+      const bulk = (await listSecrets(orgId, project, development())).filter((secret) =>
+        secret.name.startsWith("BULK_"),
+      );
+      expect(bulk).toHaveLength(30);
+      await deleteSecrets(
+        orgId,
+        project,
+        bulk.map((secret) => secret.id),
+      );
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(fetches.filter((call) => call.startsWith("POST"))).toHaveLength(2);
+    expect(await listSecrets(orgId, project, development())).toHaveLength(before.length);
   });
 
   it("lets members write secrets but not manage projects", async () => {

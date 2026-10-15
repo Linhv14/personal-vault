@@ -461,54 +461,69 @@ export class OrgStore extends DurableObject<Env> {
     return ok({ generation: access.value.generation, secrets });
   }
 
-  async writeSecret(
+  async writeSecrets(
     principal: Principal,
     teamId: string,
     projectId: string,
-    secret: { id: string; environmentId: string; sealed: SealedData; generation: number },
+    batch: {
+      generation: number;
+      secrets: { id: string; environmentId: string; sealed: SealedData }[];
+    },
     ip: string | null,
-  ): Promise<Result<{ id: string }>> {
+  ): Promise<Result<{ ids: string[] }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
     if (!access.ok) return access;
-    const refused = this.writable(access.value, secret.generation);
+    const refused = this.writable(access.value, batch.generation);
     if (refused) return refused;
-    const existing = this.projects.secretLocation(secret.id);
-    if (existing) {
-      if (existing.projectId !== projectId || existing.environmentId !== secret.environmentId) {
+    if (new Set(batch.secrets.map((secret) => secret.id)).size !== batch.secrets.length) {
+      return fail(400, "orgs.invalid_secret");
+    }
+    let added = 0;
+    for (const secret of batch.secrets) {
+      const existing = this.projects.secretLocation(secret.id);
+      if (!existing) added += 1;
+      else if (
+        existing.projectId !== projectId ||
+        existing.environmentId !== secret.environmentId
+      ) {
         return fail(409, "orgs.invalid_secret");
       }
-    } else if (this.projects.secretCount(projectId) >= MAX_SECRETS_PER_PROJECT) {
+    }
+    if (this.projects.secretCount(projectId) + added > MAX_SECRETS_PER_PROJECT) {
       return fail(409, "orgs.secret_limit", { limit: MAX_SECRETS_PER_PROJECT });
     }
-    this.projects.putSecret({ ...secret, projectId }, principal.accountId, now());
-    await this.record(
-      principal.accountId,
-      "secret.written",
-      `${projectId}:${secret.environmentId}`,
-      ip,
-    );
-    return ok({ id: secret.id });
+    const at = now();
+    this.ctx.storage.transactionSync(() => {
+      for (const secret of batch.secrets) {
+        this.projects.putSecret({ ...secret, projectId }, principal.accountId, at);
+      }
+    });
+    for (const environmentId of new Set(batch.secrets.map((secret) => secret.environmentId))) {
+      await this.record(principal.accountId, "secret.written", `${projectId}:${environmentId}`, ip);
+    }
+    return ok({ ids: batch.secrets.map((secret) => secret.id) });
   }
 
-  async deleteSecret(
+  async deleteSecrets(
     principal: Principal,
     teamId: string,
     projectId: string,
-    secretId: string,
+    ids: string[],
     ip: string | null,
-  ): Promise<Result<{ ok: true }>> {
+  ): Promise<Result<{ deleted: number }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
     if (!access.ok) return access;
-    const existing = this.projects.secretLocation(secretId);
-    if (!existing || existing.projectId !== projectId) return fail(404, "orgs.not_found");
-    this.projects.deleteSecret(secretId);
-    await this.record(
-      principal.accountId,
-      "secret.deleted",
-      `${projectId}:${existing.environmentId}`,
-      ip,
-    );
-    return ok({ ok: true as const });
+    const found = ids
+      .map((id) => ({ id, location: this.projects.secretLocation(id) }))
+      .filter(({ location }) => location?.projectId === projectId);
+    if (found.length === 0) return fail(404, "orgs.not_found");
+    this.ctx.storage.transactionSync(() => {
+      for (const { id } of found) this.projects.deleteSecret(id);
+    });
+    for (const environmentId of new Set(found.map(({ location }) => location!.environmentId))) {
+      await this.record(principal.accountId, "secret.deleted", `${projectId}:${environmentId}`, ip);
+    }
+    return ok({ deleted: found.length });
   }
 
   async teamVault(

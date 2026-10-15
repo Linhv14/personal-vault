@@ -213,6 +213,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Importing, adding a secret to several environments, deleting an environment
+  and removing duplicates now take one request per 500 secrets instead of one
+  per secret (`POST …/secrets` and `POST …/secrets/delete`, each one
+  transaction).
+
 - Console dialogs show their errors inside the dialog and lock their button
   while working. Before, a failed import or add showed its error behind the
   dialog, so it looked like the button did nothing, and every retry created the

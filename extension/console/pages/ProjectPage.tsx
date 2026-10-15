@@ -10,9 +10,11 @@ import { isOrgAdmin } from "../../lib/orgs.js";
 import {
   deleteProject,
   deleteSecret,
+  deleteSecrets,
   importSecrets,
   listSecrets,
   saveSecret,
+  saveSecrets,
   updateProject,
   type Secret,
 } from "../../lib/projects.js";
@@ -116,11 +118,14 @@ export function ProjectPage({
 
   const addSecret = (draft: SecretDraft) =>
     void mutate(async () => {
-      for (const [envId, value] of Object.entries(draft.values)) {
-        const current = await listSecrets(orgId, project, envId);
-        const same = current.find((secret) => secret.name === draft.name);
-        await saveSecret(orgId, project, envId, { id: same?.id, name: draft.name, value });
-      }
+      const writes = await Promise.all(
+        Object.entries(draft.values).map(async ([envId, value]) => {
+          const current = await listSecrets(orgId, project, envId);
+          const same = current.find((secret) => secret.name === draft.name);
+          return { id: same?.id, environmentId: envId, name: draft.name, value };
+        }),
+      );
+      await saveSecrets(orgId, project, writes);
       setModal(null);
     }, "projects.saved");
 
@@ -139,7 +144,11 @@ export function ProjectPage({
   );
   const removeDuplicates = () =>
     void mutate(async () => {
-      for (const secret of duplicates) await deleteSecret(orgId, project, secret.id);
+      await deleteSecrets(
+        orgId,
+        project,
+        duplicates.map((secret) => secret.id),
+      );
     }, "console.duplicates_removed");
   const names = [...new Set(all.map((secret) => secret.name))].sort();
   const missing = environments.map((env) => ({
@@ -409,9 +418,8 @@ export function ProjectPage({
           onClose={() => setModal(null)}
           onConfirm={() =>
             void run(async () => {
-              for (const secret of secrets?.[environment.id] ?? []) {
-                await deleteSecret(orgId, project, secret.id);
-              }
+              const doomed = (secrets?.[environment.id] ?? []).map((secret) => secret.id);
+              if (doomed.length > 0) await deleteSecrets(orgId, project, doomed);
               await updateProject(orgId, owner, identity, project, {
                 ...project.content,
                 environments: environments.filter((env) => env.id !== environment.id),

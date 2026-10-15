@@ -6,6 +6,8 @@ import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
 import { isSealedProject, isSealedSecret, isUuid } from "../validate.js";
+import type { SealedData } from "../../core/crypto.js";
+import type { Principal } from "../../core/org-model.js";
 import { asMember, isGeneration, limitsOf, param, type Ctx } from "./org-access.js";
 
 const projects = new Hono<AppBindings>();
@@ -90,28 +92,75 @@ projects.get(
   }),
 );
 
+const MAX_BATCH = 500;
+
+function secretEntry(
+  value: unknown,
+): { id: string; environmentId: string; sealed: SealedData } | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { id, environmentId, sealed } = value as Record<string, unknown>;
+  return isUuid(id) && isEnvironmentId(environmentId) && isSealedSecret(sealed)
+    ? { id, environmentId, sealed }
+    : null;
+}
+
+const write = (
+  c: Ctx,
+  member: Principal,
+  orgId: string,
+  generation: number,
+  secrets: ReturnType<typeof secretEntry>[],
+) =>
+  orgStore(c.env, orgId).writeSecrets(
+    member,
+    team(c),
+    project(c),
+    { generation, secrets: secrets.filter((entry) => entry !== null) },
+    clientIp(c),
+  );
+
+projects.post(
+  "/projects/:projectId/secrets",
+  asMember(async (c, member, orgId) => {
+    const { generation, secrets } = await readJson(c);
+    const entries = Array.isArray(secrets) ? secrets.map(secretEntry) : [];
+    if (
+      !isGeneration(generation) ||
+      entries.length === 0 ||
+      entries.length > MAX_BATCH ||
+      entries.some((entry) => entry === null)
+    ) {
+      return invalidSecret(c);
+    }
+    return respond(c, await write(c, member, orgId, generation, entries));
+  }),
+);
+
 projects.put(
   "/projects/:projectId/secrets/:secretId",
   asMember(async (c, member, orgId) => {
-    const id = param(c, "secretId");
     const { environmentId, sealed, generation } = await readJson(c);
+    const entry = secretEntry({ id: param(c, "secretId"), environmentId, sealed });
+    if (!entry || !isGeneration(generation)) return invalidSecret(c);
+    return respond(c, await write(c, member, orgId, generation, [entry]));
+  }),
+);
+
+projects.post(
+  "/projects/:projectId/secrets/delete",
+  asMember(async (c, member, orgId) => {
+    const { ids } = await readJson(c);
     if (
-      !isUuid(id) ||
-      !isEnvironmentId(environmentId) ||
-      !isSealedSecret(sealed) ||
-      !isGeneration(generation)
+      !Array.isArray(ids) ||
+      ids.length === 0 ||
+      ids.length > MAX_BATCH * 2 ||
+      !ids.every(isUuid)
     ) {
       return invalidSecret(c);
     }
     return respond(
       c,
-      await orgStore(c.env, orgId).writeSecret(
-        member,
-        team(c),
-        project(c),
-        { id, environmentId, sealed, generation },
-        clientIp(c),
-      ),
+      await orgStore(c.env, orgId).deleteSecrets(member, team(c), project(c), ids, clientIp(c)),
     );
   }),
 );
@@ -121,11 +170,11 @@ projects.delete(
   asMember(async (c, member, orgId) =>
     respond(
       c,
-      await orgStore(c.env, orgId).deleteSecret(
+      await orgStore(c.env, orgId).deleteSecrets(
         member,
         team(c),
         project(c),
-        param(c, "secretId"),
+        [param(c, "secretId")],
         clientIp(c),
       ),
     ),

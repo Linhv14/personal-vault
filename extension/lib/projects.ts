@@ -141,20 +141,49 @@ export async function listSecrets(
   return opened.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+const BATCH = 500;
+
+export interface SecretWrite extends SecretContent {
+  id?: string;
+  environmentId: string;
+}
+
+function chunks<T>(list: T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(list.length / size) }, (_, index) =>
+    list.slice(index * size, (index + 1) * size),
+  );
+}
+
+export async function saveSecrets(
+  orgId: string,
+  project: Project,
+  writes: SecretWrite[],
+): Promise<void> {
+  const sealed = await Promise.all(
+    writes.map(async ({ id = crypto.randomUUID(), environmentId, name, value, note }) => {
+      const content: SecretContent = note ? { name, value, note } : { name, value };
+      return {
+        id,
+        environmentId,
+        sealed: await sealSecret(project.content, address(project, environmentId, id), content),
+      };
+    }),
+  );
+  for (const batch of chunks(sealed, BATCH)) {
+    await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/secrets`, {
+      method: "POST",
+      body: json({ generation: project.generation, secrets: batch }),
+    });
+  }
+}
+
 export async function saveSecret(
   orgId: string,
   project: Project,
   environmentId: string,
   secret: SecretContent & { id?: string },
 ): Promise<void> {
-  const id = secret.id ?? crypto.randomUUID();
-  const content: SecretContent = { name: secret.name, value: secret.value };
-  if (secret.note) content.note = secret.note;
-  const sealed = await sealSecret(project.content, address(project, environmentId, id), content);
-  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/secrets/${id}`, {
-    method: "PUT",
-    body: json({ environmentId, sealed, generation: project.generation }),
-  });
+  await saveSecrets(orgId, project, [{ ...secret, environmentId }]);
 }
 
 export async function importSecrets(
@@ -164,11 +193,29 @@ export async function importSecrets(
   existing: Secret[],
   entries: SecretContent[],
 ): Promise<number> {
-  for (const entry of entries) {
-    const current = existing.find((secret) => secret.name === entry.name);
-    await saveSecret(orgId, project, environmentId, { ...entry, id: current?.id });
-  }
+  await saveSecrets(
+    orgId,
+    project,
+    entries.map((entry) => ({
+      ...entry,
+      environmentId,
+      id: existing.find((secret) => secret.name === entry.name)?.id,
+    })),
+  );
   return entries.length;
+}
+
+export async function deleteSecrets(
+  orgId: string,
+  project: Project,
+  secretIds: string[],
+): Promise<void> {
+  for (const batch of chunks(secretIds, BATCH * 2)) {
+    await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/secrets/delete`, {
+      method: "POST",
+      body: json({ ids: batch }),
+    });
+  }
 }
 
 export async function deleteSecret(
@@ -176,9 +223,7 @@ export async function deleteSecret(
   project: Project,
   secretId: string,
 ): Promise<void> {
-  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/secrets/${secretId}`, {
-    method: "DELETE",
-  });
+  await deleteSecrets(orgId, project, [secretId]);
 }
 
 export async function rekeyTeam(
