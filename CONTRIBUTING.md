@@ -5,12 +5,7 @@
 ```bash
 npm install
 npm test
-npm run preview        # the popup in a normal browser tab, no extension needed
 ```
-
-`npm run preview` serves the real popup at <http://127.0.0.1:8788> against stubbed
-`chrome.*` APIs and a seeded vault. Add `?screen=setup`, `?screen=unlock` or
-`?locale=vi` to reach the other states.
 
 Running against a real Worker:
 

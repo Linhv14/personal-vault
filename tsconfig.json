@@ -13,7 +13,8 @@
     "noEmit": true,
     "verbatimModuleSyntax": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src/core/**/*.ts",
@@ -24,8 +25,6 @@
     "extension/**/*.tsx",
     "share/**/*.ts",
     "web/**/*.ts",
-    "web/**/*.tsx",
-    "preview/**/*.ts",
-    "scripts/**/*.d.mts"
+    "web/**/*.tsx"
   ]
 }

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-// @ts-expect-error The build script is plain JavaScript.
-import { renderMarkdown } from "../scripts/markdown.mjs";
+import { renderMarkdown } from "../scripts/markdown.ts";
 
 const render = renderMarkdown as (markdown: string) => string;
 

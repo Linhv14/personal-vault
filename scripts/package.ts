@@ -4,10 +4,12 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const extension = path.join(root, "dist", "extension");
-const { version } = JSON.parse(readFileSync(path.join(root, "extension", "manifest.json"), "utf8"));
+const { version } = JSON.parse(
+  readFileSync(path.join(root, "extension", "manifest.json"), "utf8"),
+) as { version: string };
 const output = path.join(root, "dist", `personal-vault-extension-${version}.zip`);
 
-const build = spawnSync(process.execPath, [path.join(root, "scripts", "build.mjs")], {
+const build = spawnSync(process.execPath, [path.join(root, "scripts", "build.ts")], {
   stdio: "inherit",
 });
 if (build.status !== 0) process.exit(build.status ?? 1);

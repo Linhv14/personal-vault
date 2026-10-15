@@ -11,8 +11,8 @@ shared server ([Run a shared server](run-a-shared-server.md)).
 - A deployed Worker with a privacy policy that matches it, served at
   `https://<worker>/privacy`.
 - Screenshots at 1280×800: the popup list, an item with its 2FA code, the
-  autofill menu on a login page, and the share page. Take them from
-  `npm run preview` and a real login page.
+  autofill menu on a login page, and the share page. Take them from the
+  installed extension and a real login page.
 
 ## Build the upload
 

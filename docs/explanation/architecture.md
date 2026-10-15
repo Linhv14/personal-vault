@@ -57,7 +57,7 @@ src/worker/   The Worker: routes, sessions, at-rest protection, email.
 extension/    The MV3 extension: Preact UI pages, service worker, page script, offscreen document.
 share/        The share page, the landing page and the privacy policy.
 migrations/   D1 schema, applied in order by `npm run deploy`.
-scripts/      Build, deploy, preview and packaging tools.
+scripts/      Build, deploy and packaging tools, in TypeScript run by Node.
 test/         Unit tests, and end-to-end tests against a live local Worker.
 ```
 

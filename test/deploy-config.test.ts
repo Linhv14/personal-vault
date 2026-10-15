@@ -7,7 +7,7 @@ import {
   renderConfig,
   requiredSecrets,
   resolveDeployOptions,
-} from "../scripts/deploy-config.mjs";
+} from "../scripts/deploy-config.ts";
 
 const template = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
 

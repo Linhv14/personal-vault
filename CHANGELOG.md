@@ -110,6 +110,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Build and deploy scripts are TypeScript, run directly by Node 22.18 or later
+  and type-checked by `npm run typecheck`; the hand-written `.d.mts` files are
+  gone and `.node-version` pins Node 22 for Workers Builds.
+- Removed `npm run preview` and its stubbed popup harness.
+
 - Worker configuration follows Cloudflare's current best practices:
   compatibility date 2026-10-13 with `nodejs_compat`, source maps uploaded,
   explicit log sampling, structured JSON logs, and the required secrets declared

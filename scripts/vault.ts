@@ -34,7 +34,8 @@ import {
   renderConfig,
   requiredSecrets,
   resolveDeployOptions,
-} from "./deploy-config.mjs";
+  type DeployOptions,
+} from "./deploy-config.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 const TEMPLATE = path.join(root, "wrangler.toml");
@@ -55,12 +56,29 @@ const WRANGLER = path.join(root, "node_modules", "wrangler", "bin", "wrangler.js
 const DB_NAME = "vault";
 const GENERATED_SECRETS = new Set(["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET", "AT_REST_SECRET"]);
 
+interface Account {
+  id: string;
+  name: string;
+}
+
+interface Database {
+  uuid: string;
+  name: string;
+}
+
+interface DeployState extends Partial<DeployOptions> {
+  accountId?: string;
+  accountName?: string;
+  databaseId?: string;
+  workerUrl?: string;
+}
+
 const style = {
-  step: (text) => console.log(`\n\x1b[1m▸ ${text}\x1b[0m`),
-  ok: (text) => console.log(`  \x1b[32m✓\x1b[0m ${text}`),
-  info: (text) => console.log(`  ${text}`),
-  warn: (text) => console.log(`  \x1b[33m!\x1b[0m ${text}`),
-  fail: (text) => console.error(`\n\x1b[31m✗ ${text}\x1b[0m`),
+  step: (text: string) => console.log(`\n\x1b[1m▸ ${text}\x1b[0m`),
+  ok: (text: string) => console.log(`  \x1b[32m✓\x1b[0m ${text}`),
+  info: (text: string) => console.log(`  ${text}`),
+  warn: (text: string) => console.log(`  \x1b[33m!\x1b[0m ${text}`),
+  fail: (text: string) => console.error(`\n\x1b[31m✗ ${text}\x1b[0m`),
 };
 
 /**
@@ -71,13 +89,13 @@ const style = {
  * guess. Without this the database lookup fails silently and the script tries to
  * create a database that is already there.
  */
-let accountEnv = {};
+let accountEnv: Record<string, string> = {};
 
 function wranglerEnv() {
   return { ...process.env, ...accountEnv };
 }
 
-function wranglerCapture(args) {
+function wranglerCapture(args: string[]) {
   const result = spawnSync(process.execPath, [WRANGLER, ...args], {
     cwd: root,
     encoding: "utf8",
@@ -90,7 +108,7 @@ function wranglerCapture(args) {
  * Like wranglerInherit, but also returns what was printed. Used for `deploy`,
  * whose output is the only place the Worker URL appears.
  */
-function wranglerTee(args) {
+function wranglerTee(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [WRANGLER, ...args], {
       cwd: root,
@@ -110,7 +128,7 @@ function wranglerTee(args) {
   });
 }
 
-function wranglerInherit(args) {
+function wranglerInherit(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [WRANGLER, ...args], {
       cwd: root,
@@ -128,12 +146,12 @@ function wranglerInherit(args) {
  * opening brace in turn. Taking only the last one would land inside a nested
  * object; taking only the first fails when a log line contains a brace.
  */
-function parseJsonFromOutput(output) {
+function parseJsonFromOutput<T>(output: string): T | null {
   for (let i = 0; i < output.length; i++) {
     const char = output[i];
     if (char !== "{" && char !== "[") continue;
     try {
-      return JSON.parse(output.slice(i));
+      return JSON.parse(output.slice(i)) as T;
     } catch {
       // Not the start of the JSON block; keep looking.
     }
@@ -141,24 +159,25 @@ function parseJsonFromOutput(output) {
   return null;
 }
 
-function readState() {
-  return existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {};
+function readState(): DeployState {
+  return existsSync(STATE) ? (JSON.parse(readFileSync(STATE, "utf8")) as DeployState) : {};
 }
 
-function writeState(patch) {
+function writeState(patch: DeployState): DeployState {
   const next = { ...readState(), ...patch };
   writeFileSync(STATE, `${JSON.stringify(next, null, 2)}\n`);
   return next;
 }
 
-async function ask(question, choices) {
+async function ask<T extends { label: string }>(question: string, choices: T[]): Promise<T> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
     choices.forEach((choice, index) => console.log(`    ${index + 1}) ${choice.label}`));
     for (;;) {
       const answer = (await rl.question(`  ${question} [1-${choices.length}]: `)).trim();
       const index = Number.parseInt(answer, 10) - 1;
-      if (index >= 0 && index < choices.length) return choices[index];
+      const choice = choices[index];
+      if (choice) return choice;
       console.log("  Not a valid choice.");
     }
   } finally {
@@ -183,7 +202,7 @@ async function ensureLogin() {
     if (!who.ok) throw new Error("Sign-in failed");
   }
 
-  const accounts = parseJsonFromOutput(who.stdout)?.accounts ?? [];
+  const accounts = parseJsonFromOutput<{ accounts?: Account[] }>(who.stdout)?.accounts ?? [];
   if (accounts.length === 0) throw new Error("Could not read the account list from wrangler");
 
   const state = readState();
@@ -212,7 +231,8 @@ async function ensureDatabase() {
   style.step("Checking the D1 database");
 
   const state = readState();
-  const listed = parseJsonFromOutput(wranglerCapture(["d1", "list", "--json"]).stdout) ?? [];
+  const listed =
+    parseJsonFromOutput<Database[]>(wranglerCapture(["d1", "list", "--json"]).stdout) ?? [];
   const existing = listed.find((db) => db.uuid === state.databaseId || db.name === DB_NAME);
 
   if (existing) {
@@ -225,7 +245,8 @@ async function ensureDatabase() {
   await wranglerInherit(["d1", "create", DB_NAME]);
 
   // `d1 create` has no --json, so read the list back to learn the uuid.
-  const after = parseJsonFromOutput(wranglerCapture(["d1", "list", "--json"]).stdout) ?? [];
+  const after =
+    parseJsonFromOutput<Database[]>(wranglerCapture(["d1", "list", "--json"]).stdout) ?? [];
   const created = after.find((db) => db.name === DB_NAME);
   if (!created) throw new Error(`Created the database but could not find "${DB_NAME}"`);
 
@@ -239,22 +260,26 @@ async function ensureDatabase() {
  * id — this is a public template and those values belong to each operator. The
  * generated file is gitignored.
  */
-function writeGeneratedConfig(accountId, databaseId, options) {
+function writeGeneratedConfig(
+  accountId: string,
+  databaseId: string,
+  options: DeployOptions,
+): string {
   const template = readFileSync(TEMPLATE, "utf8");
   writeFileSync(GENERATED, renderConfig(template, { accountId, databaseId, options }));
   return GENERATED;
 }
 
-async function ensureSecrets(configPath, options) {
+async function ensureSecrets(configPath: string, options: DeployOptions): Promise<void> {
   style.step("Checking secrets");
 
   const listed =
-    parseJsonFromOutput(
+    parseJsonFromOutput<{ name: string }[]>(
       wranglerCapture(["secret", "list", "--format", "json", "-c", configPath]).stdout,
     ) ?? [];
   const present = new Set(listed.map((secret) => secret.name));
 
-  const generated = {};
+  const generated: Record<string, string> = {};
   for (const name of requiredSecrets(options)) {
     if (present.has(name)) {
       style.ok(`${name} already set`);
@@ -286,7 +311,7 @@ async function ensureSecrets(configPath, options) {
     style.ok(`${name} generated`);
   }
 
-  const lines = [];
+  const lines: string[] = [];
   if (generated.REGISTRATION_TOKEN) {
     lines.push(
       `REGISTRATION_TOKEN=${generated.REGISTRATION_TOKEN}`,
@@ -321,7 +346,7 @@ async function ensureSecrets(configPath, options) {
 
 function buildAssets() {
   style.step("Building the share page and the extension");
-  const result = spawnSync(process.execPath, [path.join(root, "scripts", "build.mjs")], {
+  const result = spawnSync(process.execPath, [path.join(root, "scripts", "build.ts")], {
     cwd: root,
     stdio: "inherit",
   });
@@ -329,7 +354,7 @@ function buildAssets() {
 }
 
 async function deploy() {
-  const options = resolveDeployOptions(readState(), parseDeployFlags(process.argv.slice(3)));
+  const options = resolveDeployOptions({ ...readState() }, parseDeployFlags(process.argv.slice(3)));
   const account = await ensureLogin();
   const databaseId = await ensureDatabase();
   writeState(options);
@@ -449,11 +474,11 @@ async function ci() {
   await wranglerInherit(["deploy", "-c", configPath]);
 }
 
-const COMMANDS = { deploy, ci, dev, status, logs, backup };
+const COMMANDS: Record<string, () => Promise<void>> = { deploy, ci, dev, status, logs, backup };
 
 const command = process.argv[2];
 if (!command || !(command in COMMANDS)) {
-  console.log(`Usage: node scripts/vault.mjs <command>
+  console.log(`Usage: node scripts/vault.ts <command>
 
   deploy   Create D1 and secrets if needed, migrate, build and deploy to your
            own Cloudflare account. Safe to run repeatedly.
@@ -474,7 +499,7 @@ if (!command || !(command in COMMANDS)) {
 }
 
 try {
-  await COMMANDS[command]();
+  await COMMANDS[command]?.();
 } catch (error) {
   style.fail(error instanceof Error ? error.message : String(error));
   process.exit(1);

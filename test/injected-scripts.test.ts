@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INJECTED_SCRIPTS } from "../scripts/extension-entries.mjs";
+import { INJECTED_SCRIPTS } from "../scripts/extension-entries.ts";
 import { SCRIPTS } from "../extension/lib/autofill-permission.js";
 
 describe("scripts injected into web pages", () => {

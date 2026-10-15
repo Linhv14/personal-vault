@@ -29,13 +29,12 @@ non-interactive shell.
 
 ## Development
 
-| Command             | What it does                                                                                                                                                            |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`       | Worker and local D1 at `http://127.0.0.1:8787`. Creates `.dev.vars` if missing.                                                                                         |
-| `npm run preview`   | The popup as a web page at `http://127.0.0.1:8788`, with stubbed `chrome.*` APIs and a seeded vault. Query parameters: `?screen=setup`, `?screen=unlock`, `?locale=vi`. |
-| `npm run build`     | Builds the Worker assets and the extension into `dist/`, with the last deployed Worker URL (from `.cf-state.json`) as the extension's server.                           |
-| `npm run build:dev` | Same, unminified and with inline source maps.                                                                                                                           |
-| `npm run package`   | Builds and zips the extension to `dist/personal-vault-extension-<version>.zip`.                                                                                         |
+| Command             | What it does                                                                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`       | Worker and local D1 at `http://127.0.0.1:8787`. Creates `.dev.vars` if missing.                                                               |
+| `npm run build`     | Builds the Worker assets and the extension into `dist/`, with the last deployed Worker URL (from `.cf-state.json`) as the extension's server. |
+| `npm run build:dev` | Same, unminified and with inline source maps.                                                                                                 |
+| `npm run package`   | Builds and zips the extension to `dist/personal-vault-extension-<version>.zip`.                                                               |
 
 ## Quality checks
 

@@ -6,11 +6,11 @@
  * to maintain.
  */
 
-import { build } from "esbuild";
-import { hasTokensMarker, injectTokens } from "./tokens.mjs";
-import { renderMarkdown } from "./markdown.mjs";
-import { localizePage } from "./localize-page.mjs";
-import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.mjs";
+import { build, type BuildOptions } from "esbuild";
+import { hasTokensMarker, injectTokens } from "./tokens.ts";
+import { renderMarkdown } from "./markdown.ts";
+import { localizePage } from "./localize-page.ts";
+import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -39,7 +39,7 @@ function deployedServerUrl() {
   }
 }
 
-const common = {
+const common: BuildOptions = {
   define: { __VAULT_DEFAULT_SERVER__: JSON.stringify(deployedServerUrl()) },
   bundle: true,
   format: "esm",
@@ -62,13 +62,19 @@ async function logoSvg() {
     write: false,
     logLevel: "silent",
   });
-  const source = Buffer.from(outputFiles[0].text).toString("base64");
-  const { LOGO_SVG } = await import(`data:text/javascript;base64,${source}`);
+  const source = Buffer.from(outputFiles[0]?.text ?? "").toString("base64");
+  const { LOGO_SVG } = (await import(`data:text/javascript;base64,${source}`)) as {
+    LOGO_SVG: string;
+  };
   return LOGO_SVG;
 }
 
-async function replaceAsync(text, pattern, replace) {
-  const parts = [];
+async function replaceAsync(
+  text: string,
+  pattern: RegExp,
+  replace: (...match: string[]) => Promise<string>,
+): Promise<string> {
+  const parts: string[] = [];
   let last = 0;
   for (const match of text.matchAll(pattern)) {
     parts.push(text.slice(last, match.index), await replace(...match));
@@ -77,7 +83,7 @@ async function replaceAsync(text, pattern, replace) {
   return parts.join("") + text.slice(last);
 }
 
-async function copyPage(from, to) {
+async function copyPage(from: string, to: string): Promise<void> {
   const text = await readFile(from, "utf8");
   await writeFile(to, hasTokensMarker(text) ? await injectTokens(text, from) : text);
 }
@@ -93,7 +99,7 @@ async function buildSharePage() {
   await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
   await copyPage(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
   const security = await readFile(path.join(root, "share", "security.html"), "utf8");
-  const filled = await replaceAsync(security, /<!-- markdown:([^ ]+) -->/g, async (_, file) =>
+  const filled = await replaceAsync(security, /<!-- markdown:([^ ]+) -->/g, async (_, file = "") =>
     renderMarkdown(await readFile(path.join(root, file), "utf8")),
   );
   await writeFile(
@@ -104,7 +110,7 @@ async function buildSharePage() {
   for (const [lang, file] of [
     ["en", "index.html"],
     ["vi", "vi.html"],
-  ]) {
+  ] as const) {
     await writeFile(
       path.join(outPublic, file),
       await injectTokens(localizePage(landing, lang), "share/landing.html"),
@@ -114,7 +120,7 @@ async function buildSharePage() {
   await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
 }
 
-async function fingerprinted(out, name, text) {
+async function fingerprinted(out: string, name: string, text: string): Promise<string> {
   const hash = createHash("sha256").update(text).digest("hex").slice(0, 10);
   const [base, extension] = name.split(".");
   const file = `assets/${base}-${hash}.${extension}`;
@@ -132,19 +138,19 @@ async function buildDashboard() {
     outfile: path.join(out, "app.js"),
     write: false,
   });
-  const assets = {
-    "app.js": await fingerprinted(out, "app.js", outputFiles[0].text),
+  const assets: Record<string, string> = {
+    "app.js": await fingerprinted(out, "app.js", outputFiles?.[0]?.text ?? ""),
   };
   for (const [name, from] of [
     ["tokens.css", path.join(root, "src", "ui", "tokens.css")],
     ["console.css", path.join(root, "extension", "console", "console.css")],
     ["web.css", path.join(source, "web.css")],
-  ]) {
+  ] as const) {
     assets[name] = await fingerprinted(out, name, await readFile(from, "utf8"));
   }
   const page = (await readFile(path.join(source, "index.html"), "utf8")).replace(
     /(href|src)="(app\.js|tokens\.css|console\.css|web\.css)"/g,
-    (_, attribute, name) => `${attribute}="${assets[name]}"`,
+    (_: string, attribute: string, name: string) => `${attribute}="${assets[name]}"`,
   );
   await writeFile(path.join(out, "index.html"), page);
 }
@@ -158,7 +164,7 @@ async function buildExtension() {
 
   await mkdir(outExtension, { recursive: true });
 
-  const entries = (files) =>
+  const entries = (files: readonly string[]) =>
     files.map((file) => path.join(source, file)).filter((file) => existsSync(file));
 
   await build({
@@ -209,19 +215,19 @@ async function packageForDownload() {
 }
 
 /**
- * Clean only this script's own outputs, never all of dist/: other tooling
- * (scripts/preview.mjs) writes siblings there, and wiping them makes a running
- * preview server start returning 404 the moment someone runs a build.
+ * Clean only this script's own outputs, never all of dist/, which also holds
+ * the packaged extension zips.
  *
  * `wrangler dev` keeps a handle on dist/public while running, which makes rmdir
  * fail with EBUSY on Windows; in that case clear the contents instead.
  */
-async function clean(dir) {
+async function clean(dir: string): Promise<void> {
   if (!existsSync(dir)) return;
   try {
     await rm(dir, { recursive: true, force: true });
   } catch (error) {
-    if (error.code !== "EBUSY" && error.code !== "EPERM") throw error;
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "EBUSY" && code !== "EPERM") throw error;
     for (const entry of await readdir(dir)) {
       await rm(path.join(dir, entry), { recursive: true, force: true });
     }

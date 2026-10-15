@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { localizePage } from "../scripts/localize-page.mjs";
+import { localizePage } from "../scripts/localize-page.ts";
 
 const page = `<html lang="en">
 <!-- lang:en --><title>Hello</title><!-- /lang -->
