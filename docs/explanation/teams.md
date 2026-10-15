@@ -11,18 +11,19 @@ Company ─ Team ─ Project ─ Environment (dev, staging, prod) ─ Secret
                     └─ linked GitHub repositories, each granted some environments
 ```
 
-Company owners and admins manage people and billing. A team's members see its
-projects; each member reads or also writes. Admins who are not in a team cannot
-read its projects.
+Company owners and admins manage people and billing. A team's members read and
+write its secrets; admins who are in the team also create, change and delete
+its projects. Admins who are not in a team cannot read its projects. Read-only
+access per project comes later.
 
 ## Keys
 
-| Key                           | Encrypts                                    | Held by                                          |
-| ----------------------------- | ------------------------------------------- | ------------------------------------------------ |
-| Account key pair (ECDH P-256) | Team keys wrapped for this account          | Private key sealed under the account's vault key |
-| Team key                      | Project keys                                | Wrapped for each member's public key             |
-| Project key                   | Secrets of every environment in the project | Sealed under the team key                        |
-| Repository key                | The environments a repository is granted    | Kept by the repository as a GitHub secret        |
+| Key                           | Encrypts                                    | Held by                                                           |
+| ----------------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| Account key pair (ECDH P-256) | Team keys wrapped for this account          | Private key sealed under the account's vault key                  |
+| Team key                      | Project keys                                | Wrapped for each member's public key                              |
+| Project key                   | Secrets of every environment in the project | Sealed under the team key, with the project name and environments |
+| Repository key                | The environments a repository is granted    | Kept by the repository as a GitHub secret                         |
 
 Wrapping for a public key is ECDH with a fresh ephemeral key, HKDF-SHA-256 over
 the shared secret with both public keys as salt, and AES-256-GCM with a context
@@ -32,6 +33,18 @@ be passed off as another team's.
 Removing a member creates new team and project keys and re-encrypts the
 secrets: the person who left may have kept the old keys, and nothing else
 guarantees they cannot read what is written later.
+
+### Projects and secrets
+
+A project is one record sealed under the team key: its name, its environments
+(each with a random id and a name, Development, Staging and Production to start)
+and its own random key. A secret is a name, a value and an optional note sealed
+under the project key. Every seal names what it belongs to as associated data:
+`personal-vault/project/<project>/<generation>` and
+`personal-vault/secret/<project>/<generation>/<environment>/<secret>`. The server
+cannot move a production secret into development, swap two secrets, or replay
+one from an older key: the first open fails. The server also refuses to move a
+secret's environment outright. It sees ids, counts and timestamps, never names.
 
 ### Re-keying
 
@@ -45,8 +58,14 @@ time, cannot leave someone with a stale key. Each generation has its own
 wrapping context (`personal-vault/team-key/<team>/<generation>`; generation 0
 keeps the original string), so a wrapped key from an older generation does not
 open as the current one. Adding a member names the generation it wrapped for and
-is refused if the team has moved on. Once projects exist (phase 2), re-keying
-also re-wraps their keys under the new team key.
+is refused if the team has moved on.
+
+Re-keying also gives every project a new key and re-encrypts every secret of
+the team on the admin's device, and the server swaps all of it in one
+transaction: the team key, each project and each secret, refusing the set if a
+project or secret is missing or extra. Until that happens, the team is flagged
+and every write to its projects is refused, so nothing new is written under keys
+the departed member holds.
 
 ## Plans
 
@@ -162,6 +181,7 @@ treated as enough on its own:
 
 1. Account key pairs (done), per-tenant stores (vault items move to `user:<id>`),
    companies, teams, invitations, roles, audit log.
-2. Projects, environments, secrets, re-keying on removal, fingerprints in the UI.
+2. Projects, environments, secrets, re-keying on removal, fingerprints in the UI
+   (done: a fingerprint check before adding someone to a team).
 3. Repository links, the `1pw` CLI and the GitHub Action.
 4. Other targets (Cloudflare, Vercel), SSO and SCIM, billing.

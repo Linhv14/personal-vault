@@ -16,11 +16,12 @@ export function ActivityTab() {
 
   const teamName = (id: string) =>
     detail.teams.find((team) => team.id === id)?.name ?? t("orgs.deleted_team");
-  const target = (event: AuditEvent) => {
-    if (!event.target || event.target === event.actor) return "";
-    const [first, second] = event.target.split(":");
-    if (second) return ` ${emailOf(second)} → ${teamName(first ?? "")}`;
-    return ` ${event.action.startsWith("team.") ? teamName(event.target) : emailOf(event.target)}`;
+  const target = ({ action, actor, target }: AuditEvent) => {
+    if (!target || target === actor || action.startsWith("secret")) return "";
+    const [first = "", second] = target.split(":");
+    if (action.startsWith("project.")) return ` ${teamName(first)}`;
+    if (second) return ` ${emailOf(second)} → ${teamName(first)}`;
+    return ` ${action.startsWith("team.") ? teamName(target) : emailOf(target)}`;
   };
 
   return (

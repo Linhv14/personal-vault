@@ -10,6 +10,16 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Projects and secrets (Organization → Projects, in the extension and the
+  dashboard): a team's projects hold secrets per environment (Development,
+  Staging, Production), encrypted end to end with a project key sealed under the
+  team key. Add, edit, reveal, copy and delete secrets, import a .env file and
+  copy an environment as .env. Every read and write is in the activity log,
+  without names or values.
+- Re-keying a team now also rotates its project keys and re-encrypts every
+  secret; writes are refused until a team that lost a member has a new key.
+- Adding someone to a team shows their key fingerprint to compare first.
+
 - Web dashboard at `/app`: sign in with the master password to manage
   organizations (members, invitations, teams, re-keying, activity) outside the
   extension. Keys stay in the page's memory and it signs out after 15 minutes

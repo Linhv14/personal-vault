@@ -19,4 +19,11 @@ export const ACTION_LABEL: Record<string, MessageKey> = {
   "team.deleted": "orgs.audit_team_deleted",
   "team.rekeyed": "orgs.audit_team_rekeyed",
   "org.owner_transferred": "orgs.audit_owner_transferred",
+  "project.created": "orgs.audit_project_created",
+  "project.updated": "orgs.audit_project_updated",
+  "project.deleted": "orgs.audit_project_deleted",
+  "secret.written": "orgs.audit_secret_written",
+  "secret.deleted": "orgs.audit_secret_deleted",
+  "secrets.read": "orgs.audit_secrets_read",
+  "team.vault_read": "orgs.audit_team_vault_read",
 };

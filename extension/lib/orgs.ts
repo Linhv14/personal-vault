@@ -11,8 +11,8 @@ import {
   type InvitableRole,
   type OrgRole,
   type TeamView,
-  type WrappedKey,
 } from "../../src/core/org-model.js";
+import type { Bytes } from "../../src/core/bytes.js";
 import { request } from "./api.js";
 
 export { isOrgAdmin, planLimits } from "../../src/core/org-model.js";
@@ -123,9 +123,11 @@ export async function createTeam(orgId: string, name: string, me: Identity): Pro
   return id;
 }
 
-export async function teamKey(team: Team, me: Identity): Promise<Uint8Array> {
+export async function teamKey(team: Team, me: Identity): Promise<Bytes> {
   if (!team.wrappedKey) throw new Error("not in team");
-  return unwrapForRecipient(me, team.wrappedKey, teamKeyContext(team.id, team.generation));
+  return new Uint8Array(
+    await unwrapForRecipient(me, team.wrappedKey, teamKeyContext(team.id, team.generation)),
+  );
 }
 
 export async function addTeamMember(
@@ -144,25 +146,6 @@ export async function addTeamMember(
   await request(`/api/orgs/${orgId}/teams/${team.id}/members/${member.accountId}`, {
     method: "PUT",
     body: json({ wrappedKey, generation: team.generation }),
-  });
-}
-
-export async function rekeyTeam(orgId: string, team: Team, members: OrgMember[]): Promise<void> {
-  const generation = team.generation + 1;
-  const key = randomKey();
-  const wrappedKeys: Record<string, WrappedKey> = {};
-  for (const accountId of team.members) {
-    const publicKey = members.find((member) => member.accountId === accountId)?.publicKey;
-    if (!publicKey) throw new Error("member has no key yet");
-    wrappedKeys[accountId] = await wrapForRecipient(
-      publicKey,
-      key,
-      teamKeyContext(team.id, generation),
-    );
-  }
-  await request(`/api/orgs/${orgId}/teams/${team.id}/key`, {
-    method: "PUT",
-    body: json({ generation, wrappedKeys }),
   });
 }
 

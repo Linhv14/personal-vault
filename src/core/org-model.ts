@@ -64,13 +64,14 @@ export function teamKeyContext(teamId: string, generation: number): Bytes {
 export interface PlanLimits {
   seats: number;
   teams: number;
+  projects: number;
 }
 
-const FREE_PLAN: PlanLimits = { seats: 5, teams: 3 };
+const FREE_PLAN: PlanLimits = { seats: 5, teams: 3, projects: 5 };
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: FREE_PLAN,
-  team: { seats: 500, teams: 200 },
+  team: { seats: 500, teams: 200, projects: 1000 },
 };
 
 export function planLimits(plan: string): PlanLimits {

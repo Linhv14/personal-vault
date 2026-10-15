@@ -3,11 +3,12 @@ import {
   addTeamMember,
   createTeam,
   deleteTeam,
+  fingerprint,
   isOrgAdmin,
-  rekeyTeam,
   removeTeamMember,
   type Team,
 } from "../../lib/orgs.js";
+import { rekeyTeam } from "../../lib/projects.js";
 import { Button } from "../../ui/components/Button.js";
 import { Card } from "../../ui/components/Card.js";
 import { Icon } from "../../ui/components/Icon.js";
@@ -27,9 +28,12 @@ function TeamCard({ team }: { team: Team }) {
     event.preventDefault();
     const accountId = String(new FormData(event.currentTarget as HTMLFormElement).get("member"));
     const member = members.find((entry) => entry.accountId === accountId);
-    if (member) {
-      void run(() => addTeamMember(org.id, team, member, identity), "orgs.team_member_added");
-    }
+    if (!member?.publicKey) return;
+    void fingerprint(member.publicKey).then((print) => {
+      if (confirm(t("orgs.verify_fingerprint", { email: member.email, fingerprint: print }))) {
+        void run(() => addTeamMember(org.id, team, member, identity), "orgs.team_member_added");
+      }
+    });
   };
 
   const remove = () => {
@@ -60,7 +64,9 @@ function TeamCard({ team }: { team: Team }) {
             {admin && team.wrappedKey && (
               <Button
                 variant="primary"
-                onClick={() => void run(() => rekeyTeam(org.id, team, members), "orgs.rekeyed")}
+                onClick={() =>
+                  void run(() => rekeyTeam(org.id, team, members, identity), "orgs.rekeyed")
+                }
               >
                 {t("orgs.rekey")}
               </Button>

@@ -44,6 +44,11 @@ export type ApiErrorCode =
   | "orgs.team_limit"
   | "orgs.stale_team_key"
   | "orgs.team_changed"
+  | "orgs.invalid_project"
+  | "orgs.invalid_secret"
+  | "orgs.project_limit"
+  | "orgs.secret_limit"
+  | "orgs.rekey_required"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
@@ -97,6 +102,11 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.team_limit": "This plan allows no more teams",
   "orgs.stale_team_key": "The team key changed; reload and try again",
   "orgs.team_changed": "The team's members changed; reload and try again",
+  "orgs.invalid_project": "Invalid project id or content",
+  "orgs.invalid_secret": "Invalid secret id, environment or content",
+  "orgs.project_limit": "This plan allows no more projects",
+  "orgs.secret_limit": "This project has reached its secret limit",
+  "orgs.rekey_required": "Someone left this team; create a new team key before changing secrets",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",

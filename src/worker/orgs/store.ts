@@ -1,5 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
+import type { SealedData } from "../../core/crypto.js";
+import { MAX_SECRETS_PER_PROJECT } from "../../core/projects.js";
 import {
   isOrgAdmin,
   type AuditEvent,
@@ -10,9 +12,14 @@ import {
 } from "../../core/org-model.js";
 import { fail, now, ok, type Result } from "../http.js";
 import type { Env } from "../types.js";
+import { ProjectTables, type ProjectRecord, type SecretRecord } from "./project-tables.js";
 
 const AUDIT_PAGE = 100;
 const GENESIS = "genesis";
+
+function sameKeys(ids: string[], map: Record<string, unknown>): boolean {
+  return ids.length === Object.keys(map).length && ids.every((id) => id in map);
+}
 
 async function chainHash(
   previous: string,
@@ -27,6 +34,7 @@ async function chainHash(
 
 export class OrgStore extends DurableObject<Env> {
   private readonly sql: SqlStorage;
+  private readonly projects: ProjectTables;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -58,6 +66,7 @@ export class OrgStore extends DurableObject<Env> {
       );
     `);
     this.addColumn("teams", "key_generation INTEGER NOT NULL DEFAULT 0");
+    this.projects = new ProjectTables(this.sql);
   }
 
   private addColumn(table: string, definition: string) {
@@ -285,7 +294,12 @@ export class OrgStore extends DurableObject<Env> {
   async rekeyTeam(
     principal: Principal,
     teamId: string,
-    next: { generation: number; wrappedKeys: Record<string, WrappedKey> },
+    next: {
+      generation: number;
+      wrappedKeys: Record<string, WrappedKey>;
+      projects: Record<string, SealedData>;
+      secrets: Record<string, SealedData>;
+    },
     ip: string | null,
   ): Promise<Result<{ generation: number }>> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
@@ -303,7 +317,13 @@ export class OrgStore extends DurableObject<Env> {
     ) {
       return fail(409, "orgs.team_changed");
     }
+    const projectIds = this.projects.ofTeam(teamId).map((project) => project.id);
+    const secretIds = this.projects.secretsOfTeam(teamId).map((secret) => secret.id);
+    if (!sameKeys(projectIds, next.projects) || !sameKeys(secretIds, next.secrets)) {
+      return fail(409, "orgs.team_changed");
+    }
     this.ctx.storage.transactionSync(() => {
+      this.projects.reseal(next.projects, next.secrets);
       for (const accountId of members) {
         this.sql.exec(
           "UPDATE team_members SET wrapped_key = ? WHERE team_id = ? AND account_id = ?",
@@ -330,6 +350,183 @@ export class OrgStore extends DurableObject<Env> {
     await this.record(owner, "org.owner_transferred", successor, ip);
   }
 
+  private teamAccess(
+    principal: Principal,
+    teamId: string,
+    adminOnly: boolean,
+  ): Result<{ generation: number; rekeyNeeded: boolean }> {
+    if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
+    if (adminOnly && !isOrgAdmin(principal.role)) return fail(403, "orgs.forbidden");
+    const generation = this.generationOf(teamId);
+    if (generation === null) return fail(404, "orgs.not_found");
+    if (!this.inTeam(teamId, principal.accountId)) return fail(403, "orgs.not_in_team");
+    const rekeyNeeded =
+      this.sql
+        .exec<{ rekey_needed: number }>("SELECT rekey_needed FROM teams WHERE id = ?", teamId)
+        .one().rekey_needed === 1;
+    return ok({ generation, rekeyNeeded });
+  }
+
+  private writable(access: { generation: number; rekeyNeeded: boolean }, generation: number) {
+    if (access.rekeyNeeded) return fail<never>(409, "orgs.rekey_required");
+    if (generation !== access.generation) return fail<never>(409, "orgs.stale_team_key");
+    return null;
+  }
+
+  private projectAccess(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    adminOnly: boolean,
+  ): Result<{ generation: number; rekeyNeeded: boolean }> {
+    const access = this.teamAccess(principal, teamId, adminOnly);
+    if (!access.ok) return access;
+    if (this.projects.teamOf(projectId) !== teamId) return fail(404, "orgs.not_found");
+    return access;
+  }
+
+  async listProjects(
+    principal: Principal,
+    teamId: string,
+  ): Promise<Result<{ generation: number; rekeyNeeded: boolean; projects: ProjectRecord[] }>> {
+    const access = this.teamAccess(principal, teamId, false);
+    if (!access.ok) return access;
+    return ok({
+      generation: access.value.generation,
+      rekeyNeeded: access.value.rekeyNeeded,
+      projects: this.projects.ofTeam(teamId),
+    });
+  }
+
+  async createProject(
+    principal: Principal,
+    teamId: string,
+    project: { id: string; sealed: SealedData; generation: number },
+    maxProjects: number,
+    ip: string | null,
+  ): Promise<Result<{ id: string }>> {
+    const access = this.teamAccess(principal, teamId, true);
+    if (!access.ok) return access;
+    const refused = this.writable(access.value, project.generation);
+    if (refused) return refused;
+    if (this.projects.teamOf(project.id) !== null) return fail(409, "orgs.invalid_project");
+    if (this.projects.count() >= maxProjects) {
+      return fail(409, "orgs.project_limit", { limit: maxProjects });
+    }
+    this.projects.insert(teamId, project.id, project.sealed, principal.accountId, now());
+    await this.record(principal.accountId, "project.created", `${teamId}:${project.id}`, ip);
+    return ok({ id: project.id });
+  }
+
+  async updateProject(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    update: { sealed: SealedData; generation: number },
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    const access = this.projectAccess(principal, teamId, projectId, true);
+    if (!access.ok) return access;
+    const refused = this.writable(access.value, update.generation);
+    if (refused) return refused;
+    this.projects.replace(projectId, update.sealed);
+    await this.record(principal.accountId, "project.updated", `${teamId}:${projectId}`, ip);
+    return ok({ ok: true as const });
+  }
+
+  async deleteProject(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    const access = this.projectAccess(principal, teamId, projectId, true);
+    if (!access.ok) return access;
+    this.ctx.storage.transactionSync(() => this.projects.remove(projectId));
+    await this.record(principal.accountId, "project.deleted", `${teamId}:${projectId}`, ip);
+    return ok({ ok: true as const });
+  }
+
+  async readSecrets(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    environmentId: string,
+    ip: string | null,
+  ): Promise<Result<{ generation: number; secrets: SecretRecord[] }>> {
+    const access = this.projectAccess(principal, teamId, projectId, false);
+    if (!access.ok) return access;
+    const secrets = this.projects.secrets(projectId, environmentId);
+    await this.record(principal.accountId, "secrets.read", `${projectId}:${environmentId}`, ip);
+    return ok({ generation: access.value.generation, secrets });
+  }
+
+  async writeSecret(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    secret: { id: string; environmentId: string; sealed: SealedData; generation: number },
+    ip: string | null,
+  ): Promise<Result<{ id: string }>> {
+    const access = this.projectAccess(principal, teamId, projectId, false);
+    if (!access.ok) return access;
+    const refused = this.writable(access.value, secret.generation);
+    if (refused) return refused;
+    const existing = this.projects.secretLocation(secret.id);
+    if (existing) {
+      if (existing.projectId !== projectId || existing.environmentId !== secret.environmentId) {
+        return fail(409, "orgs.invalid_secret");
+      }
+    } else if (this.projects.secretCount(projectId) >= MAX_SECRETS_PER_PROJECT) {
+      return fail(409, "orgs.secret_limit", { limit: MAX_SECRETS_PER_PROJECT });
+    }
+    this.projects.putSecret({ ...secret, projectId }, principal.accountId, now());
+    await this.record(
+      principal.accountId,
+      "secret.written",
+      `${projectId}:${secret.environmentId}`,
+      ip,
+    );
+    return ok({ id: secret.id });
+  }
+
+  async deleteSecret(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    secretId: string,
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    const access = this.projectAccess(principal, teamId, projectId, false);
+    if (!access.ok) return access;
+    const existing = this.projects.secretLocation(secretId);
+    if (!existing || existing.projectId !== projectId) return fail(404, "orgs.not_found");
+    this.projects.deleteSecret(secretId);
+    await this.record(
+      principal.accountId,
+      "secret.deleted",
+      `${projectId}:${existing.environmentId}`,
+      ip,
+    );
+    return ok({ ok: true as const });
+  }
+
+  async teamVault(
+    principal: Principal,
+    teamId: string,
+    ip: string | null,
+  ): Promise<Result<{ generation: number; projects: ProjectRecord[]; secrets: SecretRecord[] }>> {
+    const access = this.teamAccess(principal, teamId, true);
+    if (!access.ok) return access;
+    const vault = {
+      generation: access.value.generation,
+      projects: this.projects.ofTeam(teamId),
+      secrets: this.projects.secretsOfTeam(teamId),
+    };
+    await this.record(principal.accountId, "team.vault_read", teamId, ip);
+    return ok(vault);
+  }
+
   async deleteTeam(
     principal: Principal,
     teamId: string,
@@ -340,6 +537,7 @@ export class OrgStore extends DurableObject<Env> {
     }
     if (!this.teamExists(teamId)) return fail(404, "orgs.not_found");
     this.ctx.storage.transactionSync(() => {
+      this.projects.removeTeam(teamId);
       this.sql.exec("DELETE FROM team_members WHERE team_id = ?", teamId);
       this.sql.exec("DELETE FROM teams WHERE id = ?", teamId);
     });

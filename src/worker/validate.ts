@@ -1,5 +1,7 @@
 import { fromBase64 } from "../core/bytes.js";
+import type { SealedData } from "../core/crypto.js";
 import type { WrappedKey } from "../core/org-model.js";
+import { MAX_PROJECT_BYTES, MAX_SECRET_BYTES } from "../core/projects.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,4 +47,12 @@ export function displayName(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const name = value.trim().replace(/\s+/g, " ");
   return name.length >= 1 && name.length <= 80 && !/\p{Cc}/u.test(name) ? name : null;
+}
+
+export function isSealedProject(value: unknown): value is SealedData {
+  return isSealed(value, MAX_PROJECT_BYTES);
+}
+
+export function isSealedSecret(value: unknown): value is SealedData {
+  return isSealed(value, MAX_SECRET_BYTES);
 }

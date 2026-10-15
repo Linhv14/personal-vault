@@ -1,53 +1,48 @@
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import {
   canChangeRoles,
   canInvite,
   canRemove,
   isInvitableRole,
   isOrgAdmin,
-  planLimits,
-  type Principal,
 } from "../../core/org-model.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
-import { MAX_ORGS_PER_ACCOUNT, OrgDirectory } from "../orgs/directory.js";
+import { MAX_ORGS_PER_ACCOUNT } from "../orgs/directory.js";
 import { sendInvitation } from "../orgs/invitations.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
-import { displayName, isUuid, isWrappedKey } from "../validate.js";
-
-const isGeneration = (value: unknown): value is number =>
-  Number.isSafeInteger(value) && (value as number) >= 0;
-
-async function limitsOf(c: Ctx, orgId: string) {
-  return planLimits((await directory(c).org(orgId))?.plan ?? "free");
-}
-
-type Ctx = Context<AppBindings>;
-type MemberHandler = (c: Ctx, member: Principal, orgId: string) => Promise<Response>;
+import { displayName, isUuid, isSealedProject, isSealedSecret, isWrappedKey } from "../validate.js";
+import {
+  admins,
+  asMember,
+  directory,
+  forbidden,
+  isGeneration,
+  limitsOf,
+  notFound,
+  param,
+  type Ctx,
+} from "./org-access.js";
+import projects from "./projects.js";
 
 const orgs = new Hono<AppBindings>();
+const MAX_RESEALED = 20_000;
 
-const param = (c: Ctx, name: string) => c.req.param(name) ?? "";
-const directory = (c: Ctx) => new OrgDirectory(c.env.DB);
-const notFound = (c: Ctx) => c.json(apiError("orgs.not_found"), 404);
-const forbidden = (c: Ctx) => c.json(apiError("orgs.forbidden"), 403);
-
-function asMember(handler: MemberHandler, rule: (member: Principal) => boolean = () => true) {
-  return async (c: Ctx) => {
-    const orgId = param(c, "orgId");
-    if (!isUuid(orgId)) return notFound(c);
-    const accountId = c.get("session").accountId;
-    const role = await directory(c).roleOf(orgId, accountId);
-    if (!role) return notFound(c);
-    const member = { accountId, role };
-    return rule(member) ? handler(c, member, orgId) : forbidden(c);
-  };
+function entriesOf<T>(
+  value: unknown,
+  max: number,
+  valid: (entry: unknown) => entry is T,
+): Record<string, T> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const entries = Object.entries(value);
+  if (entries.length > max) return null;
+  return entries.every(([id, entry]) => isUuid(id) && valid(entry))
+    ? (Object.fromEntries(entries) as Record<string, T>)
+    : null;
 }
-
-const admins = (member: Principal) => isOrgAdmin(member.role);
 
 orgs.get("/", async (c) => c.json({ orgs: await directory(c).orgsOf(c.get("session").accountId) }));
 
@@ -220,18 +215,26 @@ orgs.put(
 orgs.put(
   "/:orgId/teams/:teamId/key",
   asMember(async (c, member, orgId) => {
-    const { generation, wrappedKeys } = await readJson(c);
-    const entries =
-      typeof wrappedKeys === "object" && wrappedKeys !== null ? Object.entries(wrappedKeys) : [];
+    const body = await readJson(c);
+    const seats = (await limitsOf(c, orgId)).seats;
+    const wrappedKeys = entriesOf(body.wrappedKeys, seats, isWrappedKey);
+    const sealedProjects = entriesOf(body.projects ?? {}, MAX_RESEALED, isSealedProject);
+    const sealedSecrets = entriesOf(body.secrets ?? {}, MAX_RESEALED, isSealedSecret);
     if (
-      !isGeneration(generation) ||
-      entries.length === 0 ||
-      entries.length > (await limitsOf(c, orgId)).seats ||
-      !entries.every(([accountId, key]) => isUuid(accountId) && isWrappedKey(key))
+      !isGeneration(body.generation) ||
+      !wrappedKeys ||
+      Object.keys(wrappedKeys).length === 0 ||
+      !sealedProjects ||
+      !sealedSecrets
     ) {
       return c.json(apiError("orgs.invalid_team"), 400);
     }
-    const next = { generation, wrappedKeys: Object.fromEntries(entries) };
+    const next = {
+      generation: body.generation,
+      wrappedKeys,
+      projects: sealedProjects,
+      secrets: sealedSecrets,
+    };
     return respond(
       c,
       await orgStore(c.env, orgId).rekeyTeam(member, param(c, "teamId"), next, clientIp(c)),
@@ -253,6 +256,8 @@ orgs.delete(
     ),
   ),
 );
+
+orgs.route("/:orgId/teams/:teamId", projects);
 
 orgs.get(
   "/:orgId/audit",

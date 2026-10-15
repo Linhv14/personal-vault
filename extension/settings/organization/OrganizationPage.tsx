@@ -8,12 +8,18 @@ import { CreateOrgCard } from "./CreateOrgCard.js";
 import { InvitationsCard } from "./InvitationsCard.js";
 import { MembersTab } from "./MembersTab.js";
 import { OrgHeader } from "./OrgHeader.js";
+import { ProjectsTab } from "./projects/ProjectsTab.js";
 import { TeamsTab } from "./TeamsTab.js";
 import { useOrganization } from "./useOrganization.js";
 
-type Tab = "members" | "teams" | "activity";
+type Tab = "members" | "teams" | "projects" | "activity";
 
-const TAB_VIEWS = { members: MembersTab, teams: TeamsTab, activity: ActivityTab };
+const TAB_VIEWS = {
+  members: MembersTab,
+  teams: TeamsTab,
+  projects: ProjectsTab,
+  activity: ActivityTab,
+};
 
 export function OrganizationPage({ dashboardUrl }: { dashboardUrl?: string }) {
   const t = useT();
@@ -35,6 +41,7 @@ export function OrganizationPage({ dashboardUrl }: { dashboardUrl?: string }) {
     ? [
         ["members", t("orgs.members"), detail.members.length],
         ["teams", t("orgs.teams"), detail.teams.length],
+        ["projects", t("projects.tab"), null],
         ["activity", t("orgs.audit"), null],
       ]
     : [];
@@ -85,7 +92,10 @@ export function OrganizationPage({ dashboardUrl }: { dashboardUrl?: string }) {
                 role="tab"
                 aria-selected={tab === value}
                 className={tab === value ? "org-tab active" : "org-tab"}
-                onClick={() => setTab(value)}
+                onClick={() => {
+                  setTab(value);
+                  if (value === "activity") void run(async () => {});
+                }}
               >
                 {label}
                 {count !== null && <span className="org-tab-count">{count}</span>}
