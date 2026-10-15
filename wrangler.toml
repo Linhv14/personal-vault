@@ -26,9 +26,17 @@ migrations_dir = "migrations"
 name = "USER_STORE"
 class_name = "UserStore"
 
+[[durable_objects.bindings]]
+name = "ORG_STORE"
+class_name = "OrgStore"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["UserStore"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["OrgStore"]
 
 [[ratelimits]]
 name = "ANONYMOUS_RATE_LIMITER"

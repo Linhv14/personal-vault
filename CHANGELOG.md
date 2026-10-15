@@ -10,6 +10,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Organizations (server side): create one, invite people by email with a role,
+  accept invitations, manage roles and removal, create teams whose key is
+  wrapped for each member, and a hash-chained audit log. Each organization's
+  teams and log live in their own Durable Object.
 - Every account gets a key pair the first time the vault opens, the base for
   sharing secrets with teams. The private key is stored only sealed under the
   vault key.

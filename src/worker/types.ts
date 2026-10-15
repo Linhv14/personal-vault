@@ -1,8 +1,10 @@
+import type { OrgStore } from "./org-store.js";
 import type { UserStore } from "./user-store.js";
 
 export interface Env {
   DB: D1Database;
   USER_STORE: DurableObjectNamespace<UserStore>;
+  ORG_STORE: DurableObjectNamespace<OrgStore>;
   ASSETS: Fetcher;
   ANONYMOUS_RATE_LIMITER: RateLimit;
   REGISTRATION_RATE_LIMITER: RateLimit;

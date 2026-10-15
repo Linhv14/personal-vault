@@ -31,6 +31,15 @@ export type ApiErrorCode =
   | "auth.biometric_off"
   | "auth.biometric_failed"
   | "account.identity_exists"
+  | "orgs.not_found"
+  | "orgs.forbidden"
+  | "orgs.invalid_name"
+  | "orgs.invalid_invite"
+  | "orgs.invalid_role"
+  | "orgs.invalid_team"
+  | "orgs.already_member"
+  | "orgs.limit_reached"
+  | "orgs.not_in_team"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
@@ -71,6 +80,15 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.biometric_off": "Biometric unlock is off for this session",
   "auth.biometric_failed": "The biometric check did not pass",
   "account.identity_exists": "This account already has a key pair",
+  "orgs.not_found": "Organization, team or member not found",
+  "orgs.forbidden": "Your role does not allow this",
+  "orgs.invalid_name": "Use 1 to 80 characters",
+  "orgs.invalid_invite": "Enter a valid email address and role",
+  "orgs.invalid_role": "That role cannot be set",
+  "orgs.invalid_team": "Invalid team name or key",
+  "orgs.already_member": "That person is already a member",
+  "orgs.limit_reached": "This organization has reached its limit",
+  "orgs.not_in_team": "Only members of the team can add people to it",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",

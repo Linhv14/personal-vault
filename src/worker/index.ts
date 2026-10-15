@@ -5,6 +5,7 @@ import { apiError } from "./errors.js";
 import account from "./routes/account.js";
 import auth from "./routes/auth.js";
 import items from "./routes/items.js";
+import orgs, { invites } from "./routes/orgs.js";
 import logos from "./routes/logos.js";
 import shares from "./routes/shares.js";
 import { emailVerificationEnabled } from "./email-verification.js";
@@ -67,6 +68,10 @@ app.use("/api/auth/biometric", requireAuth);
 app.use("/api/auth/biometric/*", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
 app.use("/api/account/*", requireAuth);
+app.use("/api/orgs", requireAuth);
+app.use("/api/orgs/*", requireAuth);
+app.use("/api/invites", requireAuth);
+app.use("/api/invites/*", requireAuth);
 app.use("/api/auth/delete-account", requireAuth);
 
 // Creating a share needs a session; reading one must not, since the recipient
@@ -101,6 +106,8 @@ app.get("/api/config", (c) =>
 
 app.route("/api/auth", auth);
 app.route("/api/account", account);
+app.route("/api/orgs", orgs);
+app.route("/api/invites", invites);
 app.route("/api/items", items);
 app.route("/api/logo", logos);
 app.route("/api/shares", shares);
@@ -132,6 +139,7 @@ app.onError((error, c) => {
   return c.json(apiError("server.error"), 500);
 });
 
+export { OrgStore } from "./org-store.js";
 export { UserStore } from "./user-store.js";
 
 export default {

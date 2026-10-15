@@ -63,6 +63,16 @@ const STRINGS = {
       expiry: "It expires in 10 minutes.",
       ignore: "If you didn't request this, you can ignore this email.",
     },
+    invite: {
+      subject: (org: string) => `You're invited to ${org} on ${APP_NAME}`,
+      preheader: (inviter: string) => `${inviter} invited you to share secrets with the team.`,
+      heading: (org: string) => `Join ${org} on ${APP_NAME}`,
+      intro: (inviter: string, org: string) =>
+        `${inviter} invited you to ${org}. Teams there share passwords and CI secrets, encrypted end to end.`,
+      next: (site: string) =>
+        `Open ${APP_NAME} with this email address, or create an account at ${site}, then accept the invitation in Settings. It expires in 14 days.`,
+      ignore: "If you don't know the sender, ignore this email. Nothing happens unless you accept.",
+    },
     privacy: "Privacy policy",
   },
   vi: {
@@ -90,6 +100,17 @@ const STRINGS = {
       intro: `Có người đã chia sẻ một tài khoản với bạn qua ${APP_NAME}. Nhập mã này trên trang bạn đang mở.`,
       expiry: "Mã hết hạn sau 10 phút.",
       ignore: "Nếu bạn không yêu cầu mã này, hãy bỏ qua email.",
+    },
+    invite: {
+      subject: (org: string) => `Bạn được mời vào ${org} trên ${APP_NAME}`,
+      preheader: (inviter: string) => `${inviter} mời bạn cùng chia sẻ secret với team.`,
+      heading: (org: string) => `Tham gia ${org} trên ${APP_NAME}`,
+      intro: (inviter: string, org: string) =>
+        `${inviter} mời bạn vào ${org}. Các team ở đó chia sẻ mật khẩu và secret cho CI, được mã hoá đầu-cuối.`,
+      next: (site: string) =>
+        `Mở ${APP_NAME} bằng địa chỉ email này, hoặc tạo tài khoản tại ${site}, rồi chấp nhận lời mời trong Cài đặt. Lời mời hết hạn sau 14 ngày.`,
+      ignore:
+        "Nếu bạn không biết người gửi, hãy bỏ qua email này. Không có gì xảy ra nếu bạn không chấp nhận.",
     },
     privacy: "Chính sách quyền riêng tư",
   },
@@ -226,6 +247,25 @@ export function shareAccessEmail(context: EmailContext, code: string): RenderedE
         codeBlock(code) +
         paragraph(strings.expiry, "muted") +
         paragraph(strings.ignore, "small"),
+    }),
+  };
+}
+
+export function orgInviteEmail(context: EmailContext, org: string, inviter: string): RenderedEmail {
+  const strings = STRINGS[context.locale].invite;
+  const subject = strings.subject(org);
+  const heading = strings.heading(org);
+  const intro = strings.intro(inviter, org);
+  const next = strings.next(context.siteUrl);
+  return {
+    subject,
+    text: plainText(context, [heading, intro, next, strings.ignore]),
+    inlineImages: [LOGO],
+    html: layout(context, {
+      subject,
+      preheader: strings.preheader(inviter),
+      heading,
+      body: paragraph(intro) + paragraph(next) + paragraph(strings.ignore, "small"),
     }),
   };
 }

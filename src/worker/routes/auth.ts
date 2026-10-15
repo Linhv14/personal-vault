@@ -289,7 +289,19 @@ auth.post("/delete-account", async (c) => {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
 
-  const { USER_STORE } = c.env;
+  const { USER_STORE, ORG_STORE } = c.env;
+  const { results: memberships } = await c.env.DB.prepare(
+    "SELECT org_id FROM org_members WHERE account_id = ?",
+  )
+    .bind(accountId)
+    .all<{ org_id: string }>();
+  for (const { org_id } of memberships) {
+    await ORG_STORE.get(ORG_STORE.idFromName(`org:${org_id}`)).removeMember(
+      accountId,
+      accountId,
+      null,
+    );
+  }
   await USER_STORE.get(USER_STORE.idFromName(`user:${accountId}`)).destroy(accountId);
   await c.env.DB.batch([
     c.env.DB.prepare("DELETE FROM items WHERE account_id = ?").bind(accountId),

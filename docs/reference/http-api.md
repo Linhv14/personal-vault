@@ -240,6 +240,32 @@ Authenticated. Body `{ publicKey, wrappedPrivateKey }`. Stores the pair once;
 `409 account.identity_exists` afterwards, so a stolen session cannot swap in a
 key its holder controls.
 
+## Organizations
+
+All authenticated. Membership and roles live in D1; teams, wrapped team keys
+and the audit log live in the organization's Durable Object (`org:<id>`), which
+checks the caller's role again against its own copy. An organization the caller
+is not in answers `404 orgs.not_found`, never `403`, so its existence does not
+leak.
+
+| Method and path                                                       | Who                                              | Does                                                                                                                                                                                                          |
+| --------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/orgs`                                                       | anyone                                           | Organizations the caller belongs to, with their role                                                                                                                                                          |
+| `POST /api/orgs` `{ name }`                                           | anyone, up to 10 owned                           | Creates one; the caller is its owner                                                                                                                                                                          |
+| `GET /api/orgs/:id`                                                   | members                                          | The organization, its members (email, role, public key), pending invitations (admins only) and teams. Members see their own teams; admins see all team names but get a wrapped key only for teams they are in |
+| `POST /api/orgs/:id/invites` `{ email, role, locale? }`               | admins (owners for `admin`)                      | Invites an address for 14 days and emails it                                                                                                                                                                  |
+| `DELETE /api/orgs/:id/invites/:inviteId`                              | admins                                           | Withdraws an invitation                                                                                                                                                                                       |
+| `PATCH /api/orgs/:id/members/:accountId` `{ role }`                   | owner                                            | Makes someone admin or member                                                                                                                                                                                 |
+| `DELETE /api/orgs/:id/members/:accountId`                             | owner, admins for members, anyone for themselves | Removes them from the organization and its teams; affected teams are flagged for re-keying                                                                                                                    |
+| `POST /api/orgs/:id/teams` `{ name, wrappedKey }`                     | admins                                           | Creates a team; `wrappedKey` is the new team key wrapped for the caller                                                                                                                                       |
+| `PUT /api/orgs/:id/teams/:teamId/members/:accountId` `{ wrappedKey }` | admins who are in the team                       | Adds someone with the team key wrapped for their public key                                                                                                                                                   |
+| `DELETE /api/orgs/:id/teams/:teamId/members/:accountId`               | admins                                           | Removes them and flags the team for re-keying                                                                                                                                                                 |
+| `DELETE /api/orgs/:id/teams/:teamId`                                  | admins                                           | Deletes the team                                                                                                                                                                                              |
+| `GET /api/orgs/:id/audit?before=<seq>`                                | admins                                           | 100 most recent events before `seq`, and whether the hash chain verifies                                                                                                                                      |
+| `GET /api/invites`                                                    | anyone                                           | Invitations for the caller's email                                                                                                                                                                            |
+| `POST /api/invites/:id/accept`                                        | the invited address                              | Joins the organization with the invited role                                                                                                                                                                  |
+| `DELETE /api/invites/:id`                                             | the invited address                              | Declines                                                                                                                                                                                                      |
+
 ## Items
 
 All item endpoints require authentication. An item is a single sealed blob; the

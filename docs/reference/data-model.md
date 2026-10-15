@@ -179,3 +179,25 @@ days. Deleting an account removes its items, sessions and login attempts at
 once. A share is deleted when its last view is spent, when it is revoked, or by
 the cron after it expires. D1's 30-day point-in-time history still holds
 deleted rows until it rolls over.
+
+## Organizations (D1)
+
+| Table         | Columns                                                                   | Reveals                                       |
+| ------------- | ------------------------------------------------------------------------- | --------------------------------------------- |
+| `orgs`        | `id`, `name`, `plan`, `created_by`, `created_at`                          | The organization's name, in clear             |
+| `org_members` | `org_id`, `account_id`, `role`, `joined_at`                               | Who belongs where, with which role            |
+| `org_invites` | `id`, `org_id`, `email`, `role`, `invited_by`, `created_at`, `expires_at` | Invited addresses until they accept or expire |
+
+## Organization store: one Durable Object per organization
+
+`org:<orgId>` (class `OrgStore`) holds:
+
+| Table          | Content                                                                           | Reveals                                                                            |
+| -------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `members`      | Copy of the members and roles, checked on every call                              | Same as `org_members`                                                              |
+| `teams`        | `id`, `name`, `rekey_needed`, `created_at`                                        | Team names, in clear                                                               |
+| `team_members` | Team, account, the team key wrapped for that account's public key, who added them | Who is in which team; not the key                                                  |
+| `audit`        | `seq`, `at`, `actor`, `action`, `target`, `ip`, `hash`                            | Who did what, when and from where; never secret values or project and secret names |
+
+Each audit row's `hash` is SHA-256 over the previous row's hash and the event,
+so deleting or editing a row breaks every hash after it.
