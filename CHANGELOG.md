@@ -206,6 +206,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- The extension no longer offers to save, or fills, the master password on the
+  vault's own server (the dashboard at `/app`), and the dashboard clears the
+  password field before signing in so the browser has nothing to offer to save.
+  Its fields and button now share one width and height.
+
 - Touch ID unlock no longer fails with "didn't confirm it's you" when the popup
   asked for a second prompt while the first was still open. The server keeps a
   few open challenges per session and the extension never runs two prompts at

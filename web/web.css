@@ -18,6 +18,12 @@
 .sign-in-card h1 {
   font-size: 20px;
 }
+.sign-in-card input:not([type="checkbox"]),
 .sign-in-card .btn.primary {
   min-height: 40px;
+  font-size: 14px;
+}
+.sign-in-card > .btn.primary {
+  width: 100%;
+  margin: 4px 0 0;
 }

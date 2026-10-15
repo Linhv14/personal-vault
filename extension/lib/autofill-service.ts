@@ -1,6 +1,7 @@
 import { generatePassword } from "../../src/core/generator.js";
 import { withPasswordHistory } from "./item-types.js";
 import type { AutofillRequest, AutofillResponse, PendingPrompt } from "./autofill-protocol.js";
+import { getLocal } from "./storage.js";
 import {
   byLastUsed,
   markUsed,
@@ -89,12 +90,25 @@ function promptFor(
   };
 }
 
+async function isVaultServer(url: string): Promise<boolean> {
+  const { apiUrl } = await getLocal();
+  if (!apiUrl) return false;
+  try {
+    return new URL(url).origin === new URL(apiUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
 export async function handleAutofill(
   request: AutofillRequest,
   sender: TrustedSender,
 ): Promise<AutofillResponse> {
   switch (request.type) {
     case "autofill:suggest": {
+      if (await isVaultServer(sender.url)) {
+        return { ok: true, locked: false, suggestions: [], domain: sender.domain };
+      }
       const vault = await openVault();
       if (!vault) return { ok: true, locked: true };
       const suggestions = vault.items
@@ -119,7 +133,7 @@ export async function handleAutofill(
       return { ok: true, password: generatePassword({ length: 20 }).value };
 
     case "autofill:capture": {
-      if (!request.password) return { ok: true, prompt: null };
+      if (!request.password || (await isVaultServer(sender.url))) return { ok: true, prompt: null };
       const pending: PendingCapture = {
         domain: sender.domain,
         username: request.username || undefined,

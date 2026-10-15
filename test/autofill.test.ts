@@ -338,6 +338,20 @@ describe("capture and save", () => {
     });
   });
 
+  it("never offers to save or fill the master password on the vault's own server", async () => {
+    await unlockWith([GITHUB]);
+    const dashboard = sender("https://vault.test/app/")!;
+    expect(
+      await handleAutofill(
+        { type: "autofill:capture", username: "me@example.com", password: "master password" },
+        dashboard,
+      ),
+    ).toEqual({ ok: true, prompt: null });
+    expect(await handleAutofill({ type: "autofill:suggest" }, dashboard)).toMatchObject({
+      suggestions: [],
+    });
+  });
+
   it("stays quiet when the submitted password is already saved", async () => {
     await unlockWith([GITHUB]);
     const response = await handleAutofill(

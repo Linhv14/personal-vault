@@ -13,13 +13,16 @@ export function SignIn() {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
     const data = new FormData(form);
+    const password = form.elements.namedItem("password") as HTMLInputElement | null;
     setError(null);
     setWorking(true);
     try {
-      await signIn(String(data.get("email")).trim(), String(data.get("password")));
+      const secret = String(data.get("password"));
+      if (password) password.value = "";
+      await signIn(String(data.get("email")).trim(), secret);
     } catch (failure) {
       setError(describeError(failure, t));
-      (form.elements.namedItem("password") as HTMLInputElement | null)?.select();
+      password?.focus();
     } finally {
       setWorking(false);
     }
@@ -45,7 +48,7 @@ export function SignIn() {
         </label>
         <label className="field">
           <span className="field-label">{t("setup.master_password")}</span>
-          <input name="password" type="password" autoComplete="current-password" required />
+          <input name="password" type="password" autoComplete="off" required />
         </label>
         {error && (
           <p className="form-error" role="alert">
