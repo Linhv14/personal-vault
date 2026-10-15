@@ -1,7 +1,15 @@
 import type { TrustedSender } from "../autofill-service.js";
 import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
-import { newItemId, openVault, registrableDomain, saveItem, type VaultItem } from "../vault.js";
+import {
+  byLastUsed,
+  markUsed,
+  newItemId,
+  openVault,
+  registrableDomain,
+  saveItem,
+  type VaultItem,
+} from "../vault.js";
 import { createPasskey, signAssertion, type StoredPasskey } from "./authenticator.js";
 import type {
   CreateResponse,
@@ -53,11 +61,13 @@ async function query(
     const { hasPasskeys = true } = await getLocal();
     return { ok: true, state: "locked", hasPasskeys };
   }
-  const passkeys = passkeysFor(vault.items, rpId, allowCredentialIds).map(({ item, passkey }) => ({
-    credentialId: passkey.credentialId,
-    title: item.title,
-    userName: passkey.userName,
-  }));
+  const passkeys = passkeysFor(vault.items, rpId, allowCredentialIds)
+    .sort((a, b) => byLastUsed(a.item, b.item))
+    .map(({ item, passkey }) => ({
+      credentialId: passkey.credentialId,
+      title: item.title,
+      userName: passkey.userName,
+    }));
   const excluded =
     excludeCredentialIds.length > 0 &&
     passkeysFor(vault.items, rpId, excludeCredentialIds).length > 0;
@@ -114,10 +124,9 @@ async function get(
     ({ passkey }) => passkey.credentialId === credentialId,
   );
   if (!match) return { ok: false, error: "not_found" };
-  return {
-    ok: true,
-    assertion: await signAssertion(match.passkey, { origin, challenge: options.challenge }),
-  };
+  const assertion = await signAssertion(match.passkey, { origin, challenge: options.challenge });
+  await markUsed(vault.key, match.item).catch(() => {});
+  return { ok: true, assertion };
 }
 
 export async function handlePasskey(

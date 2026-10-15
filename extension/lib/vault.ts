@@ -66,6 +66,7 @@ export interface VaultItem {
   urlMatch?: "domain" | "host";
   fields?: CustomField[];
   passwordHistory?: PasswordChange[];
+  lastUsedAt?: number;
   expiresOn?: string;
   sshPublicKey?: string;
   sshPrivateKey?: string;
@@ -198,8 +199,25 @@ export async function saveItem(
   item: Omit<VaultItem, "createdAt" | "updatedAt"> & { createdAt?: number },
 ): Promise<VaultItem> {
   const now = Math.floor(Date.now() / 1000);
-  const payload: VaultItem = { ...item, createdAt: item.createdAt ?? now, updatedAt: now };
+  return storeItem(key, { ...item, createdAt: item.createdAt ?? now, updatedAt: now });
+}
 
+export const USE_RECORD_INTERVAL = 60;
+
+export async function markUsed(
+  key: CryptoKey,
+  item: VaultItem,
+  now = Math.floor(Date.now() / 1000),
+): Promise<void> {
+  if (item.lastUsedAt !== undefined && now - item.lastUsedAt < USE_RECORD_INTERVAL) return;
+  await storeItem(key, { ...item, lastUsedAt: now });
+}
+
+export function byLastUsed(a: VaultItem, b: VaultItem): number {
+  return (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);
+}
+
+async function storeItem(key: CryptoKey, payload: VaultItem): Promise<VaultItem> {
   const sealed = await sealJson(key, payload, itemAssociatedData(payload.id));
   const { updatedAt } = await api.putItem(payload.id, sealed);
 

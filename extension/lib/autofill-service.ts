@@ -2,6 +2,8 @@ import { generatePassword } from "../../src/core/generator.js";
 import { withPasswordHistory } from "./item-types.js";
 import type { AutofillRequest, AutofillResponse, PendingPrompt } from "./autofill-protocol.js";
 import {
+  byLastUsed,
+  markUsed,
   matchesSite,
   newItemId,
   openVault,
@@ -97,6 +99,7 @@ export async function handleAutofill(
       if (!vault) return { ok: true, locked: true };
       const suggestions = vault.items
         .filter((item) => matchesSite(item, sender.url))
+        .sort(byLastUsed)
         .map(({ id, title, username }) => ({ id, title, username }));
       return { ok: true, locked: false, suggestions, domain: sender.domain };
     }
@@ -108,6 +111,7 @@ export async function handleAutofill(
       if (!item?.password || !matchesSite(item, sender.url)) {
         return { ok: false, error: "no_match" };
       }
+      await markUsed(vault.key, item).catch(() => {});
       return { ok: true, credentials: { username: item.username, password: item.password } };
     }
 

@@ -199,6 +199,42 @@ describe("suggest and fill", () => {
   });
 });
 
+describe("last used", () => {
+  const WORK = {
+    id: "00000000-0000-4000-8000-000000000004",
+    title: "GitHub work",
+    url: "github.com",
+    username: "work@example.com",
+    password: "work-password",
+  };
+
+  it("records a fill without touching the modified date and suggests it first next time", async () => {
+    await unlockWith([GITHUB, WORK]);
+    const page = sender("https://github.com/login")!;
+    const before = await handleAutofill({ type: "autofill:suggest" }, page);
+    expect(before).toMatchObject({ suggestions: [{ id: GITHUB.id }, { id: WORK.id }] });
+
+    const [, workBefore] = await decryptAll(key);
+    await handleAutofill({ type: "autofill:fill", id: WORK.id }, page);
+    expect(puts).toEqual([WORK.id]);
+    const work = (await decryptAll(key)).find((item) => item.id === WORK.id)!;
+    expect(work.lastUsedAt).toBeGreaterThan(0);
+    expect(work.updatedAt).toBe(workBefore!.updatedAt);
+
+    expect(await handleAutofill({ type: "autofill:suggest" }, page)).toMatchObject({
+      suggestions: [{ id: WORK.id }, { id: GITHUB.id }],
+    });
+  });
+
+  it("writes at most once a minute per item", async () => {
+    await unlockWith([GITHUB]);
+    const page = sender("https://github.com/login")!;
+    await handleAutofill({ type: "autofill:fill", id: GITHUB.id }, page);
+    await handleAutofill({ type: "autofill:fill", id: GITHUB.id }, page);
+    expect(puts).toEqual([GITHUB.id]);
+  });
+});
+
 describe("capture and save", () => {
   it("offers to save a new login and stores it on save", async () => {
     await unlockWith([]);

@@ -1,5 +1,5 @@
 import { ITEM_TYPES, itemType, type ItemType } from "../lib/item-types.js";
-import { matchingItems, searchItems, type VaultItem } from "../lib/vault.js";
+import { byLastUsed, matchingItems, searchItems, type VaultItem } from "../lib/vault.js";
 import { vaultOf } from "../lib/vaults.js";
 import type { Scope, SortOrder } from "./state.js";
 
@@ -50,8 +50,12 @@ function sorted(items: VaultItem[], order: SortOrder, locale: string): VaultItem
   return [...items].sort((a, b) =>
     order === "name"
       ? a.title.localeCompare(b.title, locale, { sensitivity: "base" })
-      : (b.updatedAt ?? 0) - (a.updatedAt ?? 0),
+      : recency(b) - recency(a),
   );
+}
+
+function recency(item: VaultItem): number {
+  return Math.max(item.updatedAt ?? 0, item.lastUsedAt ?? 0);
 }
 
 export function listView(options: {
@@ -73,7 +77,7 @@ export function listView(options: {
     !options.query &&
     options.scope === "all" &&
     (options.type === "all" || options.type === "login");
-  const matched = showMatches ? matchingItems(found, options.tabUrl) : [];
+  const matched = showMatches ? matchingItems(found, options.tabUrl).sort(byLastUsed) : [];
   const matchedIds = new Set(matched.map((item) => item.id));
   return { matched, rest: found.filter((item) => !matchedIds.has(item.id)), scoped };
 }

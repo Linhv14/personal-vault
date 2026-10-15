@@ -15,6 +15,12 @@ form, or a prompt to unlock 1PW. It stays closed when a page focuses the field
 on load, and when nothing matches; the icon in the field opens it on demand.
 Typing closes it, ↓ moves into it, Enter picks a login and Esc closes it.
 
+The login used most recently on the site comes first, as it does for passkeys.
+Each fill records `lastUsedAt` inside the encrypted item, at most once a minute,
+so the order follows you to other devices. Recording it does not change the
+item's modified date. In the popup, **Recent** sorts by whichever is later, the
+last edit or the last use.
+
 ## What turning it on grants
 
 Turning it on in Settings asks Chrome for access to `https://*/*` and

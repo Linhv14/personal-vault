@@ -137,4 +137,30 @@ describe("passkey service", () => {
       ),
     ).toMatchObject({ ok: true, assertion: { credentialId } });
   });
+
+  it("lists the passkey used last first", async () => {
+    const ids: string[] = [];
+    for (const userName of ["first@example.com", "second@example.com"]) {
+      const created = await handlePasskey(
+        { type: "passkey:create", options: { ...OPTIONS, userName } },
+        page,
+      );
+      ids.push((created as { registration: { credentialId: string } }).registration.credentialId);
+    }
+    await handlePasskey(
+      {
+        type: "passkey:get",
+        options: { rpId: "example.com", challenge: OPTIONS.challenge, allowCredentialIds: [] },
+        credentialId: ids[1]!,
+      },
+      page,
+    );
+    const query = await handlePasskey(
+      { type: "passkey:query", rpId: "example.com", allowCredentialIds: [] },
+      page,
+    );
+    expect(query).toMatchObject({
+      passkeys: [{ userName: "second@example.com" }, { userName: "first@example.com" }],
+    });
+  });
 });
