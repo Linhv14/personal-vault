@@ -407,6 +407,12 @@ export const en = {
   "console.duplicates_found":
     "{count, plural, one {# secret has} other {# secrets have}} the same name as another in the same environment. The newest of each is kept.",
   "console.duplicates_removed": "Duplicates removed",
+  "console.kind": "Type",
+  "console.kind_secret": "Secret",
+  "console.kind_variable": "Variable",
+  "orgs.audit_secret_revealed": "revealed a secret in",
+  "orgs.audit_secret_copied": "copied a secret from",
+  "orgs.audit_secrets_exported": "copied every value of",
   "error.orgs.not_found": "Not found, or you are not a member.",
   "error.orgs.forbidden": "Your role does not allow this.",
   "error.orgs.invalid_name": "Use 1 to 80 characters.",

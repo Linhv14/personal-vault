@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { isEnvironmentId } from "../../core/projects.js";
+import { isEnvironmentId, SECRET_ACCESS, type SecretAccess } from "../../core/projects.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { clientIp } from "../request.js";
@@ -143,6 +143,27 @@ projects.put(
     const entry = secretEntry({ id: param(c, "secretId"), environmentId, sealed });
     if (!entry || !isGeneration(generation)) return invalidSecret(c);
     return respond(c, await write(c, member, orgId, generation, [entry]));
+  }),
+);
+
+projects.post(
+  "/projects/:projectId/access",
+  asMember(async (c, member, orgId) => {
+    const { environmentId, access } = await readJson(c);
+    if (!isEnvironmentId(environmentId) || !SECRET_ACCESS.includes(access as SecretAccess)) {
+      return invalidSecret(c);
+    }
+    return respond(
+      c,
+      await orgStore(c.env, orgId).noteSecretAccess(
+        member,
+        team(c),
+        project(c),
+        environmentId,
+        access as SecretAccess,
+        clientIp(c),
+      ),
+    );
   }),
 );
 

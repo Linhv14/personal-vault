@@ -1,11 +1,17 @@
 import { useState } from "preact/hooks";
-import { isSecretName, parseDotenv, type Environment } from "../../../src/core/projects.js";
+import {
+  isSecretName,
+  parseDotenv,
+  type Environment,
+  type SecretKind,
+} from "../../../src/core/projects.js";
 import type { Secret } from "../../lib/projects.js";
 import { useT } from "../../ui/i18n.js";
 import { Dialog, Field } from "../components.js";
 
 export interface SecretDraft {
   name: string;
+  kind: SecretKind;
   values: Record<string, string>;
 }
 
@@ -25,6 +31,7 @@ export function AddSecretDialog({
   const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [included, setIncluded] = useState<string[]>(selected);
+  const [kind, setKind] = useState<SecretKind>("secret");
   return (
     <Dialog
       title={t("projects.add_secret")}
@@ -43,9 +50,10 @@ export function AddSecretDialog({
         const values = Object.fromEntries(
           included.map((id) => [id, String(data.get(`value-${id}`) ?? "")]),
         );
-        onSave({ name, values });
+        onSave({ name, kind, values });
       }}
     >
+      <KindPicker value={kind} onChange={setKind} />
       <Field label={t("console.secret_name")}>
         <input
           name="name"
@@ -102,11 +110,12 @@ export function ImportDialog({
   environmentId: string;
   existing: Record<string, Secret[]>;
   onClose: () => void;
-  onImport: (environmentId: string, text: string) => void;
+  onImport: (environmentId: string, text: string, kind: SecretKind) => void;
 }) {
   const t = useT();
   const [text, setText] = useState("");
   const [target, setTarget] = useState(environmentId);
+  const [kind, setKind] = useState<SecretKind>("secret");
   const parsed = parseDotenv(text);
   const replaced = parsed.filter((entry) =>
     existing[target]?.some((secret) => secret.name === entry.name),
@@ -117,8 +126,9 @@ export function ImportDialog({
       submitLabel={t("console.import_count", { count: parsed.length })}
       busy={parsed.length === 0}
       onClose={onClose}
-      onSubmit={() => onImport(target, text)}
+      onSubmit={() => onImport(target, text, kind)}
     >
+      <KindPicker value={kind} onChange={setKind} />
       <Field label={t("console.environment")}>
         <select value={target} onChange={(event) => setTarget(event.currentTarget.value)}>
           {environments.map((env) => (
@@ -184,5 +194,31 @@ export function TypeToConfirmDialog({
         />
       </Field>
     </Dialog>
+  );
+}
+
+export function KindPicker({
+  value,
+  onChange,
+}: {
+  value: SecretKind;
+  onChange: (kind: SecretKind) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="segmented" role="radiogroup" aria-label={t("console.kind")}>
+      {(["secret", "variable"] as const).map((kind) => (
+        <button
+          key={kind}
+          type="button"
+          role="radio"
+          aria-checked={value === kind}
+          aria-selected={value === kind}
+          onClick={() => onChange(kind)}
+        >
+          {t(kind === "secret" ? "console.kind_secret" : "console.kind_variable")}
+        </button>
+      ))}
+    </div>
   );
 }

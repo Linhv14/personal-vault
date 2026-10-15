@@ -1,10 +1,12 @@
 import { useState } from "preact/hooks";
+import { isVariable, type SecretAccess, type SecretKind } from "../../../src/core/projects.js";
 import type { Secret } from "../../lib/projects.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
-import { When } from "../components.js";
+import { Badge, When } from "../components.js";
 import { toast, useConsole } from "../data.js";
+import { KindPicker } from "./project-dialogs.js";
 
 function copy(value: string, done: string) {
   void navigator.clipboard.writeText(value).then(() => toast(done));
@@ -15,21 +17,26 @@ function SecretRow({
   editable,
   onSave,
   onDelete,
+  onAccess,
 }: {
   secret: Secret;
   editable: boolean;
-  onSave: (value: string) => Promise<boolean>;
+  onSave: (value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: () => void;
+  onAccess: (access: SecretAccess) => void;
 }) {
   const t = useT();
   const { emailOf } = useConsole();
+  const variable = isVariable(secret);
   const [shown, setShown] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
+  const [kind, setKind] = useState<SecretKind>(secret.kind ?? "secret");
 
   return (
     <tr className={draft !== null ? "editing" : ""}>
       <td className="secret-name">
         <code>{secret.name}</code>
+        {variable && <Badge>{t("console.kind_variable")}</Badge>}
       </td>
       <td className="secret-value">
         {draft !== null ? (
@@ -37,7 +44,7 @@ function SecretRow({
             className="inline-edit"
             onSubmit={(event) => {
               event.preventDefault();
-              void onSave(draft).then((saved) => saved && setDraft(null));
+              void onSave(draft, kind).then((saved) => saved && setDraft(null));
             }}
           >
             <textarea
@@ -56,6 +63,7 @@ function SecretRow({
               }}
             />
             <div className="inline-edit-actions">
+              <KindPicker value={kind} onChange={setKind} />
               <button type="submit" className="btn primary sm">
                 {t("projects.save")}
               </button>
@@ -64,12 +72,19 @@ function SecretRow({
               </button>
             </div>
           </form>
+        ) : variable ? (
+          <span className="value-plain">
+            {secret.value || <span className="muted">{t("console.empty_value")}</span>}
+          </span>
         ) : (
           <button
             type="button"
             className={shown ? "value-toggle shown" : "value-toggle"}
             title={t(shown ? "projects.hide" : "projects.reveal")}
-            onClick={() => setShown(!shown)}
+            onClick={() => {
+              if (!shown) onAccess("revealed");
+              setShown(!shown);
+            }}
           >
             {shown
               ? secret.value || <span className="muted">{t("console.empty_value")}</span>
@@ -84,14 +99,21 @@ function SecretRow({
         <IconButton
           icon="copy"
           label={t("projects.copy")}
-          onClick={() => copy(secret.value, t("console.copied_name", { name: secret.name }))}
+          onClick={() => {
+            if (!variable) onAccess("copied");
+            copy(secret.value, t("console.copied_name", { name: secret.name }));
+          }}
         />
         {editable && (
           <>
             <IconButton
               icon="pencil"
               label={t("projects.edit")}
-              onClick={() => setDraft(secret.value)}
+              onClick={() => {
+                if (!variable) onAccess("revealed");
+                setKind(secret.kind ?? "secret");
+                setDraft(secret.value);
+              }}
             />
             <IconButton icon="trash" label={t("projects.delete_secret")} onClick={onDelete} />
           </>
@@ -107,12 +129,14 @@ export function SecretsTable({
   editable,
   onSave,
   onDelete,
+  onAccess,
 }: {
   secrets: Secret[];
   query: string;
   editable: boolean;
-  onSave: (secret: Secret, value: string) => Promise<boolean>;
+  onSave: (secret: Secret, value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: (secret: Secret) => void;
+  onAccess: (access: SecretAccess) => void;
 }) {
   const t = useT();
   const needle = query.trim().toLowerCase();
@@ -135,8 +159,9 @@ export function SecretsTable({
               key={secret.id}
               secret={secret}
               editable={editable}
-              onSave={(value) => onSave(secret, value)}
+              onSave={(value, kind) => onSave(secret, value, kind)}
               onDelete={() => onDelete(secret)}
+              onAccess={onAccess}
             />
           ))}
         </tbody>

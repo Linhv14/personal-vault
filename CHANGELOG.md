@@ -10,6 +10,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Variables and secrets: each entry has a type, chosen when adding, importing or
+  editing. Variables show their value; secrets stay masked, and revealing,
+  copying or exporting one is recorded in the activity log.
+
 - Environments can be added, renamed and deleted from a project page.
 
 - Projects and secrets (Organization → Projects, in the extension and the

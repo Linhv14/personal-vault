@@ -46,6 +46,18 @@ cannot move a production secret into development, swap two secrets, or replay
 one from an older key: the first open fails. The server also refuses to move a
 secret's environment outright. It sees ids, counts and timestamps, never names.
 
+### Variables and secrets
+
+Each entry is either a variable or a secret, and the type is sealed with the
+value. Variables (a public URL, a log level) show their value in the console.
+Secrets stay masked; revealing one, copying one, or copying an environment that
+contains one as `.env` is written to the activity log (`secret.revealed`,
+`secret.copied`, `secrets.exported`). The log entry comes from the client, so it
+records what people do in the console, not a guarantee: anyone in the team holds
+the project key and can decrypt every value. A secret that people cannot read at
+all needs a key people do not have, which is what CI-only environments in phase
+3 will be.
+
 ### Re-keying
 
 The server cannot make a new team key, so removal only flags the team. An

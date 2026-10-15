@@ -26,4 +26,7 @@ export const ACTION_LABEL: Record<string, MessageKey> = {
   "secret.deleted": "orgs.audit_secret_deleted",
   "secrets.read": "orgs.audit_secrets_read",
   "team.vault_read": "orgs.audit_team_vault_read",
+  "secret.revealed": "orgs.audit_secret_revealed",
+  "secret.copied": "orgs.audit_secret_copied",
+  "secrets.exported": "orgs.audit_secrets_exported",
 };

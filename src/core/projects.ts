@@ -20,10 +20,20 @@ export interface ProjectContent {
   key: string;
 }
 
+export type SecretKind = "secret" | "variable";
+
 export interface SecretContent {
   name: string;
   value: string;
   note?: string;
+  kind?: SecretKind;
+}
+
+export const SECRET_ACCESS = ["revealed", "copied", "exported"] as const;
+export type SecretAccess = (typeof SECRET_ACCESS)[number];
+
+export function isVariable(secret: SecretContent): boolean {
+  return secret.kind === "variable";
 }
 
 export interface SecretAddress {

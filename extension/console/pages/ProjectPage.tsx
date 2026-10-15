@@ -1,9 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   formatDotenv,
+  isVariable,
   MAX_ENVIRONMENTS,
   newEnvironment,
   parseDotenv,
+  type SecretKind,
 } from "../../../src/core/projects.js";
 import { describeError } from "../../../src/i18n/index.js";
 import { isOrgAdmin } from "../../lib/orgs.js";
@@ -13,6 +15,7 @@ import {
   deleteSecrets,
   importSecrets,
   listSecrets,
+  noteAccess,
   saveSecret,
   saveSecrets,
   updateProject,
@@ -122,17 +125,24 @@ export function ProjectPage({
         Object.entries(draft.values).map(async ([envId, value]) => {
           const current = await listSecrets(orgId, project, envId);
           const same = current.find((secret) => secret.name === draft.name);
-          return { id: same?.id, environmentId: envId, name: draft.name, value };
+          return {
+            id: same?.id,
+            environmentId: envId,
+            name: draft.name,
+            value,
+            kind: draft.kind,
+          };
         }),
       );
       await saveSecrets(orgId, project, writes);
       setModal(null);
     }, "projects.saved");
 
-  const importText = (envId: string, text: string) =>
+  const importText = (envId: string, text: string, kind: SecretKind) =>
     void mutate(async () => {
       const current = await listSecrets(orgId, project, envId);
-      await importSecrets(orgId, project, envId, current, parseDotenv(text));
+      const entries = parseDotenv(text).map((entry) => ({ ...entry, kind }));
+      await importSecrets(orgId, project, envId, current, entries);
       setModal(null);
     }, "projects.imported");
 
@@ -290,11 +300,15 @@ export function ProjectPage({
               type="button"
               className="btn ghost"
               disabled={!secrets?.[environment.id]?.length}
-              onClick={() =>
+              onClick={() => {
+                const list = secrets?.[environment.id] ?? [];
+                if (list.some((secret) => !isVariable(secret))) {
+                  void noteAccess(orgId, project, environment.id, "exported");
+                }
                 void navigator.clipboard
-                  .writeText(formatDotenv(secrets?.[environment.id] ?? []))
-                  .then(() => toast(t("projects.copied")))
-              }
+                  .writeText(formatDotenv(list))
+                  .then(() => toast(t("projects.copied")));
+              }}
             >
               <Icon name="copy" />
               {t("projects.copy_env")}
@@ -318,18 +332,20 @@ export function ProjectPage({
               secrets={secrets[environment.id] ?? []}
               query={query}
               editable={editable}
-              onSave={(secret, value) =>
+              onSave={(secret, value, kind) =>
                 mutate(
                   () =>
                     saveSecret(orgId, project, environment.id, {
                       id: secret.id,
                       name: secret.name,
                       value,
+                      kind,
                     }),
                   "projects.saved",
                 )
               }
               onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
+              onAccess={(access) => void noteAccess(orgId, project, environment.id, access)}
             />
           )
         ) : (

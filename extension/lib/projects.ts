@@ -8,6 +8,7 @@ import {
   sealProject,
   sealSecret,
   type ProjectContent,
+  type SecretAccess,
   type SecretContent,
 } from "../../src/core/projects.js";
 import { toBase64 } from "../../src/core/bytes.js";
@@ -160,8 +161,10 @@ export async function saveSecrets(
   writes: SecretWrite[],
 ): Promise<void> {
   const sealed = await Promise.all(
-    writes.map(async ({ id = crypto.randomUUID(), environmentId, name, value, note }) => {
-      const content: SecretContent = note ? { name, value, note } : { name, value };
+    writes.map(async ({ id = crypto.randomUUID(), environmentId, name, value, note, kind }) => {
+      const content: SecretContent = { name, value };
+      if (note) content.note = note;
+      if (kind === "variable") content.kind = kind;
       return {
         id,
         environmentId,
@@ -203,6 +206,18 @@ export async function importSecrets(
     })),
   );
   return entries.length;
+}
+
+export async function noteAccess(
+  orgId: string,
+  project: Project,
+  environmentId: string,
+  access: SecretAccess,
+): Promise<void> {
+  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/access`, {
+    method: "POST",
+    body: json({ environmentId, access }),
+  }).catch(() => {});
 }
 
 export async function deleteSecrets(

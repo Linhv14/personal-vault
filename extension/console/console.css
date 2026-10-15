@@ -728,6 +728,15 @@ a.cell-title:hover {
   white-space: pre-wrap;
   word-break: break-all;
 }
+.value-plain {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.secret-name .badge {
+  margin-left: 8px;
+}
 .inline-edit {
   display: flex;
   flex-direction: column;
@@ -735,7 +744,11 @@ a.cell-title:hover {
 }
 .inline-edit-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
+}
+.inline-edit-actions .segmented {
+  margin-right: auto;
 }
 tr.editing td {
   background: var(--accent-soft);

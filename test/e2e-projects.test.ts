@@ -15,6 +15,7 @@ import {
   importSecrets,
   listProjects,
   listSecrets,
+  noteAccess,
   rekeyTeam,
   deleteSecrets,
   saveSecret,
@@ -251,6 +252,33 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
     }
     expect(fetches.filter((call) => call.startsWith("POST"))).toHaveLength(2);
     expect(await listSecrets(orgId, project, development())).toHaveLength(before.length);
+  });
+
+  it("keeps a variable's type and logs every reveal of a secret", async () => {
+    as(member);
+    await saveSecret(orgId, project, development(), {
+      name: "PUBLIC_URL",
+      value: "https://example.com",
+      kind: "variable",
+    });
+    const stored = (await listSecrets(orgId, project, development())).find(
+      (secret) => secret.name === "PUBLIC_URL",
+    );
+    expect(stored?.kind).toBe("variable");
+
+    await noteAccess(orgId, project, development(), "revealed");
+    await noteAccess(orgId, project, development(), "exported");
+    const audit = await api(`/api/orgs/${orgId}/audit`, { token: owner.token });
+    const actions = audit.body.events.map((event: { action: string }) => event.action);
+    expect(actions.slice(0, 2)).toEqual(["secrets.exported", "secret.revealed"]);
+    expect(audit.body.events[0].target).toBe(`${project.id}:${development()}`);
+
+    const refused = await api(`/api/orgs/${orgId}/teams/${team.id}/projects/${project.id}/access`, {
+      method: "POST",
+      token: outsider.token,
+      body: JSON.stringify({ environmentId: development(), access: "revealed" }),
+    });
+    expect(refused.status).toBe(404);
   });
 
   it("lets members write secrets but not manage projects", async () => {

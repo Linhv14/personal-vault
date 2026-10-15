@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
 import type { SealedData } from "../../core/crypto.js";
-import { MAX_SECRETS_PER_PROJECT } from "../../core/projects.js";
+import { MAX_SECRETS_PER_PROJECT, type SecretAccess } from "../../core/projects.js";
 import {
   isOrgAdmin,
   type AuditEvent,
@@ -444,6 +444,25 @@ export class OrgStore extends DurableObject<Env> {
     if (!access.ok) return access;
     this.ctx.storage.transactionSync(() => this.projects.remove(projectId));
     await this.record(principal.accountId, "project.deleted", `${teamId}:${projectId}`, ip);
+    return ok({ ok: true as const });
+  }
+
+  async noteSecretAccess(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    environmentId: string,
+    access: SecretAccess,
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    const allowed = this.projectAccess(principal, teamId, projectId, false);
+    if (!allowed.ok) return allowed;
+    await this.record(
+      principal.accountId,
+      access === "exported" ? "secrets.exported" : `secret.${access}`,
+      `${projectId}:${environmentId}`,
+      ip,
+    );
     return ok({ ok: true as const });
   }
 
