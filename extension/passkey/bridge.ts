@@ -22,6 +22,12 @@ const NOT_ALLOWED: PageReply = {
   message: "The operation either timed out or was not allowed.",
 };
 
+const ALREADY_SAVED: PageReply = {
+  kind: "error",
+  name: "InvalidStateError",
+  message: "This passkey is already registered.",
+};
+
 let t: Translate = createTranslator("en");
 let activeId: string | null = null;
 let closeDialog: (() => void) | null = null;
@@ -69,14 +75,13 @@ function dialog(title: string, subtitle: string, onDismiss: () => void): HTMLEle
   closeDialog?.();
   const host = document.createElement("div");
   host.style.cssText =
-    "all: initial !important; position: fixed !important; inset: 0 !important; z-index: 2147483647 !important;";
+    "all: initial !important; position: fixed !important; top: 16px !important; right: 16px !important; z-index: 2147483647 !important;";
   const shadow = host.attachShadow({ mode: "closed" });
   const style = document.createElement("style");
   style.textContent = PASSKEY_STYLES;
-  const backdrop = element("div", "backdrop");
   const card = element("div", "card");
   card.setAttribute("role", "dialog");
-  card.setAttribute("aria-modal", "true");
+  card.setAttribute("aria-label", title);
   const head = element("div", "head");
   const heading = element("div", "heading");
   heading.append(element("strong", "title", title), element("span", "subtitle", subtitle));
@@ -85,8 +90,7 @@ function dialog(title: string, subtitle: string, onDismiss: () => void): HTMLEle
   head.append(logo(28), heading, close);
   const body = element("div", "body");
   card.append(head, body);
-  backdrop.append(card);
-  shadow.append(style, backdrop);
+  shadow.append(style, card);
   (document.body ?? document.documentElement).append(host);
 
   const onKey = (event: KeyboardEvent) => {
@@ -100,6 +104,17 @@ function dialog(title: string, subtitle: string, onDismiss: () => void): HTMLEle
     closeDialog = null;
   };
   return body;
+}
+
+const SAVED_NOTICE_MS = 2500;
+
+function savedNotice(site: string): void {
+  const body = dialog(t("passkey.saved"), site, () => closeDialog?.());
+  body.remove();
+  const close = closeDialog;
+  setTimeout(() => {
+    if (closeDialog === close) close?.();
+  }, SAVED_NOTICE_MS);
 }
 
 function actions(...buttons: HTMLButtonElement[]): HTMLElement {
@@ -146,7 +161,11 @@ function failed(id: string, site: string): void {
 }
 
 async function handleCreate(id: string, request: CreateRequest): Promise<void> {
-  const query = await send("passkey:query", { rpId: request.options.rpId, allowCredentialIds: [] });
+  const query = await send("passkey:query", {
+    rpId: request.options.rpId,
+    allowCredentialIds: [],
+    excludeCredentialIds: request.options.excludeCredentialIds,
+  });
   if (activeId !== id) return;
   if (!query.ok) return reply(id, { kind: "fallback" });
   if (query.state === "locked") {
@@ -154,6 +173,16 @@ async function handleCreate(id: string, request: CreateRequest): Promise<void> {
   }
 
   const site = query.rpId;
+  if (query.excluded) {
+    const exists = dialog(t("passkey.exists_title"), request.options.userName, () =>
+      reply(id, ALREADY_SAVED),
+    );
+    exists.append(
+      element("p", "hint", t("passkey.exists_hint", { site })),
+      actions(button(t("passkey.exists_ok"), true, () => reply(id, ALREADY_SAVED))),
+    );
+    return;
+  }
   const body = dialog(t("passkey.save_title", { site }), request.options.userName, () =>
     reply(id, NOT_ALLOWED),
   );
@@ -161,14 +190,11 @@ async function handleCreate(id: string, request: CreateRequest): Promise<void> {
     save.disabled = true;
     const result = await send("passkey:create", { options: request.options });
     if (activeId !== id) return;
-    if (result.ok) return reply(id, { kind: "registration", registration: result.registration });
-    if (result.error === "excluded") {
-      return reply(id, {
-        kind: "error",
-        name: "InvalidStateError",
-        message: "This passkey is already registered.",
-      });
+    if (result.ok) {
+      reply(id, { kind: "registration", registration: result.registration });
+      return savedNotice(site);
     }
+    if (result.error === "excluded") return reply(id, ALREADY_SAVED);
     failed(id, site);
   });
   body.append(actions(save), other(id));

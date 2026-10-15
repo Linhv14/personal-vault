@@ -130,7 +130,11 @@ function failure(reply: Extract<PageReply, { kind: "error" }>): DOMException {
 
 credentials.create = async function create(options?: CredentialCreationOptions) {
   const publicKey = options?.publicKey;
-  if (!publicKey || !publicKey.pubKeyCredParams.some((param) => param.alg === ES256)) {
+  if (
+    !publicKey ||
+    !publicKey.pubKeyCredParams.some((param) => param.alg === ES256) ||
+    publicKey.authenticatorSelection?.authenticatorAttachment === "cross-platform"
+  ) {
     return nativeCreate(options);
   }
   const reply = await ask(
@@ -176,3 +180,11 @@ credentials.get = async function get(options?: CredentialRequestOptions) {
   if (reply.kind !== "assertion") throw new DOMException("Unexpected reply", "UnknownError");
   return assertionCredential(reply.assertion);
 };
+
+if (typeof PublicKeyCredential !== "undefined") {
+  Object.defineProperty(PublicKeyCredential, "isUserVerifyingPlatformAuthenticatorAvailable", {
+    value: async () => true,
+    configurable: true,
+    writable: true,
+  });
+}

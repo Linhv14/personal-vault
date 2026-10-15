@@ -6,16 +6,16 @@ export const PASSKEY_STYLES = `${TOKENS}
 [hidden] { display: none !important; }
 .logo { display: inline-block; flex-shrink: 0; }
 .logo svg { display: block; width: 100%; height: 100%; }
-.backdrop {
-  position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center;
-  padding-top: 12vh; background: rgb(0 0 0 / 0.35);
-}
 .card {
-  width: min(380px, calc(100vw - 32px)); padding: 20px; border-radius: 16px;
+  width: min(360px, calc(100vw - 32px)); padding: 16px; border-radius: 16px;
   border: 1px solid var(--border); background: var(--card); color: var(--text);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3); font-size: 14px; line-height: 1.45;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.22); font-size: 14px; line-height: 1.45;
+  animation: enter 160ms ease-out;
 }
-.head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.head { display: flex; align-items: center; gap: 12px; }
+.body:not(:empty) { margin-top: 14px; }
+@keyframes enter { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .card { animation: none; } }
 .heading { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .title { font-size: 15px; font-weight: 650; }
 .subtitle { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

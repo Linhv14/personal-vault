@@ -40,7 +40,11 @@ function itemFor(items: VaultItem[], origin: string, userName: string): VaultIte
 
 async function query(
   origin: string,
-  { rpId: requested, allowCredentialIds }: PasskeyMessages["passkey:query"]["request"],
+  {
+    rpId: requested,
+    allowCredentialIds,
+    excludeCredentialIds = [],
+  }: PasskeyMessages["passkey:query"]["request"],
 ): Promise<QueryResponse> {
   const rpId = resolveRpId(origin, requested);
   if (!rpId) return { ok: false, error: "invalid_rp" };
@@ -54,7 +58,10 @@ async function query(
     title: item.title,
     userName: passkey.userName,
   }));
-  return { ok: true, state: "ready", rpId, passkeys };
+  const excluded =
+    excludeCredentialIds.length > 0 &&
+    passkeysFor(vault.items, rpId, excludeCredentialIds).length > 0;
+  return { ok: true, state: "ready", rpId, passkeys, excluded };
 }
 
 async function create(

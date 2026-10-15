@@ -30,6 +30,22 @@ page script (MAIN world)        isolated script            service worker
   real origin, so a signature cannot be replayed elsewhere.
 - **Consent is a real click** in a dialog the page cannot read or script.
 
+## The prompt
+
+The prompt is a small panel in the top-right corner, like the browser's own
+password prompts, not a modal over the page: the site stays readable and
+usable while it is open. It offers **Save in 1PW** when a site creates a
+passkey and the saved accounts when it asks for one. After a save it confirms
+for a moment and closes. When the site lists a credential 1PW already holds in
+`excludeCredentials`, the panel says the passkey is already saved instead of
+offering a second one, and the site gets the `InvalidStateError` the spec asks
+for.
+
+Sites often check `PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`
+before offering a passkey at all. With autofill on, 1PW answers yes, since it
+is one; without that, sites on machines with no Touch ID or Windows Hello never
+ask.
+
 ## What is stored
 
 A passkey is an ECDSA P-256 key pair (ES256). The private key, the credential
@@ -46,8 +62,9 @@ Attestation is `none`.
 
 - **Use another device** in the dialog hands the request back to the browser,
   for a security key, a phone, or the platform's own passkeys.
-- Requests in iframes, requests without ES256, and conditional (autofill-style)
-  requests go straight to the browser.
+- Requests in iframes, requests without ES256, registrations that ask for a
+  `cross-platform` authenticator (a security key), and conditional
+  (autofill-style) requests go straight to the browser.
 - A sign-in on a site where 1PW has no passkey goes straight to the browser
   without a dialog.
 - If 1PW is locked and the vault holds no passkeys, the browser handles the

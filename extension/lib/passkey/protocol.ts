@@ -43,7 +43,7 @@ type Failure<E extends string> = { ok: false; error: E | "invalid_rp" | "unavail
 
 export type QueryResponse =
   | { ok: true; state: "locked"; hasPasskeys: boolean }
-  | { ok: true; state: "ready"; rpId: string; passkeys: PasskeyOption[] }
+  | { ok: true; state: "ready"; rpId: string; passkeys: PasskeyOption[]; excluded: boolean }
   | Failure<never>;
 export type CreateResponse =
   { ok: true; registration: RegistrationJSON } | Failure<"locked" | "excluded">;
@@ -51,7 +51,7 @@ export type GetResponse = { ok: true; assertion: AssertionJSON } | Failure<"lock
 
 export interface PasskeyMessages {
   "passkey:query": {
-    request: { rpId?: string; allowCredentialIds: string[] };
+    request: { rpId?: string; allowCredentialIds: string[]; excludeCredentialIds?: string[] };
     response: QueryResponse;
   };
   "passkey:create": { request: { options: CreateOptions }; response: CreateResponse };
