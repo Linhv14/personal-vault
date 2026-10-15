@@ -728,6 +728,55 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       expect(refused.body.code).toBe("auth.biometric_failed");
     });
 
+    it("accepts a signature over any recent challenge once", async () => {
+      const rpId = "eepgmbamigmadeddhcoldncaolikeagm";
+      const origin = `chrome-extension://${rpId}`;
+      const { registration, passkey } = await createPasskey({
+        rpId,
+        origin,
+        challenge: "AA",
+        userHandle: "dXNlcg",
+        userName: "me",
+      });
+      const set = await api("/api/auth/biometric", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({
+          credentialId: registration.credentialId,
+          publicKey: registration.publicKey,
+          algorithm: registration.publicKeyAlgorithm,
+          rpId,
+          origin,
+        }),
+      });
+      const first = await api("/api/auth/biometric/challenge", { method: "POST", token });
+      const second = await api("/api/auth/biometric/challenge", { method: "POST", token });
+      expect(first.body.challenge).not.toBe(second.body.challenge);
+
+      const signed = await signAssertion(passkey, { origin, challenge: first.body.challenge });
+      const unlocked = await api("/api/auth/biometric/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify(signed),
+      });
+      expect(unlocked.status).toBe(200);
+      expect(unlocked.body.bioKey).toBe(set.body.bioKey);
+      const replay = await api("/api/auth/biometric/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify(signed),
+      });
+      expect(replay.status).toBe(403);
+
+      const later = await signAssertion(passkey, { origin, challenge: second.body.challenge });
+      const alsoUnlocked = await api("/api/auth/biometric/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify(later),
+      });
+      expect(alsoUnlocked.status).toBe(200);
+    });
+
     it("only registers an extension origin with its own RP ID", async () => {
       const result = await api("/api/auth/biometric", {
         method: "PUT",

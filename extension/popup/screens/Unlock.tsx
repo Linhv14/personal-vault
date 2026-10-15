@@ -19,6 +19,7 @@ export function Unlock({ email }: { email: string }) {
   const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [prompting, setPrompting] = useState(false);
   const [mode, setMode] = useState<"pin" | "password" | null>(null);
 
   const [biometric, setBiometric] = useState(false);
@@ -39,7 +40,7 @@ export function Unlock({ email }: { email: string }) {
 
   const useBiometric = async (automatic = false) => {
     setError(null);
-    setWorking(true);
+    setPrompting(true);
     try {
       await finish(await unlockWithBiometric());
     } catch (failure) {
@@ -54,7 +55,7 @@ export function Unlock({ email }: { email: string }) {
         setError(describeError(failure, t));
       }
     } finally {
-      setWorking(false);
+      setPrompting(false);
     }
   };
 
@@ -107,24 +108,32 @@ export function Unlock({ email }: { email: string }) {
 
   return (
     <AuthLayout id="screen-unlock">
-      <div className="auth-heading">
-        <h1>{t("unlock.submit")}</h1>
+      <div className={biometric ? "auth-heading centered" : "auth-heading"}>
+        <h1>{t("unlock.title")}</h1>
         <p className="hint">{email}</p>
       </div>
       {biometric && (
-        <button
-          id="bio-unlock"
-          className="primary bio-button"
-          type="button"
-          disabled={working}
-          onClick={() => void useBiometric(false)}
-        >
-          <Icon name="fingerprint" />
-          {t("bio.unlock", { method })}
-        </button>
+        <>
+          <button
+            id="bio-unlock"
+            className={prompting ? "bio-ring working" : "bio-ring"}
+            type="button"
+            disabled={working || prompting}
+            aria-label={t("bio.unlock", { method })}
+            title={t("bio.unlock", { method })}
+            onClick={() => void useBiometric(false)}
+          >
+            <Icon name="fingerprint" />
+          </button>
+          <p className="or-divider">{t("unlock.or")}</p>
+        </>
       )}
       {mode === "pin" && (
-        <form id="form-pin-unlock" className="stack" onSubmit={(event) => void submitPin(event)}>
+        <form
+          id="form-pin-unlock"
+          className={biometric ? "stack unlock-inline" : "stack"}
+          onSubmit={(event) => void submitPin(event)}
+        >
           <input
             name="pin"
             type="password"
@@ -135,7 +144,7 @@ export function Unlock({ email }: { email: string }) {
             placeholder={t("pin.placeholder")}
             aria-label={t("pin.placeholder")}
             required
-            autoFocus
+            autoFocus={!biometric}
           />
           <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
             {t(working ? "unlock.working" : "unlock.submit")}
@@ -154,7 +163,7 @@ export function Unlock({ email }: { email: string }) {
       )}
       <form
         id="form-unlock"
-        className="stack"
+        className={biometric ? "stack unlock-inline" : "stack"}
         hidden={mode !== "password"}
         onSubmit={(event) => void submit(event)}
       >
@@ -164,7 +173,7 @@ export function Unlock({ email }: { email: string }) {
           autoComplete="current-password"
           placeholder={t("setup.master_password")}
           required
-          autoFocus={mode === "password"}
+          autoFocus={mode === "password" && !biometric}
         />
         <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
           {t(working ? "unlock.working" : "unlock.submit")}

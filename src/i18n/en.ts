@@ -241,8 +241,10 @@ export const en = {
   "error.orgs.already_member": "That person is already a member.",
   "error.orgs.limit_reached": "The limit for this organization is reached.",
   "error.orgs.not_in_team": "Only members of the team can add people to it.",
+  "unlock.title": "Unlock",
   "unlock.submit": "Unlock",
   "unlock.working": "Unlocking…",
+  "unlock.or": "or",
   "unlock.reset": "Use another account",
   "unlock.reset_confirm":
     "Erase the configuration and data cached on this machine? The vault on the server is untouched.",

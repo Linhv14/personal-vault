@@ -240,8 +240,10 @@ export const vi: Catalogue = {
   "error.orgs.already_member": "Người này đã là thành viên.",
   "error.orgs.limit_reached": "Tổ chức đã chạm giới hạn.",
   "error.orgs.not_in_team": "Chỉ thành viên của team mới thêm được người khác.",
+  "unlock.title": "Mở khoá",
   "unlock.submit": "Mở",
   "unlock.working": "Đang mở…",
+  "unlock.or": "hoặc",
   "unlock.reset": "Dùng tài khoản khác",
   "unlock.reset_confirm":
     "Xoá cấu hình và dữ liệu đã lưu trên máy này? Vault trên server không bị ảnh hưởng.",

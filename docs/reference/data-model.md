@@ -104,20 +104,20 @@ forever; deleting forever is the server tombstone delete.
 
 ## `sessions`
 
-| Column                                              | Content                                                   | Reveals                                          |
-| --------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------ |
-| `token_hash`                                        | SHA-256 of the bearer token                               | Nothing usable                                   |
-| `account_id`                                        | Owner                                                     | Number of signed-in devices                      |
-| `created_at`                                        | Unix seconds                                              | Sign-in times                                    |
-| `expires_at`                                        | Unix seconds                                              | Nothing                                          |
-| `resume_key`                                        | Random key for this session                               | Nothing without the device                       |
-| `pin_verifier`                                      | Keyed hash of the PIN verifier                            | Nothing; the PIN needs the device's salt to test |
-| `pin_key`                                           | Random key, released for the right verifier               | Nothing without the device                       |
-| `pin_attempts`                                      | Wrong PIN tries since the last right one                  | Failed unlocks                                   |
-| `bio_credential`, `bio_public_key`, `bio_algorithm` | The platform authenticator's credential id and public key | That this device uses Touch ID or Windows Hello  |
-| `bio_rp_id`, `bio_origin`                           | The extension's id and origin                             | The extension build in use                       |
-| `bio_key`                                           | Random key, released for a valid signature                | Nothing without the device                       |
-| `bio_challenge`, `bio_challenge_expires`            | One-time challenge and its expiry                         | When an unlock was attempted                     |
+| Column                                              | Content                                                             | Reveals                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| `token_hash`                                        | SHA-256 of the bearer token                                         | Nothing usable                                   |
+| `account_id`                                        | Owner                                                               | Number of signed-in devices                      |
+| `created_at`                                        | Unix seconds                                                        | Sign-in times                                    |
+| `expires_at`                                        | Unix seconds                                                        | Nothing                                          |
+| `resume_key`                                        | Random key for this session                                         | Nothing without the device                       |
+| `pin_verifier`                                      | Keyed hash of the PIN verifier                                      | Nothing; the PIN needs the device's salt to test |
+| `pin_key`                                           | Random key, released for the right verifier                         | Nothing without the device                       |
+| `pin_attempts`                                      | Wrong PIN tries since the last right one                            | Failed unlocks                                   |
+| `bio_credential`, `bio_public_key`, `bio_algorithm` | The platform authenticator's credential id and public key           | That this device uses Touch ID or Windows Hello  |
+| `bio_rp_id`, `bio_origin`                           | The extension's id and origin                                       | The extension build in use                       |
+| `bio_key`                                           | Random key, released for a valid signature                          | Nothing without the device                       |
+| `bio_challenge`, `bio_challenge_expires`            | Open one-time challenges, JSON `[{ value, expires }]`, at most five | When an unlock was attempted                     |
 
 ## `shares`
 

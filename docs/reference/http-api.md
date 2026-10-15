@@ -180,12 +180,15 @@ a random 32-byte key for this session.
 ### `POST /api/auth/biometric/challenge`
 
 Authenticated. Returns `{ challenge, credentialId }`: a one-time base64url
-challenge that expires in two minutes, or `410 auth.biometric_off`.
+challenge that expires in two minutes, or `410 auth.biometric_off`. The session
+keeps its five most recent open challenges, so a second request does not void
+a prompt that is still on screen.
 
 ### `POST /api/auth/biometric/unlock`
 
 Authenticated. Body `{ clientDataJSON, authenticatorData, signature }` from
-`navigator.credentials.get`. The challenge is spent before anything is checked,
+`navigator.credentials.get`. The challenge named in `clientDataJSON` must be one
+of the session's open challenges, and it is spent before anything else is checked,
 then the server verifies the type, challenge, origin, RP ID hash, the user
 present and user verified flags, and the signature against the registered key.
 Returns `{ "bioKey": string }`, or `403 auth.biometric_failed`.

@@ -142,7 +142,16 @@ async function server<T>(path: string, token: string, body?: unknown): Promise<T
   }
 }
 
-export async function unlockWithBiometric(): Promise<string> {
+let pending: Promise<string> | null = null;
+
+export function unlockWithBiometric(): Promise<string> {
+  pending ??= attemptUnlock().finally(() => {
+    pending = null;
+  });
+  return pending;
+}
+
+async function attemptUnlock(): Promise<string> {
   const { biometric } = await getLocal();
   if (!biometric) throw new BiometricError("off");
   const { challenge } = await server<{ challenge: string }>(

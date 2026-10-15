@@ -217,6 +217,9 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     pin.verifier = "";
     return json({ ok: true });
   }
+  if (url.pathname === "/api/auth/biometric/challenge") {
+    return json({ challenge: "AA", credentialId: "AA" });
+  }
   if (url.pathname === "/api/auth/pin/unlock") {
     const { verifier } = JSON.parse(String(init?.body ?? "{}")) as { verifier: string };
     if (pin.verifier && verifier === pin.verifier) return json({ pinKey: pin.key });
@@ -312,6 +315,10 @@ async function seed(): Promise<void> {
         secret: toBase64(new Uint8Array(32)),
         sealed: { ciphertext: "AA", nonce: "AA" },
       });
+      navigator.credentials.get = () =>
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new DOMException("cancelled", "NotAllowedError")), 1_500),
+        );
     }
     if (screen === "unlock") session.clear();
   }

@@ -88,6 +88,7 @@ const server = {
   },
   bioKey: "",
   challenge: "",
+  challenges: 0,
 };
 
 function json(body: unknown, status = 200) {
@@ -113,6 +114,7 @@ vi.stubGlobal(
     }
     if (path === "/api/auth/biometric/challenge") {
       if (!server.registration) return json({ code: "auth.biometric_off" }, 410);
+      server.challenges += 1;
       server.challenge = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
       return json({ challenge: server.challenge, credentialId: server.registration.credentialId });
     }
@@ -136,7 +138,7 @@ beforeEach(() => {
   localArea.clear();
   sessionArea.clear();
   Object.assign(device, { passkey: null, refuse: false });
-  Object.assign(server, { registration: null, bioKey: "", challenge: "" });
+  Object.assign(server, { registration: null, bioKey: "", challenge: "", challenges: 0 });
   localArea.set("apiUrl", "https://vault.test");
   localArea.set("email", "me@example.com");
   sessionArea.set("vaultKeyRaw", VAULT_KEY);
@@ -159,6 +161,17 @@ describe("biometric unlock", () => {
     const stored = JSON.stringify([...localArea.values()]);
     expect(stored).not.toContain(VAULT_KEY);
     expect(stored).not.toContain(server.bioKey);
+  });
+
+  it("shares one prompt between overlapping requests", async () => {
+    await enableBiometric();
+    await lock();
+    const [first, second] = await Promise.all([unlockWithBiometric(), unlockWithBiometric()]);
+    expect(first).toBe(VAULT_KEY);
+    expect(second).toBe(VAULT_KEY);
+    expect(server.challenges).toBe(1);
+    expect(await unlockWithBiometric()).toBe(VAULT_KEY);
+    expect(server.challenges).toBe(2);
   });
 
   it("does not open for another authenticator's signature", async () => {

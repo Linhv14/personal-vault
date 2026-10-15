@@ -80,6 +80,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The unlock screen leads with a single fingerprint button when Touch ID or
+  Windows Hello is on, with the PIN or master password below it.
+
 - With Touch ID or the Mac password turned on, the popup asks for it as soon as
   it opens instead of waiting for a click, and after a master-password unlock
   the popup offers to turn it on. Only one suggestion banner shows at a time.
@@ -164,6 +167,11 @@ version may change the API or storage format; such releases list the steps in
 - `npm run status` prints the Worker URL.
 
 ### Fixed
+
+- Touch ID unlock no longer fails with "didn't confirm it's you" when the popup
+  asked for a second prompt while the first was still open. The server keeps a
+  few open challenges per session and the extension never runs two prompts at
+  once.
 
 - The passkey prompt opens as a panel in the top-right corner instead of a
   modal over the page, confirms after saving, and says when the passkey is
