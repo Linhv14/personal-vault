@@ -48,7 +48,6 @@ End-to-end encrypted password manager with built-in 2FA codes, autofill and self
 > - Strong password, passphrase and PIN generator
 > - Share a login through a link that expires after a set time or number of views
 > - Works offline from the copy on your device; syncs across your computers
-> - Open source: https://github.com/Linhv14/personal-vault
 
 **Category:** Productivity · **Language:** English, Vietnamese
 

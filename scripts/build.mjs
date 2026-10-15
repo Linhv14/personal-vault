@@ -8,6 +8,7 @@
 
 import { build } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.mjs";
+import { renderMarkdown } from "./markdown.mjs";
 import { localizePage } from "./localize-page.mjs";
 import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.mjs";
 import { spawnSync } from "node:child_process";
@@ -65,6 +66,16 @@ async function logoSvg() {
   return LOGO_SVG;
 }
 
+async function replaceAsync(text, pattern, replace) {
+  const parts = [];
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    parts.push(text.slice(last, match.index), await replace(...match));
+    last = match.index + match[0].length;
+  }
+  return parts.join("") + text.slice(last);
+}
+
 async function copyPage(from, to) {
   const text = await readFile(from, "utf8");
   await writeFile(to, hasTokensMarker(text) ? await injectTokens(text, from) : text);
@@ -80,6 +91,14 @@ async function buildSharePage() {
   await copyPage(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
   await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
   await copyPage(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
+  const security = await readFile(path.join(root, "share", "security.html"), "utf8");
+  const filled = await replaceAsync(security, /<!-- markdown:([^ ]+) -->/g, async (_, file) =>
+    renderMarkdown(await readFile(path.join(root, file), "utf8")),
+  );
+  await writeFile(
+    path.join(outPublic, "security.html"),
+    await injectTokens(filled, "share/security.html"),
+  );
   const landing = await readFile(path.join(root, "share", "landing.html"), "utf8");
   for (const [lang, file] of [
     ["en", "index.html"],

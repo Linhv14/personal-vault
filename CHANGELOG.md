@@ -71,6 +71,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The threat model is published at 1pw.online/security. The landing and privacy
+  pages no longer link to the source repository, which is now private.
 - The import and export page is redesigned: one drop zone with the export
   steps for each app listed under it, a review that counts items by type, and
   export formats side by side.
