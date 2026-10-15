@@ -5,6 +5,7 @@ import { itemType } from "../lib/item-types.js";
 import { decryptEverything, sync, type VaultDef, type VaultItem } from "../lib/vault.js";
 import { vaultList, vaultOf } from "../lib/vaults.js";
 import { localeSignal, useT } from "../ui/i18n.js";
+import { LockedCard, StatusHead } from "./ImportPanel.js";
 import { vaultKey } from "./session.js";
 
 type Format = "encrypted" | "csv";
@@ -52,18 +53,13 @@ export function ExportPanel() {
   }, []);
 
   if (state.kind === "loading") return null;
-  if (state.kind === "locked") {
-    return (
-      <section className="card">
-        <p>{t("import.locked")}</p>
-      </section>
-    );
-  }
+  if (state.kind === "locked") return <LockedCard />;
   if (state.kind === "done") {
     return (
       <section className="card">
-        <h2>{t("export.done", { count: state.count })}</h2>
-        <p className="hint">{state.file}</p>
+        <StatusHead icon="check" tone="ok" title={t("export.done", { count: state.count })}>
+          <p className="hint">{state.file}</p>
+        </StatusHead>
         <p className="warning">
           {t(state.format === "csv" ? "export.done_csv" : "export.done_encrypted")}
         </p>
@@ -107,9 +103,9 @@ export function ExportPanel() {
   };
 
   return (
-    <form className="card stack" onSubmit={(event) => void submit(event)}>
+    <form className="card" onSubmit={(event) => void submit(event)}>
       {state.vaults.length > 1 && (
-        <label className="field">
+        <label className="field section-first">
           <span>{t("export.vault")}</span>
           <select value={vault} onChange={(event) => setVault(event.currentTarget.value)}>
             <option value="all">{t("vault.all")}</option>
@@ -123,49 +119,55 @@ export function ExportPanel() {
       )}
 
       <fieldset className="formats">
-        <legend>{t("export.format")}</legend>
-        {(["encrypted", "csv"] as const).map((value) => (
-          <label className="format" key={value}>
-            <input
-              type="radio"
-              name="format"
-              value={value}
-              checked={format === value}
-              onChange={() => setFormat(value)}
-            />
-            <span className="format-text">
-              <strong>
-                {t(value === "encrypted" ? "export.encrypted" : "export.csv")}
-                {value === "encrypted" && <span className="badge">{t("export.recommended")}</span>}
-              </strong>
-              <small>
-                {t(value === "encrypted" ? "export.encrypted_hint" : "export.csv_hint")}
-              </small>
-            </span>
-          </label>
-        ))}
+        <legend className="eyebrow">{t("export.format")}</legend>
+        <div className="format-grid">
+          {(["encrypted", "csv"] as const).map((value) => (
+            <label className="format" key={value}>
+              <input
+                type="radio"
+                name="format"
+                value={value}
+                checked={format === value}
+                onChange={() => setFormat(value)}
+              />
+              <span className="format-text">
+                <strong>
+                  {t(value === "encrypted" ? "export.encrypted" : "export.csv")}
+                  {value === "encrypted" && (
+                    <span className="badge">{t("export.recommended")}</span>
+                  )}
+                </strong>
+                <small>
+                  {t(value === "encrypted" ? "export.encrypted_hint" : "export.csv_hint")}
+                </small>
+              </span>
+            </label>
+          ))}
+        </div>
       </fieldset>
 
       {format === "encrypted" ? (
-        <div className="stack tight">
-          <label className="field">
-            <span>{t("export.passphrase")}</span>
-            <input
-              name="passphrase"
-              type="password"
-              autoComplete="new-password"
-              minLength={EXPORT_PASSPHRASE_MIN}
-              required
-            />
-          </label>
-          <label className="field">
-            <span>{t("export.confirm")}</span>
-            <input name="confirm" type="password" autoComplete="new-password" required />
-          </label>
+        <div className="section">
+          <div className="pair">
+            <label className="field">
+              <span>{t("export.passphrase")}</span>
+              <input
+                name="passphrase"
+                type="password"
+                autoComplete="new-password"
+                minLength={EXPORT_PASSPHRASE_MIN}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>{t("export.confirm")}</span>
+              <input name="confirm" type="password" autoComplete="new-password" required />
+            </label>
+          </div>
           <p className="hint">{t("export.passphrase_hint")}</p>
         </div>
       ) : (
-        <div className="stack tight">
+        <div className="section">
           <p className="warning">{t("export.csv_warning")}</p>
           <label className="check">
             <input
@@ -183,7 +185,7 @@ export function ExportPanel() {
           {error}
         </p>
       )}
-      <div className="actions">
+      <div className="actions end">
         <button
           className="button primary"
           type="submit"

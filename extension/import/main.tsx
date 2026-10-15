@@ -43,7 +43,6 @@ function TransferApp() {
         <Wordmark />
       </header>
       <h1>{t("transfer.title")}</h1>
-      <p className="lead">{t(tab === "import" ? "import.lead" : "export.lead")}</p>
       <nav className="tabs" role="tablist" aria-label={t("transfer.title")}>
         {(["import", "export"] as const).map((value) => (
           <a
@@ -57,6 +56,7 @@ function TransferApp() {
           </a>
         ))}
       </nav>
+      <p className="lead">{t(tab === "import" ? "import.lead" : "export.lead")}</p>
       {tab === "import" ? <ImportPanel key={session} /> : <ExportPanel key={session} />}
     </main>
   );

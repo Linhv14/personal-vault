@@ -86,7 +86,7 @@
 
       .hero {
         display: grid;
-        grid-template-columns: 1.1fr 0.9fr;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
         align-items: center;
         gap: 48px;
         padding: 72px 0 56px;
@@ -140,8 +140,8 @@
       .shot {
         justify-self: center;
         width: 100%;
-        max-width: 340px;
-        border-radius: 18px;
+        max-width: 600px;
+        border-radius: 14px;
         border: 1px solid var(--border);
         background: var(--card);
         box-shadow:
@@ -204,12 +204,12 @@
       }
       .showcase {
         display: grid;
-        grid-template-columns: 0.9fr 1.1fr;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
         align-items: center;
         gap: 48px;
       }
       .showcase.reverse {
-        grid-template-columns: 1.1fr 0.9fr;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
       }
       .showcase.reverse .shot {
         order: 2;
@@ -394,8 +394,8 @@
         <div class="shot">
           <img
             src="/assets/popup-item-en.png"
-            width="720"
-            height="1160"
+            width="1200"
+            height="860"
             alt="The 1PW popup showing a GitHub login with its 2FA code"
           />
         </div>
@@ -442,8 +442,8 @@
                   <path d="m4 20 10-10" />
                   <path d="M19 13v4M17 15h4M7 3v3M5.5 4.5h3" /></svg
               ></span>
-              <h3>Fill and save on websites</h3>
-              <p>Optional. Suggests your logins and offers to save new ones.</p>
+              <h3>Fill, save and passkeys</h3>
+              <p>Optional. Suggests your logins, saves new ones and keeps your passkeys.</p>
             </div>
           </div>
         </div>
@@ -454,9 +454,9 @@
           <div class="shot">
             <img
               src="/assets/popup-list-en.png"
-              width="720"
-              height="740"
-              alt="The vault list filtered by type, logins showing a live 2FA code"
+              width="1200"
+              height="860"
+              alt="A Cloudflare login in the vault with its live 2FA code"
             />
           </div>
           <div>
@@ -479,8 +479,8 @@
           <div class="shot">
             <img
               src="/assets/popup-share-en.png"
-              width="720"
-              height="1160"
+              width="1200"
+              height="860"
               alt="Sharing a login with an expiry and a view limit"
             />
           </div>
@@ -635,8 +635,8 @@
         <div class="shot">
           <img
             src="/assets/popup-item-vi.png"
-            width="720"
-            height="1160"
+            width="1200"
+            height="860"
             alt="Popup 1PW hiện tài khoản GitHub kèm mã 2FA"
           />
         </div>
@@ -684,8 +684,8 @@
                   <path d="m4 20 10-10" />
                   <path d="M19 13v4M17 15h4M7 3v3M5.5 4.5h3" /></svg
               ></span>
-              <h3>Điền và lưu trên trang web</h3>
-              <p>Tuỳ chọn. Gợi ý tài khoản và đề nghị lưu tài khoản mới.</p>
+              <h3>Điền, lưu và passkey</h3>
+              <p>Tuỳ chọn. Gợi ý tài khoản, lưu tài khoản mới và giữ passkey của bạn.</p>
             </div>
           </div>
         </div>
@@ -696,9 +696,9 @@
           <div class="shot">
             <img
               src="/assets/popup-list-vi.png"
-              width="720"
-              height="740"
-              alt="Danh sách lọc theo loại, mục đăng nhập có mã 2FA đang chạy"
+              width="1200"
+              height="860"
+              alt="Tài khoản Cloudflare trong vault kèm mã 2FA đang chạy"
             />
           </div>
           <div>
@@ -721,8 +721,8 @@
           <div class="shot">
             <img
               src="/assets/popup-share-vi.png"
-              width="720"
-              height="1160"
+              width="1200"
+              height="860"
               alt="Chia sẻ tài khoản với thời hạn và giới hạn lượt mở"
             />
           </div>

@@ -10,6 +10,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Unlock with a PIN (Settings → Security). The vault key stays sealed under the
+  PIN and a key the server releases only for the right PIN; five wrong tries,
+  sign-out, a password change or the end of the 30-day session turn it off.
+- The login or passkey used last on a site is suggested first. Use is recorded
+  in the encrypted item, so the order syncs; Recent in the popup counts it too.
+- Passkeys in the sign-in field: when a site asks for a passkey as the page
+  loads, the 1PW fill menu on the username field lists the passkeys saved for
+  it.
 - Preact + Signals UI foundation, with Settings migrated to reactive components
   and shared button, card, icon, toast, locale and session primitives.
 - Favorites, user-defined tags and Trash in the popup, with all three states
@@ -60,6 +68,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The import and export page is redesigned: one drop zone with the export
+  steps for each app listed under it, a review that counts items by type, and
+  export formats side by side.
+- The landing page shows the two-pane popup.
 - The share screen fits the popup: the item sits in the title bar, expiry and
   view limit are compact rows, and "Create link" stays pinned at the bottom.
 - The popup, Settings and the import page render from Preact components

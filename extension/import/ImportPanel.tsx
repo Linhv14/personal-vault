@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { describeError, type MessageKey, type Translate } from "../../src/i18n/index.js";
 import { planImport, type ImportPlan } from "../lib/import/plan.js";
@@ -5,7 +6,8 @@ import { readExport } from "../lib/import/read-export.js";
 import { ImportError, type ImportFormat, type SkipReason } from "../lib/import/source.js";
 import { notePasskeys } from "../lib/storage.js";
 import { decryptAll, importItems, saveItemPatiently, sync } from "../lib/vault.js";
-import { ITEM_TYPES, itemType, TYPE_LABEL } from "../lib/item-types.js";
+import { ITEM_TYPES, itemType, TYPE_ICON, TYPE_LABEL } from "../lib/item-types.js";
+import type { IconName } from "../../src/ui/icons.js";
 import { Icon } from "../ui/components/Icon.js";
 import { localeSignal, useT } from "../ui/i18n.js";
 import { vaultKey } from "./session.js";
@@ -51,7 +53,7 @@ function importErrorText(error: unknown, t: Translate): string {
     : describeError(error, t);
 }
 
-function sourceLines(plan: ImportPlan, t: Translate): string[] {
+function noteLines(plan: ImportPlan, t: Translate): string[] {
   if (plan.format === "recovery") {
     return plan.items.map((item) =>
       t("import.recovery_file", {
@@ -60,22 +62,8 @@ function sourceLines(plan: ImportPlan, t: Translate): string[] {
       }),
     );
   }
-  const byType = ITEM_TYPES.map((type) => ({
-    type,
-    count: plan.items.filter((item) => itemType(item) === type).length,
-  })).filter(({ count }) => count > 0);
-  return [
-    t("import.from", { source: SOURCE_NAMES[plan.format] }),
-    ...(byType.length > 1
-      ? byType.map(({ type, count }) => t("import.of_type", { type: t(TYPE_LABEL[type]), count }))
-      : []),
-  ];
-}
-
-function addedLines(plan: ImportPlan, t: Translate): string[] {
   const newPasskeys = plan.items.filter((item) => item.passkey).length;
   return [
-    ...sourceLines(plan, t),
     ...(newPasskeys > 0 ? [t("import.passkeys_new", { count: newPasskeys })] : []),
     ...(plan.passkeysForExisting.length > 0
       ? [t("import.passkeys_existing", { count: plan.passkeysForExisting.length })]
@@ -194,11 +182,7 @@ export function ImportPanel() {
 
   return (
     <>
-      {step.kind === "locked" && (
-        <section className="card">
-          <p>{t("import.locked")}</p>
-        </section>
-      )}
+      {step.kind === "locked" && <LockedCard />}
 
       {step.kind === "pick" && (
         <section className="card">
@@ -215,38 +199,53 @@ export function ImportPanel() {
               void openFile(event.dataTransfer?.files[0]);
             }}
           >
-            <Icon name="upload" />
-            <strong>{t("import.choose_file")}</strong>
-            <small>{t("import.drop")}</small>
+            <span className="dropzone-icon">
+              <Icon name="upload" />
+            </span>
+            <strong>{t("import.drop_title")}</strong>
+            <span className="button small">{t("import.choose_file")}</span>
+            <small>{t("import.formats")}</small>
             <input
               type="file"
               accept=".zip,.pgp,.json,.1pux,.csv,.txt"
               onChange={(event) => void pickFile(event)}
             />
           </label>
-          <p className="hint">{t("import.pick")}</p>
-          <ul className="sources">
-            {SOURCES.map(([name, hint]) => (
-              <li key={hint}>
-                <strong>{name || t("import.source_other")}</strong>
-                <span>{t(hint)}</span>
-              </li>
-            ))}
-          </ul>
           {step.error && (
             <p className="error" role="alert">
               {step.error}
             </p>
           )}
+          <div className="section">
+            <h2 className="eyebrow">{t("import.how_to")}</h2>
+            <dl className="sources">
+              {SOURCES.map(([name, hint]) => (
+                <div className="source" key={hint}>
+                  <dt>{name || t("import.source_other")}</dt>
+                  <dd>{t(hint)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <p className="footnote">
+            <Icon name="lock" />
+            {t("import.privacy")}
+          </p>
         </section>
       )}
 
       {step.kind === "passphrase" && (
         <section className="card">
-          <h2>{t("import.passphrase_title")}</h2>
+          <StatusHead icon="lock" title={t("import.passphrase_title")} />
           <p className="hint">{t("import.passphrase_hint")}</p>
           <form className="passphrase" onSubmit={(event) => void submitPassphrase(event)}>
-            <input ref={passphrase} type="password" autoComplete="off" required />
+            <input
+              ref={passphrase}
+              type="password"
+              autoComplete="off"
+              required
+              aria-label={t("import.passphrase_title")}
+            />
             <button className="button primary" type="submit" disabled={opening}>
               {t(opening ? "import.opening" : "import.open")}
             </button>
@@ -257,7 +256,7 @@ export function ImportPanel() {
             </p>
           )}
           <div className="actions">
-            <button className="button" onClick={chooseOther}>
+            <button className="button quiet" onClick={chooseOther}>
               {t("import.choose_other")}
             </button>
           </div>
@@ -267,6 +266,7 @@ export function ImportPanel() {
       {step.kind === "review" && (
         <ReviewStep
           plan={step.plan}
+          file={selected.current?.name ?? ""}
           onConfirm={() => void confirmImport(step.plan)}
           onCancel={chooseOther}
         />
@@ -274,55 +274,142 @@ export function ImportPanel() {
 
       {step.kind === "progress" && (
         <section className="card">
-          <h2>
-            {step.waiting
-              ? t("import.waiting")
-              : t("import.progress", { saved: step.saved, total: step.total })}
-          </h2>
-          <progress max={1} value={step.total ? step.saved / step.total : 1} />
+          <StatusHead
+            icon="upload"
+            title={
+              step.waiting
+                ? t("import.waiting")
+                : t("import.progress", { saved: step.saved, total: step.total })
+            }
+          />
+          <div
+            className="bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={step.total}
+            aria-valuenow={step.saved}
+          >
+            <span style={{ width: `${step.total ? (step.saved / step.total) * 100 : 100}%` }} />
+          </div>
         </section>
       )}
 
       {step.kind === "done" && (
         <section className="card">
-          <h2>{t("import.done", { count: step.count })}</h2>
+          <StatusHead icon="check" tone="ok" title={t("import.done", { count: step.count })} />
           <p className="warning">{t("import.delete_file")}</p>
+          <div className="actions">
+            <button className="button" onClick={chooseOther}>
+              {t("import.another")}
+            </button>
+          </div>
         </section>
       )}
     </>
   );
 }
 
+export function LockedCard() {
+  const t = useT();
+  return (
+    <section className="card">
+      <StatusHead icon="lock" title={t("import.locked_title")} />
+      <p className="hint">{t("import.locked")}</p>
+    </section>
+  );
+}
+
+export function StatusHead({
+  icon,
+  title,
+  tone,
+  children,
+}: {
+  icon: IconName;
+  title: string;
+  tone?: "ok";
+  children?: ComponentChildren;
+}) {
+  return (
+    <div className="status-head">
+      <span className={tone ? `status-icon ${tone}` : "status-icon"}>
+        <Icon name={icon} />
+      </span>
+      <div>
+        <h2>{title}</h2>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function ReviewStep({
   plan,
+  file,
   onConfirm,
   onCancel,
 }: {
   plan: ImportPlan;
+  file: string;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   const t = useT();
   const total = plan.items.length + plan.passkeysForExisting.length;
+  const byType = ITEM_TYPES.map((type) => ({
+    type,
+    count: plan.items.filter((item) => itemType(item) === type).length,
+  })).filter(({ count }) => count > 0);
+  const notes = noteLines(plan, t);
+  const skipped = Object.entries(plan.skipped);
   return (
     <section className="card">
-      <h2>{t("import.ready", { count: plan.items.length })}</h2>
-      <ul className="summary added">
-        {addedLines(plan, t).map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-      <ul className="summary">
-        {Object.entries(plan.skipped).map(([reason, count]) => (
-          <li key={reason}>{t(SKIP_KEYS[reason as SkipReason], { count })}</li>
-        ))}
-      </ul>
-      <div className="actions">
+      <StatusHead icon="check" tone="ok" title={t("import.ready", { count: plan.items.length })}>
+        <p className="hint">
+          {[
+            file,
+            plan.format === "recovery"
+              ? ""
+              : t("import.from", { source: SOURCE_NAMES[plan.format] }),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      </StatusHead>
+      {plan.format !== "recovery" && byType.length > 0 && (
+        <ul className="stats">
+          {byType.map(({ type, count }) => (
+            <li key={type}>
+              <Icon name={TYPE_ICON[type]} />
+              <strong>{count}</strong>
+              <span>{t(TYPE_LABEL[type])}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {notes.length > 0 && (
+        <ul className="notes">
+          {notes.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
+      {skipped.length > 0 && (
+        <div className="section">
+          <h2 className="eyebrow">{t("import.skipped_title")}</h2>
+          <ul className="notes muted">
+            {skipped.map(([reason, count]) => (
+              <li key={reason}>{t(SKIP_KEYS[reason as SkipReason], { count })}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="actions end">
+        <button className="button quiet" onClick={onCancel}>
+          {t("import.choose_other")}
+        </button>
         <button className="button primary" disabled={total === 0} onClick={onConfirm}>
           {t("import.confirm", { count: total })}
-        </button>
-        <button className="button" onClick={onCancel}>
-          {t("import.choose_other")}
         </button>
       </div>
     </section>
