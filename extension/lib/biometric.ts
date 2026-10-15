@@ -1,19 +1,15 @@
-import { openJson, sealJson } from "../../src/core/crypto.js";
 import {
   fromBase64,
   fromBase64Url,
   randomBytes,
   toBase64,
   toBase64Url,
-  utf8Encode,
 } from "../../src/core/bytes.js";
 import type { MessageKey } from "../../src/i18n/index.js";
-import * as api from "./api.js";
-import { deviceWrappingKey } from "./device-key.js";
-import { getLocal, getUnlocked, setLocal, unlock } from "./storage.js";
+import { asSession, request } from "./api.js";
+import { forget, openVaultKey, rejection, sealVaultKey, signedInSession } from "./device-unlock.js";
+import { getLocal, setLocal, unlock } from "./storage.js";
 
-const PURPOSE = "personal-vault/biometric";
-const CONTEXT = utf8Encode(PURPOSE);
 const TIMEOUT_MS = 60_000;
 const ES256 = -7;
 const RS256 = -257;
@@ -69,8 +65,7 @@ function asCancelled(error: unknown): never {
 }
 
 export async function enableBiometric(): Promise<void> {
-  const session = await getUnlocked();
-  if (!session?.token) throw new api.ApiError("error.api.not_signed_in", 401);
+  const session = await signedInSession();
   if (!(await biometricSupported())) throw new BiometricError("unsupported");
   const { email = "1PW" } = await getLocal();
   const credential = (await navigator.credentials
@@ -97,19 +92,18 @@ export async function enableBiometric(): Promise<void> {
   const response = credential.response as AuthenticatorAttestationResponse;
   const publicKey = response.getPublicKey();
   if (!publicKey) throw new BiometricError("unsupported");
-  const bioKey = await api.setBiometric({
-    credentialId: credential.id,
-    publicKey: toBase64Url(new Uint8Array(publicKey)),
-    algorithm: response.getPublicKeyAlgorithm(),
-    rpId: location.hostname,
-    origin: location.origin,
+  const { bioKey } = await request<{ bioKey: string }>("/api/auth/biometric", {
+    method: "PUT",
+    body: JSON.stringify({
+      credentialId: credential.id,
+      publicKey: toBase64Url(new Uint8Array(publicKey)),
+      algorithm: response.getPublicKeyAlgorithm(),
+      rpId: location.hostname,
+      origin: location.origin,
+    }),
   });
   const secret = randomBytes(32);
-  const sealed = await sealJson(
-    await deviceWrappingKey(bioKey, secret, PURPOSE),
-    { vaultKeyRaw: session.vaultKeyRaw },
-    CONTEXT,
-  );
+  const sealed = await sealVaultKey("biometric", bioKey, secret, session.vaultKeyRaw);
   await setLocal({
     biometric: {
       token: session.token,
@@ -122,19 +116,28 @@ export async function enableBiometric(): Promise<void> {
 
 export async function disableBiometric(): Promise<void> {
   const { biometric } = await getLocal();
-  await chrome.storage.local.remove("biometric");
-  if (biometric) await api.clearBiometric(biometric.token).catch(() => {});
+  await forget("biometric");
+  if (biometric) {
+    await request("/api/auth/biometric", { method: "DELETE", ...asSession(biometric.token) }).catch(
+      () => {},
+    );
+  }
 }
 
-async function forgetWhenGone<T>(work: Promise<T>): Promise<T> {
+async function server<T>(path: string, token: string, body?: unknown): Promise<T> {
   try {
-    return await work;
+    return await request<T>(path, {
+      method: "POST",
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...asSession(token),
+    });
   } catch (error) {
-    if (error instanceof api.ApiError && (error.status === 410 || error.status === 401)) {
-      await chrome.storage.local.remove("biometric");
+    const reason = rejection(error);
+    if (reason === "gone") {
+      await forget("biometric");
       throw new BiometricError("off");
     }
-    if (error instanceof api.ApiError && error.status === 403) throw new BiometricError("failed");
+    if (reason === "denied") throw new BiometricError("failed");
     throw error;
   }
 }
@@ -142,7 +145,10 @@ async function forgetWhenGone<T>(work: Promise<T>): Promise<T> {
 export async function unlockWithBiometric(): Promise<string> {
   const { biometric } = await getLocal();
   if (!biometric) throw new BiometricError("off");
-  const { challenge } = await forgetWhenGone(api.biometricChallenge(biometric.token));
+  const { challenge } = await server<{ challenge: string }>(
+    "/api/auth/biometric/challenge",
+    biometric.token,
+  );
   const credential = (await navigator.credentials
     .get({
       publicKey: {
@@ -156,17 +162,20 @@ export async function unlockWithBiometric(): Promise<string> {
     .catch(asCancelled)) as PublicKeyCredential | null;
   if (!credential) throw new BiometricError("cancelled");
   const response = credential.response as AuthenticatorAssertionResponse;
-  const bioKey = await forgetWhenGone(
-    api.biometricUnlock(biometric.token, {
+  const { bioKey } = await server<{ bioKey: string }>(
+    "/api/auth/biometric/unlock",
+    biometric.token,
+    {
       clientDataJSON: toBase64Url(new Uint8Array(response.clientDataJSON)),
       authenticatorData: toBase64Url(new Uint8Array(response.authenticatorData)),
       signature: toBase64Url(new Uint8Array(response.signature)),
-    }),
+    },
   );
-  const { vaultKeyRaw } = await openJson<{ vaultKeyRaw: string }>(
-    await deviceWrappingKey(bioKey, fromBase64(biometric.secret), PURPOSE),
+  const vaultKeyRaw = await openVaultKey(
+    "biometric",
+    bioKey,
+    fromBase64(biometric.secret),
     biometric.sealed,
-    CONTEXT,
   );
   await unlock(vaultKeyRaw, biometric.token);
   return vaultKeyRaw;

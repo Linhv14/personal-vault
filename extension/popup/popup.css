@@ -1726,3 +1726,6 @@ details.history .field-row {
   border-radius: 50%;
   background: var(--danger);
 }
+.teams-cta.pending {
+  visibility: hidden;
+}

@@ -6,14 +6,8 @@ import { MenuList } from "./Menu.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { TypeBadge } from "./ItemIcons.js";
 import { VaultMenu } from "./VaultMenu.js";
-import {
-  drawerOpen,
-  openEditor,
-  openSettings,
-  orgCount,
-  orgInvites,
-  searchQuery,
-} from "../state.js";
+import { orgSnapshot } from "../promos.js";
+import { drawerOpen, openEditor, openSettings, searchQuery } from "../state.js";
 
 function AddButton() {
   const t = useT();
@@ -48,19 +42,22 @@ function AddButton() {
 
 function TeamsButton() {
   const t = useT();
-  const hasOrg = orgCount.value > 0;
-  const invited = orgInvites.value.length > 0;
+  const snapshot = orgSnapshot.value;
   return (
     <button
       type="button"
       id="btn-teams"
-      className="teams-cta"
+      className={snapshot ? "teams-cta" : "teams-cta pending"}
       title={t("orgs.cta_hint")}
+      aria-hidden={snapshot ? undefined : "true"}
+      tabIndex={snapshot ? undefined : -1}
       onClick={() => openSettings("#teams")}
     >
       <Icon name="users" />
-      <span>{t(hasOrg ? "orgs.cta_open" : "orgs.cta_start")}</span>
-      {invited && <span className="teams-cta-dot" aria-label={t("orgs.invitations")} />}
+      <span>{t(snapshot && snapshot.orgs > 0 ? "orgs.cta_open" : "orgs.cta_start")}</span>
+      {snapshot && snapshot.invites.length > 0 && (
+        <span className="teams-cta-dot" aria-label={t("orgs.invitations")} />
+      )}
     </button>
   );
 }

@@ -9,13 +9,13 @@ import { Data } from "./pages/Data.js";
 import { General } from "./pages/General.js";
 import { Health } from "./pages/Health.js";
 import { Security } from "./pages/Security.js";
-import { Teams } from "./pages/Teams.js";
+import { OrganizationPage } from "./organization/OrganizationPage.js";
 import { isSignedIn, localState, toastMessage, watchStorage } from "./state.js";
 
 const PAGE_VIEWS: Record<Page, ComponentType> = {
   general: General,
   security: Security,
-  teams: Teams,
+  teams: OrganizationPage,
   health: Health,
   data: Data,
   account: Account,

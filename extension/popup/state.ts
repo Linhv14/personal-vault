@@ -1,21 +1,9 @@
-import {
-  BiometricError,
-  biometricLabel,
-  biometricSupported,
-  enableBiometric,
-} from "../lib/biometric.js";
-import { listOrgs, myInvites, type MyInvite } from "../lib/orgs.js";
 import { ensureIdentity } from "../lib/identity.js";
 import { signal } from "@preact/signals";
 import { createTranslator, describeError, type Translate } from "../../src/i18n/index.js";
 import { formatDateTime } from "../ui/format.js";
 import { localeSignal } from "../ui/i18n.js";
 import * as api from "../lib/api.js";
-import {
-  autofillSupported,
-  enableAutofill,
-  isAutofillEnabled,
-} from "../lib/autofill-permission.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { getLocal, lock, notePasskeys, setLocal, takeItemFocus, touch } from "../lib/storage.js";
 import {
@@ -58,11 +46,6 @@ export const drawerOpen = signal(false);
 export const syncing = signal(false);
 export const syncProblem = signal<SyncProblem>(null);
 export const clockWarning = signal<string | null>(null);
-export const autofillPromo = signal(false);
-export const orgInvites = signal<MyInvite[]>([]);
-export const orgCount = signal(0);
-export const invitesDismissed = signal(false);
-export const biometricPromo = signal(false);
 
 export const editing = signal<{ item: VaultItem | null; type: ItemType; session: number }>({
   item: null,
@@ -225,62 +208,7 @@ export async function enterVault(rawBase64: string): Promise<void> {
   const focused = items.value.find((item) => item.id === focus);
   if (focused) openEditor(focused);
   void backgroundSync();
-  void refreshAutofillPromo();
   void ensureIdentity(vaultKey.value).catch(() => {});
-  void refreshOrgs();
-  void refreshBiometricPromo();
-}
-
-async function refreshBiometricPromo(): Promise<void> {
-  const { biometric, biometricPromoDismissed } = await getLocal();
-  biometricPromo.value = !biometric && !biometricPromoDismissed && (await biometricSupported());
-}
-
-export async function dismissBiometricPromo(): Promise<void> {
-  biometricPromo.value = false;
-  await setLocal({ biometricPromoDismissed: true });
-}
-
-export async function turnOnBiometric(): Promise<void> {
-  const t = translator();
-  const method = t(biometricLabel());
-  try {
-    await enableBiometric();
-    biometricPromo.value = false;
-    toast(t("bio.enabled", { method }));
-  } catch (error) {
-    toast(
-      error instanceof BiometricError ? t("bio.cancelled", { method }) : describeError(error, t),
-    );
-  }
-}
-
-async function refreshOrgs(): Promise<void> {
-  try {
-    const [orgs, invites] = await Promise.all([listOrgs(), myInvites()]);
-    orgCount.value = orgs.length;
-    orgInvites.value = invites;
-  } catch {
-    orgInvites.value = [];
-  }
-}
-
-async function refreshAutofillPromo(): Promise<void> {
-  const { autofillPromoDismissed } = await getLocal();
-  const show = autofillSupported() && !autofillPromoDismissed && !(await isAutofillEnabled());
-  autofillPromo.value = show;
-  if (show) await setLocal({ autofillPromoDismissed: true });
-}
-
-export async function turnOnAutofill(): Promise<void> {
-  if (!(await enableAutofill())) return;
-  toast(translator()("settings.autofill_enabled"));
-  autofillPromo.value = false;
-}
-
-export async function dismissAutofillPromo(): Promise<void> {
-  autofillPromo.value = false;
-  await setLocal({ autofillPromoDismissed: true });
 }
 
 const SYNC_BAR_DELAY_MS = 300;

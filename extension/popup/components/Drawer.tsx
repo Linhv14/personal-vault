@@ -11,12 +11,11 @@ import {
   openGenerator,
   openImport,
   openSettings,
-  orgCount,
-  orgInvites,
   scope,
   typeFilter,
   type Scope,
 } from "../state.js";
+import { orgSnapshot } from "../promos.js";
 import { useDismiss } from "./Menu.js";
 
 function DrawerLink({
@@ -109,8 +108,8 @@ export function Drawer() {
           <DrawerLink
             icon="users"
             label={t("orgs.title")}
-            count={orgInvites.value.length || orgCount.value || undefined}
-            highlight={orgInvites.value.length > 0}
+            count={orgSnapshot.value?.invites.length || orgSnapshot.value?.orgs || undefined}
+            highlight={(orgSnapshot.value?.invites.length ?? 0) > 0}
             onSelect={() => {
               close();
               openSettings("#teams");

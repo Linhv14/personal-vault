@@ -1,14 +1,20 @@
 import { open, seal, type SealedData } from "../../src/core/crypto.js";
 import { utf8Encode } from "../../src/core/bytes.js";
 import { createIdentity, type Identity } from "../../src/core/identity.js";
-import * as api from "./api.js";
+import { ApiError, request } from "./api.js";
+
+interface StoredIdentity {
+  publicKey: string;
+  wrappedPrivateKey: SealedData;
+}
+
+async function fetchIdentity(): Promise<StoredIdentity | null> {
+  return (await request<{ identity: StoredIdentity | null }>("/api/account/identity")).identity;
+}
 
 const PRIVATE_KEY_CONTEXT = utf8Encode("personal-vault/account-private-key");
 
-async function opened(
-  vaultKey: CryptoKey,
-  stored: { publicKey: string; wrappedPrivateKey: SealedData },
-): Promise<Identity> {
+async function opened(vaultKey: CryptoKey, stored: StoredIdentity): Promise<Identity> {
   return {
     publicKey: stored.publicKey,
     privateKey: await open(vaultKey, stored.wrappedPrivateKey, PRIVATE_KEY_CONTEXT),
@@ -16,16 +22,19 @@ async function opened(
 }
 
 export async function ensureIdentity(vaultKey: CryptoKey): Promise<Identity> {
-  const stored = await api.getIdentity();
+  const stored = await fetchIdentity();
   if (stored) return opened(vaultKey, stored);
   const identity = await createIdentity();
   const wrappedPrivateKey = await seal(vaultKey, identity.privateKey, PRIVATE_KEY_CONTEXT);
   try {
-    await api.putIdentity(identity.publicKey, wrappedPrivateKey);
+    await request("/api/account/identity", {
+      method: "PUT",
+      body: JSON.stringify({ publicKey: identity.publicKey, wrappedPrivateKey }),
+    });
     return identity;
   } catch (error) {
-    if (!(error instanceof api.ApiError) || error.status !== 409) throw error;
-    const winner = await api.getIdentity();
+    if (!(error instanceof ApiError) || error.status !== 409) throw error;
+    const winner = await fetchIdentity();
     if (!winner) throw error;
     return opened(vaultKey, winner);
   }

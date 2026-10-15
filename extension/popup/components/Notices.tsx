@@ -1,34 +1,64 @@
+import { useEffect } from "preact/hooks";
+import type { IconName } from "../../../src/ui/icons.js";
+import { biometricLabel } from "../../lib/biometric.js";
 import { Icon } from "../../ui/components/Icon.js";
+import { IconButton } from "../../ui/components/IconButton.js";
 import { Logo } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
-import { biometricLabel } from "../../lib/biometric.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import {
-  autofillPromo,
-  biometricPromo,
-  dismissBiometricPromo,
-  turnOnBiometric,
-  clockWarning,
-  dismissAutofillPromo,
-  invitesDismissed,
-  openSettings,
-  orgInvites,
-  syncing,
-  syncProblem,
-  turnOnAutofill,
-} from "../state.js";
+import { acceptPromo, activePromo, dismissPromo, orgSnapshot, refreshPromos } from "../promos.js";
+import { clockWarning, openSettings, syncing, syncProblem, vaultKey } from "../state.js";
+
+function PromoBanner() {
+  const t = useT();
+  const promo = activePromo.value;
+  if (!promo) return null;
+
+  const invites = orgSnapshot.value?.invites ?? [];
+  const content: Record<typeof promo, { icon: IconName | null; text: string; action: string }> = {
+    biometric: {
+      icon: "fingerprint",
+      text: t("bio.promo", { method: t(biometricLabel()) }),
+      action: t("bio.promo_action"),
+    },
+    invites: {
+      icon: "users",
+      text:
+        invites.length === 1
+          ? t("orgs.invited_to", { name: invites[0]!.orgName })
+          : t("orgs.invited_many", { count: invites.length }),
+      action: t("orgs.review"),
+    },
+    autofill: { icon: null, text: t("list.autofill_promo"), action: t("list.autofill_enable") },
+  };
+  const { icon, text, action } = content[promo];
+
+  return (
+    <div className="promo">
+      {icon ? (
+        <span className="promo-icon">
+          <Icon name={icon} />
+        </span>
+      ) : (
+        <Logo size={22} />
+      )}
+      <span className="promo-text">{text}</span>
+      <button
+        className="link"
+        onClick={() => (promo === "invites" ? openSettings("#teams") : void acceptPromo(promo))}
+      >
+        {action}
+      </button>
+      <IconButton icon="close" label={t("common.close")} onClick={() => void dismissPromo(promo)} />
+    </div>
+  );
+}
 
 export function Notices() {
-  const t = useT();
   const problem = syncProblem.value;
-  const showInvites = orgInvites.value.length > 0 && !invitesDismissed.value;
-  const promo = biometricPromo.value
-    ? "biometric"
-    : showInvites
-      ? "invites"
-      : autofillPromo.value
-        ? "autofill"
-        : null;
+  useEffect(() => {
+    if (vaultKey.value) void refreshPromos();
+  }, [vaultKey.value]);
+
   return (
     <>
       <div className="sync-bar" hidden={!syncing.value} />
@@ -39,56 +69,7 @@ export function Notices() {
         </p>
       )}
       {clockWarning.value && <p className="notice-line warn">{clockWarning.value}</p>}
-      {promo === "biometric" && (
-        <div className="promo">
-          <span className="promo-icon">
-            <Icon name="fingerprint" />
-          </span>
-          <span className="promo-text">{t("bio.promo", { method: t(biometricLabel()) })}</span>
-          <button className="link" onClick={() => void turnOnBiometric()}>
-            {t("bio.promo_action")}
-          </button>
-          <IconButton
-            icon="close"
-            label={t("common.close")}
-            onClick={() => void dismissBiometricPromo()}
-          />
-        </div>
-      )}
-      {promo === "invites" && (
-        <div className="promo">
-          <span className="promo-icon">
-            <Icon name="users" />
-          </span>
-          <span className="promo-text">
-            {orgInvites.value.length === 1
-              ? t("orgs.invited_to", { name: orgInvites.value[0]!.orgName })
-              : t("orgs.invited_many", { count: orgInvites.value.length })}
-          </span>
-          <button className="link" onClick={() => openSettings("#teams")}>
-            {t("orgs.review")}
-          </button>
-          <IconButton
-            icon="close"
-            label={t("common.close")}
-            onClick={() => (invitesDismissed.value = true)}
-          />
-        </div>
-      )}
-      {promo === "autofill" && (
-        <div className="promo">
-          <Logo size={22} />
-          <span className="promo-text">{t("list.autofill_promo")}</span>
-          <button className="link" onClick={() => void turnOnAutofill()}>
-            {t("list.autofill_enable")}
-          </button>
-          <IconButton
-            icon="close"
-            label={t("common.close")}
-            onClick={() => void dismissAutofillPromo()}
-          />
-        </div>
-      )}
+      <PromoBanner />
     </>
   );
 }

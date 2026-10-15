@@ -1,15 +1,22 @@
-import { utf8Encode } from "../../src/core/bytes.js";
 import {
   fingerprint,
   randomKey,
   unwrapForRecipient,
   wrapForRecipient,
   type Identity,
-  type WrappedForRecipient,
 } from "../../src/core/identity.js";
+import {
+  teamKeyContext,
+  type AuditEvent,
+  type InvitableRole,
+  type OrgRole,
+  type TeamView,
+} from "../../src/core/org-model.js";
 import { request } from "./api.js";
 
-export type OrgRole = "owner" | "admin" | "member";
+export { isOrgAdmin } from "../../src/core/org-model.js";
+export type { AuditEvent, OrgRole } from "../../src/core/org-model.js";
+export type Team = TeamView;
 
 export interface OrgSummary {
   id: string;
@@ -28,16 +35,8 @@ export interface OrgMember {
 export interface OrgInvite {
   id: string;
   email: string;
-  role: OrgRole;
+  role: InvitableRole;
   expiresAt: number;
-}
-
-export interface Team {
-  id: string;
-  name: string;
-  members: string[];
-  rekeyNeeded: boolean;
-  wrappedKey: WrappedForRecipient | null;
 }
 
 export interface OrgDetail {
@@ -51,25 +50,8 @@ export interface MyInvite {
   id: string;
   orgId: string;
   orgName: string;
-  role: OrgRole;
+  role: InvitableRole;
   expiresAt: number;
-}
-
-export interface AuditEvent {
-  seq: number;
-  at: number;
-  actor: string;
-  action: string;
-  target: string | null;
-  ip: string | null;
-}
-
-export function isOrgAdmin(role: OrgRole): boolean {
-  return role === "owner" || role === "admin";
-}
-
-function teamContext(teamId: string) {
-  return utf8Encode(`personal-vault/team-key/${teamId}`);
 }
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -89,7 +71,7 @@ export async function getOrg(orgId: string): Promise<OrgDetail> {
 export async function inviteMember(
   orgId: string,
   email: string,
-  role: "admin" | "member",
+  role: InvitableRole,
   locale: string,
 ): Promise<void> {
   await request(`/api/orgs/${orgId}/invites`, {
@@ -105,7 +87,7 @@ export async function withdrawInvite(orgId: string, inviteId: string): Promise<v
 export async function setMemberRole(
   orgId: string,
   accountId: string,
-  role: "admin" | "member",
+  role: InvitableRole,
 ): Promise<void> {
   await request(`/api/orgs/${orgId}/members/${accountId}`, {
     method: "PATCH",
@@ -132,7 +114,7 @@ export async function declineInvite(inviteId: string): Promise<void> {
 
 export async function createTeam(orgId: string, name: string, me: Identity): Promise<string> {
   const id = crypto.randomUUID();
-  const wrappedKey = await wrapForRecipient(me.publicKey, randomKey(), teamContext(id));
+  const wrappedKey = await wrapForRecipient(me.publicKey, randomKey(), teamKeyContext(id));
   await request(`/api/orgs/${orgId}/teams`, {
     method: "POST",
     body: json({ id, name, wrappedKey }),
@@ -142,7 +124,7 @@ export async function createTeam(orgId: string, name: string, me: Identity): Pro
 
 export async function teamKey(team: Team, me: Identity): Promise<Uint8Array> {
   if (!team.wrappedKey) throw new Error("not in team");
-  return unwrapForRecipient(me, team.wrappedKey, teamContext(team.id));
+  return unwrapForRecipient(me, team.wrappedKey, teamKeyContext(team.id));
 }
 
 export async function addTeamMember(
@@ -156,7 +138,7 @@ export async function addTeamMember(
   const wrappedKey = await wrapForRecipient(
     member.publicKey,
     new Uint8Array(key),
-    teamContext(team.id),
+    teamKeyContext(team.id),
   );
   await request(`/api/orgs/${orgId}/teams/${team.id}/members/${member.accountId}`, {
     method: "PUT",
@@ -176,9 +158,12 @@ export async function deleteTeam(orgId: string, teamId: string): Promise<void> {
   await request(`/api/orgs/${orgId}/teams/${teamId}`, { method: "DELETE" });
 }
 
-export async function auditLog(
-  orgId: string,
-): Promise<{ events: AuditEvent[]; verified: boolean }> {
+export interface AuditPage {
+  events: AuditEvent[];
+  verified: boolean;
+}
+
+export async function auditLog(orgId: string): Promise<AuditPage> {
   return request(`/api/orgs/${orgId}/audit`);
 }
 
