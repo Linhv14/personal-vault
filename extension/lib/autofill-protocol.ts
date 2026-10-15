@@ -13,6 +13,7 @@ export interface PendingPrompt {
   domain: string;
   username?: string;
   update: boolean;
+  confirmed: boolean;
 }
 
 export type AutofillRequest =
@@ -21,6 +22,7 @@ export type AutofillRequest =
   | { type: "autofill:generate" }
   | { type: "autofill:capture"; username?: string; password: string }
   | { type: "autofill:pending" }
+  | { type: "autofill:confirm" }
   | { type: "autofill:save" }
   | { type: "autofill:dismiss" }
   | { type: "autofill:open-popup" };

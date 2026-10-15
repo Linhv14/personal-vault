@@ -11,12 +11,14 @@ import {
 } from "./vault.js";
 
 const PENDING_TTL_MS = 5 * 60_000;
+const UNCONFIRMED_TTL_MS = 60_000;
 
 interface PendingCapture {
   domain: string;
   username?: string;
   password: string;
   at: number;
+  confirmed?: boolean;
 }
 
 export interface TrustedSender {
@@ -56,7 +58,8 @@ async function readPending(sender: TrustedSender): Promise<PendingCapture | null
   const key = pendingKey(sender.tabId);
   const pending = (await chrome.storage.session.get(key))[key] as PendingCapture | undefined;
   if (!pending) return null;
-  if (Date.now() - pending.at > PENDING_TTL_MS || pending.domain !== sender.domain) {
+  const ttl = pending.confirmed ? PENDING_TTL_MS : UNCONFIRMED_TTL_MS;
+  if (Date.now() - pending.at > ttl || pending.domain !== sender.domain) {
     await chrome.storage.session.remove(key);
     return null;
   }
@@ -76,7 +79,12 @@ function promptFor(
 ): PendingPrompt | null {
   const existing = items && existingLogin(items, pageUrl, pending.username);
   if (existing?.password === pending.password) return null;
-  return { domain: pending.domain, username: pending.username, update: Boolean(existing) };
+  return {
+    domain: pending.domain,
+    username: pending.username,
+    update: Boolean(existing),
+    confirmed: Boolean(pending.confirmed),
+  };
 }
 
 export async function handleAutofill(
@@ -125,6 +133,15 @@ export async function handleAutofill(
       if (!pending) return { ok: true, prompt: null };
       const vault = await openVault();
       return { ok: true, prompt: promptFor(pending, sender.url, vault?.items ?? null) };
+    }
+
+    case "autofill:confirm": {
+      const pending = await readPending(sender);
+      if (!pending) return { ok: true, prompt: null };
+      const confirmed = { ...pending, confirmed: true, at: Date.now() };
+      await chrome.storage.session.set({ [pendingKey(sender.tabId)]: confirmed });
+      const vault = await openVault();
+      return { ok: true, prompt: promptFor(confirmed, sender.url, vault?.items ?? null) };
     }
 
     case "autofill:save": {

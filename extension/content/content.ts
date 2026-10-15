@@ -16,6 +16,11 @@ const NEW_PASSWORD_HINT = /new|confirm|repeat|register|signup|sign-up|sign_up|cr
 let t: Translate = createTranslator("en");
 let activeInput: HTMLInputElement | null = null;
 let lastCapture = { password: "", at: 0 };
+let outcomeTimer: ReturnType<typeof setInterval> | undefined;
+
+const OUTCOME_WAIT_MS = 10_000;
+const OUTCOME_STABLE_MS = 1_000;
+const OUTCOME_POLL_MS = 250;
 
 const host = document.createElement("div");
 host.style.cssText =
@@ -313,7 +318,50 @@ async function capture(scope: ParentNode): Promise<void> {
 
   const username = findUsernameField(fields[0]!)?.value.trim() || undefined;
   const response = await send({ type: "autofill:capture", username, password });
-  if (response.ok && "prompt" in response && response.prompt) showBanner(response.prompt);
+  if (response.ok && "prompt" in response && response.prompt) {
+    banner.hidden = true;
+    watchOutcome(fields);
+  }
+}
+
+function loginRejected(fields: HTMLInputElement[]): boolean {
+  return fields.some(
+    (field) =>
+      field.isConnected && isVisible(field) && field.getAttribute("aria-invalid") === "true",
+  );
+}
+
+function loginFormShown(fields: HTMLInputElement[]): boolean {
+  return (
+    fields.some((field) => field.isConnected && isVisible(field)) || passwordFields().length > 0
+  );
+}
+
+function watchOutcome(fields: HTMLInputElement[]): void {
+  clearInterval(outcomeTimer);
+  const deadline = Date.now() + OUTCOME_WAIT_MS;
+  let goneSince = 0;
+  const stop = (outcome: "confirm" | "dismiss") => {
+    clearInterval(outcomeTimer);
+    outcomeTimer = undefined;
+    if (outcome === "dismiss") {
+      void send({ type: "autofill:dismiss" });
+      return;
+    }
+    void send({ type: "autofill:confirm" }).then((response) => {
+      if (response.ok && "prompt" in response && response.prompt) showBanner(response.prompt);
+    });
+  };
+  outcomeTimer = setInterval(() => {
+    if (loginRejected(fields)) return stop("dismiss");
+    if (loginFormShown(fields)) {
+      goneSince = 0;
+      if (Date.now() > deadline) stop("dismiss");
+      return;
+    }
+    goneSince ||= Date.now();
+    if (Date.now() - goneSince >= OUTCOME_STABLE_MS) stop("confirm");
+  }, OUTCOME_POLL_MS);
 }
 
 function onFocusIn(event: FocusEvent): void {
@@ -421,7 +469,10 @@ async function start(): Promise<void> {
   document.documentElement.append(host);
 
   const response = await send({ type: "autofill:pending" });
-  if (response.ok && "prompt" in response && response.prompt) showBanner(response.prompt);
+  if (response.ok && "prompt" in response && response.prompt) {
+    if (response.prompt.confirmed) showBanner(response.prompt);
+    else watchOutcome([]);
+  }
 
   if (document.activeElement instanceof HTMLInputElement) {
     onFocusIn({ target: document.activeElement } as unknown as FocusEvent);

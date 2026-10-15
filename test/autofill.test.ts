@@ -209,10 +209,14 @@ describe("capture and save", () => {
     );
     expect(captured).toEqual({
       ok: true,
-      prompt: { domain: "example.com", username: "reader", update: false },
+      prompt: { domain: "example.com", username: "reader", update: false, confirmed: false },
     });
 
     expect(await handleAutofill({ type: "autofill:pending" }, page)).toEqual(captured);
+    expect(await handleAutofill({ type: "autofill:confirm" }, page)).toEqual({
+      ok: true,
+      prompt: { domain: "example.com", username: "reader", update: false, confirmed: true },
+    });
     expect(await handleAutofill({ type: "autofill:save" }, page)).toEqual({
       ok: true,
       saved: true,
@@ -268,6 +272,33 @@ describe("capture and save", () => {
     expect(
       await handleAutofill({ type: "autofill:pending" }, sender("https://another-site.com/")!),
     ).toEqual({ ok: true, prompt: null });
+  });
+
+  it("forgets an unconfirmed capture after a minute but keeps a confirmed one longer", async () => {
+    vi.useFakeTimers();
+    try {
+      await unlockWith([]);
+      const page = sender("https://example.com/login")!;
+      await handleAutofill({ type: "autofill:capture", username: "u", password: "typo" }, page);
+      vi.advanceTimersByTime(61_000);
+      expect(await handleAutofill({ type: "autofill:pending" }, page)).toEqual({
+        ok: true,
+        prompt: null,
+      });
+      expect(await handleAutofill({ type: "autofill:confirm" }, page)).toEqual({
+        ok: true,
+        prompt: null,
+      });
+
+      await handleAutofill({ type: "autofill:capture", username: "u", password: "right" }, page);
+      await handleAutofill({ type: "autofill:confirm" }, page);
+      vi.advanceTimersByTime(4 * 60_000);
+      expect(await handleAutofill({ type: "autofill:pending" }, page)).toMatchObject({
+        prompt: { confirmed: true },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("asks to unlock instead of saving while locked", async () => {

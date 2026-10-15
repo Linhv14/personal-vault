@@ -61,12 +61,28 @@ unrelated sites apart:
 
 When a form with a password is submitted, the page script sends the username
 and password to the service worker, which keeps them in
-`chrome.storage.session` for five minutes, keyed by tab. The page, or the next
-page after the navigation, shows **Save** for a new login or **Update** when
-the password differs from the saved one. Nothing is offered when it is already
-saved, and a pending save is not carried to a different site. Locking the
-vault discards it. If the vault is locked when **Save** is pressed, the banner
-asks you to unlock first.
+`chrome.storage.session`, keyed by tab. Nothing is shown yet: a submit only
+says the password was sent, not that it was right.
+
+The page script then waits for the sign-in to land. It asks only once no login
+form has been on screen for a full second, either because the page navigated
+to one without a password field or because a single-page app swapped the form
+out. The capture is dropped, without asking, when:
+
+- the site marks the password field `aria-invalid`;
+- a login form is still, or again, on screen 10 seconds after the submit,
+  which is what a rejected password looks like on most sites;
+- the page that loads next is a login form again;
+- nothing confirms it within a minute.
+
+Revealing the password does not count as the form going away: the fields
+captured at submit are tracked even when their type changes.
+
+Once confirmed, the banner shows **Save** for a new login or **Update** when
+the password differs from the saved one, and keeps being offered on that tab
+for five minutes. Nothing is offered when it is already saved, and a pending
+save is not carried to a different site. Locking the vault discards it. If the
+vault is locked when **Save** is pressed, the banner asks you to unlock first.
 
 ## Generating passwords
 
