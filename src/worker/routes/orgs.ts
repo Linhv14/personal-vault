@@ -256,8 +256,10 @@ orgs.post("/:orgId/teams", async (c) => {
   if (!me) return notFound(c);
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const name = cleanName(body?.name);
-  if (!name || !isWrappedKey(body?.wrappedKey)) return c.json(apiError("orgs.invalid_team"), 400);
-  const id = crypto.randomUUID();
+  const id = body?.id;
+  if (!name || !isId(id) || !isWrappedKey(body?.wrappedKey)) {
+    return c.json(apiError("orgs.invalid_team"), 400);
+  }
   const result = await store(c, orgId).createTeam(
     me,
     { id, name, wrappedKey: body.wrappedKey },

@@ -505,3 +505,84 @@ main > .notice {
 .card + .card {
   margin-top: 16px;
 }
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.inline-form input {
+  flex: 1;
+  min-width: 200px;
+}
+.org-switch {
+  margin-bottom: 16px;
+}
+.org-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.org-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.org-row.pending {
+  opacity: 0.75;
+}
+.org-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.org-row-text small {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.fingerprint {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.team {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.team summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+}
+.team > .button {
+  margin-top: 10px;
+}
+.audit-row {
+  display: grid;
+  grid-template-columns: 150px 1fr auto;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13.5px;
+}
+.audit-time,
+.audit-ip {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.ok-text {
+  color: var(--accent);
+}
+.button.quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+.button.quiet:hover {
+  color: var(--danger);
+}

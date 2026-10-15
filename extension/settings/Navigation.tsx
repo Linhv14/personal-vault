@@ -5,7 +5,7 @@ import { useT } from "../ui/i18n.js";
 import { refreshSession, vaultKeyRawSignal } from "../ui/store/session.js";
 import { isSignedIn, localState, showToast } from "./state.js";
 
-export const PAGES = ["general", "security", "health", "data", "account"] as const;
+export const PAGES = ["general", "security", "teams", "health", "data", "account"] as const;
 export type Page = (typeof PAGES)[number];
 
 export function pageFromHash(): Page {
@@ -18,6 +18,7 @@ export function Navigation({ page }: { page: Page }) {
   const entries: { page: Page; label: string; icon: IconName }[] = [
     { page: "general", label: t("settings.section_preferences"), icon: "gear" },
     { page: "security", label: t("settings.section_security"), icon: "shield" },
+    { page: "teams", label: t("orgs.title"), icon: "users" },
     { page: "health", label: t("health.title"), icon: "pulse" },
     { page: "data", label: t("settings.section_data"), icon: "database" },
     { page: "account", label: t("settings.section_account"), icon: "person" },

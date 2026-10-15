@@ -147,16 +147,24 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
   });
 
   it("shares a team key only with the members it was wrapped for", async () => {
+    teamId = crypto.randomUUID();
+    const body = JSON.stringify({
+      id: teamId,
+      name: "Backend",
+      wrappedKey: await wrapForRecipient(owner.identity.publicKey, teamKey, teamContext(teamId)),
+    });
     const created = await api(`/api/orgs/${orgId}/teams`, {
       method: "POST",
       token: owner.token,
-      body: JSON.stringify({
-        name: "Backend",
-        wrappedKey: await wrapForRecipient(owner.identity.publicKey, teamKey, teamContext("new")),
-      }),
+      body,
     });
     expect(created.status).toBe(201);
-    teamId = created.body.id;
+    const again = await api(`/api/orgs/${orgId}/teams`, {
+      method: "POST",
+      token: owner.token,
+      body,
+    });
+    expect(again.status).toBe(409);
 
     const added = await api(`/api/orgs/${orgId}/teams/${teamId}/members/${member.accountId}`, {
       method: "PUT",
@@ -220,5 +228,20 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
       "member.removed",
     ]);
     expect(JSON.stringify(audit.body)).not.toContain(Buffer.from(teamKey).toString("base64"));
+  });
+
+  it("lets the extension send every method the organization API uses", async () => {
+    const response = await fetch(`${BASE}/api/orgs/${orgId}/members/${admin.accountId}`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "chrome-extension://eepgmbamigmadeddhcoldncaolikeagm",
+        "Access-Control-Request-Method": "PATCH",
+        "Access-Control-Request-Headers": "authorization,content-type",
+      },
+    });
+    const allowed = response.headers.get("access-control-allow-methods") ?? "";
+    for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
+      expect(allowed).toContain(method);
+    }
   });
 });

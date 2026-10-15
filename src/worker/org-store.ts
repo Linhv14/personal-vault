@@ -198,6 +198,7 @@ export class OrgStore extends DurableObject<Env> {
     }
     const count = this.sql.exec<{ n: number }>("SELECT count(*) AS n FROM teams").one().n;
     if (count >= MAX_TEAMS) return { ok: false, status: 409, code: "orgs.limit_reached" };
+    if (this.teamExists(team.id)) return { ok: false, status: 409, code: "orgs.invalid_team" };
     const at = now();
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(

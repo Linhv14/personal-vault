@@ -28,7 +28,7 @@ interface ServerError {
   params?: Record<string, string | number>;
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   init: RequestInit & { auth?: boolean; extraHeaders?: Record<string, string> } = {},
 ): Promise<T> {

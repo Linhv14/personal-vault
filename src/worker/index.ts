@@ -23,7 +23,7 @@ app.use(
         ? origin
         : null,
     allowHeaders: ["Content-Type", "Authorization", "X-Registration-Token"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     maxAge: 86_400,
   }),
 );
