@@ -481,7 +481,7 @@ async function ci() {
   };
   writeState(state);
   accountEnv = { CLOUDFLARE_ACCOUNT_ID: state.accountId };
-  const options = resolveDeployOptions(state, {});
+  const options = resolveDeployOptions({ ...state }, {});
   const configPath = writeGeneratedConfig(state.accountId, state.databaseId, options);
 
   style.step("Applying migrations");
