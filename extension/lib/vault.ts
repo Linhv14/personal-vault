@@ -202,24 +202,37 @@ export async function saveItem(
   return storeItem(key, { ...item, createdAt: item.createdAt ?? now, updatedAt: now });
 }
 
-export const USE_RECORD_INTERVAL = 60;
+const USE_RECORD_INTERVAL = 60;
+
+function usedRecently(item: VaultItem, now: number): boolean {
+  return item.lastUsedAt !== undefined && now - item.lastUsedAt < USE_RECORD_INTERVAL;
+}
 
 export async function markUsed(
   key: CryptoKey,
   item: VaultItem,
   now = Math.floor(Date.now() / 1000),
 ): Promise<void> {
-  if (item.lastUsedAt !== undefined && now - item.lastUsedAt < USE_RECORD_INTERVAL) return;
-  await storeItem(key, { ...item, lastUsedAt: now });
+  if (usedRecently(item, now)) return;
+  if ((await sync()) === null) return;
+  const row = ((await getLocal()).items ?? []).find((cached) => cached.id === item.id);
+  if (!row || !isLive(row)) return;
+  const { item: latest } = await openItem(key, row, false);
+  if (usedRecently(latest, now)) return;
+  await storeItem(key, { ...latest, lastUsedAt: now }, row.updatedAt);
 }
 
 export function byLastUsed(a: VaultItem, b: VaultItem): number {
   return (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);
 }
 
-async function storeItem(key: CryptoKey, payload: VaultItem): Promise<VaultItem> {
+async function storeItem(
+  key: CryptoKey,
+  payload: VaultItem,
+  ifUpdatedAt?: number,
+): Promise<VaultItem> {
   const sealed = await sealJson(key, payload, itemAssociatedData(payload.id));
-  const { updatedAt } = await api.putItem(payload.id, sealed);
+  const { updatedAt } = await api.putItem(payload.id, sealed, ifUpdatedAt);
 
   await upsertCache({
     id: payload.id,

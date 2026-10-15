@@ -26,8 +26,12 @@ vi.stubGlobal("chrome", {
 });
 vi.stubGlobal(
   "fetch",
-  vi.fn(async (input: RequestInfo | URL) => {
-    const id = new URL(String(input)).pathname.split("/").pop()!;
+  vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/api/items" && (init?.method ?? "GET") === "GET") {
+      return new Response(JSON.stringify({ serverTime: Math.floor(Date.now() / 1000), items: [] }));
+    }
+    const id = url.pathname.split("/").pop()!;
     return new Response(JSON.stringify({ id, updatedAt: Math.floor(Date.now() / 1000) }));
   }),
 );
@@ -155,6 +159,8 @@ describe("passkey service", () => {
       },
       page,
     );
+    for (let round = 0; round < 50; round += 1)
+      await new Promise((resolve) => setTimeout(resolve, 1));
     const query = await handlePasskey(
       { type: "passkey:query", rpId: "example.com", allowCredentialIds: [] },
       page,

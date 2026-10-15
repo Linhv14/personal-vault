@@ -27,14 +27,31 @@ vi.stubGlobal("chrome", {
 });
 
 const puts: string[] = [];
+const conditions: (string | null)[] = [];
+const remote = { changes: [] as unknown[], conflict: false };
 vi.stubGlobal(
   "fetch",
-  vi.fn(async (input: RequestInfo | URL) => {
-    const id = new URL(String(input)).pathname.split("/").pop()!;
+  vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    if (url.pathname === "/api/items" && (init?.method ?? "GET") === "GET") {
+      return new Response(
+        JSON.stringify({ serverTime: Math.floor(Date.now() / 1000), items: remote.changes }),
+      );
+    }
+    const id = url.pathname.split("/").pop()!;
+    conditions.push(url.searchParams.get("ifUpdatedAt"));
+    if (remote.conflict && url.searchParams.has("ifUpdatedAt")) {
+      return new Response(JSON.stringify({ code: "items.conflict" }), { status: 409 });
+    }
     puts.push(id);
-    return new Response(JSON.stringify({ id, updatedAt: Math.floor(Date.now() / 1000) }));
+    return new Response(JSON.stringify({ id, updatedAt: Math.floor(Date.now() / 1000) + 1 }));
   }),
 );
+
+async function settled(done: () => boolean = () => false): Promise<void> {
+  const deadline = Date.now() + 500;
+  while (!done() && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 5));
+}
 
 const { handleAutofill, trustedSender } = await import("../extension/lib/autofill-service.js");
 const { saveItem, decryptAll } = await import("../extension/lib/vault.js");
@@ -61,6 +78,11 @@ async function unlockWith(items: Parameters<typeof saveItem>[1][]) {
   puts.length = 0;
 }
 
+async function unlockFresh(items: Parameters<typeof saveItem>[1][]) {
+  await unlockWith(items);
+  conditions.length = 0;
+}
+
 const GITHUB = {
   id: "00000000-0000-4000-8000-000000000001",
   title: "GitHub",
@@ -83,10 +105,14 @@ const PAGES = {
   password: "pages-password",
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await new Promise((resolve) => setTimeout(resolve, 50));
   localArea.clear();
   sessionArea.clear();
   puts.length = 0;
+  conditions.length = 0;
+  remote.changes = [];
+  remote.conflict = false;
 });
 
 describe("trustedSender", () => {
@@ -209,14 +235,25 @@ describe("last used", () => {
   };
 
   it("records a fill without touching the modified date and suggests it first next time", async () => {
-    await unlockWith([GITHUB, WORK]);
+    await unlockFresh([GITHUB, WORK]);
     const page = sender("https://github.com/login")!;
     const before = await handleAutofill({ type: "autofill:suggest" }, page);
     expect(before).toMatchObject({ suggestions: [{ id: GITHUB.id }, { id: WORK.id }] });
 
     const [, workBefore] = await decryptAll(key);
+    const cachedRow = (localArea.get("items") as { id: string; updatedAt: number }[]).find(
+      (row) => row.id === WORK.id,
+    )!;
     await handleAutofill({ type: "autofill:fill", id: WORK.id }, page);
+    await settled(() => puts.length > 0);
+    await settled(() => {
+      const row = (localArea.get("items") as { id: string; updatedAt: number }[]).find(
+        (cached) => cached.id === WORK.id,
+      );
+      return row !== undefined && row.updatedAt !== cachedRow.updatedAt;
+    });
     expect(puts).toEqual([WORK.id]);
+    expect(conditions).toEqual([String(cachedRow.updatedAt)]);
     const work = (await decryptAll(key)).find((item) => item.id === WORK.id)!;
     expect(work.lastUsedAt).toBeGreaterThan(0);
     expect(work.updatedAt).toBe(workBefore!.updatedAt);
@@ -230,8 +267,37 @@ describe("last used", () => {
     await unlockWith([GITHUB]);
     const page = sender("https://github.com/login")!;
     await handleAutofill({ type: "autofill:fill", id: GITHUB.id }, page);
+    await settled(() => puts.length > 0);
+    await settled();
     await handleAutofill({ type: "autofill:fill", id: GITHUB.id }, page);
+    await settled();
     expect(puts).toEqual([GITHUB.id]);
+  });
+
+  it("never brings back an item another device deleted", async () => {
+    await unlockFresh([GITHUB]);
+    remote.changes = [
+      {
+        id: GITHUB.id,
+        ciphertext: null,
+        nonce: null,
+        updatedAt: 9_999_999_999,
+        deletedAt: 9_999_999_999,
+      },
+    ];
+    await handleAutofill({ type: "autofill:fill", id: GITHUB.id }, sender("https://github.com/")!);
+    await settled();
+    expect(puts).toEqual([]);
+  });
+
+  it("leaves a newer version on the server alone", async () => {
+    await unlockFresh([GITHUB]);
+    remote.conflict = true;
+    const before = localArea.get("items");
+    await handleAutofill({ type: "autofill:fill", id: GITHUB.id }, sender("https://github.com/")!);
+    await settled();
+    expect(puts).toEqual([]);
+    expect(localArea.get("items")).toEqual(before);
   });
 });
 

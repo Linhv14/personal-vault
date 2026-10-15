@@ -111,7 +111,7 @@ export async function handleAutofill(
       if (!item?.password || !matchesSite(item, sender.url)) {
         return { ok: false, error: "no_match" };
       }
-      await markUsed(vault.key, item).catch(() => {});
+      void markUsed(vault.key, item).catch(() => {});
       return { ok: true, credentials: { username: item.username, password: item.password } };
     }
 

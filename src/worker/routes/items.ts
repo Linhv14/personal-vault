@@ -63,6 +63,21 @@ items.put("/:id", async (c) => {
   }
 
   const { accountId } = c.get("session");
+  const ifUpdatedAt = c.req.query("ifUpdatedAt");
+  if (ifUpdatedAt !== undefined) {
+    const base = Number(ifUpdatedAt);
+    if (!Number.isSafeInteger(base)) return c.json(apiError("items.invalid_payload"), 400);
+    const updatedAt = now();
+    const result = await c.env.DB.prepare(
+      `UPDATE items SET ciphertext = ?, nonce = ?, updated_at = ?
+        WHERE id = ? AND account_id = ? AND updated_at = ? AND deleted_at IS NULL`,
+    )
+      .bind(ciphertext, nonce, updatedAt, id, accountId, base)
+      .run();
+    if (!result.meta.changes) return c.json(apiError("items.conflict"), 409);
+    return c.json({ id, updatedAt });
+  }
+
   const usage = await c.env.DB.prepare(
     `SELECT
        (SELECT count(*) FROM items WHERE account_id = ? AND deleted_at IS NULL) AS live,

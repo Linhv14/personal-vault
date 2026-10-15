@@ -125,7 +125,7 @@ async function get(
   );
   if (!match) return { ok: false, error: "not_found" };
   const assertion = await signAssertion(match.passkey, { origin, challenge: options.challenge });
-  await markUsed(vault.key, match.item).catch(() => {});
+  void markUsed(vault.key, match.item).catch(() => {});
   return { ok: true, assertion };
 }
 
