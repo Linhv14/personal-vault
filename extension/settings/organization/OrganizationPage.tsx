@@ -15,7 +15,7 @@ type Tab = "members" | "teams" | "activity";
 
 const TAB_VIEWS = { members: MembersTab, teams: TeamsTab, activity: ActivityTab };
 
-export function OrganizationPage() {
+export function OrganizationPage({ dashboardUrl }: { dashboardUrl?: string }) {
   const t = useT();
   const vaultKey = vaultKeySignal.value;
   const state = useOrganization(vaultKey);
@@ -45,7 +45,14 @@ export function OrganizationPage() {
 
   return (
     <section className="page">
-      <h1>{t("orgs.title")}</h1>
+      <div className="page-head">
+        <h1>{t("orgs.title")}</h1>
+        {dashboardUrl && (
+          <a className="button quiet" href={dashboardUrl} target="_blank" rel="noreferrer">
+            {t("orgs.open_dashboard")}
+          </a>
+        )}
+      </div>
       {error && (
         <p className="error" role="alert">
           {error}

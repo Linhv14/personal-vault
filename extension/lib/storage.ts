@@ -12,6 +12,7 @@
 
 import type { KdfParams, SealedData } from "../../src/core/crypto.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
+import { platform } from "./platform.js";
 
 /** An item exactly as the server stores it — always ciphertext. */
 export interface CachedItem {
@@ -77,11 +78,11 @@ const PENDING_SIGNUP_KEY = "pendingSignup";
 const PENDING_SIGNUP_TTL_MS = 15 * 60_000;
 
 export async function savePendingSignup(signup: PendingSignup): Promise<void> {
-  await chrome.storage.session.set({ [PENDING_SIGNUP_KEY]: signup });
+  await platform().session.set({ [PENDING_SIGNUP_KEY]: signup });
 }
 
 export async function loadPendingSignup(): Promise<PendingSignup | null> {
-  const signup = (await chrome.storage.session.get(PENDING_SIGNUP_KEY))[PENDING_SIGNUP_KEY] as
+  const signup = (await platform().session.get(PENDING_SIGNUP_KEY))[PENDING_SIGNUP_KEY] as
     PendingSignup | undefined;
   if (!signup) return null;
   if (Date.now() - signup.sentAt > PENDING_SIGNUP_TTL_MS) {
@@ -92,15 +93,15 @@ export async function loadPendingSignup(): Promise<PendingSignup | null> {
 }
 
 export async function clearPendingSignup(): Promise<void> {
-  await chrome.storage.session.remove(PENDING_SIGNUP_KEY);
+  await platform().session.remove(PENDING_SIGNUP_KEY);
 }
 
 export async function getLocal(): Promise<LocalState> {
-  return (await chrome.storage.local.get(null)) as LocalState;
+  return (await platform().local.get(null)) as LocalState;
 }
 
 export async function setLocal(patch: Partial<LocalState>): Promise<void> {
-  await chrome.storage.local.set(patch);
+  await platform().local.set(patch);
 }
 
 const DEVICE_PREFERENCES = [
@@ -114,12 +115,12 @@ export async function clearAccountData(): Promise<void> {
   const preferences = Object.fromEntries(
     DEVICE_PREFERENCES.filter((key) => local[key] !== undefined).map((key) => [key, local[key]]),
   );
-  await chrome.storage.local.clear();
-  await chrome.storage.local.set(preferences);
+  await platform().local.clear();
+  await platform().local.set(preferences);
 }
 
 async function getSession(): Promise<SessionState> {
-  return (await chrome.storage.session.get(null)) as SessionState;
+  return (await platform().session.get(null)) as SessionState;
 }
 
 export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: string } | null> {
@@ -136,19 +137,19 @@ export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: stri
 }
 
 export async function unlock(vaultKeyRaw: string, token: string | undefined): Promise<void> {
-  await chrome.storage.session.remove("lockAt");
-  await chrome.storage.session.set({ vaultKeyRaw, token, ...(await lockDeadline()) });
+  await platform().session.remove("lockAt");
+  await platform().session.set({ vaultKeyRaw, token, ...(await lockDeadline()) });
   await scheduleLockAlarm();
 }
 
 /** Extend the deadline on activity so the vault never locks mid-use. */
 export async function requestItemFocus(id: string): Promise<void> {
-  await chrome.storage.session.set({ focusItem: id });
+  await platform().session.set({ focusItem: id });
 }
 
 export async function takeItemFocus(): Promise<string | undefined> {
   const { focusItem } = await getSession();
-  if (focusItem) await chrome.storage.session.remove("focusItem");
+  if (focusItem) await platform().session.remove("focusItem");
   return focusItem;
 }
 
@@ -156,8 +157,8 @@ export async function touch(): Promise<void> {
   const session = await getSession();
   if (!session.vaultKeyRaw) return;
   const deadline = await lockDeadline();
-  if (deadline.lockAt) await chrome.storage.session.set(deadline);
-  else await chrome.storage.session.remove("lockAt");
+  if (deadline.lockAt) await platform().session.set(deadline);
+  else await platform().session.remove("lockAt");
 }
 
 export async function notePasskeys(present: boolean): Promise<void> {
@@ -167,16 +168,16 @@ export async function notePasskeys(present: boolean): Promise<void> {
 export async function lock(): Promise<void> {
   // clear() rather than deleting named keys, so adding a field later cannot
   // leave a secret behind.
-  await chrome.storage.session.clear();
-  await chrome.storage.local.remove("resume");
+  await platform().session.clear();
+  await platform().local.remove("resume");
 }
 
 export async function setToken(token: string): Promise<void> {
-  await chrome.storage.session.set({ token });
+  await platform().session.set({ token });
 }
 
 export const LOCK_ALARM = "auto-lock";
 
 export async function scheduleLockAlarm(): Promise<void> {
-  await chrome.alarms.create(LOCK_ALARM, { periodInMinutes: 1 });
+  await platform().scheduleLock(LOCK_ALARM);
 }

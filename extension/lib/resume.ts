@@ -1,6 +1,7 @@
 import { importVaultKey, openJson, sealJson } from "../../src/core/crypto.js";
 import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
 import * as api from "./api.js";
+import { platform } from "./platform.js";
 import { autoLockMinutes, getLocal, getUnlocked, LOCK_NEVER, setLocal, unlock } from "./storage.js";
 
 const RESUME_CONTEXT = utf8Encode("personal-vault/resume");
@@ -20,7 +21,7 @@ export async function rememberUnlock(vaultKeyRaw: string, token: string | undefi
 }
 
 export async function forgetUnlock(): Promise<void> {
-  await chrome.storage.local.remove("resume");
+  await platform().local.remove("resume");
 }
 
 export async function resumeUnlock(): Promise<boolean> {

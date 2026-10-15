@@ -91,8 +91,7 @@ both. See "CI trust" below for what this does not protect against.
 | Clients       | Chrome extension (Preact), web dashboard (Preact, same UI kit), `1pw` CLI and GitHub Action (TypeScript on Node) | Keys and plaintext, only while unlocked                                                                     |
 | Edge API      | One Cloudflare Worker (Hono)                                                                                     | No state; authenticates, routes to the right store                                                          |
 | Control plane | D1, shared                                                                                                       | Accounts, sessions, organizations, memberships, invitations, plans and billing, one-time codes, share links |
-| Data plane    | One SQLite-backed Durable Object per tenant: `user:<accountId>` and `org:<orgId>`                                | Vault items; teams, projects, environments, secrets, wrapped keys, repository links, recent audit log       |
-| Archive       | Basin Pipelines into R2 (Iceberg), partitioned by organization and day                                           | Long-term audit log, kept per plan                                                                          |
+| Data plane    | One SQLite-backed Durable Object per tenant: `user:<accountId>` and `org:<orgId>`                                | Vault items; teams, projects, environments, secrets, wrapped keys, repository links, audit log              |
 | Email         | Resend                                                                                                           | Codes and invitations                                                                                       |
 
 Why this split:
@@ -108,7 +107,7 @@ Why this split:
 - Limits to design around: about 500 to 1,000 simple requests per second per
   object, 128 MB of memory, 2 MB per row, one location per object. No object
   serves everyone; there is no "global" object. Cross-tenant numbers live in the
-  control plane or the archive.
+  control plane.
 
 The Worker authenticates against the control plane and passes the verified
 account and role to the object. The object checks membership again against its
@@ -117,19 +116,32 @@ another tenant's data.
 
 ## Audit log
 
-Two tiers, because an audit log for secrets must not lose a record:
-
-1. The organization's object appends every event in the same step as the action
-   it records, with each record carrying the hash of the previous one and the
-   object keeping the latest hash. Recent events (90 days) are served from here,
-   instantly.
-2. A copy goes to Basin Pipelines and lands in R2 as Iceberg tables, partitioned
-   by organization and day, under a retention lock. This is the long-term record,
-   queryable with SQL and exportable to a customer's SIEM. Pipelines can drop or
-   delay events; the hash chain shows any gap, and the object re-sends it.
+One path only: the organization's object appends every event in the same step
+as the action it records, and each record carries the hash of the previous one,
+so deleting or editing a record breaks every hash after it. The log stays in the
+object for the life of the organization; there is no second copy to operate or
+keep in step. An organization's object holds up to 10 GB, which at a few hundred
+bytes per event is tens of millions of events. If a customer needs the log in
+their own SIEM, an export endpoint reads it from the object.
 
 Events carry identifiers, never secret values or names (names are encrypted
 too): who (account, or repository and ref), what, which object, from where, when.
+
+## Web dashboard
+
+Organizations are also managed at `/app` on the service's own domain, for admins
+who are not in the extension. It is the same Preact code as the extension's
+Organization page, built into `dist/public/app` and served by the Worker. Signing
+in derives the keys in the browser exactly as the extension does: the master
+password and the vault key never leave the page. Keys and the session token
+live only in the page's memory (no `localStorage`, no cookies), so a reload or
+15 minutes without activity signs out. The page talks only to its own origin,
+enforced by the site's Content Security Policy.
+
+The trade-off is the usual one for web vaults: the server delivers the code
+that handles the keys, so a compromised server could deliver code that leaks
+them to anyone who signs in afterwards. The extension does not have this
+exposure, because its code is installed, not fetched. See the threat model.
 
 ## CI trust, without overtrusting OIDC
 

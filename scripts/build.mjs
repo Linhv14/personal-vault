@@ -113,6 +113,23 @@ async function buildSharePage() {
   await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
 }
 
+async function buildDashboard() {
+  const source = path.join(root, "web");
+  const out = path.join(outPublic, "app");
+  await mkdir(out, { recursive: true });
+  await build({
+    ...common,
+    entryPoints: [path.join(source, "main.tsx")],
+    outfile: path.join(out, "app.js"),
+  });
+  await copyPage(path.join(source, "index.html"), path.join(out, "index.html"));
+  await copyPage(
+    path.join(root, "extension", "settings", "settings.css"),
+    path.join(out, "settings.css"),
+  );
+  await cp(path.join(source, "web.css"), path.join(out, "web.css"));
+}
+
 async function buildExtension() {
   const source = path.join(root, "extension");
   if (!existsSync(path.join(source, "manifest.json"))) {
@@ -190,6 +207,7 @@ await clean(outPublic);
 await clean(outExtension);
 
 await buildSharePage();
+await buildDashboard();
 await buildExtension();
 await packageForDownload();
 console.log(dev ? "Dev build complete." : "Build complete.");

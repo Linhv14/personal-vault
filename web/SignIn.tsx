@@ -1,0 +1,66 @@
+import { useState } from "preact/hooks";
+import { describeError } from "../src/i18n/index.js";
+import { logoSvg } from "../src/ui/logo.js";
+import { Button } from "../extension/ui/components/Button.js";
+import { useT } from "../extension/ui/i18n.js";
+import { IDLE_MINUTES, signIn } from "./session.js";
+
+export function SignIn() {
+  const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+
+  const submit = async (event: Event) => {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const data = new FormData(form);
+    setError(null);
+    setWorking(true);
+    try {
+      await signIn(String(data.get("email")).trim(), String(data.get("password")));
+    } catch (failure) {
+      setError(describeError(failure, t));
+      (form.elements.namedItem("password") as HTMLInputElement | null)?.select();
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  return (
+    <main className="sign-in">
+      <form className="card sign-in-card" onSubmit={(event) => void submit(event)}>
+        <header className="brand">
+          <span
+            className="brand-logo"
+            aria-hidden="true"
+            dangerouslySetInnerHTML={{ __html: logoSvg("web-logo") }}
+          />
+          <span className="wordmark">
+            <span className="wordmark-accent">1</span>PW
+          </span>
+        </header>
+        <h1>{t("web.sign_in_title")}</h1>
+        <label>
+          {t("setup.email")}
+          <input name="email" type="email" autoComplete="username" required autoFocus />
+        </label>
+        <label>
+          {t("setup.master_password")}
+          <input name="password" type="password" autoComplete="current-password" required />
+        </label>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <Button variant="primary" type="submit" disabled={working}>
+          {t(working ? "web.signing_in" : "setup.sign_in")}
+        </Button>
+        <p className="row-hint">{t("web.sign_in_hint", { minutes: IDLE_MINUTES })}</p>
+        <p className="row-hint">
+          {t("web.no_account")} <a href="/">{t("web.get_extension")}</a>
+        </p>
+      </form>
+    </main>
+  );
+}

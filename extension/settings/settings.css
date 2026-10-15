@@ -156,6 +156,12 @@ h3 {
   margin: 0 0 4px;
   font-size: 15px;
 }
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
 .card h2 {
   margin-top: 0;
   margin-bottom: 4px;

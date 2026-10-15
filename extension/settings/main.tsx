@@ -15,7 +15,13 @@ import { isSignedIn, localState, toastMessage, watchStorage } from "./state.js";
 const PAGE_VIEWS: Record<Page, ComponentType> = {
   general: General,
   security: Security,
-  teams: OrganizationPage,
+  teams: () => (
+    <OrganizationPage
+      dashboardUrl={
+        localState.value.apiUrl ? `${localState.value.apiUrl.replace(/\/$/, "")}/app/` : undefined
+      }
+    />
+  ),
   health: Health,
   data: Data,
   account: Account,

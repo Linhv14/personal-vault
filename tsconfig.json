@@ -23,6 +23,8 @@
     "extension/**/*.ts",
     "extension/**/*.tsx",
     "share/**/*.ts",
+    "web/**/*.ts",
+    "web/**/*.tsx",
     "preview/**/*.ts",
     "scripts/**/*.d.mts"
   ]

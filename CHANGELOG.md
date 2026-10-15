@@ -10,6 +10,12 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Web dashboard at `/app`: sign in with the master password to manage
+  organizations (members, invitations, teams, re-keying, activity) outside the
+  extension. Keys stay in the page's memory and it signs out after 15 minutes
+  without activity. Linked from Settings → Organization and the landing page;
+  invitation emails point to it.
+
 - Team re-keying: after someone leaves a team, an admin in the team creates a
   new key, wrapped for each remaining member in one step. Team keys carry a
   generation; adding a member with an older generation's key is refused.

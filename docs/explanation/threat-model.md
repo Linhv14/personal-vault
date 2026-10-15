@@ -87,6 +87,12 @@ one that sends keys home. Self-hosting from source you have read, or building
 the extension yourself, is the defence. A Chrome Web Store build is only as
 trustworthy as its publisher.
 
+**A malicious server and the web dashboard.** The dashboard at `/app` is code the
+server sends on every visit. An operator, or anyone who takes over the server,
+can send a version that leaks the master password or keys of whoever signs in
+next. Only organization admins need the dashboard; the extension covers the
+same tasks without this exposure.
+
 **Server-side rollback.** A server can return an older copy of an item, or
 withhold a newer one; the extension cannot tell. Integrity of each item is
 protected, freshness of the whole vault is not.

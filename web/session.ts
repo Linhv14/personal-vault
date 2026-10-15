@@ -1,0 +1,57 @@
+import { deriveAuthKey, deriveMasterKey, deriveWrappingKey, open } from "../src/core/crypto.js";
+import { toBase64 } from "../src/core/bytes.js";
+import { signal } from "@preact/signals";
+import * as api from "../extension/lib/api.js";
+import { memoryArea, usePlatform } from "../extension/lib/platform.js";
+import { getUnlocked, lock, setLocal, touch, unlock } from "../extension/lib/storage.js";
+import { refreshSession, vaultKeySignal } from "../extension/ui/store/session.js";
+
+export const IDLE_MINUTES = 15;
+export const accountEmail = signal<string | null>(null);
+const CHECK_INTERVAL_MS = 5_000;
+const TOUCH_INTERVAL_MS = 30_000;
+
+export function startWebSession(): void {
+  usePlatform({
+    local: memoryArea({ apiUrl: location.origin, autoLockMinutes: IDLE_MINUTES }),
+    session: memoryArea(),
+    scheduleLock: async () => {},
+  });
+
+  let lastTouch = 0;
+  const onActivity = () => {
+    if (Date.now() - lastTouch < TOUCH_INTERVAL_MS) return;
+    lastTouch = Date.now();
+    void touch();
+  };
+  for (const event of ["pointerdown", "keydown"]) {
+    addEventListener(event, onActivity, { passive: true });
+  }
+
+  setInterval(() => {
+    if (!vaultKeySignal.value) return;
+    void getUnlocked().then((unlocked) => {
+      if (!unlocked?.token) void refreshSession();
+    });
+  }, CHECK_INTERVAL_MS);
+}
+
+export async function signIn(email: string, password: string): Promise<void> {
+  const kdf = await api.prelogin(email);
+  const masterKey = await deriveMasterKey(email, password, kdf);
+  const { token, wrappedVaultKey } = await api.login(
+    email,
+    toBase64(await deriveAuthKey(masterKey)),
+  );
+  const vaultKeyRaw = await open(await deriveWrappingKey(masterKey), wrappedVaultKey);
+  await setLocal({ email, kdf, wrappedVaultKey });
+  await unlock(toBase64(vaultKeyRaw), token);
+  accountEmail.value = email;
+  await refreshSession();
+}
+
+export async function signOut(): Promise<void> {
+  await api.logout();
+  await lock();
+  await refreshSession();
+}

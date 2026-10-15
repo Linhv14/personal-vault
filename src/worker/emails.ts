@@ -70,7 +70,7 @@ const STRINGS = {
       intro: (inviter: string, org: string) =>
         `${inviter} invited you to ${org}. Teams there share passwords and CI secrets, encrypted end to end.`,
       next: (site: string) =>
-        `Open ${APP_NAME} with this email address, or create an account at ${site}, then accept the invitation in Settings. It expires in 14 days.`,
+        `Sign in at ${site}/app with this email address and accept the invitation there or in the ${APP_NAME} extension. No account yet? Install the extension from ${site} first. It expires in 14 days.`,
       ignore: "If you don't know the sender, ignore this email. Nothing happens unless you accept.",
     },
     privacy: "Privacy policy",
@@ -108,7 +108,7 @@ const STRINGS = {
       intro: (inviter: string, org: string) =>
         `${inviter} mời bạn vào ${org}. Các team ở đó chia sẻ mật khẩu và secret cho CI, được mã hoá đầu-cuối.`,
       next: (site: string) =>
-        `Mở ${APP_NAME} bằng địa chỉ email này, hoặc tạo tài khoản tại ${site}, rồi chấp nhận lời mời trong Cài đặt. Lời mời hết hạn sau 14 ngày.`,
+        `Đăng nhập tại ${site}/app bằng địa chỉ email này rồi chấp nhận lời mời ở đó hoặc trong extension ${APP_NAME}. Chưa có tài khoản? Cài extension từ ${site} trước. Lời mời hết hạn sau 14 ngày.`,
       ignore:
         "Nếu bạn không biết người gửi, hãy bỏ qua email này. Không có gì xảy ra nếu bạn không chấp nhận.",
     },
