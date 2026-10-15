@@ -12,6 +12,7 @@ import { renderMarkdown } from "./markdown.mjs";
 import { localizePage } from "./localize-page.mjs";
 import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.mjs";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -113,19 +114,39 @@ async function buildSharePage() {
   await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
 }
 
+async function fingerprinted(out, name, text) {
+  const hash = createHash("sha256").update(text).digest("hex").slice(0, 10);
+  const [base, extension] = name.split(".");
+  const file = `assets/${base}-${hash}.${extension}`;
+  await writeFile(path.join(out, file), text);
+  return file;
+}
+
 async function buildDashboard() {
   const source = path.join(root, "web");
   const out = path.join(outPublic, "app");
-  await mkdir(out, { recursive: true });
-  await build({
+  await mkdir(path.join(out, "assets"), { recursive: true });
+  const { outputFiles } = await build({
     ...common,
     entryPoints: [path.join(source, "main.tsx")],
     outfile: path.join(out, "app.js"),
+    write: false,
   });
-  await copyPage(path.join(source, "index.html"), path.join(out, "index.html"));
-  await cp(path.join(root, "src", "ui", "tokens.css"), path.join(out, "tokens.css"));
-  await cp(path.join(root, "extension", "console", "console.css"), path.join(out, "console.css"));
-  await cp(path.join(source, "web.css"), path.join(out, "web.css"));
+  const assets = {
+    "app.js": await fingerprinted(out, "app.js", outputFiles[0].text),
+  };
+  for (const [name, from] of [
+    ["tokens.css", path.join(root, "src", "ui", "tokens.css")],
+    ["console.css", path.join(root, "extension", "console", "console.css")],
+    ["web.css", path.join(source, "web.css")],
+  ]) {
+    assets[name] = await fingerprinted(out, name, await readFile(from, "utf8"));
+  }
+  const page = (await readFile(path.join(source, "index.html"), "utf8")).replace(
+    /(href|src)="(app\.js|tokens\.css|console\.css|web\.css)"/g,
+    (_, attribute, name) => `${attribute}="${assets[name]}"`,
+  );
+  await writeFile(path.join(out, "index.html"), page);
 }
 
 async function buildExtension() {

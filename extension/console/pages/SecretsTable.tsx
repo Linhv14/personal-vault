@@ -136,7 +136,7 @@ export function SecretsTable({
   editable: boolean;
   onSave: (secret: Secret, value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: (secret: Secret) => void;
-  onAccess: (access: SecretAccess) => void;
+  onAccess: (access: SecretAccess, secretId: string) => void;
 }) {
   const t = useT();
   const needle = query.trim().toLowerCase();
@@ -161,7 +161,7 @@ export function SecretsTable({
               editable={editable}
               onSave={(value, kind) => onSave(secret, value, kind)}
               onDelete={() => onDelete(secret)}
-              onAccess={onAccess}
+              onAccess={(access) => onAccess(access, secret.id)}
             />
           ))}
         </tbody>

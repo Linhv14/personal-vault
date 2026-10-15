@@ -36,9 +36,22 @@ async function waitFor(check: () => boolean, label: string, timeout = 3_000): Pr
 
 const heading = () => document.querySelector("main h1")?.textContent;
 
-describe("settings page", () => {
+function routed(input: RequestInfo | URL, init?: RequestInit, raw = ""): Response {
+  const path = new URL(String(input)).pathname;
+  const body = (value: unknown) => new Response(JSON.stringify(value), { status: 200 });
+  if (path === "/api/auth/pin") return body({ pinKey: raw });
+  if (path === "/api/account/identity") {
+    return init?.method === "PUT" ? body({ ok: true }) : body({ identity: null });
+  }
+  if (path === "/api/orgs") return body({ orgs: [] });
+  if (path === "/api/invites") return body({ invites: [] });
+  return body({ shares: [] });
+}
+
+describe("personal settings in the console", () => {
   beforeAll(async () => {
     document.body.innerHTML = '<div id="app"></div>';
+    history.replaceState(null, "", "#/me/general");
     const raw = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
     sessionArea.set("vaultKeyRaw", raw);
     vi.stubGlobal("chrome", {
@@ -49,20 +62,20 @@ describe("settings page", () => {
       },
       permissions: { contains: vi.fn(async () => false) },
       alarms: { create: vi.fn(async () => {}), clear: vi.fn(async () => true) },
-      runtime: { getManifest: () => ({ version: "0.0.0-test" }) },
+      runtime: {
+        getManifest: () => ({ version: "0.0.0-test" }),
+        getURL: (path: string) => `chrome-extension://test/${path}`,
+      },
+      tabs: { create: vi.fn() },
     });
     sessionArea.set("token", "session-token");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: RequestInfo | URL) =>
-        String(input).endsWith("/api/auth/pin")
-          ? new Response(JSON.stringify({ pinKey: raw }), { status: 200 })
-          : new Response(JSON.stringify({ shares: [] }), { status: 200 }),
-      ),
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => routed(input, init, raw)),
     );
     const { options } = await import("preact");
     options.debounceRendering = (render) => render();
-    await import("../extension/settings/main.js");
+    await import("../extension/console/main.js");
   });
 
   it("opens every section from its address", async () => {
@@ -74,7 +87,7 @@ describe("settings page", () => {
       ["account", "Account"],
       ["general", "Preferences"],
     ]) {
-      history.replaceState(null, "", `#${hash}`);
+      history.replaceState(null, "", `#/me/${hash}`);
       await waitFor(() => {
         window.dispatchEvent(new HashChangeEvent("hashchange"));
         return heading() === title;
@@ -93,7 +106,7 @@ describe("settings page", () => {
   });
 
   it("turns on PIN unlock from Security", async () => {
-    history.replaceState(null, "", "#security");
+    history.replaceState(null, "", "#/me/security");
     window.dispatchEvent(new HashChangeEvent("hashchange"));
     await waitFor(() => heading() === "Security", "the security page");
     const setUp = () =>
@@ -121,10 +134,28 @@ describe("settings page", () => {
     );
   });
 
-  it("locks the vault from the navigation", async () => {
-    await waitFor(() => document.querySelector(".nav-action") !== null, "the lock button");
-    document.querySelector<HTMLButtonElement>(".nav-action")!.click();
+  it("lists the personal pages and the organization entry side by side", () => {
+    const links = [...document.querySelectorAll<HTMLAnchorElement>(".side-nav a")].map((link) =>
+      link.getAttribute("href"),
+    );
+    expect(links).toEqual([
+      "#/me/general",
+      "#/me/security",
+      "#/me/health",
+      "#/me/data",
+      "#/me/account",
+      "#/new/projects",
+    ]);
+  });
+
+  it("locks the vault from the sidebar", async () => {
+    const lockButton = () =>
+      [...document.querySelectorAll<HTMLButtonElement>(".side-link")].find(
+        (button) => button.textContent === "Lock now",
+      );
+    await waitFor(() => lockButton() !== undefined, "the lock button");
+    lockButton()!.click();
     await waitFor(() => sessionArea.size === 0, "the session to clear");
-    await waitFor(() => document.querySelector(".nav-action") === null, "the lock button to go");
+    await waitFor(() => document.querySelector(".locked") !== null, "the locked screen");
   });
 });

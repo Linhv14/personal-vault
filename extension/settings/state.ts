@@ -10,16 +10,13 @@ import { resumeUnlock } from "../lib/resume.js";
 import { getLocal, type LocalState } from "../lib/storage.js";
 import { setUiLocale } from "../ui/i18n.js";
 import { refreshSession } from "../ui/store/session.js";
+import { toast, toast$ } from "../console/data.js";
 
 export const localState = signal<LocalState>({});
-export const toastMessage = signal<string | null>(null);
-
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
+export const toastMessage = toast$;
 
 export function showToast(message: string): void {
-  toastMessage.value = message;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toastMessage.value = null), 2200);
+  toast(message);
 }
 
 export async function reloadLocal(): Promise<void> {

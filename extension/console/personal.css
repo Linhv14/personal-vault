@@ -1,0 +1,324 @@
+.personal .card h2 {
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+.personal .card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.personal .rows {
+  padding: 4px 20px;
+}
+.personal .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 10px 0;
+}
+.personal .row + .row {
+  border-top: 1px solid var(--border);
+}
+.personal .row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.personal .row-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.personal .value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.personal .switch {
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.personal .switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+  transition: transform 0.15s;
+}
+.personal .switch:checked {
+  background: var(--accent);
+}
+.personal .switch:checked::after {
+  transform: translateX(16px);
+}
+.personal .switch:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.personal .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 420px;
+  margin-top: 16px;
+}
+.personal .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.personal .stack .button {
+  align-self: flex-start;
+}
+.personal .button:hover {
+  background: var(--surface-hover);
+}
+.personal .button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.personal .button.primary:hover {
+  background: var(--accent-hover);
+}
+.personal .button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+.personal .button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.personal .danger-title {
+  color: var(--danger);
+}
+.personal .danger-card {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+.personal .notice {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+}
+.personal main > .notice {
+  margin: 0 0 24px;
+}
+.personal .error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 14px;
+}
+.personal .links {
+  display: flex;
+  flex-direction: column;
+}
+.personal .link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+}
+.personal .link-row + .link-row {
+  border-top: 1px solid var(--border);
+}
+.personal .link-text {
+  flex: 1;
+  min-width: 0;
+}
+.personal .link-title {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.personal .footnote {
+  margin-top: 8px;
+}
+.personal .about {
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.personal .about a {
+  color: inherit;
+}
+@media (max-width: 760px) {
+  .personal .row {
+    flex-wrap: wrap;
+  }
+}
+.personal .lead {
+  margin: -12px 0 24px;
+  color: var(--muted);
+}
+.personal .stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.personal .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+.personal .stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.personal .stat.bad .stat-number {
+  color: var(--danger);
+}
+.personal .stat-label {
+  color: var(--muted);
+  font-size: 14px;
+}
+.personal .breach-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.personal .card.links {
+  padding: 4px 20px;
+}
+@media (max-width: 760px) {
+  .personal .breach-check {
+    flex-wrap: wrap;
+  }
+}
+.personal .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.personal .pin-state {
+  flex: 1;
+  color: var(--accent);
+  font-weight: 600;
+}
+.personal .card + .card {
+  margin-top: 16px;
+}
+.personal .inline-form,
+.personal .panel-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.personal .inline-form {
+  margin-top: 16px;
+}
+.personal .inline-form input,
+.personal .panel-form input {
+  flex: 1;
+  min-width: 220px;
+}
+.personal .panel-form {
+  margin: 4px 0 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+.personal .panel-form select {
+  width: auto;
+}
+.personal .button.quiet {
+  border-color: transparent;
+  background: none;
+  color: var(--muted);
+}
+.personal .button.quiet:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.personal .button.danger-quiet:hover {
+  color: var(--danger);
+}
+.personal .section-head .row-hint {
+  margin: 0;
+  max-width: 460px;
+}
+.personal .team-body .panel-form {
+  margin: 12px 0 0;
+}
+.personal .rekey .row-hint {
+  margin: 0;
+  color: var(--text);
+}
+.personal .team-body .panel-form {
+  padding: 0;
+  background: none;
+}
+.personal .secret-form .error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.personal .import-form .row-hint {
+  margin: 0;
+}
+.personal .page > h1 {
+  margin: 0 0 20px;
+  font-size: 22px;
+}
+.personal .card {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: 12px;
+}
+.personal .card + .card {
+  margin-top: 0;
+}
+.personal .card h2 {
+  font-size: 15px;
+}
+.personal .button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+.personal input:not([type="checkbox"]),
+.personal select {
+  max-width: 420px;
+}

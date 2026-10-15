@@ -381,7 +381,7 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
           </p>
         )}
         <div className="screen-footer">
-          <button type="button" className="link quiet" onClick={() => openSettings("#data")}>
+          <button type="button" className="link quiet" onClick={() => openSettings("data")}>
             {t("share.manage")}
           </button>
         </div>

@@ -3,7 +3,6 @@ export const EXTENSION_PAGES = [
   "background.ts",
   "offscreen/offscreen.ts",
   "import/main.tsx",
-  "settings/main.tsx",
   "console/main.tsx",
 ];
 

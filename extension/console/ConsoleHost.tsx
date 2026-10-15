@@ -4,16 +4,18 @@ import type { Identity } from "../../src/core/identity.js";
 import { describeError } from "../../src/i18n/index.js";
 import { ensureIdentity } from "../lib/identity.js";
 import { useT } from "../ui/i18n.js";
-import { ConsoleApp } from "./ConsoleApp.js";
+import { ConsoleApp, type PersonalPage } from "./ConsoleApp.js";
 
 export function ConsoleHost({
   vaultKey,
   account,
   footer,
+  personal,
 }: {
   vaultKey: CryptoKey;
   account: string;
   footer?: ComponentChildren;
+  personal?: PersonalPage[];
 }) {
   const t = useT();
   const [identity, setIdentity] = useState<Identity | null>(null);
@@ -33,5 +35,5 @@ export function ConsoleHost({
       </div>
     );
   }
-  return <ConsoleApp identity={identity} account={account} footer={footer} />;
+  return <ConsoleApp identity={identity} account={account} footer={footer} personal={personal} />;
 }

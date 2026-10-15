@@ -15,6 +15,7 @@ import {
   importSecrets,
   listProjects,
   listSecrets,
+  flushAccess,
   noteAccess,
   rekeyTeam,
   deleteSecrets,
@@ -266,8 +267,21 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
     );
     expect(stored?.kind).toBe("variable");
 
-    await noteAccess(orgId, project, development(), "revealed");
-    await noteAccess(orgId, project, development(), "exported");
+    const posts: string[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = (input, init) => {
+      if (init?.method === "POST") posts.push(new URL(String(input)).pathname);
+      return original(input, init);
+    };
+    try {
+      noteAccess(orgId, project, development(), "revealed", stored!.id);
+      noteAccess(orgId, project, development(), "revealed", stored!.id);
+      noteAccess(orgId, project, development(), "exported");
+      await flushAccess();
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(posts).toHaveLength(1);
     const audit = await api(`/api/orgs/${orgId}/audit`, { token: owner.token });
     const actions = audit.body.events.map((event: { action: string }) => event.action);
     expect(actions.slice(0, 2)).toEqual(["secrets.exported", "secret.revealed"]);

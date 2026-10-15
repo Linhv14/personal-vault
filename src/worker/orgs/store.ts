@@ -451,18 +451,19 @@ export class OrgStore extends DurableObject<Env> {
     principal: Principal,
     teamId: string,
     projectId: string,
-    environmentId: string,
-    access: SecretAccess,
+    events: { environmentId: string; access: SecretAccess }[],
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const allowed = this.projectAccess(principal, teamId, projectId, false);
     if (!allowed.ok) return allowed;
-    await this.record(
-      principal.accountId,
-      access === "exported" ? "secrets.exported" : `secret.${access}`,
-      `${projectId}:${environmentId}`,
-      ip,
-    );
+    for (const { environmentId, access } of events) {
+      await this.record(
+        principal.accountId,
+        access === "exported" ? "secrets.exported" : `secret.${access}`,
+        `${projectId}:${environmentId}`,
+        ip,
+      );
+    }
     return ok({ ok: true as const });
   }
 

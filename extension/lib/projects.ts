@@ -208,16 +208,45 @@ export async function importSecrets(
   return entries.length;
 }
 
-export async function noteAccess(
+const ACCESS_FLUSH_MS = 3000;
+const accessQueue = new Map<
+  string,
+  { orgId: string; project: Project; events: { environmentId: string; access: SecretAccess }[] }
+>();
+const accessSeen = new Set<string>();
+let accessTimer: ReturnType<typeof setTimeout> | undefined;
+
+export function noteAccess(
   orgId: string,
   project: Project,
   environmentId: string,
   access: SecretAccess,
-): Promise<void> {
-  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/access`, {
-    method: "POST",
-    body: json({ environmentId, access }),
-  }).catch(() => {});
+  secretId = "",
+): void {
+  const once = `${project.id}:${environmentId}:${access}:${secretId}`;
+  if (accessSeen.has(once)) return;
+  accessSeen.add(once);
+  const key = `${orgId}:${project.id}`;
+  const entry = accessQueue.get(key) ?? { orgId, project, events: [] };
+  entry.events.push({ environmentId, access });
+  accessQueue.set(key, entry);
+  clearTimeout(accessTimer);
+  accessTimer = setTimeout(() => void flushAccess(), ACCESS_FLUSH_MS);
+}
+
+export async function flushAccess(keepalive = false): Promise<void> {
+  clearTimeout(accessTimer);
+  const pending = [...accessQueue.values()];
+  accessQueue.clear();
+  await Promise.all(
+    pending.map(({ orgId, project, events }) =>
+      request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/access`, {
+        method: "POST",
+        keepalive,
+        body: json({ events }),
+      }).catch(() => {}),
+    ),
+  );
 }
 
 export async function deleteSecrets(

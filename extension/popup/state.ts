@@ -271,8 +271,8 @@ export function openGenerator(): void {
   screen.value = "generator";
 }
 
-export function openSettings(page = ""): void {
-  void chrome.tabs.create({ url: chrome.runtime.getURL(`settings/settings.html${page}`) });
+export function openSettings(section = "general"): void {
+  void chrome.tabs.create({ url: chrome.runtime.getURL(`console/console.html#/me/${section}`) });
 }
 
 export function openConsole(): void {

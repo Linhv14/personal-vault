@@ -110,6 +110,17 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Settings moved into the console. The extension has two surfaces left: the
+  popup for daily use, and the console, whose sidebar holds Personal
+  (preferences, security, password health, data, account) and Organization.
+  The browser's extension options and every Settings link open it.
+- The dashboard's scripts and stylesheets carry a content hash in their name and
+  are cached for a year, while `/app/` itself is always revalidated, so a deploy
+  reaches every browser on the next load.
+- Revealing or copying the same secret again in one session is logged once, and
+  access logs are sent in one request every few seconds or when the page is
+  hidden.
+
 - The console uses the full window width and shows less: no descriptions under
   page titles, no key fingerprints in tables (a Verify key action shows one when
   needed), no key version badges unless a team needs a new key, and the activity

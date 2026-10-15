@@ -26,6 +26,8 @@ export function toast(message: string): void {
   toastTimer = setTimeout(() => (toast$.value = null), 2400);
 }
 
+let lastOrgId: string | null = null;
+
 export const pending$ = signal(false);
 export const failure$ = signal<string | null>(null);
 
@@ -79,19 +81,21 @@ export function useConsoleLoader(identity: Identity) {
   const [detail, setDetail] = useState<OrgDetail | null>(null);
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const wanted = location$.value.orgId;
+  const wanted = location$.value.orgId ?? lastOrgId;
 
   const reload = async () => {
     const [list, pending] = await Promise.all([listOrgs(), myInvites()]);
     setOrgs(list);
     setInvites(pending);
-    const current = list.find((org) => org.id === location$.value.orgId) ?? list[0];
+    const current = list.find((org) => org.id === (location$.value.orgId ?? lastOrgId)) ?? list[0];
     if (!current) {
       setDetail(null);
       setProjects([]);
       return;
     }
-    if (current.id !== location$.value.orgId) navigate(current.id, location$.value.route);
+    lastOrgId = current.id;
+    const { orgId, route } = location$.value;
+    if (route.page !== "me" && current.id !== orgId) navigate(current.id, route);
     const next = await getOrg(current.id);
     setDetail(next);
     const mine = next.teams.filter((team) => team.wrappedKey);

@@ -413,6 +413,7 @@ export const en = {
   "orgs.audit_secret_revealed": "revealed a secret in",
   "orgs.audit_secret_copied": "copied a secret from",
   "orgs.audit_secrets_exported": "copied every value of",
+  "console.personal": "Personal",
   "error.orgs.not_found": "Not found, or you are not a member.",
   "error.orgs.forbidden": "Your role does not allow this.",
   "error.orgs.invalid_name": "Use 1 to 80 characters.",

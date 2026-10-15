@@ -1,6 +1,10 @@
 import { signal } from "@preact/signals";
 
+export const PERSONAL_SECTIONS = ["general", "security", "health", "data", "account"] as const;
+export type PersonalSection = (typeof PERSONAL_SECTIONS)[number];
+
 export type Route =
+  | { page: "me"; section: PersonalSection }
   | { page: "projects" }
   | { page: "project"; projectId: string; environmentId: string | null }
   | { page: "teams" }
@@ -16,6 +20,10 @@ export interface Location {
 
 export function parseHash(hash: string): Location {
   const [orgId = "", page = "", id, sub] = hash.replace(/^#\/?/, "").split("/");
+  if (orgId === "me") {
+    const section = PERSONAL_SECTIONS.find((entry) => entry === page) ?? "general";
+    return { orgId: null, route: { page: "me", section } };
+  }
   const org = orgId || null;
   if (page === "projects" && id) {
     return { orgId: org, route: { page: "project", projectId: id, environmentId: sub ?? null } };
@@ -29,6 +37,8 @@ export function parseHash(hash: string): Location {
 
 export function href(orgId: string, route: Route): string {
   switch (route.page) {
+    case "me":
+      return `#/me/${route.section}`;
     case "project":
       return `#/${orgId}/projects/${route.projectId}${route.environmentId ? `/${route.environmentId}` : ""}`;
     case "team":

@@ -408,6 +408,7 @@ export const vi: Catalogue = {
   "orgs.audit_secret_revealed": "đã xem một secret trong",
   "orgs.audit_secret_copied": "đã sao chép một secret từ",
   "orgs.audit_secrets_exported": "đã sao chép toàn bộ giá trị của",
+  "console.personal": "Cá nhân",
   "error.orgs.not_found": "Không tìm thấy, hoặc bạn không phải thành viên.",
   "error.orgs.forbidden": "Vai trò của bạn không cho phép thao tác này.",
   "error.orgs.invalid_name": "Dùng từ 1 đến 80 ký tự.",

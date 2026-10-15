@@ -1,9 +1,11 @@
-import type { ComponentChildren } from "preact";
+import type { ComponentChildren, ComponentType } from "preact";
+import type { MessageKey } from "../../src/i18n/index.js";
 import { useEffect } from "preact/hooks";
 import type { Identity } from "../../src/core/identity.js";
 import type { IconName } from "../../src/ui/icons.js";
 import { logoSvg } from "../../src/ui/logo.js";
 import { acceptInvite, declineInvite, type OrgSummary } from "../lib/orgs.js";
+import { flushAccess } from "../lib/projects.js";
 import { Icon } from "../ui/components/Icon.js";
 import { Toast } from "../ui/components/Toast.js";
 import { useT } from "../ui/i18n.js";
@@ -18,7 +20,21 @@ import { SettingsPage } from "./pages/SettingsPage.js";
 import { TeamPage } from "./pages/TeamPage.js";
 import { TeamsPage } from "./pages/TeamsPage.js";
 import { WelcomePage } from "./pages/WelcomePage.js";
-import { href, location$, navigate, watchHash, type Route } from "./router.js";
+import {
+  href,
+  location$,
+  navigate,
+  watchHash,
+  type PersonalSection,
+  type Route,
+} from "./router.js";
+
+export interface PersonalPage {
+  section: PersonalSection;
+  icon: IconName;
+  label: MessageKey;
+  view: ComponentType;
+}
 
 type Section = "projects" | "teams" | "members" | "activity" | "settings";
 
@@ -34,7 +50,8 @@ const SECTIONS: {
   { section: "settings", icon: "gear", label: "console.settings" },
 ];
 
-function sectionOf(route: Route): Section {
+function sectionOf(route: Route): Section | null {
+  if (route.page === "me") return null;
   if (route.page === "project") return "projects";
   if (route.page === "team") return "teams";
   return route.page;
@@ -131,15 +148,29 @@ export function ConsoleApp({
   identity,
   account,
   footer,
+  personal = [],
 }: {
   identity: Identity;
   account: string;
   footer?: ComponentChildren;
+  personal?: PersonalPage[];
 }) {
   const t = useT();
   const loader = useConsoleLoader(identity);
   const { data } = loader;
   useEffect(() => watchHash(), []);
+  useEffect(() => {
+    const flush = () => void flushAccess(true);
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    addEventListener("visibilitychange", onHide);
+    addEventListener("pagehide", flush);
+    return () => {
+      removeEventListener("visibilitychange", onHide);
+      removeEventListener("pagehide", flush);
+    };
+  }, []);
 
   const brand = (
     <div className="brand">
@@ -154,7 +185,8 @@ export function ConsoleApp({
     </div>
   );
 
-  if (loader.orgs && loader.orgs.length === 0) {
+  const noOrg = loader.orgs !== null && loader.orgs.length === 0;
+  if (noOrg && personal.length === 0) {
     return (
       <div className="console solo">
         <header className="solo-head">{brand}</header>
@@ -167,57 +199,95 @@ export function ConsoleApp({
     );
   }
 
-  if (!data) {
-    return (
-      <div className="console loading">
+  const { route } = location$.value;
+  const current = sectionOf(route);
+  const personalPage =
+    route.page === "me" ? personal.find((page) => page.section === route.section) : undefined;
+  const orgId = data?.detail.org.id;
+
+  const main = personalPage ? (
+    <div className="personal">
+      <personalPage.view />
+    </div>
+  ) : noOrg ? (
+    <>
+      <Invitations data={{ invites: loader.invites, run: loader.run }} />
+      <WelcomePage run={loader.run} error={loader.error} />
+    </>
+  ) : data ? (
+    <>
+      <Invitations data={data} />
+      {(failure$.value ?? data.error) && (
+        <p className="alert" role="alert">
+          {failure$.value ?? data.error}
+        </p>
+      )}
+      <Page data={data} />
+    </>
+  ) : loader.error ? (
+    <p className="alert">{loader.error}</p>
+  ) : (
+    <span className="spinner" />
+  );
+
+  const shell = (
+    <div className="console">
+      <aside className="sidebar">
         {brand}
-        {loader.error ? <p className="alert">{loader.error}</p> : <span className="spinner" />}
-      </div>
-    );
-  }
-
-  const current = sectionOf(location$.value.route);
-  const orgId = data.detail.org.id;
-
-  return (
-    <ConsoleContext.Provider value={data}>
-      <div className="console">
-        <aside className="sidebar">
-          {brand}
-          <OrgSwitcher orgs={data.orgs} current={data} />
-          <nav className="side-nav">
-            {SECTIONS.filter(
-              ({ section }) => section !== "activity" || data.detail.org.role !== "member",
-            ).map(({ section, icon, label }) => (
+        {personal.length > 0 && (
+          <nav className="side-nav" aria-label={t("console.personal")}>
+            <span className="side-group">{t("console.personal")}</span>
+            {personal.map((page) => (
               <a
-                key={section}
-                href={href(orgId, { page: section })}
-                aria-current={current === section ? "page" : undefined}
+                key={page.section}
+                href={href("", { page: "me", section: page.section })}
+                aria-current={personalPage?.section === page.section ? "page" : undefined}
               >
-                <Icon name={icon} />
-                <span>{t(label)}</span>
+                <Icon name={page.icon} />
+                <span>{t(page.label)}</span>
               </a>
             ))}
           </nav>
-          <div className="side-foot">
-            <div className="side-account">
-              <Avatar text={account} size="sm" />
-              <span title={account}>{account}</span>
-            </div>
-            {footer}
+        )}
+        <nav className="side-nav" aria-label={t("orgs.title")}>
+          {personal.length > 0 && <span className="side-group">{t("orgs.title")}</span>}
+          {data && loader.orgs && <OrgSwitcher orgs={loader.orgs} current={data} />}
+          {data && orgId
+            ? SECTIONS.filter(
+                ({ section }) => section !== "activity" || data.detail.org.role !== "member",
+              ).map(({ section, icon, label }) => (
+                <a
+                  key={section}
+                  href={href(orgId, { page: section })}
+                  aria-current={current === section ? "page" : undefined}
+                >
+                  <Icon name={icon} />
+                  <span>{t(label)}</span>
+                </a>
+              ))
+            : noOrg && (
+                <a href="#/new/projects" aria-current={current !== null ? "page" : undefined}>
+                  <Icon name="plus" />
+                  <span>{t("orgs.create_title")}</span>
+                </a>
+              )}
+        </nav>
+        <div className="side-foot">
+          <div className="side-account">
+            <Avatar text={account} size="sm" />
+            <span title={account}>{account}</span>
           </div>
-        </aside>
-        <main className="main">
-          <Invitations data={data} />
-          {(failure$.value ?? data.error) && (
-            <p className="alert" role="alert">
-              {failure$.value ?? data.error}
-            </p>
-          )}
-          <Page data={data} />
-        </main>
-      </div>
+          {footer}
+        </div>
+      </aside>
+      <main className="main">{main}</main>
+    </div>
+  );
+
+  return (
+    <>
+      {data ? <ConsoleContext.Provider value={data}>{shell}</ConsoleContext.Provider> : shell}
       <Toast message={toast$.value} />
-    </ConsoleContext.Provider>
+    </>
   );
 }

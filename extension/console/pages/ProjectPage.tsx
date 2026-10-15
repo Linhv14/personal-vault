@@ -303,7 +303,7 @@ export function ProjectPage({
               onClick={() => {
                 const list = secrets?.[environment.id] ?? [];
                 if (list.some((secret) => !isVariable(secret))) {
-                  void noteAccess(orgId, project, environment.id, "exported");
+                  noteAccess(orgId, project, environment.id, "exported");
                 }
                 void navigator.clipboard
                   .writeText(formatDotenv(list))
@@ -345,7 +345,9 @@ export function ProjectPage({
                 )
               }
               onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
-              onAccess={(access) => void noteAccess(orgId, project, environment.id, access)}
+              onAccess={(access, secretId) =>
+                noteAccess(orgId, project, environment.id, access, secretId)
+              }
             />
           )
         ) : (

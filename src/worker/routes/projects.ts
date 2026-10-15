@@ -93,6 +93,7 @@ projects.get(
 );
 
 const MAX_BATCH = 500;
+const MAX_ACCESS_EVENTS = 100;
 
 function secretEntry(
   value: unknown,
@@ -149,20 +150,25 @@ projects.put(
 projects.post(
   "/projects/:projectId/access",
   asMember(async (c, member, orgId) => {
-    const { environmentId, access } = await readJson(c);
-    if (!isEnvironmentId(environmentId) || !SECRET_ACCESS.includes(access as SecretAccess)) {
-      return invalidSecret(c);
-    }
+    const { events } = await readJson(c);
+    const valid =
+      Array.isArray(events) &&
+      events.length > 0 &&
+      events.length <= MAX_ACCESS_EVENTS &&
+      events.every(
+        (event) =>
+          typeof event === "object" &&
+          event !== null &&
+          isEnvironmentId(event.environmentId) &&
+          SECRET_ACCESS.includes(event.access),
+      );
+    if (!valid) return invalidSecret(c);
+    const list = (events as { environmentId: string; access: SecretAccess }[]).map(
+      ({ environmentId, access }) => ({ environmentId, access }),
+    );
     return respond(
       c,
-      await orgStore(c.env, orgId).noteSecretAccess(
-        member,
-        team(c),
-        project(c),
-        environmentId,
-        access as SecretAccess,
-        clientIp(c),
-      ),
+      await orgStore(c.env, orgId).noteSecretAccess(member, team(c), project(c), list, clientIp(c)),
     );
   }),
 );

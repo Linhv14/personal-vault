@@ -85,10 +85,16 @@ extension/popup/
   screens/             Setup, Unlock, Vault (two panes), Detail, Editor,
                        Generator, Share.
   components/          Topbar, Drawer, ListPane, Row, FieldRow, Totp, Menu…
+extension/console/      The one place for settings and organizations, opened as
+                       an extension tab and served at /app on the web.
+  ConsoleApp.tsx       Sidebar (Personal and Organization groups) and routing
+                       (#/me/<page>, #/<org>/<page>/…).
+  pages/               Projects, Project, Teams, Team, Members, Activity,
+                       Settings, Welcome.
 extension/settings/
-  main.tsx             Layout and hash routing.
-  state.ts             Local state, toast, storage watcher.
-  pages/               General, Security, Health, Data, Account.
+  state.ts             Local state and storage watcher for the personal pages.
+  pages/               General, Security, Health, Data, Account, shown by the
+                       extension's console only.
 extension/import/      One page that walks pick, passphrase, review, done.
 ```
 
