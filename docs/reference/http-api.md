@@ -142,6 +142,32 @@ belongs to this session and is created on first request. The extension seals
 the vault key under it so the vault reopens after a browser restart; deleting
 the session deletes the key.
 
+### `PUT /api/auth/pin`
+
+Authenticated. Body `{ "verifier": "<base64, 32 bytes>" }`. Turns on PIN unlock
+for this session: stores a keyed hash of the verifier, creates a random
+32-byte `pinKey`, resets the attempt count and returns `{ "pinKey": string }`.
+The extension derives the verifier and a second, local half from the PIN with
+PBKDF2; the server never sees the PIN or the local half.
+
+### `POST /api/auth/pin/unlock`
+
+Authenticated with the session the PIN belongs to. Body `{ "verifier": ... }`.
+
+| Status | Body / code                                                        |
+| ------ | ------------------------------------------------------------------ |
+| 200    | `{ "pinKey": string }`; the attempt count resets                   |
+| 403    | `auth.pin_wrong` with `params.count`, the tries left               |
+| 410    | `auth.pin_off`: no PIN, or the fifth wrong try just wiped it       |
+| 401    | `auth.unauthorized`: the session ended, so the PIN is gone with it |
+
+Each call spends a try before comparing, in one statement, so parallel guesses
+cannot exceed five.
+
+### `DELETE /api/auth/pin`
+
+Authenticated. Turns PIN unlock off for this session. Returns `{ "ok": true }`.
+
 ### `POST /api/auth/logout`
 
 Authenticated. Revokes the current session. Returns `{ "ok": true }`.

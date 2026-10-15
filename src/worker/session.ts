@@ -6,7 +6,7 @@
  * cannot make the browser attach your token to its own request.
  */
 
-import { toBase64, toBase64Url, randomBytes, fromBase64 } from "../core/bytes.js";
+import { toBase64, toBase64Url, randomBytes, fromBase64, timingSafeEqual } from "../core/bytes.js";
 import type { Env, SessionContext } from "./types.js";
 
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -74,6 +74,59 @@ export async function sessionResumeKey(env: Env, tokenHash: string): Promise<str
     env.DB.prepare("SELECT resume_key FROM sessions WHERE token_hash = ?").bind(tokenHash),
   ]);
   return row?.results[0]?.resume_key ?? null;
+}
+
+export const PIN_MAX_ATTEMPTS = 5;
+
+export async function setSessionPin(
+  env: Env,
+  tokenHash: string,
+  verifierHash: string,
+): Promise<string> {
+  const pinKey = toBase64(randomBytes(32));
+  await env.DB.prepare(
+    "UPDATE sessions SET pin_verifier = ?, pin_key = ?, pin_attempts = 0 WHERE token_hash = ?",
+  )
+    .bind(verifierHash, pinKey, tokenHash)
+    .run();
+  return pinKey;
+}
+
+export async function clearSessionPin(env: Env, tokenHash: string): Promise<void> {
+  await env.DB.prepare(
+    "UPDATE sessions SET pin_verifier = NULL, pin_key = NULL, pin_attempts = 0 WHERE token_hash = ?",
+  )
+    .bind(tokenHash)
+    .run();
+}
+
+export type PinCheck = { ok: true; pinKey: string } | { ok: false; attemptsLeft: number };
+
+export async function checkSessionPin(
+  env: Env,
+  tokenHash: string,
+  verifierHash: string,
+): Promise<PinCheck> {
+  const row = await env.DB.prepare(
+    `UPDATE sessions SET pin_attempts = pin_attempts + 1
+      WHERE token_hash = ? AND pin_key IS NOT NULL AND pin_attempts < ?
+      RETURNING pin_verifier, pin_key, pin_attempts`,
+  )
+    .bind(tokenHash, PIN_MAX_ATTEMPTS)
+    .first<{ pin_verifier: string; pin_key: string; pin_attempts: number }>();
+  if (!row) {
+    await clearSessionPin(env, tokenHash);
+    return { ok: false, attemptsLeft: 0 };
+  }
+  if (timingSafeEqual(fromBase64(row.pin_verifier), fromBase64(verifierHash))) {
+    await env.DB.prepare("UPDATE sessions SET pin_attempts = 0 WHERE token_hash = ?")
+      .bind(tokenHash)
+      .run();
+    return { ok: true, pinKey: row.pin_key };
+  }
+  const attemptsLeft = PIN_MAX_ATTEMPTS - row.pin_attempts;
+  if (attemptsLeft <= 0) await clearSessionPin(env, tokenHash);
+  return { ok: false, attemptsLeft };
 }
 
 export async function revokeSession(env: Env, tokenHash: string): Promise<void> {

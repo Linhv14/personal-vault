@@ -80,6 +80,32 @@ export async function resumeKey(token: string): Promise<string> {
   return resumeKey;
 }
 
+export async function setPin(verifier: string): Promise<string> {
+  const { pinKey } = await request<{ pinKey: string }>("/api/auth/pin", {
+    method: "PUT",
+    body: JSON.stringify({ verifier }),
+  });
+  return pinKey;
+}
+
+export async function clearPin(token: string): Promise<void> {
+  await request("/api/auth/pin", {
+    method: "DELETE",
+    auth: false,
+    extraHeaders: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function pinUnlock(token: string, verifier: string): Promise<string> {
+  const { pinKey } = await request<{ pinKey: string }>("/api/auth/pin/unlock", {
+    method: "POST",
+    auth: false,
+    extraHeaders: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ verifier }),
+  });
+  return pinKey;
+}
+
 export async function fetchLogo(domain: string): Promise<Blob | null> {
   const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
   if (!apiUrl || !session?.token) return null;

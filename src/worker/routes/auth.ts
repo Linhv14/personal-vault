@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
-import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
+import { fromBase64, timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
 import { apiError } from "../errors.js";
 import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
@@ -10,11 +10,14 @@ import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import {
+  checkSessionPin,
+  clearSessionPin,
   createSession,
   isBase64,
   revokeAllSessions,
   revokeSession,
   sessionResumeKey,
+  setSessionPin,
 } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
 
@@ -292,6 +295,48 @@ auth.get("/resume-key", async (c) => {
   if (!resumeKey) return c.json(apiError("auth.unauthorized"), 401);
   c.header("Cache-Control", "no-store");
   return c.json({ resumeKey });
+});
+
+async function pinVerifier(c: { req: { json: () => Promise<unknown> } }): Promise<string | null> {
+  const body = (await c.req.json().catch(() => null)) as { verifier?: unknown } | null;
+  return isBase64(body?.verifier, 32) && fromBase64(body.verifier as string).length === 32
+    ? (body.verifier as string)
+    : null;
+}
+
+function verifierHash(env: Env, verifier: string): Promise<string> {
+  return keyedHash(env.EMAIL_PROBE_SECRET, `pin-verifier:${verifier}`);
+}
+
+auth.put("/pin", async (c) => {
+  const verifier = await pinVerifier(c);
+  if (!verifier) return c.json(apiError("auth.invalid_body"), 400);
+  const pinKey = await setSessionPin(
+    c.env,
+    c.get("session").tokenHash,
+    await verifierHash(c.env, verifier),
+  );
+  c.header("Cache-Control", "no-store");
+  return c.json({ pinKey });
+});
+
+auth.delete("/pin", async (c) => {
+  await clearSessionPin(c.env, c.get("session").tokenHash);
+  return c.json({ ok: true });
+});
+
+auth.post("/pin/unlock", async (c) => {
+  const verifier = await pinVerifier(c);
+  if (!verifier) return c.json(apiError("auth.invalid_body"), 400);
+  const result = await checkSessionPin(
+    c.env,
+    c.get("session").tokenHash,
+    await verifierHash(c.env, verifier),
+  );
+  c.header("Cache-Control", "no-store");
+  if (result.ok) return c.json({ pinKey: result.pinKey });
+  if (result.attemptsLeft === 0) return c.json(apiError("auth.pin_off"), 410);
+  return c.json(apiError("auth.pin_wrong", { count: result.attemptsLeft }), 403);
 });
 
 auth.post("/logout", async (c) => {

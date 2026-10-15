@@ -40,6 +40,7 @@ export interface LocalState {
   locale?: LocalePreference;
   showLogos?: boolean;
   resume?: { token: string; sealed: SealedData };
+  pin?: { token: string; salt: string; iterations: number; sealed: SealedData };
 }
 
 interface SessionState {

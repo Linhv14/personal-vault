@@ -25,8 +25,8 @@ function area(store: Map<string, unknown>) {
   };
 }
 
-async function waitFor(check: () => boolean, label: string): Promise<void> {
-  const deadline = Date.now() + 3_000;
+async function waitFor(check: () => boolean, label: string, timeout = 3_000): Promise<void> {
+  const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     if (check()) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -51,9 +51,14 @@ describe("settings page", () => {
       alarms: { create: vi.fn(async () => {}), clear: vi.fn(async () => true) },
       runtime: { getManifest: () => ({ version: "0.0.0-test" }) },
     });
+    sessionArea.set("token", "session-token");
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(JSON.stringify({ shares: [] }), { status: 200 })),
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).endsWith("/api/auth/pin")
+          ? new Response(JSON.stringify({ pinKey: raw }), { status: 200 })
+          : new Response(JSON.stringify({ shares: [] }), { status: 200 }),
+      ),
     );
     const { options } = await import("preact");
     options.debounceRendering = (render) => render();
@@ -85,6 +90,35 @@ describe("settings page", () => {
     toggle.checked = false;
     toggle.dispatchEvent(new Event("change", { bubbles: true }));
     await waitFor(() => localArea.get("showLogos") === false, "the stored choice");
+  });
+
+  it("turns on PIN unlock from Security", async () => {
+    history.replaceState(null, "", "#security");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await waitFor(() => heading() === "Security", "the security page");
+    const setUp = () =>
+      [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+        (button) => button.textContent === "Set up PIN",
+      );
+    await waitFor(() => setUp() !== undefined, "the set up button");
+    setUp()!.click();
+    await waitFor(() => document.getElementById("form-pin") !== null, "the PIN form");
+    const form = document.getElementById("form-pin") as HTMLFormElement;
+    (form.elements.namedItem("pin") as HTMLInputElement).value = "12345";
+    (form.elements.namedItem("confirm") as HTMLInputElement).value = "12345";
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(
+      () => form.querySelector(".error")?.textContent === "Use 6 to 12 digits.",
+      "the length error",
+    );
+    (form.elements.namedItem("pin") as HTMLInputElement).value = "482913";
+    (form.elements.namedItem("confirm") as HTMLInputElement).value = "482913";
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => localArea.has("pin"), "the sealed PIN copy", 15_000);
+    await waitFor(
+      () => document.body.textContent?.includes("PIN is on for this device") ?? false,
+      "the PIN state",
+    );
   });
 
   it("locks the vault from the navigation", async () => {

@@ -553,4 +553,107 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect(result.status).toBe(200);
     expect(Math.abs(result.body.serverTime - Math.floor(Date.now() / 1000))).toBeLessThan(60);
   });
+
+  describe("PIN unlock", () => {
+    const verifier = (byte: number) => toBase64(new Uint8Array(32).fill(byte));
+    let token: string;
+
+    beforeAll(async () => {
+      const pinEmail = `pin-${Date.now()}@example.com`;
+      const created = await createAccount(pinEmail, "a password for the pin tests", ITERATIONS);
+      const registered = await api("/api/auth/register", {
+        method: "POST",
+        headers: { "x-registration-token": REGISTRATION_TOKEN },
+        body: JSON.stringify({ email: pinEmail, ...created.record }),
+      });
+      token = registered.body.token;
+    });
+
+    it("hands the PIN key back only for the right verifier and counts wrong tries", async () => {
+      const set = await api("/api/auth/pin", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      expect(set.status).toBe(200);
+      const { pinKey } = set.body;
+
+      const wrong = await api("/api/auth/pin/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ verifier: verifier(2) }),
+      });
+      expect(wrong.status).toBe(403);
+      expect(wrong.body).toMatchObject({ code: "auth.pin_wrong", params: { count: 4 } });
+
+      const right = await api("/api/auth/pin/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      expect(right.status).toBe(200);
+      expect(right.body.pinKey).toBe(pinKey);
+
+      const again = await api("/api/auth/pin/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ verifier: verifier(2) }),
+      });
+      expect(again.body.params.count).toBe(4);
+    });
+
+    it("wipes the PIN after five wrong tries, even with the right one afterwards", async () => {
+      await api("/api/auth/pin", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      const statuses: number[] = [];
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const result = await api("/api/auth/pin/unlock", {
+          method: "POST",
+          token,
+          body: JSON.stringify({ verifier: verifier(9) }),
+        });
+        statuses.push(result.status);
+      }
+      expect(statuses).toEqual([403, 403, 403, 403, 410]);
+      const right = await api("/api/auth/pin/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      expect(right.status).toBe(410);
+      expect(right.body.code).toBe("auth.pin_off");
+    });
+
+    it("needs a live session and a well-formed verifier", async () => {
+      const anonymous = await api("/api/auth/pin/unlock", {
+        method: "POST",
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      expect(anonymous.status).toBe(401);
+      const malformed = await api("/api/auth/pin", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ verifier: "short" }),
+      });
+      expect(malformed.status).toBe(400);
+    });
+
+    it("turns off on request", async () => {
+      await api("/api/auth/pin", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      expect((await api("/api/auth/pin", { method: "DELETE", token })).status).toBe(200);
+      const result = await api("/api/auth/pin/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ verifier: verifier(1) }),
+      });
+      expect(result.status).toBe(410);
+    });
+  });
 });

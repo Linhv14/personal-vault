@@ -1,14 +1,46 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { describeError } from "../../../src/i18n/index.js";
-import { clearAccountData, lock } from "../../lib/storage.js";
+import { rememberUnlock } from "../../lib/resume.js";
+import { hasPin, PIN_MAX_LENGTH, PinError, unlockWithPin } from "../../lib/pin.js";
+import { clearAccountData, getUnlocked, lock } from "../../lib/storage.js";
 import { useT } from "../../ui/i18n.js";
 import { signIn } from "../auth.js";
 import { AuthLayout } from "../components/AuthLayout.js";
+import { enterVault } from "../state.js";
 
 export function Unlock({ email }: { email: string }) {
   const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [mode, setMode] = useState<"pin" | "password" | null>(null);
+
+  useEffect(() => {
+    void hasPin().then((on) => setMode(on ? "pin" : "password"));
+  }, []);
+
+  const submitPin = async (event: Event) => {
+    event.preventDefault();
+    setError(null);
+    setWorking(true);
+    const form = event.currentTarget as HTMLFormElement;
+    try {
+      const vaultKeyRaw = await unlockWithPin(String(new FormData(form).get("pin")));
+      await rememberUnlock(vaultKeyRaw, (await getUnlocked())?.token);
+      await enterVault(vaultKeyRaw);
+    } catch (failure) {
+      form.reset();
+      if (failure instanceof PinError && failure.code === "wrong") {
+        setError(t("pin.wrong", { count: failure.attemptsLeft }));
+      } else if (failure instanceof PinError) {
+        setError(t("pin.turned_off"));
+        setMode("password");
+      } else {
+        setError(describeError(failure, t));
+      }
+    } finally {
+      setWorking(false);
+    }
+  };
 
   const submit = async (event: Event) => {
     event.preventDefault();
@@ -39,14 +71,48 @@ export function Unlock({ email }: { email: string }) {
         <h1>{t("unlock.submit")}</h1>
         <p className="hint">{email}</p>
       </div>
-      <form id="form-unlock" className="stack" onSubmit={(event) => void submit(event)}>
+      {mode === "pin" && (
+        <form id="form-pin-unlock" className="stack" onSubmit={(event) => void submitPin(event)}>
+          <input
+            name="pin"
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            pattern="[0-9]*"
+            maxLength={PIN_MAX_LENGTH}
+            placeholder={t("pin.placeholder")}
+            aria-label={t("pin.placeholder")}
+            required
+            autoFocus
+          />
+          <button className="primary" type="submit" disabled={working}>
+            {t(working ? "unlock.working" : "unlock.submit")}
+          </button>
+          <button
+            type="button"
+            className="link quiet"
+            onClick={() => {
+              setError(null);
+              setMode("password");
+            }}
+          >
+            {t("pin.use_password")}
+          </button>
+        </form>
+      )}
+      <form
+        id="form-unlock"
+        className="stack"
+        hidden={mode !== "password"}
+        onSubmit={(event) => void submit(event)}
+      >
         <input
           name="password"
           type="password"
           autoComplete="current-password"
           placeholder={t("setup.master_password")}
           required
-          autoFocus
+          autoFocus={mode === "password"}
         />
         <button className="primary" type="submit" disabled={working}>
           {t(working ? "unlock.working" : "unlock.submit")}

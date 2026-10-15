@@ -10,6 +10,7 @@
 import { importVaultKey, rewrapVaultKey, sealJson } from "../src/core/crypto.js";
 import { toBase64 } from "../src/core/bytes.js";
 import type { VaultItem } from "../extension/lib/vault.js";
+import { enablePin } from "../extension/lib/pin.js";
 
 const EMAIL = "you@example.com";
 const PASSWORD = "preview-master-password";
@@ -181,6 +182,7 @@ Object.assign(globalThis, {
 });
 
 const realFetch = globalThis.fetch.bind(globalThis);
+const pin = { verifier: "", key: toBase64(crypto.getRandomValues(new Uint8Array(32))) };
 
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = new URL(String(input), location.href);
@@ -206,6 +208,19 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   }
   if (url.pathname.startsWith("/api/items/")) {
     return json({ id: url.pathname.split("/").pop(), updatedAt: now });
+  }
+  if (url.pathname === "/api/auth/pin" && init?.method === "PUT") {
+    pin.verifier = (JSON.parse(String(init.body)) as { verifier: string }).verifier;
+    return json({ pinKey: pin.key });
+  }
+  if (url.pathname === "/api/auth/pin" && init?.method === "DELETE") {
+    pin.verifier = "";
+    return json({ ok: true });
+  }
+  if (url.pathname === "/api/auth/pin/unlock") {
+    const { verifier } = JSON.parse(String(init?.body ?? "{}")) as { verifier: string };
+    if (pin.verifier && verifier === pin.verifier) return json({ pinKey: pin.key });
+    return json({ code: "auth.pin_wrong", error: "Wrong PIN", params: { count: 4 } }, 403);
   }
   if (url.pathname === "/api/config") {
     return json({ registration: "open", emailVerification: true });
@@ -259,15 +274,19 @@ async function seed(): Promise<void> {
   const params = new URLSearchParams(location.search);
   if (params.get("locale")) local.set("locale", params.get("locale"));
 
-  // `?screen=setup` or `?screen=unlock` to review the locked-out states.
+  // `?screen=setup` or `?screen=unlock` to review the locked-out states;
+  // add `&pin=123456` to review unlocking with a PIN.
   const screen = params.get("screen");
   if (screen === "setup") {
     local.delete("apiUrl");
     local.delete("email");
-  } else if (screen !== "unlock") {
+  } else {
     session.set("vaultKeyRaw", toBase64(vaultKeyRaw));
     session.set("token", "preview-token");
     session.set("lockAt", Date.now() + 3_600_000);
+    const pinCode = params.get("pin");
+    if (pinCode) await enablePin(pinCode, 1_000);
+    if (screen === "unlock") session.clear();
   }
 }
 

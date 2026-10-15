@@ -26,6 +26,8 @@ export type ApiErrorCode =
   | "auth.invalid_credentials"
   | "auth.rate_limited"
   | "auth.unauthorized"
+  | "auth.pin_wrong"
+  | "auth.pin_off"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
@@ -60,6 +62,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.invalid_credentials": "Incorrect email or master password",
   "auth.rate_limited": "Too many attempts, try again later",
   "auth.unauthorized": "Not signed in, or the session has expired",
+  "auth.pin_wrong": "Wrong PIN",
+  "auth.pin_off": "PIN unlock is off for this session",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",

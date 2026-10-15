@@ -207,3 +207,18 @@ scrolls off screen; the side menu holds only app actions.
   with the current Node binary instead.
 - **A deploy with `routes` turns `workers.dev` off** unless `workers_dev` is
   set explicitly. The generated config always sets it.
+
+### PIN unlock is a server-limited second key
+
+A 6-digit PIN has a million values, so anything that can be tested offline
+falls in seconds. The PIN therefore never protects the vault key alone: PBKDF2
+turns it into a verifier, which goes to the server, and a local half, which
+stays on the device. The vault key is sealed under HKDF of the local half and a
+random `pin_key` that the server hands out only for the right verifier. A thief
+with the disk has the salt and the sealed copy but not `pin_key`; the server has
+`pin_key` and a keyed hash of the verifier but not the salt, so neither can
+guess offline. Online guessing stops at five: the server spends a try before it
+compares, in one `UPDATE … RETURNING`, so parallel requests cannot race past
+the limit, and the fifth miss deletes `pin_key`. The PIN is tied to the session
+whose token it keeps on disk, so the 30-day session expiry, sign-out and a
+password change all end it and the master password is needed again.
