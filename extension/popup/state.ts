@@ -275,6 +275,11 @@ export function openSettings(page = ""): void {
   void chrome.tabs.create({ url: chrome.runtime.getURL(`settings/settings.html${page}`) });
 }
 
+export function openConsole(): void {
+  drawerOpen.value = false;
+  void chrome.tabs.create({ url: chrome.runtime.getURL("console/console.html") });
+}
+
 export function openImport(): void {
   void chrome.tabs.create({ url: chrome.runtime.getURL("import/import.html") });
 }

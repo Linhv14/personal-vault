@@ -146,11 +146,15 @@ their own SIEM, an export endpoint reads it from the object.
 Events carry identifiers, never secret values or names (names are encrypted
 too): who (account, or repository and ref), what, which object, from where, when.
 
-## Web dashboard
+## Console and web dashboard
 
-Organizations are also managed at `/app` on the service's own domain, for admins
-who are not in the extension. It is the same Preact code as the extension's
-Organization page, built into `dist/public/app` and served by the Worker. Signing
+Organizations are managed in one console (`extension/console`): sidebar
+navigation, a hash route per page (`#/<org>/projects/<project>/<environment>`),
+tables, and an overview of each project that lines every secret up against every
+environment. It runs in two places from the same code: as an extension page,
+using the vault the extension already holds, and at `/app` on the service's own
+domain, for admins who are not in the extension, built into `dist/public/app`
+and served by the Worker. Signing
 in derives the keys in the browser exactly as the extension does: the master
 password and the vault key never leave the page. Keys and the session token
 live only in the page's memory (no `localStorage`, no cookies), so a reload or

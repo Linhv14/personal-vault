@@ -170,8 +170,8 @@ export interface AuditPage {
   verified: boolean;
 }
 
-export async function auditLog(orgId: string): Promise<AuditPage> {
-  return request(`/api/orgs/${orgId}/audit`);
+export async function auditLog(orgId: string, before?: number): Promise<AuditPage> {
+  return request(`/api/orgs/${orgId}/audit${before ? `?before=${before}` : ""}`);
 }
 
 export { fingerprint };

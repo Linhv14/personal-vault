@@ -1,5 +1,5 @@
-import type { MessageKey } from "../../../src/i18n/index.js";
-import type { OrgRole } from "../../lib/orgs.js";
+import type { MessageKey } from "../../src/i18n/index.js";
+import type { OrgRole } from "../lib/orgs.js";
 
 export const ROLE_LABEL: Record<OrgRole, MessageKey> = {
   owner: "orgs.role_owner",

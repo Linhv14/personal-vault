@@ -7,7 +7,7 @@ import { IconButton } from "../../ui/components/IconButton.js";
 import { TypeBadge } from "./ItemIcons.js";
 import { VaultMenu } from "./VaultMenu.js";
 import { orgSnapshot } from "../promos.js";
-import { drawerOpen, openEditor, openSettings, searchQuery } from "../state.js";
+import { openConsole, drawerOpen, openEditor, searchQuery } from "../state.js";
 
 function AddButton() {
   const t = useT();
@@ -51,7 +51,7 @@ function TeamsButton() {
       title={t("orgs.cta_hint")}
       aria-hidden={snapshot ? undefined : "true"}
       tabIndex={snapshot ? undefined : -1}
-      onClick={() => openSettings("#teams")}
+      onClick={() => openConsole()}
     >
       <Icon name="users" />
       <span>{t(snapshot && snapshot.orgs > 0 ? "orgs.cta_open" : "orgs.cta_start")}</span>

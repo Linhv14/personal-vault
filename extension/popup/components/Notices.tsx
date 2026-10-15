@@ -6,7 +6,7 @@ import { IconButton } from "../../ui/components/IconButton.js";
 import { Logo } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
 import { acceptPromo, activePromo, dismissPromo, orgSnapshot, refreshPromos } from "../promos.js";
-import { clockWarning, openSettings, syncing, syncProblem, vaultKey } from "../state.js";
+import { openConsole, clockWarning, syncing, syncProblem, vaultKey } from "../state.js";
 
 function PromoBanner() {
   const t = useT();
@@ -44,7 +44,7 @@ function PromoBanner() {
       <span className="promo-text">{text}</span>
       <button
         className="link"
-        onClick={() => (promo === "invites" ? openSettings("#teams") : void acceptPromo(promo))}
+        onClick={() => (promo === "invites" ? openConsole() : void acceptPromo(promo))}
       >
         {action}
       </button>

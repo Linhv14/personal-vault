@@ -123,10 +123,8 @@ async function buildDashboard() {
     outfile: path.join(out, "app.js"),
   });
   await copyPage(path.join(source, "index.html"), path.join(out, "index.html"));
-  await copyPage(
-    path.join(root, "extension", "settings", "settings.css"),
-    path.join(out, "settings.css"),
-  );
+  await cp(path.join(root, "src", "ui", "tokens.css"), path.join(out, "tokens.css"));
+  await cp(path.join(root, "extension", "console", "console.css"), path.join(out, "console.css"));
   await cp(path.join(source, "web.css"), path.join(out, "web.css"));
 }
 
@@ -173,6 +171,12 @@ async function buildExtension() {
   }
 }
 
+async function copyConsoleTokens() {
+  const target = path.join(outExtension, "console", "tokens.css");
+  if (!existsSync(path.dirname(target))) return;
+  await cp(path.join(root, "src", "ui", "tokens.css"), target);
+}
+
 async function packageForDownload() {
   if (!existsSync(outExtension)) return;
   const target = path.join(outPublic, "download", "1pw-extension.zip");
@@ -209,5 +213,6 @@ await clean(outExtension);
 await buildSharePage();
 await buildDashboard();
 await buildExtension();
+await copyConsoleTokens();
 await packageForDownload();
 console.log(dev ? "Dev build complete." : "Build complete.");

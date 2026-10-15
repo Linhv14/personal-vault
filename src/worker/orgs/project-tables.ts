@@ -4,6 +4,8 @@ export interface ProjectRecord {
   id: string;
   sealed: SealedData;
   createdAt: number;
+  secretCount: number;
+  updatedAt: number;
 }
 
 export interface SecretRecord {
@@ -73,8 +75,16 @@ export class ProjectTables {
 
   ofTeam(teamId: string): ProjectRecord[] {
     return this.sql
-      .exec<{ id: string; sealed: string; created_at: number }>(
-        "SELECT id, sealed, created_at FROM projects WHERE team_id = ? ORDER BY created_at",
+      .exec<{
+        id: string;
+        sealed: string;
+        created_at: number;
+        secret_count: number;
+        updated_at: number | null;
+      }>(
+        `SELECT p.id, p.sealed, p.created_at, count(s.id) AS secret_count, max(s.updated_at) AS updated_at
+           FROM projects p LEFT JOIN secrets s ON s.project_id = p.id
+          WHERE p.team_id = ? GROUP BY p.id ORDER BY p.created_at`,
         teamId,
       )
       .toArray()
@@ -82,6 +92,8 @@ export class ProjectTables {
         id: row.id,
         sealed: JSON.parse(row.sealed) as SealedData,
         createdAt: row.created_at,
+        secretCount: row.secret_count,
+        updatedAt: Math.max(row.updated_at ?? 0, row.created_at),
       }));
   }
 

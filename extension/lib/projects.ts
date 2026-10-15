@@ -20,6 +20,8 @@ export interface Project {
   generation: number;
   content: ProjectContent;
   createdAt: number;
+  secretCount: number;
+  updatedAt: number;
 }
 
 export interface Secret extends SecretContent {
@@ -33,6 +35,8 @@ interface ProjectRecord {
   id: string;
   sealed: SealedData;
   createdAt: number;
+  secretCount: number;
+  updatedAt: number;
 }
 
 interface SecretRecord {
@@ -67,6 +71,8 @@ export async function listProjects(orgId: string, team: Team, me: Identity): Pro
       generation,
       content: await openProject(key, record.id, generation, record.sealed),
       createdAt: record.createdAt,
+      secretCount: record.secretCount,
+      updatedAt: record.updatedAt,
     })),
   );
 }

@@ -1,7 +1,6 @@
 .sign-in {
   display: grid;
   place-items: center;
-  max-width: none;
   min-height: 100vh;
   padding: 24px 16px;
 }
@@ -10,34 +9,15 @@
   flex-direction: column;
   gap: 14px;
   width: min(100%, 400px);
+  margin: 0;
   padding: 28px;
 }
 .sign-in-card .brand {
-  margin-bottom: 4px;
   padding: 0;
 }
 .sign-in-card h1 {
-  margin: 0;
-  font-size: 22px;
+  font-size: 20px;
 }
-.sign-in-card label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.sign-in-card .button.primary {
-  min-height: 42px;
-  margin-top: 4px;
-}
-.sign-in-card .error {
-  margin: 0;
-}
-.sign-in-card a {
-  color: var(--accent);
-}
-.nav .nav-note {
-  padding: 6px 10px;
-  overflow-wrap: anywhere;
+.sign-in-card .btn.primary {
+  min-height: 40px;
 }

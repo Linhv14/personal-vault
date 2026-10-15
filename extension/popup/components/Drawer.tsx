@@ -4,6 +4,7 @@ import { Logo } from "../../ui/components/Logo.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { inVault, live, tagsOf } from "../filters.js";
 import {
+  openConsole,
   currentVault,
   drawerOpen,
   items,
@@ -112,7 +113,7 @@ export function Drawer() {
             highlight={(orgSnapshot.value?.invites.length ?? 0) > 0}
             onSelect={() => {
               close();
-              openSettings("#teams");
+              openConsole();
             }}
           />
           <DrawerLink icon="wand" label={t("list.generator")} onSelect={openGenerator} />

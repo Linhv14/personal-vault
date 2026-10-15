@@ -1,7 +1,6 @@
 import { useState } from "preact/hooks";
 import { describeError } from "../src/i18n/index.js";
 import { logoSvg } from "../src/ui/logo.js";
-import { Button } from "../extension/ui/components/Button.js";
 import { useT } from "../extension/ui/i18n.js";
 import { IDLE_MINUTES, signIn } from "./session.js";
 
@@ -28,7 +27,7 @@ export function SignIn() {
 
   return (
     <main className="sign-in">
-      <form className="card sign-in-card" onSubmit={(event) => void submit(event)}>
+      <form className="panel sign-in-card" onSubmit={(event) => void submit(event)}>
         <header className="brand">
           <span
             className="brand-logo"
@@ -40,24 +39,24 @@ export function SignIn() {
           </span>
         </header>
         <h1>{t("web.sign_in_title")}</h1>
-        <label>
-          {t("setup.email")}
+        <label className="field">
+          <span className="field-label">{t("setup.email")}</span>
           <input name="email" type="email" autoComplete="username" required autoFocus />
         </label>
-        <label>
-          {t("setup.master_password")}
+        <label className="field">
+          <span className="field-label">{t("setup.master_password")}</span>
           <input name="password" type="password" autoComplete="current-password" required />
         </label>
         {error && (
-          <p className="error" role="alert">
+          <p className="form-error" role="alert">
             {error}
           </p>
         )}
-        <Button variant="primary" type="submit" disabled={working}>
+        <button className="btn primary" type="submit" disabled={working}>
           {t(working ? "web.signing_in" : "setup.sign_in")}
-        </Button>
-        <p className="row-hint">{t("web.sign_in_hint", { minutes: IDLE_MINUTES })}</p>
-        <p className="row-hint">
+        </button>
+        <p className="field-hint">{t("web.sign_in_hint", { minutes: IDLE_MINUTES })}</p>
+        <p className="field-hint">
           {t("web.no_account")} <a href="/">{t("web.get_extension")}</a>
         </p>
       </form>

@@ -104,6 +104,16 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Organizations are managed in a console instead of a Settings tab: a sidebar
+  with Projects, Teams, Members, Activity and Settings, a link for every page,
+  searchable tables and dialogs instead of browser prompts. A project opens on an
+  overview of every secret against every environment that flags what is
+  missing; a secret can be added to several environments at once; deleting a
+  project or team asks for its name. The activity log names the project and
+  environment of each secret event and filters by kind. The same console runs at
+  `/app` and, without signing in again, as an extension tab opened from Settings
+  → Organization or the popup.
+
 - New passkeys carry the 1PW AAGUID `8c3f47c7-7c94-4ad9-9344-8fbe58a9b394`
   instead of all zeros, so sites can name 1PW as the provider once the AAGUID is
   in the community list. Existing passkeys keep the zero AAGUID.

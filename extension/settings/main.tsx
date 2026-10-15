@@ -9,19 +9,13 @@ import { Data } from "./pages/Data.js";
 import { General } from "./pages/General.js";
 import { Health } from "./pages/Health.js";
 import { Security } from "./pages/Security.js";
-import { OrganizationPage } from "./organization/OrganizationPage.js";
+import { Organization } from "./pages/Organization.js";
 import { isSignedIn, localState, toastMessage, watchStorage } from "./state.js";
 
 const PAGE_VIEWS: Record<Page, ComponentType> = {
   general: General,
   security: Security,
-  teams: () => (
-    <OrganizationPage
-      dashboardUrl={
-        localState.value.apiUrl ? `${localState.value.apiUrl.replace(/\/$/, "")}/app/` : undefined
-      }
-    />
-  ),
+  teams: Organization,
   health: Health,
   data: Data,
   account: Account,
