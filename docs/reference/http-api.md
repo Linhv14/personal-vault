@@ -54,6 +54,14 @@ clock is off.
 { "serverTime": 1791820800 }
 ```
 
+### `GET /api/logo?domain=<hostname>`
+
+Session required. Returns the website icon for a hostname as an image, fetched
+from DuckDuckGo or, failing that, Google, and cached at the edge for 7 days.
+The hostname must be a plain domain name; anything else, or a site without an
+icon, answers `404 server.not_found`. Images over 64 KiB are refused. The
+response is `Cache-Control: private, no-store`, so browsers keep no copy.
+
 ## Accounts
 
 ### `POST /api/auth/verify-email`

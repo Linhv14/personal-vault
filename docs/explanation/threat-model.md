@@ -22,6 +22,7 @@ enforce them are listed at the end.
 | Malicious website     | Runs script in a page the user visits                  |
 | Link carrier          | The chat or email service that transports a share link |
 | Breach-check service  | Have I Been Pwned, when the user runs the check        |
+| Icon service          | DuckDuckGo or Google, asked by the Worker for logos    |
 | Device thief          | Holds a powered-off or locked device                   |
 | Malware on the device | Runs code as the user while the vault is unlocked      |
 
@@ -35,6 +36,7 @@ enforce them are listed at the end.
 | Malicious website    | Only a login the user explicitly fills there, and only on its own domain                                | No                                                       | Whether autofill is on                                   |
 | Link carrier         | The shared item, unless a passphrase was set and sent separately                                        | No                                                       | That something was shared                                |
 | Breach-check service | No: it receives 5-character SHA-1 prefixes, each shared by hundreds of passwords, with padded responses | No                                                       | The user's IP address and that a check ran               |
+| Icon service         | No                                                                                                      | No                                                       | Domain names, from the Worker's address, not the user's  |
 | Device thief         | No, while locked: the local copy is ciphertext                                                          | Can guess offline against the cached wrapped key         | Email, item count                                        |
 | Malware on device    | Yes, once unlocked                                                                                      | Yes, if it logs keystrokes                               | Yes                                                      |
 
@@ -51,8 +53,11 @@ The server, and so anyone who operates or breaches it, learns:
   but not who created it;
 - addresses that requested a sign-up code or failed to sign in.
 
-It never learns site names, URLs, usernames, passwords, 2FA secrets, notes, or
-the contents of a share.
+With website icons on (the default), the server also sees the domain of each
+saved login while it fetches that site's logo. It does not store them, and the
+extension keeps fetched logos in memory only, never on disk. With the option
+off, the server never learns site names. It never learns URLs, usernames,
+passwords, 2FA secrets, notes, or the contents of a share.
 
 ## Out of reach, by design
 

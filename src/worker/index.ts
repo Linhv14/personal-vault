@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { apiError } from "./errors.js";
 import auth from "./routes/auth.js";
 import items from "./routes/items.js";
+import logos from "./routes/logos.js";
 import shares from "./routes/shares.js";
 import { emailVerificationEnabled } from "./email-verification.js";
 import { clientIp, isOpenRegistration } from "./request.js";
@@ -56,6 +57,7 @@ const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
 
 app.use("/api/items", requireAuth);
 app.use("/api/items/*", requireAuth);
+app.use("/api/logo", requireAuth);
 app.use("/api/auth/logout", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
 app.use("/api/auth/delete-account", requireAuth);
@@ -92,6 +94,7 @@ app.get("/api/config", (c) =>
 
 app.route("/api/auth", auth);
 app.route("/api/items", items);
+app.route("/api/logo", logos);
 app.route("/api/shares", shares);
 
 /**
