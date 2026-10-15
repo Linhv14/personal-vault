@@ -475,8 +475,12 @@ const PRODUCTION = path.join(root, "deploy", "production.json");
 
 async function ci() {
   if (!existsSync(PRODUCTION)) throw new Error("deploy/production.json is missing");
-  const state = JSON.parse(readFileSync(PRODUCTION, "utf8"));
+  const state = JSON.parse(readFileSync(PRODUCTION, "utf8")) as DeployState & {
+    accountId: string;
+    databaseId: string;
+  };
   writeState(state);
+  accountEnv = { CLOUDFLARE_ACCOUNT_ID: state.accountId };
   const options = resolveDeployOptions(state, {});
   const configPath = writeGeneratedConfig(state.accountId, state.databaseId, options);
 
