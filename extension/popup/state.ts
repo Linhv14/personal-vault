@@ -1,3 +1,4 @@
+import { ensureIdentity } from "../lib/identity.js";
 import { signal } from "@preact/signals";
 import { createTranslator, describeError, type Translate } from "../../src/i18n/index.js";
 import { formatDateTime } from "../ui/format.js";
@@ -214,6 +215,7 @@ export async function enterVault(rawBase64: string): Promise<void> {
   if (focused) openEditor(focused);
   void backgroundSync();
   void refreshAutofillPromo();
+  void ensureIdentity(vaultKey.value).catch(() => {});
 }
 
 async function refreshAutofillPromo(): Promise<void> {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { apiError } from "./errors.js";
+import account from "./routes/account.js";
 import auth from "./routes/auth.js";
 import items from "./routes/items.js";
 import logos from "./routes/logos.js";
@@ -65,6 +66,7 @@ app.use("/api/auth/pin/*", requireAuth);
 app.use("/api/auth/biometric", requireAuth);
 app.use("/api/auth/biometric/*", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
+app.use("/api/account/*", requireAuth);
 app.use("/api/auth/delete-account", requireAuth);
 
 // Creating a share needs a session; reading one must not, since the recipient
@@ -98,6 +100,7 @@ app.get("/api/config", (c) =>
 );
 
 app.route("/api/auth", auth);
+app.route("/api/account", account);
 app.route("/api/items", items);
 app.route("/api/logo", logos);
 app.route("/api/shares", shares);

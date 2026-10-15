@@ -769,5 +769,31 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       });
       expect(revived.status).toBe(409);
     });
+
+    it("stores one account key pair and never replaces it", async () => {
+      const { createIdentity } = await import("../src/core/identity.js");
+      const empty = await api("/api/account/identity", { token });
+      expect(empty.body).toEqual({ identity: null });
+      const first = await createIdentity();
+      const wrappedPrivateKey = {
+        ciphertext: toBase64(new Uint8Array(150)),
+        nonce: toBase64(new Uint8Array(12)),
+      };
+      const stored = await api("/api/account/identity", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ publicKey: first.publicKey, wrappedPrivateKey }),
+      });
+      expect(stored.status).toBe(200);
+      const replaced = await api("/api/account/identity", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ publicKey: (await createIdentity()).publicKey, wrappedPrivateKey }),
+      });
+      expect(replaced.status).toBe(409);
+      const read = await api("/api/account/identity", { token });
+      expect(read.body.identity).toEqual({ publicKey: first.publicKey, wrappedPrivateKey });
+      expect((await api("/api/account/identity")).status).toBe(401);
+    });
   });
 });

@@ -151,6 +151,23 @@ export async function biometricUnlock(
   return bioKey;
 }
 
+export async function getIdentity(): Promise<{
+  publicKey: string;
+  wrappedPrivateKey: SealedData;
+} | null> {
+  const { identity } = await request<{
+    identity: { publicKey: string; wrappedPrivateKey: SealedData } | null;
+  }>("/api/account/identity");
+  return identity;
+}
+
+export async function putIdentity(publicKey: string, wrappedPrivateKey: SealedData): Promise<void> {
+  await request("/api/account/identity", {
+    method: "PUT",
+    body: JSON.stringify({ publicKey, wrappedPrivateKey }),
+  });
+}
+
 export async function fetchLogo(domain: string): Promise<Blob | null> {
   const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
   if (!apiUrl || !session?.token) return null;

@@ -58,6 +58,7 @@ export const vi: Catalogue = {
   "error.auth.invalid_credentials": "Email hoặc master password không đúng",
   "error.auth.rate_limited": "Sai quá nhiều lần. Thử lại sau {seconds} giây.",
   "error.items.conflict": "Mục này vừa được sửa trên thiết bị khác. Đồng bộ rồi thử lại.",
+  "error.account.identity_exists": "Tài khoản này đã có cặp khoá.",
   "error.auth.unauthorized": "Chưa đăng nhập, hoặc session đã hết hạn",
   "error.items.invalid_id": "Id mục không hợp lệ",
   "error.items.invalid_payload": "Dữ liệu mã hoá không hợp lệ",

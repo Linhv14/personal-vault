@@ -222,6 +222,24 @@ items and its sessions. Returns `{ "ok": true }`, or
 Shares are not linked to accounts, so links already sent keep working until
 they expire or run out of views.
 
+## Account key pair
+
+Every account has an ECDH P-256 key pair so that team keys can be wrapped for it
+(see [Teams and CI secrets](../explanation/teams.md)). The extension creates it
+the first time the vault opens.
+
+### `GET /api/account/identity`
+
+Authenticated. Returns `{ "identity": { publicKey, wrappedPrivateKey } }`, or
+`{ "identity": null }` before one exists. `wrappedPrivateKey` is sealed under the
+vault key; the server cannot open it.
+
+### `PUT /api/account/identity`
+
+Authenticated. Body `{ publicKey, wrappedPrivateKey }`. Stores the pair once;
+`409 account.identity_exists` afterwards, so a stolen session cannot swap in a
+key its holder controls.
+
 ## Items
 
 All item endpoints require authentication. An item is a single sealed blob; the

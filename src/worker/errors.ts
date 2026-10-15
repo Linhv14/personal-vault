@@ -30,6 +30,7 @@ export type ApiErrorCode =
   | "auth.pin_off"
   | "auth.biometric_off"
   | "auth.biometric_failed"
+  | "account.identity_exists"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
@@ -69,6 +70,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.pin_off": "PIN unlock is off for this session",
   "auth.biometric_off": "Biometric unlock is off for this session",
   "auth.biometric_failed": "The biometric check did not pass",
+  "account.identity_exists": "This account already has a key pair",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",

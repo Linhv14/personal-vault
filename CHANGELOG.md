@@ -10,6 +10,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Every account gets a key pair the first time the vault opens, the base for
+  sharing secrets with teams. The private key is stored only sealed under the
+  vault key.
 - Unlock with Touch ID or the Mac password on macOS, or Windows Hello on
   Windows (Settings → Security). The server releases the key only for a fresh signature from the
   device's platform authenticator.

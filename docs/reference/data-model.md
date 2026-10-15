@@ -9,17 +9,20 @@ without the secret, the original value cannot be confirmed by guessing.
 
 ## `accounts`
 
-| Column              | Content                                                                                                             | Reveals                    |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `id`                | Random UUID                                                                                                         | Nothing                    |
-| `email`             | Normalized address, unique                                                                                          | **The address, in clear**  |
-| `kdf_type`          | `pbkdf2-sha256`                                                                                                     | Nothing                    |
-| `kdf_iterations`    | Iteration count                                                                                                     | Nothing                    |
-| `kdf_salt`          | Random salt, base64                                                                                                 | Nothing                    |
-| `auth_key_hash`     | `v2:` + HMAC of the auth key under a key derived from `AT_REST_SECRET`                                              | Nothing without the secret |
-| `wrapped_vault_key` | `v2:` + vault key wrapped by the client, sealed again under `AT_REST_SECRET` with the account id as associated data | Nothing without the secret |
-| `wrap_nonce`        | Nonce of the client-side wrap                                                                                       | Nothing                    |
-| `created_at`        | Unix seconds                                                                                                        | Sign-up time               |
+| Column                | Content                                                                                                             | Reveals                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `id`                  | Random UUID                                                                                                         | Nothing                       |
+| `email`               | Normalized address, unique                                                                                          | **The address, in clear**     |
+| `kdf_type`            | `pbkdf2-sha256`                                                                                                     | Nothing                       |
+| `kdf_iterations`      | Iteration count                                                                                                     | Nothing                       |
+| `kdf_salt`            | Random salt, base64                                                                                                 | Nothing                       |
+| `auth_key_hash`       | `v2:` + HMAC of the auth key under a key derived from `AT_REST_SECRET`                                              | Nothing without the secret    |
+| `wrapped_vault_key`   | `v2:` + vault key wrapped by the client, sealed again under `AT_REST_SECRET` with the account id as associated data | Nothing without the secret    |
+| `wrap_nonce`          | Nonce of the client-side wrap                                                                                       | Nothing                       |
+| `created_at`          | Unix seconds                                                                                                        | Sign-up time                  |
+| `public_key`          | The account's ECDH P-256 public key, base64 SPKI                                                                    | Nothing beyond the key itself |
+| `wrapped_private_key` | Its private key, sealed by the client under the vault key                                                           | Nothing                       |
+| `identity_created_at` | Unix seconds                                                                                                        | When the key pair was made    |
 
 Values without the `v2:` prefix come from before 0.2.0 and are rewritten on
 the account's next login.

@@ -59,6 +59,7 @@ export const en = {
   "error.auth.invalid_credentials": "Incorrect email or master password",
   "error.auth.rate_limited": "Too many failed attempts. Try again in {seconds} seconds.",
   "error.items.conflict": "The item changed on another device. Sync and try again.",
+  "error.account.identity_exists": "This account already has a key pair.",
   "error.auth.unauthorized": "Not signed in, or the session has expired",
   "error.items.invalid_id": "Invalid item id",
   "error.items.invalid_payload": "Invalid encrypted payload",
