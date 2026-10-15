@@ -48,6 +48,7 @@ export function navigate(orgId: string, route: Route): void {
 
 export function watchHash(): () => void {
   const update = () => (location$.value = parseHash(location.hash));
+  update();
   addEventListener("hashchange", update);
   return () => removeEventListener("hashchange", update);
 }

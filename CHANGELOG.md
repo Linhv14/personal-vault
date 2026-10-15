@@ -10,6 +10,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Environments can be added, renamed and deleted from a project page.
+
 - Projects and secrets (Organization → Projects, in the extension and the
   dashboard): a team's projects hold secrets per environment (Development,
   Staging, Production), encrypted end to end with a project key sealed under the
@@ -103,6 +105,11 @@ version may change the API or storage format; such releases list the steps in
   built for the server it is served from.
 
 ### Changed
+
+- The console uses the full window width and shows less: no descriptions under
+  page titles, no key fingerprints in tables (a Verify key action shows one when
+  needed), no key version badges unless a team needs a new key, and the activity
+  log keeps the IP address in a tooltip.
 
 - Organizations are managed in a console instead of a Settings tab: a sidebar
   with Projects, Teams, Members, Activity and Settings, a link for every page,

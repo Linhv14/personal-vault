@@ -4,7 +4,7 @@ import { auditLog, type AuditEvent } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { Avatar, Badge, PageHeader } from "../components.js";
+import { Avatar, Badge, PageHeader, When } from "../components.js";
 import { useConsole } from "../data.js";
 import { ACTION_LABEL } from "../labels.js";
 
@@ -72,7 +72,6 @@ export function ActivityPage() {
     <>
       <PageHeader
         title={t("orgs.audit")}
-        meta={t("console.activity_hint")}
         actions={
           verified !== null &&
           (verified ? (
@@ -109,7 +108,6 @@ export function ActivityPage() {
               <th>{t("console.when")}</th>
               <th>{t("console.who")}</th>
               <th>{t("console.what")}</th>
-              <th>{t("console.from")}</th>
             </tr>
           </thead>
           <tbody>
@@ -117,7 +115,12 @@ export function ActivityPage() {
               const label = ACTION_LABEL[event.action];
               return (
                 <tr key={event.seq}>
-                  <td className="muted nowrap">{formatDateTime(event.at, localeSignal.value)}</td>
+                  <td
+                    className="muted nowrap"
+                    title={`${formatDateTime(event.at, localeSignal.value)}${event.ip ? ` · ${event.ip}` : ""}`}
+                  >
+                    <When at={event.at} />
+                  </td>
                   <td>
                     <span className="cell-title">
                       <Avatar text={emailOf(event.actor)} size="sm" />
@@ -127,7 +130,6 @@ export function ActivityPage() {
                   <td>
                     {label ? t(label) : event.action} <strong>{target(event)}</strong>
                   </td>
-                  <td className="muted mono-sm">{event.ip ?? "–"}</td>
                 </tr>
               );
             })}

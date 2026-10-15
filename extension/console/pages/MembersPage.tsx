@@ -31,6 +31,7 @@ type Modal =
   | { kind: "invite" }
   | { kind: "remove"; member: OrgMember }
   | { kind: "transfer"; member: OrgMember }
+  | { kind: "verify"; member: OrgMember }
   | null;
 
 export function MembersPage() {
@@ -50,7 +51,6 @@ export function MembersPage() {
     <>
       <PageHeader
         title={t("orgs.members")}
-        meta={t("orgs.fingerprint_hint")}
         actions={
           isOrgAdmin(org.role) && (
             <button
@@ -78,7 +78,6 @@ export function MembersPage() {
               <th>{t("console.member")}</th>
               <th>{t("orgs.role")}</th>
               <th>{t("orgs.teams")}</th>
-              <th>{t("console.key_fingerprint")}</th>
               <th aria-label={t("console.actions")} />
             </tr>
           </thead>
@@ -135,10 +134,14 @@ export function MembersPage() {
                       {teamsOf(member.accountId).length === 0 && <span className="muted">–</span>}
                     </div>
                   </td>
-                  <td>
-                    <Fingerprint publicKey={member.publicKey} />
-                  </td>
                   <td className="row-actions">
+                    {member.publicKey && !isMe && (
+                      <IconButton
+                        icon="key"
+                        label={t("console.verify_key")}
+                        onClick={() => setModal({ kind: "verify", member })}
+                      />
+                    )}
                     {removable && (
                       <IconButton
                         icon="close"
@@ -237,6 +240,20 @@ export function MembersPage() {
             }, "orgs.removed")
           }
         />
+      )}
+      {modal?.kind === "verify" && (
+        <Dialog
+          title={t("console.verify_key")}
+          submitLabel={t("console.done")}
+          onClose={() => setModal(null)}
+          onSubmit={() => setModal(null)}
+        >
+          <div className="verify">
+            <span className="field-label">{modal.member.email}</span>
+            <Fingerprint publicKey={modal.member.publicKey} />
+            <p className="field-hint">{t("console.verify_hint")}</p>
+          </div>
+        </Dialog>
       )}
       {modal?.kind === "transfer" && (
         <Dialog

@@ -107,25 +107,16 @@ code,
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg);
 }
-.org-switch-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.org-switch-text strong {
+.org-switch-name {
   overflow: hidden;
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.org-switch-text span {
-  color: var(--muted);
-  font-size: 12px;
 }
 .org-switch select {
   position: absolute;
@@ -198,8 +189,7 @@ code,
 .main {
   width: 100%;
   min-width: 0;
-  max-width: 1180px;
-  padding: 28px 40px 80px;
+  padding: 24px 32px 80px;
 }
 
 .btn {
@@ -646,6 +636,27 @@ a.cell-title:hover {
   border-bottom-color: var(--accent);
   color: var(--text);
 }
+.tab-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 4px 4px;
+  padding: 4px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  align-self: center;
+}
+.tab-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .tab-count {
   padding: 0 6px;
   border-radius: 999px;
@@ -749,12 +760,19 @@ tr.editing td {
   height: 13px;
 }
 .cell-missing {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--warn-soft);
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px dashed color-mix(in srgb, var(--warn) 55%, transparent);
+  border-radius: 50%;
   color: var(--warn);
   font-size: 12px;
-  font-weight: 600;
+  text-decoration: none;
+}
+.cell-missing:hover {
+  background: var(--warn-soft);
+  text-decoration: none;
 }
 .link-list {
   margin: 0;

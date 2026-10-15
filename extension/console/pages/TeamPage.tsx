@@ -105,19 +105,7 @@ export function TeamPage({ teamId }: { teamId: string }) {
       <PageHeader
         crumbs={[{ label: t("orgs.teams"), href: href(orgId, { page: "teams" }) }]}
         title={team.name}
-        meta={
-          <>
-            <span>{t("orgs.team_members", { count: team.members.length })}</span>
-            <span>·</span>
-            {team.rekeyNeeded ? (
-              <Badge tone="warn">{t("orgs.rekey_needed")}</Badge>
-            ) : (
-              <Badge tone="ok">
-                {t("console.key_current", { generation: team.generation + 1 })}
-              </Badge>
-            )}
-          </>
-        }
+        meta={t("orgs.team_members", { count: team.members.length })}
         actions={
           admin && (
             <>
@@ -172,7 +160,6 @@ export function TeamPage({ teamId }: { teamId: string }) {
             <tr>
               <th>{t("console.member")}</th>
               <th>{t("orgs.role")}</th>
-              <th>{t("console.key_fingerprint")}</th>
               <th aria-label={t("console.actions")} />
             </tr>
           </thead>
@@ -187,9 +174,6 @@ export function TeamPage({ teamId }: { teamId: string }) {
                   </span>
                 </td>
                 <td className="muted">{t(ROLE_LABEL[member.role])}</td>
-                <td>
-                  <Fingerprint publicKey={member.publicKey} />
-                </td>
                 <td className="row-actions">
                   {admin && (
                     <IconButton

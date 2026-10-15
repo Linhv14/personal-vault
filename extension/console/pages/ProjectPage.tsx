@@ -1,5 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
-import { formatDotenv, parseDotenv } from "../../../src/core/projects.js";
+import {
+  formatDotenv,
+  MAX_ENVIRONMENTS,
+  newEnvironment,
+  parseDotenv,
+} from "../../../src/core/projects.js";
 import { describeError } from "../../../src/i18n/index.js";
 import { isOrgAdmin } from "../../lib/orgs.js";
 import {
@@ -37,6 +42,9 @@ type Modal =
   | { kind: "add" }
   | { kind: "import" }
   | { kind: "rename" }
+  | { kind: "add-env" }
+  | { kind: "rename-env" }
+  | { kind: "delete-env" }
   | { kind: "delete-project" }
   | { kind: "delete-secret"; secret: Secret }
   | null;
@@ -74,7 +82,7 @@ export function ProjectPage({
 
   useEffect(() => {
     void load();
-  }, [project?.id, project?.generation]);
+  }, [project?.id, project?.generation, project?.content.environments.map((env) => env.id).join()]);
 
   if (!projects) return <span className="spinner" />;
   if (!project) {
@@ -155,6 +163,26 @@ export function ProjectPage({
             onSelect={() => setModal({ kind: "rename" })}
           />
           <MenuItem
+            icon="plus"
+            label={t("console.add_environment")}
+            onSelect={() => setModal({ kind: "add-env" })}
+          />
+          {environment && (
+            <MenuItem
+              icon="pencil"
+              label={t("console.rename_environment", { env: environment.name })}
+              onSelect={() => setModal({ kind: "rename-env" })}
+            />
+          )}
+          {environment && environments.length > 1 && (
+            <MenuItem
+              icon="trash"
+              label={t("console.delete_environment", { env: environment.name })}
+              danger
+              onSelect={() => setModal({ kind: "delete-env" })}
+            />
+          )}
+          <MenuItem
             icon="trash"
             label={t("projects.delete")}
             danger
@@ -215,6 +243,12 @@ export function ProjectPage({
             </a>
           );
         })}
+        {canManage && environments.length < MAX_ENVIRONMENTS && (
+          <button type="button" className="tab-add" onClick={() => setModal({ kind: "add-env" })}>
+            <Icon name="plus" />
+            {t("console.environment")}
+          </button>
+        )}
       </nav>
 
       <section className="panel">
@@ -293,6 +327,77 @@ export function ProjectPage({
           existing={secrets ?? {}}
           onClose={() => setModal(null)}
           onImport={importText}
+        />
+      )}
+      {modal?.kind === "add-env" && owner && (
+        <Dialog
+          title={t("console.add_environment")}
+          description={t("console.add_environment_hint")}
+          submitLabel={t("orgs.create")}
+          onClose={() => setModal(null)}
+          onSubmit={(form) => {
+            const name = String(new FormData(form).get("name")).trim();
+            const created = newEnvironment(name);
+            void run(async () => {
+              await updateProject(orgId, owner, identity, project, {
+                ...project.content,
+                environments: [...environments, created],
+              });
+              setModal(null);
+              navigate(orgId, { page: "project", projectId, environmentId: created.id });
+            }, "console.environment_added");
+          }}
+        >
+          <Field label={t("console.environment_name")}>
+            <input name="name" maxLength={40} required autoFocus placeholder="QA" />
+          </Field>
+        </Dialog>
+      )}
+      {modal?.kind === "rename-env" && owner && environment && (
+        <Dialog
+          title={t("console.rename_environment", { env: environment.name })}
+          submitLabel={t("projects.save")}
+          onClose={() => setModal(null)}
+          onSubmit={(form) => {
+            const name = String(new FormData(form).get("name")).trim();
+            void run(async () => {
+              await updateProject(orgId, owner, identity, project, {
+                ...project.content,
+                environments: environments.map((env) =>
+                  env.id === environment.id ? { ...env, name } : env,
+                ),
+              });
+              setModal(null);
+            }, "console.renamed");
+          }}
+        >
+          <Field label={t("console.environment_name")}>
+            <input name="name" defaultValue={environment.name} maxLength={40} required autoFocus />
+          </Field>
+        </Dialog>
+      )}
+      {modal?.kind === "delete-env" && owner && environment && (
+        <TypeToConfirmDialog
+          title={t("console.delete_environment", { env: environment.name })}
+          text={t("console.delete_environment_text", {
+            count: secrets?.[environment.id]?.length ?? 0,
+          })}
+          phrase={environment.name}
+          submitLabel={t("projects.delete_secret")}
+          onClose={() => setModal(null)}
+          onConfirm={() =>
+            void run(async () => {
+              for (const secret of secrets?.[environment.id] ?? []) {
+                await deleteSecret(orgId, project, secret.id);
+              }
+              await updateProject(orgId, owner, identity, project, {
+                ...project.content,
+                environments: environments.filter((env) => env.id !== environment.id),
+              });
+              setModal(null);
+              navigate(orgId, { page: "project", projectId, environmentId: null });
+            }, "console.environment_deleted")
+          }
         />
       )}
       {modal?.kind === "rename" && owner && (
@@ -415,8 +520,13 @@ function Matrix({
                         </span>
                       )
                     ) : (
-                      <a href={tab(env.id)} className="cell-missing">
-                        {t("console.missing")}
+                      <a
+                        href={tab(env.id)}
+                        className="cell-missing"
+                        title={t("console.missing")}
+                        aria-label={t("console.missing")}
+                      >
+                        —
                       </a>
                     )}
                   </td>

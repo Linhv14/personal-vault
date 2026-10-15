@@ -73,7 +73,7 @@ export function ProjectsPage() {
 
   return (
     <>
-      <PageHeader title={t("projects.tab")} meta={t("projects.hint")} actions={newButton} />
+      <PageHeader title={t("projects.tab")} actions={newButton} />
       {creating && <NewProjectDialog onClose={() => setCreating(false)} />}
 
       {myTeams.length === 0 ? (

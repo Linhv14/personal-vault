@@ -30,11 +30,7 @@ export function TeamsPage() {
 
   return (
     <>
-      <PageHeader
-        title={t("orgs.teams")}
-        meta={`${t("orgs.teams_hint")} ${t("console.used_of", { used: teams.length, limit })}`}
-        actions={newButton}
-      />
+      <PageHeader title={t("orgs.teams")} actions={newButton} />
       {creating && (
         <Dialog
           title={t("orgs.create_team")}
@@ -71,8 +67,6 @@ export function TeamsPage() {
                 <th>{t("orgs.team_name")}</th>
                 <th>{t("orgs.members")}</th>
                 <th className="num">{t("projects.tab")}</th>
-                <th>{t("console.key_status")}</th>
-                <th>{t("console.your_access")}</th>
               </tr>
             </thead>
             <tbody>
@@ -88,6 +82,8 @@ export function TeamsPage() {
                         </span>
                         {team.name}
                       </a>
+                      {team.rekeyNeeded && <Badge tone="warn">{t("orgs.rekey_needed")}</Badge>}
+                      {!team.wrappedKey && <Badge>{t("console.access_none")}</Badge>}
                     </td>
                     <td>
                       <div className="avatar-stack" title={team.members.map(emailOf).join(", ")}>
@@ -98,18 +94,6 @@ export function TeamsPage() {
                       </div>
                     </td>
                     <td className="num">{team.wrappedKey ? (count ?? "–") : "–"}</td>
-                    <td>
-                      {team.rekeyNeeded ? (
-                        <Badge tone="warn">{t("orgs.rekey_needed")}</Badge>
-                      ) : (
-                        <Badge tone="ok">
-                          {t("console.key_current", { generation: team.generation + 1 })}
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="muted">
-                      {team.wrappedKey ? t("console.access_member") : t("console.access_none")}
-                    </td>
                   </tr>
                 );
               })}

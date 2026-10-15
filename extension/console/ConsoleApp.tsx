@@ -3,11 +3,11 @@ import { useEffect } from "preact/hooks";
 import type { Identity } from "../../src/core/identity.js";
 import type { IconName } from "../../src/ui/icons.js";
 import { logoSvg } from "../../src/ui/logo.js";
-import { acceptInvite, declineInvite, planLimits, type OrgSummary } from "../lib/orgs.js";
+import { acceptInvite, declineInvite, type OrgSummary } from "../lib/orgs.js";
 import { Icon } from "../ui/components/Icon.js";
 import { Toast } from "../ui/components/Toast.js";
 import { useT } from "../ui/i18n.js";
-import { Avatar, Badge } from "./components.js";
+import { Avatar } from "./components.js";
 import { ConsoleContext, toast$, useConsoleLoader, type ConsoleData } from "./data.js";
 import { ROLE_LABEL } from "./labels.js";
 import { ActivityPage } from "./pages/ActivityPage.js";
@@ -43,18 +43,10 @@ function sectionOf(route: Route): Section {
 function OrgSwitcher({ orgs, current }: { orgs: OrgSummary[]; current: ConsoleData }) {
   const t = useT();
   const { org } = current.detail;
-  const limits = planLimits(org.plan);
-  const seats = current.detail.members.length + current.detail.invites.length;
   return (
     <div className="org-switch">
-      <Avatar text={org.name} size="lg" />
-      <div className="org-switch-text">
-        <strong>{org.name}</strong>
-        <span>
-          {t(org.plan === "team" ? "orgs.plan_team" : "orgs.plan_free")} ·{" "}
-          {t("orgs.seats", { used: seats, limit: limits.seats })}
-        </span>
-      </div>
+      <Avatar text={org.name} size="md" />
+      <strong className="org-switch-name">{org.name}</strong>
       {orgs.length > 1 && (
         <select
           aria-label={t("orgs.title")}
@@ -159,7 +151,6 @@ export function ConsoleApp({
       <span className="wordmark">
         <span className="wordmark-accent">1</span>PW
       </span>
-      <Badge>{t("web.title")}</Badge>
     </div>
   );
 

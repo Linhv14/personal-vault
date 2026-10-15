@@ -391,6 +391,18 @@ export const en = {
     "Manage members, teams, projects and their secrets in the console. It opens in a new tab and uses this unlocked vault.",
   "console.open": "Open console",
   "console.other_project": "a project you cannot open",
+  "console.verify_key": "Verify key",
+  "console.done": "Done",
+  "console.add_environment": "Add environment",
+  "console.add_environment_hint":
+    "A new, empty environment in this project, such as QA or Preview.",
+  "console.environment_name": "Environment name",
+  "console.environment_added": "Environment added",
+  "console.environment_deleted": "Environment deleted",
+  "console.rename_environment": "Rename {env}",
+  "console.delete_environment": "Delete {env}",
+  "console.delete_environment_text":
+    "This deletes the environment and its {count, plural, one {# secret} other {# secrets}}. It cannot be undone.",
   "error.orgs.not_found": "Not found, or you are not a member.",
   "error.orgs.forbidden": "Your role does not allow this.",
   "error.orgs.invalid_name": "Use 1 to 80 characters.",
