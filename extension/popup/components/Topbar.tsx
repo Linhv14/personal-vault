@@ -6,7 +6,14 @@ import { MenuList } from "./Menu.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { TypeBadge } from "./ItemIcons.js";
 import { VaultMenu } from "./VaultMenu.js";
-import { drawerOpen, openEditor, searchQuery } from "../state.js";
+import {
+  drawerOpen,
+  openEditor,
+  openSettings,
+  orgCount,
+  orgInvites,
+  searchQuery,
+} from "../state.js";
 
 function AddButton() {
   const t = useT();
@@ -39,6 +46,25 @@ function AddButton() {
   );
 }
 
+function TeamsButton() {
+  const t = useT();
+  const hasOrg = orgCount.value > 0;
+  const invited = orgInvites.value.length > 0;
+  return (
+    <button
+      type="button"
+      id="btn-teams"
+      className="teams-cta"
+      title={t("orgs.cta_hint")}
+      onClick={() => openSettings("#teams")}
+    >
+      <Icon name="users" />
+      <span>{t(hasOrg ? "orgs.cta_open" : "orgs.cta_start")}</span>
+      {invited && <span className="teams-cta-dot" aria-label={t("orgs.invitations")} />}
+    </button>
+  );
+}
+
 export function Topbar() {
   const t = useT();
   return (
@@ -62,6 +88,7 @@ export function Topbar() {
           onInput={(event) => (searchQuery.value = (event.currentTarget as HTMLInputElement).value)}
         />
       </label>
+      <TeamsButton />
       <AddButton />
     </header>
   );

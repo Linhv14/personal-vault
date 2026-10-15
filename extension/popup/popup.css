@@ -1692,3 +1692,37 @@ details.history .field-row {
   background: var(--accent);
   color: var(--accent-text);
 }
+.teams-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 13px 0 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.teams-cta:hover {
+  border-color: var(--accent);
+}
+.teams-cta .icon {
+  width: 16px;
+  height: 16px;
+}
+.teams-cta-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--danger);
+}

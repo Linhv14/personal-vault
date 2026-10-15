@@ -10,8 +10,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
-- Organizations, in Settings → Organization, reachable from the popup menu and
-  announced in the popup when an invitation is waiting: create one, invite people by email with a role,
+- Organizations, in Settings → Organization, reachable from a Teams button next
+  to the add button and from the popup menu, and announced in the popup when an
+  invitation is waiting: create one, invite people by email with a role,
   accept invitations, manage roles and removal, create teams whose key is
   wrapped for each member, and a hash-chained audit log. Each organization's
   teams and log live in their own Durable Object.

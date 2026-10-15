@@ -170,6 +170,9 @@ export const en = {
   "orgs.pending": "Pending invitations",
   "orgs.teams_hint":
     "Each team has its own key, wrapped for every member. Only members can read what the team shares.",
+  "orgs.cta_start": "Try Teams",
+  "orgs.cta_open": "Teams",
+  "orgs.cta_hint": "Share passwords and CI secrets with your team",
   "orgs.title": "Organization",
   "orgs.invitations": "Invitations",
   "orgs.accept": "Accept",

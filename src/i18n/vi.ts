@@ -169,6 +169,9 @@ export const vi: Catalogue = {
   "orgs.pending": "Lời mời đang chờ",
   "orgs.teams_hint":
     "Mỗi team có khoá riêng, được bọc cho từng thành viên. Chỉ thành viên mới đọc được những gì team chia sẻ.",
+  "orgs.cta_start": "Dùng thử Team",
+  "orgs.cta_open": "Team",
+  "orgs.cta_hint": "Chia sẻ mật khẩu và secret cho CI với team của bạn",
   "orgs.title": "Tổ chức",
   "orgs.invitations": "Lời mời",
   "orgs.accept": "Chấp nhận",

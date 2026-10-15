@@ -256,6 +256,9 @@ describe("extension popup", () => {
         ),
       "the invitation banner",
     );
+    const teams = el<HTMLButtonElement>("btn-teams");
+    expect(teams.textContent).toBe("Try Teams");
+    expect(teams.querySelector(".teams-cta-dot")).not.toBeNull();
   });
 
   it("signs up without asking for any browser permission", () => {
