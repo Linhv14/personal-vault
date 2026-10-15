@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import ci from "./routes/ci.js";
 import { logError, logInfo } from "./log.js";
 import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
@@ -118,6 +119,7 @@ app.route("/api/invites", invites);
 app.route("/api/items", items);
 app.route("/api/logo", logos);
 app.route("/api/shares", shares);
+app.route("/api/ci", ci);
 
 /**
  * Lets the extension measure clock drift at unlock. A machine whose clock is off

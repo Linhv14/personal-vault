@@ -25,6 +25,8 @@
     "extension/**/*.tsx",
     "share/**/*.ts",
     "web/**/*.ts",
-    "web/**/*.tsx"
+    "web/**/*.tsx",
+    "cli/**/*.ts",
+    "action/**/*.ts"
   ]
 }

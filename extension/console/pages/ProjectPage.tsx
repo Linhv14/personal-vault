@@ -12,12 +12,15 @@ import { isOrgAdmin } from "../../lib/orgs.js";
 import {
   deleteProject,
   deleteSecret,
+  deleteLink,
   deleteSecrets,
   importSecrets,
+  listLinks,
   listSecrets,
   noteAccess,
   saveSecret,
   saveSecrets,
+  upgradeLegacySecrets,
   updateProject,
   type Secret,
 } from "../../lib/projects.js";
@@ -41,7 +44,10 @@ import {
   TypeToConfirmDialog,
   type SecretDraft,
 } from "./project-dialogs.js";
+import { RepositoryLinks } from "./RepositoryLinks.js";
 import { SecretsTable } from "./SecretsTable.js";
+
+const CI_TAB = "ci";
 
 type Modal =
   | { kind: "add" }
@@ -79,7 +85,17 @@ export function ProjectPage({
           await listSecrets(orgId, project, env.id),
         ]),
       );
-      setSecrets(Object.fromEntries(lists));
+      const byEnvironment = Object.fromEntries(lists) as Record<string, Secret[]>;
+      setSecrets(byEnvironment);
+      const owner = team(project.teamId);
+      if (owner && !owner.rekeyNeeded) {
+        const upgraded = await upgradeLegacySecrets(
+          orgId,
+          project,
+          Object.values(byEnvironment).flat(),
+        );
+        if (upgraded > 0) await load();
+      }
     } catch (failure) {
       setError(describeError(failure, t));
     }
@@ -109,6 +125,7 @@ export function ProjectPage({
   const canManage = isOrgAdmin(detail.org.role) && editable;
   const { environments } = project.content;
   const environment = environments.find((env) => env.id === environmentId) ?? null;
+  const ciTab = environmentId === CI_TAB;
   const tab = (id: string | null) => href(orgId, { page: "project", projectId, environmentId: id });
 
   const mutate = async (work: () => Promise<unknown>, done: Parameters<typeof t>[0]) => {
@@ -264,7 +281,7 @@ export function ProjectPage({
       )}
 
       <nav className="tabs" role="tablist">
-        <a href={tab(null)} role="tab" aria-selected={!environment}>
+        <a href={tab(null)} role="tab" aria-selected={!environment && !ciTab}>
           {t("console.overview")}
         </a>
         {environments.map((env) => {
@@ -284,6 +301,10 @@ export function ProjectPage({
             </a>
           );
         })}
+        <a href={tab(CI_TAB)} role="tab" aria-selected={ciTab} className="tab-ci">
+          <Icon name="terminal" />
+          {t("ci.tab")}
+        </a>
         {canManage && environments.length < MAX_ENVIRONMENTS && (
           <button type="button" className="tab-add" onClick={() => setModal({ kind: "add-env" })}>
             <Icon name="plus" />
@@ -292,73 +313,85 @@ export function ProjectPage({
         )}
       </nav>
 
-      <section className="panel">
-        <div className="toolbar">
-          <SearchInput value={query} onInput={setQuery} placeholder={t("console.search_secrets")} />
-          {environment && (
-            <button
-              type="button"
-              className="btn ghost"
-              disabled={!secrets?.[environment.id]?.length}
-              onClick={() => {
-                const list = secrets?.[environment.id] ?? [];
-                if (list.some((secret) => !isVariable(secret))) {
-                  noteAccess(orgId, project, environment.id, "exported");
-                }
-                void navigator.clipboard
-                  .writeText(formatDotenv(list))
-                  .then(() => toast(t("projects.copied")));
-              }}
-            >
-              <Icon name="copy" />
-              {t("projects.copy_env")}
-            </button>
-          )}
-        </div>
-
-        {!secrets ? (
-          <span className="spinner" />
-        ) : names.length === 0 ? (
-          <EmptyState
-            icon="key"
-            title={t("console.no_secrets_title")}
-            text={t("console.no_secrets_text")}
-          />
-        ) : environment ? (
-          (secrets[environment.id]?.length ?? 0) === 0 ? (
-            <p className="table-empty">{t("projects.empty_env", { env: environment.name })}</p>
-          ) : (
-            <SecretsTable
-              secrets={secrets[environment.id] ?? []}
-              query={query}
-              editable={editable}
-              onSave={(secret, value, kind) =>
-                mutate(
-                  () =>
-                    saveSecret(orgId, project, environment.id, {
-                      id: secret.id,
-                      name: secret.name,
-                      value,
-                      kind,
-                    }),
-                  "projects.saved",
-                )
-              }
-              onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
-              onAccess={(access, secretId) =>
-                noteAccess(orgId, project, environment.id, access, secretId)
-              }
+      {ciTab ? (
+        <section className="panel">
+          <RepositoryLinks project={project} canManage={canManage} />
+        </section>
+      ) : (
+        <section className="panel">
+          <div className="toolbar">
+            <SearchInput
+              value={query}
+              onInput={setQuery}
+              placeholder={t("console.search_secrets")}
             />
-          )
-        ) : (
-          <Matrix
-            names={names.filter((name) => name.toLowerCase().includes(query.trim().toLowerCase()))}
-            secrets={secrets}
-            environments={environments}
-            tab={tab}
-          />
-        )}
-      </section>
+            {environment && (
+              <button
+                type="button"
+                className="btn ghost"
+                disabled={!secrets?.[environment.id]?.length}
+                onClick={() => {
+                  const list = secrets?.[environment.id] ?? [];
+                  if (list.some((secret) => !isVariable(secret))) {
+                    noteAccess(orgId, project, environment.id, "exported");
+                  }
+                  void navigator.clipboard
+                    .writeText(formatDotenv(list))
+                    .then(() => toast(t("projects.copied")));
+                }}
+              >
+                <Icon name="copy" />
+                {t("projects.copy_env")}
+              </button>
+            )}
+          </div>
+
+          {!secrets ? (
+            <span className="spinner" />
+          ) : names.length === 0 ? (
+            <EmptyState
+              icon="key"
+              title={t("console.no_secrets_title")}
+              text={t("console.no_secrets_text")}
+            />
+          ) : environment ? (
+            (secrets[environment.id]?.length ?? 0) === 0 ? (
+              <p className="table-empty">{t("projects.empty_env", { env: environment.name })}</p>
+            ) : (
+              <SecretsTable
+                secrets={secrets[environment.id] ?? []}
+                query={query}
+                editable={editable}
+                onSave={(secret, value, kind) =>
+                  mutate(
+                    () =>
+                      saveSecret(orgId, project, environment.id, {
+                        id: secret.id,
+                        name: secret.name,
+                        value,
+                        kind,
+                      }),
+                    "projects.saved",
+                  )
+                }
+                onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
+                onAccess={(access, secretId) =>
+                  noteAccess(orgId, project, environment.id, access, secretId)
+                }
+              />
+            )
+          ) : (
+            <Matrix
+              names={names.filter((name) =>
+                name.toLowerCase().includes(query.trim().toLowerCase()),
+              )}
+              secrets={secrets}
+              environments={environments}
+              tab={tab}
+            />
+          )}
+        </section>
+      )}
 
       {modal?.kind === "add" && (
         <AddSecretDialog
@@ -436,6 +469,10 @@ export function ProjectPage({
           onClose={() => setModal(null)}
           onConfirm={() =>
             void run(async () => {
+              for (const link of await listLinks(orgId, project)) {
+                if (link.environmentId === environment.id)
+                  await deleteLink(orgId, project, link.id);
+              }
               const doomed = (secrets?.[environment.id] ?? []).map((secret) => secret.id);
               if (doomed.length > 0) await deleteSecrets(orgId, project, doomed);
               await updateProject(orgId, owner, identity, project, {

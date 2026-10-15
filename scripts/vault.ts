@@ -54,6 +54,7 @@ const SECRETS_NOTE = path.join(root, ".secrets.local.txt");
 const WRANGLER = path.join(root, "node_modules", "wrangler", "bin", "wrangler.js");
 
 const DB_NAME = "vault";
+const CI_TEST_ISSUER = "https://ci-test.invalid";
 const GENERATED_SECRETS = new Set(["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET", "AT_REST_SECRET"]);
 
 interface Account {
@@ -418,7 +419,21 @@ async function dev() {
   }
 
   style.step("Worker running at http://127.0.0.1:8787");
-  await wranglerInherit(["dev", "--port", "8787"]);
+  const testKey = JSON.parse(
+    readFileSync(path.join(root, "test", "fixtures", "ci-test-key.json"), "utf8"),
+  ) as { kid: string; kty: string; n: string; e: string };
+  const testJwks = Buffer.from(
+    JSON.stringify([{ kid: testKey.kid, kty: testKey.kty, n: testKey.n, e: testKey.e }]),
+  ).toString("base64url");
+  await wranglerInherit([
+    "dev",
+    "--port",
+    "8787",
+    "--var",
+    `CI_TEST_JWKS:${testJwks}`,
+    "--var",
+    `CI_TEST_ISSUER:${CI_TEST_ISSUER}`,
+  ]);
 }
 
 async function status() {

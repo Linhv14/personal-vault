@@ -10,6 +10,16 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- GitHub Actions: link a repository to one environment of a project (console,
+  project, CI tab) and read it from a workflow with the `action/` step or the
+  `1pw` CLI (`run`, `env`, `dotenv`). The workflow proves its repository and
+  branch with GitHub's OIDC token; the server returns ciphertext that only the
+  repository key, kept as a GitHub secret, opens. Reads are logged with the
+  repository and ref, and unlinking stops them at once.
+- Each environment has its own key derived from the project key, so a repository
+  gets one environment and nothing else. Existing secrets are re-sealed the first
+  time the project is opened.
+
 - Variables and secrets: each entry has a type, chosen when adding, importing or
   editing. Variables show their value; secrets stay masked, and revealing,
   copying or exporting one is recorded in the activity log.

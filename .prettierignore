@@ -2,3 +2,4 @@ dist/
 node_modules/
 src/core/wordlist.ts
 package-lock.json
+action/dist

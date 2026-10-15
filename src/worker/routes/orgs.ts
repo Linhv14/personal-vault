@@ -220,12 +220,14 @@ orgs.put(
     const wrappedKeys = entriesOf(body.wrappedKeys, seats, isWrappedKey);
     const sealedProjects = entriesOf(body.projects ?? {}, MAX_RESEALED, isSealedProject);
     const sealedSecrets = entriesOf(body.secrets ?? {}, MAX_RESEALED, isSealedSecret);
+    const linkKeys = entriesOf(body.links ?? {}, MAX_RESEALED, isWrappedKey);
     if (
       !isGeneration(body.generation) ||
       !wrappedKeys ||
       Object.keys(wrappedKeys).length === 0 ||
       !sealedProjects ||
-      !sealedSecrets
+      !sealedSecrets ||
+      !linkKeys
     ) {
       return c.json(apiError("orgs.invalid_team"), 400);
     }
@@ -234,6 +236,7 @@ orgs.put(
       wrappedKeys,
       projects: sealedProjects,
       secrets: sealedSecrets,
+      links: linkKeys,
     };
     return respond(
       c,

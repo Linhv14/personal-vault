@@ -18,6 +18,8 @@ export interface Env {
   /** HMAC key used to fabricate KDF params for addresses that do not exist. */
   EMAIL_PROBE_SECRET: string;
   AT_REST_SECRET: string;
+  CI_TEST_JWKS?: string;
+  CI_TEST_ISSUER?: string;
 }
 
 export interface SessionContext {

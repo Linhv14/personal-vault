@@ -9,10 +9,11 @@ import { useConsole } from "../data.js";
 import { ACTION_LABEL } from "../labels.js";
 
 const PAGE = 100;
-const CATEGORIES = ["all", "member", "team", "project", "secret"] as const;
+const CATEGORIES = ["all", "member", "team", "project", "secret", "ci"] as const;
 type Category = (typeof CATEGORIES)[number];
 
 function categoryOf(action: string): Category {
+  if (action.startsWith("ci.") || action.startsWith("link.")) return "ci";
   if (action.startsWith("member") || action.startsWith("org.")) return "member";
   if (action.startsWith("team")) return "team";
   if (action.startsWith("project")) return "project";
@@ -55,7 +56,9 @@ export function ActivityPage() {
   const target = ({ action, actor, target }: AuditEvent) => {
     if (!target || target === actor) return "";
     const [first = "", second] = target.split(":");
-    if (action.startsWith("secret")) return projectLabel(first, second);
+    if (action.startsWith("secret") || action.startsWith("ci.") || action.startsWith("link.")) {
+      return projectLabel(first, second);
+    }
     if (action.startsWith("project.")) {
       return second && project(second)
         ? `${projectLabel(second)} (${teamName(first)})`
@@ -64,6 +67,7 @@ export function ActivityPage() {
     if (second) return `${emailOf(second)} → ${teamName(first)}`;
     return action.startsWith("team.") ? teamName(target) : emailOf(target);
   };
+  const who = (actor: string) => (actor.startsWith("github:") ? actor.slice(7) : emailOf(actor));
   const visible = events.filter(
     (event) => category === "all" || categoryOf(event.action) === category,
   );
@@ -123,8 +127,8 @@ export function ActivityPage() {
                   </td>
                   <td>
                     <span className="cell-title">
-                      <Avatar text={emailOf(event.actor)} size="sm" />
-                      {emailOf(event.actor)}
+                      <Avatar text={who(event.actor)} size="sm" />
+                      {who(event.actor)}
                     </span>
                   </td>
                   <td>

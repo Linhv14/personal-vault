@@ -1,10 +1,18 @@
 import type { SealedData } from "../../src/core/crypto.js";
-import { wrapForRecipient, randomKey, type Identity } from "../../src/core/identity.js";
+import {
+  createIdentity,
+  wrapForRecipient,
+  randomKey,
+  type Identity,
+} from "../../src/core/identity.js";
+import { encodeRepoKey, linkKeyContext, linkReference } from "../../src/core/ci.js";
 import { teamKeyContext, type WrappedKey } from "../../src/core/org-model.js";
 import {
+  environmentKey,
   newProject,
   openProject,
   openSecret,
+  openSecretWithOrigin,
   sealProject,
   sealSecret,
   type ProjectContent,
@@ -30,6 +38,7 @@ export interface Secret extends SecretContent {
   environmentId: string;
   updatedAt: number;
   updatedBy: string;
+  legacy: boolean;
 }
 
 interface ProjectRecord {
@@ -127,19 +136,45 @@ export async function listSecrets(
     `${teamPath(orgId, project.teamId)}/projects/${project.id}/environments/${environmentId}/secrets`,
   );
   const opened = await Promise.all(
-    secrets.map(async (record) => ({
-      ...(await openSecret(
+    secrets.map(async (record) => {
+      const { content, legacy } = await openSecretWithOrigin(
         project.content,
         address(project, environmentId, record.id),
         record.sealed,
-      )),
-      id: record.id,
-      environmentId,
-      updatedAt: record.updatedAt,
-      updatedBy: record.updatedBy,
-    })),
+      );
+      return {
+        ...content,
+        id: record.id,
+        environmentId,
+        updatedAt: record.updatedAt,
+        updatedBy: record.updatedBy,
+        legacy,
+      };
+    }),
   );
   return opened.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function upgradeLegacySecrets(
+  orgId: string,
+  project: Project,
+  secrets: Secret[],
+): Promise<number> {
+  const legacy = secrets.filter((secret) => secret.legacy);
+  if (legacy.length === 0) return 0;
+  await saveSecrets(
+    orgId,
+    project,
+    legacy.map(({ id, environmentId, name, value, note, kind }) => ({
+      id,
+      environmentId,
+      name,
+      value,
+      note,
+      kind,
+    })),
+  );
+  return legacy.length;
 }
 
 const BATCH = 500;
@@ -270,6 +305,63 @@ export async function deleteSecret(
   await deleteSecrets(orgId, project, [secretId]);
 }
 
+export interface RepoLink {
+  id: string;
+  environmentId: string;
+  repository: string;
+  branch: string | null;
+  githubEnvironment: string | null;
+  createdBy: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
+export interface NewLink {
+  environmentId: string;
+  repository: string;
+  branch: string | null;
+  githubEnvironment: string | null;
+}
+
+export async function listLinks(orgId: string, project: Project): Promise<RepoLink[]> {
+  return (
+    await request<{ links: RepoLink[] }>(
+      `${teamPath(orgId, project.teamId)}/projects/${project.id}/links`,
+    )
+  ).links;
+}
+
+export async function createLink(
+  orgId: string,
+  project: Project,
+  rule: NewLink,
+): Promise<{ reference: string; repoKey: string }> {
+  const id = crypto.randomUUID();
+  const repo = await createIdentity();
+  const wrappedKey = await wrapForRecipient(
+    repo.publicKey,
+    await environmentKey(project.content, project.id, rule.environmentId),
+    linkKeyContext(id, project.generation),
+  );
+  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/links`, {
+    method: "POST",
+    body: json({
+      id,
+      ...rule,
+      publicKey: repo.publicKey,
+      wrappedKey,
+      generation: project.generation,
+    }),
+  });
+  return { reference: linkReference(orgId, id), repoKey: encodeRepoKey(repo) };
+}
+
+export async function deleteLink(orgId: string, project: Project, linkId: string): Promise<void> {
+  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/links/${linkId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function rekeyTeam(
   orgId: string,
   team: Team,
@@ -280,6 +372,7 @@ export async function rekeyTeam(
     generation: number;
     projects: ProjectRecord[];
     secrets: SecretRecord[];
+    links: { id: string; projectId: string; environmentId: string; publicKey: string }[];
   }>(`${teamPath(orgId, team.id)}/vault`);
   const current = vault.generation;
   const generation = current + 1;
@@ -299,10 +392,18 @@ export async function rekeyTeam(
 
   const projects: Record<string, SealedData> = {};
   const secrets: Record<string, SealedData> = {};
+  const links: Record<string, WrappedKey> = {};
   for (const record of vault.projects) {
     const before = await openProject(oldKey, record.id, current, record.sealed);
     const after = { ...before, key: toBase64(randomKey()) };
     projects[record.id] = await sealProject(newKey, record.id, generation, after);
+    for (const link of vault.links.filter((entry) => entry.projectId === record.id)) {
+      links[link.id] = await wrapForRecipient(
+        link.publicKey,
+        await environmentKey(after, record.id, link.environmentId),
+        linkKeyContext(link.id, generation),
+      );
+    }
     for (const secret of vault.secrets.filter((entry) => entry.projectId === record.id)) {
       const at = (gen: number) => ({
         projectId: record.id,
@@ -317,6 +418,6 @@ export async function rekeyTeam(
 
   await request(`${teamPath(orgId, team.id)}/key`, {
     method: "PUT",
-    body: json({ generation, wrappedKeys, projects, secrets }),
+    body: json({ generation, wrappedKeys, projects, secrets, links }),
   });
 }

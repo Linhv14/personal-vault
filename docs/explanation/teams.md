@@ -115,6 +115,33 @@ GitHub secret. Either half alone is useless: the secret outside that
 repository's workflow, the OIDC token without the secret, the server without
 both. See "CI trust" below for what this does not protect against.
 
+How it is built:
+
+- Each environment has its own key, derived from the project key with HKDF
+  (`personal-vault/environment-key/<project>/<environment>`), and secrets are
+  sealed under it. Handing a repository the Production key opens Production and
+  nothing else. Secrets sealed earlier under the project key are re-sealed the
+  first time an admin or member opens the project.
+- Linking creates a key pair in the browser. The environment key is wrapped for
+  its public key (context `personal-vault/link-key/<link>/<generation>`), the
+  private key is shown once as `ONEPW_KEY`, and the server stores the public key,
+  the wrapped key and the rule.
+- `POST /api/ci/secrets` verifies the token against GitHub's published keys
+  (issuer `token.actions.githubusercontent.com`, audience = this server's
+  origin, expiry), then the rule, then returns the wrapped key and the sealed
+  values of that environment. The read is logged with the repository and ref as
+  the actor.
+- Re-keying a team re-wraps every link's environment key under the new
+  generation, so linked repositories keep working with the key they already
+  have.
+- The CLI (`cli/`) and the Action (`action/`, bundled to `action/dist`) share one
+  client: they ask the runner for an OIDC token, call the endpoint, and decrypt
+  locally.
+
+Local development accepts tokens signed by `test/fixtures/ci-test-key.json`, and
+only on `127.0.0.1` or `localhost`: `npm run dev` passes its public key and a
+test issuer as variables, and production never has them.
+
 ## Architecture
 
 | Layer         | Runs on                                                                                                          | Holds                                                                                                       |

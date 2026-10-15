@@ -5,7 +5,9 @@ import { readJson, respond } from "../http.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
-import { isSealedProject, isSealedSecret, isUuid } from "../validate.js";
+import { isBranch, isGithubEnvironment, isRepository } from "../../core/ci.js";
+import { isPublicKey } from "../../core/identity.js";
+import { isSealedProject, isSealedSecret, isUuid, isWrappedKey } from "../validate.js";
 import type { SealedData } from "../../core/crypto.js";
 import type { Principal } from "../../core/org-model.js";
 import { asMember, isGeneration, limitsOf, param, type Ctx } from "./org-access.js";
@@ -202,6 +204,66 @@ projects.delete(
         team(c),
         project(c),
         [param(c, "secretId")],
+        clientIp(c),
+      ),
+    ),
+  ),
+);
+
+projects.get(
+  "/projects/:projectId/links",
+  asMember(async (c, member, orgId) =>
+    respond(c, await orgStore(c.env, orgId).listLinks(member, team(c), project(c))),
+  ),
+);
+
+projects.post(
+  "/projects/:projectId/links",
+  asMember(async (c, member, orgId) => {
+    const body = await readJson(c);
+    const branch = body.branch ?? null;
+    const githubEnvironment = body.githubEnvironment ?? null;
+    if (
+      !isUuid(body.id) ||
+      !isEnvironmentId(body.environmentId) ||
+      !isRepository(body.repository) ||
+      (branch !== null && !isBranch(branch)) ||
+      (githubEnvironment !== null && !isGithubEnvironment(githubEnvironment)) ||
+      (branch === null && githubEnvironment === null) ||
+      !isPublicKey(body.publicKey) ||
+      !isWrappedKey(body.wrappedKey) ||
+      !isGeneration(body.generation)
+    ) {
+      return c.json(apiError("orgs.invalid_link"), 400);
+    }
+    const link = {
+      id: body.id,
+      environmentId: body.environmentId,
+      repository: body.repository,
+      branch,
+      githubEnvironment,
+      publicKey: body.publicKey,
+      wrappedKey: body.wrappedKey,
+      generation: body.generation,
+    };
+    return respond(
+      c,
+      await orgStore(c.env, orgId).createLink(member, team(c), project(c), link, clientIp(c)),
+      201,
+    );
+  }),
+);
+
+projects.delete(
+  "/projects/:projectId/links/:linkId",
+  asMember(async (c, member, orgId) =>
+    respond(
+      c,
+      await orgStore(c.env, orgId).deleteLink(
+        member,
+        team(c),
+        project(c),
+        param(c, "linkId"),
         clientIp(c),
       ),
     ),

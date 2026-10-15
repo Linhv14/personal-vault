@@ -49,6 +49,10 @@ export type ApiErrorCode =
   | "orgs.project_limit"
   | "orgs.secret_limit"
   | "orgs.rekey_required"
+  | "orgs.invalid_link"
+  | "orgs.link_limit"
+  | "ci.unauthorized"
+  | "ci.forbidden"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
@@ -106,6 +110,10 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.invalid_secret": "Invalid secret id, environment or content",
   "orgs.project_limit": "This plan allows no more projects",
   "orgs.secret_limit": "This project has reached its secret limit",
+  "orgs.invalid_link": "Invalid repository, branch, environment or key",
+  "orgs.link_limit": "This project has reached its repository limit",
+  "ci.unauthorized": "A valid GitHub Actions OIDC token is required",
+  "ci.forbidden": "This repository, branch or environment is not linked to these secrets",
   "orgs.rekey_required": "Someone left this team; create a new team key before changing secrets",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",

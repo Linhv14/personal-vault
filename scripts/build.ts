@@ -155,6 +155,28 @@ async function buildDashboard() {
   await writeFile(path.join(out, "index.html"), page);
 }
 
+async function buildCli() {
+  const node: BuildOptions = {
+    bundle: true,
+    platform: "node",
+    format: "esm",
+    target: "node20",
+    minify: false,
+    logLevel: "info",
+  };
+  await build({
+    ...node,
+    entryPoints: [path.join(root, "cli", "bin.ts")],
+    outfile: path.join(root, "dist", "cli", "1pw.mjs"),
+    banner: { js: "#!/usr/bin/env node" },
+  });
+  await build({
+    ...node,
+    entryPoints: [path.join(root, "action", "main.ts")],
+    outfile: path.join(root, "action", "dist", "index.mjs"),
+  });
+}
+
 async function buildExtension() {
   const source = path.join(root, "extension");
   if (!existsSync(path.join(source, "manifest.json"))) {
@@ -239,6 +261,7 @@ await clean(outExtension);
 
 await buildSharePage();
 await buildDashboard();
+await buildCli();
 await buildExtension();
 await copyConsoleTokens();
 await packageForDownload();

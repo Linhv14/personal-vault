@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { randomKey } from "../src/core/identity.js";
+import { importVaultKey, sealJson } from "../src/core/crypto.js";
+import { fromBase64, utf8Encode } from "../src/core/bytes.js";
 import {
+  environmentKey,
   formatDotenv,
+  openSecretWithOrigin,
+  openWithEnvironmentKey,
   isSecretName,
   newProject,
   openProject,
@@ -41,6 +46,51 @@ describe("project and secret encryption", () => {
       openSecret(project, { ...address, environmentId: production!.id }, sealed),
     ).rejects.toThrow();
     await expect(openSecret(project, { ...address, generation: 1 }, sealed)).rejects.toThrow();
+  });
+
+  it("gives each environment its own key, which opens nothing else", async () => {
+    const project = newProject("Api");
+    const [development, , production] = project.environments;
+    const address: SecretAddress = {
+      projectId: PROJECT_ID,
+      generation: 0,
+      environmentId: production!.id,
+      secretId: crypto.randomUUID(),
+    };
+    const sealed = await sealSecret(project, address, { name: "TOKEN", value: "prod" });
+    const productionKey = await environmentKey(project, PROJECT_ID, production!.id);
+    const developmentKey = await environmentKey(project, PROJECT_ID, development!.id);
+    expect(productionKey).not.toEqual(developmentKey);
+    expect(productionKey).not.toEqual(fromBase64(project.key));
+    expect(await openWithEnvironmentKey(productionKey, address, sealed)).toEqual({
+      name: "TOKEN",
+      value: "prod",
+    });
+    await expect(openWithEnvironmentKey(developmentKey, address, sealed)).rejects.toThrow();
+  });
+
+  it("still opens a secret sealed under the project key and marks it for upgrade", async () => {
+    const project = newProject("Old");
+    const address: SecretAddress = {
+      projectId: PROJECT_ID,
+      generation: 0,
+      environmentId: project.environments[0]!.id,
+      secretId: crypto.randomUUID(),
+    };
+    const context = utf8Encode(
+      `personal-vault/secret/${PROJECT_ID}/0/${address.environmentId}/${address.secretId}`,
+    );
+    const sealed = await sealJson(
+      await importVaultKey(fromBase64(project.key)),
+      { name: "OLD", value: "v" },
+      context,
+    );
+    expect(await openSecretWithOrigin(project, address, sealed)).toEqual({
+      content: { name: "OLD", value: "v" },
+      legacy: true,
+    });
+    const fresh = await sealSecret(project, address, { name: "NEW", value: "v" });
+    expect((await openSecretWithOrigin(project, address, fresh)).legacy).toBe(false);
   });
 
   it("starts with three environments that have distinct ids", () => {

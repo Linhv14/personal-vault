@@ -92,12 +92,64 @@ export async function openProject(
   return openJson(await importVaultKey(teamKey), sealed, projectContext(projectId, generation));
 }
 
+export async function environmentKey(
+  project: ProjectContent,
+  projectId: string,
+  environmentId: string,
+): Promise<Bytes> {
+  const base = await crypto.subtle.importKey("raw", fromBase64(project.key), "HKDF", false, [
+    "deriveBits",
+  ]);
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(0),
+      info: utf8Encode(`personal-vault/environment-key/${projectId}/${environmentId}`),
+    },
+    base,
+    256,
+  );
+  return new Uint8Array(bits);
+}
+
+export async function sealWithEnvironmentKey(
+  key: Bytes,
+  address: SecretAddress,
+  content: SecretContent,
+): Promise<SealedData> {
+  return sealJson(await importVaultKey(key), content, secretContext(address));
+}
+
+export async function openWithEnvironmentKey(
+  key: Bytes,
+  address: SecretAddress,
+  sealed: SealedData,
+): Promise<SecretContent> {
+  return openJson(await importVaultKey(key), sealed, secretContext(address));
+}
+
 export async function sealSecret(
   project: ProjectContent,
   address: SecretAddress,
   content: SecretContent,
 ): Promise<SealedData> {
-  return sealJson(await importVaultKey(fromBase64(project.key)), content, secretContext(address));
+  const key = await environmentKey(project, address.projectId, address.environmentId);
+  return sealWithEnvironmentKey(key, address, content);
+}
+
+export async function openSecretWithOrigin(
+  project: ProjectContent,
+  address: SecretAddress,
+  sealed: SealedData,
+): Promise<{ content: SecretContent; legacy: boolean }> {
+  const key = await environmentKey(project, address.projectId, address.environmentId);
+  try {
+    return { content: await openWithEnvironmentKey(key, address, sealed), legacy: false };
+  } catch {
+    const legacy = await importVaultKey(fromBase64(project.key));
+    return { content: await openJson(legacy, sealed, secretContext(address)), legacy: true };
+  }
 }
 
 export async function openSecret(
@@ -105,7 +157,7 @@ export async function openSecret(
   address: SecretAddress,
   sealed: SealedData,
 ): Promise<SecretContent> {
-  return openJson(await importVaultKey(fromBase64(project.key)), sealed, secretContext(address));
+  return (await openSecretWithOrigin(project, address, sealed)).content;
 }
 
 export function parseDotenv(text: string): SecretContent[] {

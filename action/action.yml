@@ -1,0 +1,16 @@
+name: 1PW secrets
+description: Load one environment of a 1PW project into the job, with secret values masked.
+inputs:
+  link:
+    description: Repository link from the 1PW console (organization.link).
+    required: true
+  key:
+    description: Repository key from the 1PW console. Store it as a GitHub secret.
+    required: true
+  server:
+    description: 1PW server.
+    required: false
+    default: https://1pw.online
+runs:
+  using: node20
+  main: dist/index.mjs

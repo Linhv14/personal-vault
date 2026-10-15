@@ -12,10 +12,13 @@ import {
 } from "../../core/org-model.js";
 import { fail, now, ok, type Result } from "../http.js";
 import type { Env } from "../types.js";
+import { ruleAllows, type GithubClaims } from "../../core/ci.js";
+import { LinkTables, type LinkRecord } from "./link-tables.js";
 import { ProjectTables, type ProjectRecord, type SecretRecord } from "./project-tables.js";
 
 const AUDIT_PAGE = 100;
 const GENESIS = "genesis";
+const MAX_LINKS_PER_PROJECT = 50;
 
 function sameKeys(ids: string[], map: Record<string, unknown>): boolean {
   return ids.length === Object.keys(map).length && ids.every((id) => id in map);
@@ -35,6 +38,7 @@ async function chainHash(
 export class OrgStore extends DurableObject<Env> {
   private readonly sql: SqlStorage;
   private readonly projects: ProjectTables;
+  private readonly links: LinkTables;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -67,6 +71,7 @@ export class OrgStore extends DurableObject<Env> {
     `);
     this.addColumn("teams", "key_generation INTEGER NOT NULL DEFAULT 0");
     this.projects = new ProjectTables(this.sql);
+    this.links = new LinkTables(this.sql);
   }
 
   private addColumn(table: string, definition: string) {
@@ -299,6 +304,7 @@ export class OrgStore extends DurableObject<Env> {
       wrappedKeys: Record<string, WrappedKey>;
       projects: Record<string, SealedData>;
       secrets: Record<string, SealedData>;
+      links: Record<string, WrappedKey>;
     },
     ip: string | null,
   ): Promise<Result<{ generation: number }>> {
@@ -319,11 +325,17 @@ export class OrgStore extends DurableObject<Env> {
     }
     const projectIds = this.projects.ofTeam(teamId).map((project) => project.id);
     const secretIds = this.projects.secretsOfTeam(teamId).map((secret) => secret.id);
-    if (!sameKeys(projectIds, next.projects) || !sameKeys(secretIds, next.secrets)) {
+    const linkIds = this.links.ofTeam(teamId).map((link) => link.id);
+    if (
+      !sameKeys(projectIds, next.projects) ||
+      !sameKeys(secretIds, next.secrets) ||
+      !sameKeys(linkIds, next.links)
+    ) {
       return fail(409, "orgs.team_changed");
     }
     this.ctx.storage.transactionSync(() => {
       this.projects.reseal(next.projects, next.secrets);
+      this.links.rewrap(next.links);
       for (const accountId of members) {
         this.sql.exec(
           "UPDATE team_members SET wrapped_key = ? WHERE team_id = ? AND account_id = ?",
@@ -442,7 +454,10 @@ export class OrgStore extends DurableObject<Env> {
   ): Promise<Result<{ ok: true }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
     if (!access.ok) return access;
-    this.ctx.storage.transactionSync(() => this.projects.remove(projectId));
+    this.ctx.storage.transactionSync(() => {
+      this.links.removeProject(projectId);
+      this.projects.remove(projectId);
+    });
     await this.record(principal.accountId, "project.deleted", `${teamId}:${projectId}`, ip);
     return ok({ ok: true as const });
   }
@@ -546,17 +561,130 @@ export class OrgStore extends DurableObject<Env> {
     return ok({ deleted: found.length });
   }
 
+  async listLinks(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+  ): Promise<Result<{ links: LinkRecord[] }>> {
+    const access = this.projectAccess(principal, teamId, projectId, false);
+    if (!access.ok) return access;
+    return ok({ links: this.links.ofProject(projectId) });
+  }
+
+  async createLink(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    link: Omit<LinkRecord, "createdBy" | "createdAt" | "lastUsedAt" | "projectId"> & {
+      generation: number;
+    },
+    ip: string | null,
+  ): Promise<Result<{ id: string }>> {
+    const access = this.projectAccess(principal, teamId, projectId, true);
+    if (!access.ok) return access;
+    const refused = this.writable(access.value, link.generation);
+    if (refused) return refused;
+    if (this.links.find(link.id)) return fail(409, "orgs.invalid_link");
+    if (this.links.count(projectId) >= MAX_LINKS_PER_PROJECT) {
+      return fail(409, "orgs.link_limit", { limit: MAX_LINKS_PER_PROJECT });
+    }
+    const { generation: _generation, ...record } = link;
+    this.links.insert(teamId, {
+      ...record,
+      projectId,
+      createdBy: principal.accountId,
+      createdAt: now(),
+    });
+    await this.record(
+      principal.accountId,
+      "link.created",
+      `${projectId}:${link.environmentId}`,
+      ip,
+    );
+    return ok({ id: link.id });
+  }
+
+  async deleteLink(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    linkId: string,
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    const access = this.projectAccess(principal, teamId, projectId, true);
+    if (!access.ok) return access;
+    const link = this.links.find(linkId);
+    if (!link || link.projectId !== projectId) return fail(404, "orgs.not_found");
+    this.links.remove(linkId);
+    await this.record(
+      principal.accountId,
+      "link.deleted",
+      `${projectId}:${link.environmentId}`,
+      ip,
+    );
+    return ok({ ok: true as const });
+  }
+
+  async ciRead(
+    linkId: string,
+    claims: GithubClaims,
+    ip: string | null,
+  ): Promise<
+    Result<{
+      projectId: string;
+      environmentId: string;
+      generation: number;
+      wrappedKey: WrappedKey;
+      secrets: { id: string; sealed: SealedData }[];
+    }>
+  > {
+    const link = this.links.find(linkId);
+    if (!link || !ruleAllows(link, claims)) return fail(403, "ci.forbidden");
+    const generation = this.generationOf(link.teamId);
+    if (generation === null) return fail(403, "ci.forbidden");
+    const secrets = this.projects
+      .secrets(link.projectId, link.environmentId)
+      .map(({ id, sealed }) => ({ id, sealed }));
+    this.links.touch(linkId, now());
+    await this.record(
+      `github:${claims.repository}@${claims.ref}`,
+      "ci.read",
+      `${link.projectId}:${link.environmentId}`,
+      ip,
+    );
+    return ok({
+      projectId: link.projectId,
+      environmentId: link.environmentId,
+      generation,
+      wrappedKey: link.wrappedKey,
+      secrets,
+    });
+  }
+
   async teamVault(
     principal: Principal,
     teamId: string,
     ip: string | null,
-  ): Promise<Result<{ generation: number; projects: ProjectRecord[]; secrets: SecretRecord[] }>> {
+  ): Promise<
+    Result<{
+      generation: number;
+      projects: ProjectRecord[];
+      secrets: SecretRecord[];
+      links: { id: string; projectId: string; environmentId: string; publicKey: string }[];
+    }>
+  > {
     const access = this.teamAccess(principal, teamId, true);
     if (!access.ok) return access;
     const vault = {
       generation: access.value.generation,
       projects: this.projects.ofTeam(teamId),
       secrets: this.projects.secretsOfTeam(teamId),
+      links: this.links.ofTeam(teamId).map(({ id, projectId, environmentId, publicKey }) => ({
+        id,
+        projectId,
+        environmentId,
+        publicKey,
+      })),
     };
     await this.record(principal.accountId, "team.vault_read", teamId, ip);
     return ok(vault);
@@ -573,6 +701,7 @@ export class OrgStore extends DurableObject<Env> {
     if (!this.teamExists(teamId)) return fail(404, "orgs.not_found");
     this.ctx.storage.transactionSync(() => {
       this.projects.removeTeam(teamId);
+      this.links.removeTeam(teamId);
       this.sql.exec("DELETE FROM team_members WHERE team_id = ?", teamId);
       this.sql.exec("DELETE FROM teams WHERE id = ?", teamId);
     });
