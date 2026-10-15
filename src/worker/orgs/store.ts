@@ -594,14 +594,21 @@ export class OrgStore extends DurableObject<Env> {
         AUDIT_PAGE,
       )
       .toArray();
-    return ok({ events, verified: await this.verifyChain() });
+    return ok({ events, verified: await this.verifyPage(events) });
   }
 
-  async verifyChain(): Promise<boolean> {
-    let previous = GENESIS;
-    for (const row of this.sql
-      .exec<AuditEvent>("SELECT seq, at, actor, action, target, ip, hash FROM audit ORDER BY seq")
-      .toArray()) {
+  private async verifyPage(events: AuditEvent[]): Promise<boolean> {
+    const ordered = [...events].sort((a, b) => a.seq - b.seq);
+    const first = ordered[0];
+    if (!first) return true;
+    let previous =
+      this.sql
+        .exec<{ hash: string }>(
+          "SELECT hash FROM audit WHERE seq < ? ORDER BY seq DESC LIMIT 1",
+          first.seq,
+        )
+        .toArray()[0]?.hash ?? GENESIS;
+    for (const row of ordered) {
       const expected = await chainHash(previous, {
         at: row.at,
         actor: row.actor,

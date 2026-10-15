@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
-import { timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
+import { toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
 import { apiError } from "../errors.js";
 import { now } from "../http.js";
@@ -65,12 +65,18 @@ function isKdf(value: unknown): value is KdfBody {
  * they would consume your quota and turn your infrastructure into a host for
  * strangers' data.
  */
+async function sameSecret(provided: string, expected: string): Promise<boolean> {
+  const digest = (value: string) => crypto.subtle.digest("SHA-256", utf8Encode(value));
+  const [a, b] = await Promise.all([digest(provided), digest(expected)]);
+  return crypto.subtle.timingSafeEqual(a, b);
+}
+
 auth.post("/register", async (c) => {
   const openRegistration = isOpenRegistration(c.env);
   if (!openRegistration) {
     const provided = c.req.header("x-registration-token") ?? "";
     const expected = c.env.REGISTRATION_TOKEN;
-    if (!expected || !timingSafeEqual(utf8Encode(provided), utf8Encode(expected))) {
+    if (!expected || !(await sameSecret(provided, expected))) {
       return c.json(apiError("auth.bad_registration_token"), 403);
     }
   }

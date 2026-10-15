@@ -431,7 +431,25 @@ async function backup() {
   );
 }
 
-const COMMANDS = { deploy, dev, status, logs, backup };
+const PRODUCTION = path.join(root, "deploy", "production.json");
+
+async function ci() {
+  if (!existsSync(PRODUCTION)) throw new Error("deploy/production.json is missing");
+  const state = JSON.parse(readFileSync(PRODUCTION, "utf8"));
+  writeState(state);
+  const options = resolveDeployOptions(state, {});
+  const configPath = writeGeneratedConfig(state.accountId, state.databaseId, options);
+
+  style.step("Applying migrations");
+  await wranglerInherit(["d1", "migrations", "apply", DB_NAME, "--remote", "-c", configPath]);
+
+  buildAssets();
+
+  style.step("Deploying the Worker");
+  await wranglerInherit(["deploy", "-c", configPath]);
+}
+
+const COMMANDS = { deploy, ci, dev, status, logs, backup };
 
 const command = process.argv[2];
 if (!command || !(command in COMMANDS)) {
@@ -445,6 +463,8 @@ if (!command || !(command in COMMANDS)) {
            --email-from <addr>   send sign-up codes from this address ("none" to drop)
            --email-provider <p>  "resend" (default; needs the RESEND_API_KEY secret)
                                  or "cloudflare" (Email Sending; Workers Paid plan)
+  ci       Deploy from Workers Builds with deploy/production.json: migrate,
+           build and deploy. Secrets must already be set on the Worker.
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787
   status   Show the account and resources in use
   logs     Tail the Worker logs

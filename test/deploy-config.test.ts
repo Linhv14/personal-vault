@@ -100,6 +100,17 @@ describe("renderConfig", () => {
     expect(config.workers_dev).toBe(true);
   });
 
+  it("declares the secrets a deploy must find on the Worker", () => {
+    expect(render().secrets.required).toEqual([
+      "REGISTRATION_TOKEN",
+      "EMAIL_PROBE_SECRET",
+      "AT_REST_SECRET",
+    ]);
+    expect(
+      render({ emailFrom: "no-reply@example.com", emailProvider: "resend" }).secrets.required,
+    ).toContain("RESEND_API_KEY");
+  });
+
   it("adds the sender address, and the Email Sending binding only for Cloudflare", () => {
     const resend = render({ emailFrom: "no-reply@1pw.online" });
     expect(resend.vars.EMAIL_FROM).toBe("no-reply@1pw.online");

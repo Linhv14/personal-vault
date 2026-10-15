@@ -1,4 +1,5 @@
 import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
+import { logError } from "./log.js";
 import { shareAccessEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import type { Mailer } from "./mailer.js";
@@ -70,7 +71,7 @@ export async function sendShareCode(
       ...shareAccessEmail({ locale, siteUrl }, code),
     });
   } catch (error) {
-    console.error("Share access email failed:", error);
+    logError("share_access_email_failed", error);
   }
 }
 

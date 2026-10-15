@@ -1,4 +1,5 @@
 import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
+import { logError } from "./log.js";
 import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import { createMailer, type Mailer } from "./mailer.js";
@@ -55,7 +56,7 @@ export async function issueCode(
     await mailer.send({ to: email, ...message });
     return "sent";
   } catch (error) {
-    console.error("Verification email failed:", error);
+    logError("verification_email_failed", error);
     return "failed";
   }
 }

@@ -10,6 +10,7 @@
     "build": "node scripts/build.mjs",
     "build:dev": "node scripts/build.mjs --dev",
     "deploy": "node scripts/vault.mjs deploy",
+    "deploy:ci": "node scripts/vault.mjs ci",
     "dev": "node scripts/vault.mjs dev",
     "status": "node scripts/vault.mjs status",
     "logs": "node scripts/vault.mjs logs",

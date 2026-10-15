@@ -1,6 +1,8 @@
 name = "personal-vault"
 main = "src/worker/index.ts"
-compatibility_date = "2025-10-01"
+compatibility_date = "2026-10-13"
+compatibility_flags = ["nodejs_compat"]
+upload_source_maps = true
 # Every version would otherwise get its own public URL, keeping old builds
 # reachable after a fix ships.
 preview_urls = false
@@ -68,6 +70,10 @@ crons = ["17 * * * *"]
 
 [observability]
 enabled = true
+head_sampling_rate = 1
+
+[secrets]
+required = ["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET", "AT_REST_SECRET"]
 
 # Secrets are generated and uploaded by `npm run deploy`. To set them manually:
 #   npx wrangler secret put REGISTRATION_TOKEN -c .wrangler.local.toml

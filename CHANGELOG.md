@@ -110,6 +110,13 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Worker configuration follows Cloudflare's current best practices:
+  compatibility date 2026-10-13 with `nodejs_compat`, source maps uploaded,
+  explicit log sampling, structured JSON logs, and the required secrets declared
+  so a deploy fails if one is missing.
+- `npm run deploy:ci` deploys from `deploy/production.json` (migrations, build,
+  deploy) for Workers Builds.
+
 - Settings moved into the console. The extension has two surfaces left: the
   popup for daily use, and the console, whose sidebar holds Personal
   (preferences, security, password health, data, account) and Organization.
@@ -227,6 +234,14 @@ version may change the API or storage format; such releases list the steps in
 - `npm run status` prints the Worker URL.
 
 ### Fixed
+
+- The activity log checks the hash chain of the page it returns against the
+  entry before it, instead of re-hashing the whole log on every request.
+- Organization, invitation and account writes count against the per-account
+  write limit.
+- Fetching a site icon stops reading once the response passes 64 KB instead of
+  buffering it whole, and the registration token is compared through SHA-256
+  digests so its length does not leak.
 
 - Importing, adding a secret to several environments, deleting an environment
   and removing duplicates now take one request per 500 secrets instead of one

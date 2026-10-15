@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { logError, logInfo } from "./log.js";
 import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { apiError } from "./errors.js";
@@ -91,6 +92,10 @@ const limitWritesByAccount: MiddlewareHandler<AppBindings> = async (c, next) => 
 };
 
 app.use("/api/items/*", limitWritesByAccount);
+app.use("/api/orgs", limitWritesByAccount);
+app.use("/api/orgs/*", limitWritesByAccount);
+app.use("/api/invites/*", limitWritesByAccount);
+app.use("/api/account/*", limitWritesByAccount);
 app.use("/api/shares", async (c, next) =>
   c.req.method === "POST" ? limitWritesByAccount(c, next) : next(),
 );
@@ -137,7 +142,7 @@ app.notFound((c) =>
 
 app.onError((error, c) => {
   // Never echo the cause: a D1 message can contain the SQL statement.
-  console.error("Unhandled error:", error);
+  logError("unhandled_error", error, { method: c.req.method, path: c.req.path });
   return c.json(apiError("server.error"), 500);
 });
 
@@ -159,9 +164,15 @@ export default {
       env.DB.prepare("DELETE FROM email_verifications WHERE expires_at <= ?").bind(now),
       env.DB.prepare("DELETE FROM share_codes WHERE expires_at <= ?").bind(now),
     ]);
-    console.log(
-      "Cleaned up shares/sessions/login_attempts/registration_counts/email_verifications/share_codes:",
-      results.map((r) => r.meta.changes).join("/"),
-    );
+    const [shares, sessions, loginAttempts, registrationCounts, verifications, shareCodes] =
+      results.map((result) => result.meta.changes);
+    logInfo("cleanup", {
+      shares,
+      sessions,
+      loginAttempts,
+      registrationCounts,
+      verifications,
+      shareCodes,
+    });
   },
 } satisfies ExportedHandler<Env>;

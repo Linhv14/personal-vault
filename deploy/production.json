@@ -1,0 +1,9 @@
+{
+  "accountId": "e894b81be63301546cb422b102e6641a",
+  "databaseId": "55cf48ab-6424-4951-b76d-f21935d2c1b4",
+  "workerUrl": "https://1pw.online",
+  "registrationMode": "open",
+  "customDomain": "1pw.online",
+  "emailFrom": "no-reply@1pw.online",
+  "emailProvider": "resend"
+}
