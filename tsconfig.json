@@ -11,7 +11,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
   "include": [
     "src/core/**/*.ts",
@@ -19,6 +21,7 @@
     "src/i18n/**/*.ts",
     "test/**/*.ts",
     "extension/**/*.ts",
+    "extension/**/*.tsx",
     "share/**/*.ts",
     "preview/**/*.ts",
     "scripts/**/*.d.mts"

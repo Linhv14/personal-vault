@@ -72,6 +72,21 @@ async function request<T>(
   return body as T;
 }
 
+export async function fetchLogo(domain: string): Promise<Blob | null> {
+  const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
+  if (!apiUrl || !session?.token) return null;
+  try {
+    const response = await fetch(
+      `${apiUrl.replace(/\/$/, "")}/api/logo?domain=${encodeURIComponent(domain)}`,
+      { headers: { Authorization: `Bearer ${session.token}` }, cache: "no-store" },
+    );
+    if (!response.ok || !response.headers.get("Content-Type")?.startsWith("image/")) return null;
+    return await response.blob();
+  } catch {
+    return null;
+  }
+}
+
 export async function register(
   email: string,
   record: AccountCryptoRecord,

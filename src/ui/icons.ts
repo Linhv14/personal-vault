@@ -2,6 +2,8 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 
 const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  filter: '<path d="M4 5h16l-6 7v5l-4 2v-7z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   wand: '<path d="m15 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/><path d="m4 20 10-10"/><path d="M19 13v4M17 15h4M7 3v3M5.5 4.5h3"/>',
@@ -16,7 +18,12 @@ const ICONS = {
   scan: '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 12h10"/>',
   share: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13 7 4 4"/>',
+  trash:
+    '<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="m9 7 1-3h4l1 3M6 7l1 14h10l1-14"/>',
   back: '<path d="m15 6-6 6 6 6"/>',
+  chevron: '<path d="m7 10 5 5 5-5"/>',
+  more: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+  upload: '<path d="M12 15V4M7 9l5-5 5 5"/><path d="M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/>',
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
   check: '<path d="m5 12 5 5 9-10"/>',
   "cloud-off":
@@ -41,6 +48,8 @@ const ICONS = {
   "id-card":
     '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16a3 3 0 0 1 6 0M14 10h4M14 14h3"/>',
   badge: '<circle cx="12" cy="9" r="5"/><path d="m9 13-1.5 8L12 19l4.5 2L15 13"/>',
+  tag: '<path d="M20 13 13 20 4 11V4h7z"/><circle cx="8" cy="8" r="1.2"/>',
+  star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
   pulse: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
   minus: '<path d="M5 12h14"/>',
@@ -49,6 +58,11 @@ const ICONS = {
 } as const;
 
 export type IconName = keyof typeof ICONS;
+
+/** The SVG body of an icon: constant markup from this file, never user data. */
+export function iconMarkup(name: IconName): string {
+  return ICONS[name];
+}
 
 export function icon(name: IconName): SVGSVGElement {
   const svg = document.createElementNS(SVG_NS, "svg");

@@ -59,7 +59,7 @@ Bold marks the extension's default.
 | Expired-row purge                  | Hourly, at minute 17                                    | `wrangler.toml`                                                   |
 | Auto-lock                          | 5 min, **15 min**, 1 h, 4 h, or when the browser closes | `extension/lib/storage.ts`                                        |
 | Clipboard clear after copy         | 30 seconds                                              | `extension/lib/clipboard.ts`                                      |
-| Clock drift warning                | More than 10 seconds                                    | `extension/popup/popup.ts`                                        |
+| Clock drift warning                | More than 10 seconds                                    | `extension/popup/state.ts`                                        |
 | Unfinished sign-up remembered      | 15 minutes                                              | `extension/lib/storage.ts`                                        |
 | Submitted login offered for saving | 5 minutes                                               | `extension/lib/autofill-service.ts`                               |
 

@@ -40,13 +40,15 @@ await build({
   target: "es2022",
   sourcemap: "inline",
   logLevel: "info",
+  jsx: "automatic",
+  jsxImportSource: "preact",
   // Same substitution the shipped build makes, so the preview shows what ships.
   define: { __VAULT_DEFAULT_SERVER__: JSON.stringify(deployedServerUrl()) },
   loader: { ".css": "text" },
 });
 
 const html = await readFile(path.join(root, "extension", "popup", "popup.html"), "utf8");
-await writeFile(path.join(out, "index.html"), html.replace("popup.js", "preview.js"));
+await writeFile(path.join(out, "index.html"), html.replace("main.js", "preview.js"));
 const css = path.join(root, "extension", "popup", "popup.css");
 await writeFile(path.join(out, "popup.css"), await injectTokens(await readFile(css, "utf8"), css));
 
@@ -54,6 +56,21 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 
 createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://${request.headers.host}`);
+  if (url.pathname === "/logo") {
+    const domain = encodeURIComponent(url.searchParams.get("domain") ?? "");
+    const icon = await fetch(`https://icons.duckduckgo.com/ip3/${domain}.ico`).catch(() => null);
+    if (!icon?.ok) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": icon.headers.get("Content-Type") ?? "image/x-icon" });
+    response.end(Buffer.from(await icon.arrayBuffer()));
+    return;
+  }
+  if (url.pathname === "/favicon.ico") {
+    response.writeHead(204).end();
+    return;
+  }
   const name = url.pathname === "/" ? "index.html" : path.basename(url.pathname);
   try {
     const body = await readFile(path.join(out, name));

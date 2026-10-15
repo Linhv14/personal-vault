@@ -10,6 +10,12 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Preact + Signals UI foundation, with Settings migrated to reactive components
+  and shared button, card, icon, toast, locale and session primitives.
+- Favorites, user-defined tags and Trash in the popup, with all three states
+  kept inside the end-to-end encrypted item payload. Favorites, tags and Trash
+  appear as filter chips once they hold an item; trashed items can be restored
+  or deleted forever.
 - Password health in Settings: weak and reused passwords, and, on request,
   passwords exposed in breaches via Have I Been Pwned's k-anonymity range API.
   Change opens the item in the popup.
@@ -54,6 +60,21 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The popup, Settings and the import page render from Preact components
+  instead of hand-written DOM code.
+- The popup is redesigned as two panes (600 × 430): the item list on the left,
+  the selected item on the right with grouped, click-to-copy fields. Types are
+  filtered from a dropdown, favorites, tags and trash from the scope switcher,
+  app actions sit in the menu, and the list sorts by most recent or by name.
+- Website icons in the popup, fetched through your own server from DuckDuckGo
+  or Google (`GET /api/logo`), held in memory only, and switchable off in
+  Settings → Preferences. Servers without the endpoint fall back to letters.
+- Recovery codes are hidden until revealed, numbered, and can be marked as
+  used; the list shows how many are left, and unused codes copy in one go.
+- New colour palette across the extension, share page and emails: one teal
+  accent on warm off-white in light mode and on teal-tinted ink in dark mode.
+  New extension icons to match.
+- Removing an item from the editor moves it to Trash instead of deleting it.
 - Settings open as a page in a tab, with Preferences, Security, Data and
   Account sections, instead of a screen inside the popup. It is also the
   extension's options page. Shared links are managed there.

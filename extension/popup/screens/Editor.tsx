@@ -1,0 +1,295 @@
+import { Fragment } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
+import { generatePassword } from "../../../src/core/generator.js";
+import { describeError } from "../../../src/i18n/index.js";
+import {
+  HAS_PASSWORD_HISTORY,
+  keepUsedCodes,
+  NEW_LABEL,
+  TYPE_FIELDS,
+  withPasswordHistory,
+  type FieldSpec,
+  type ItemType,
+} from "../../lib/item-types.js";
+import { parseRecoveryCodes } from "../../lib/recovery-codes.js";
+import { newItemId, saveItem, type VaultItem } from "../../lib/vault.js";
+import { IconButton } from "../../ui/components/IconButton.js";
+import { useT } from "../../ui/i18n.js";
+import {
+  CustomFieldsEditor,
+  rowKey,
+  WebsitesEditor,
+  type CustomRow,
+} from "../components/EditorRows.js";
+import { initialValue, InvalidField, readEditedFields, type EditedFields } from "../edit-fields.js";
+import { scanTotpFromTab, type ScanHint } from "../qr-scan.js";
+import {
+  nowMs,
+  reloadItems,
+  setTrashed,
+  showList,
+  tabUrl,
+  toast,
+  translator,
+  vaultKey,
+} from "../state.js";
+import { formatEntropy } from "../strength.js";
+
+function EditField({
+  spec,
+  item,
+  type,
+  onScanned,
+}: {
+  spec: FieldSpec;
+  item: VaultItem | null;
+  type: ItemType;
+  onScanned: (issuer: string | undefined) => void;
+}) {
+  const t = useT();
+  const [revealed, setRevealed] = useState(false);
+  const [scanHint, setScanHint] = useState<ScanHint>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const secret = spec.kind === "password" || spec.kind === "secret";
+  const multiline =
+    spec.kind === "multiline" || spec.kind === "codes" || spec.kind === "multilineSecret";
+  const value = initialValue(spec, item, tabUrl.value);
+
+  const control = multiline ? (
+    <textarea
+      name={spec.key}
+      rows={spec.kind === "multiline" ? (type === "note" ? 8 : 2) : spec.kind === "codes" ? 6 : 5}
+      defaultValue={value}
+      className={
+        spec.kind === "codes"
+          ? "mono"
+          : spec.kind === "multilineSecret"
+            ? revealed
+              ? "mono"
+              : "mono concealed"
+            : undefined
+      }
+      onPaste={
+        spec.kind === "codes"
+          ? (event) => {
+              const area = event.currentTarget;
+              setTimeout(() => {
+                const codes = parseRecoveryCodes(area.value);
+                if (codes.length > 0) area.value = codes.join("\n");
+              });
+            }
+          : undefined
+      }
+    />
+  ) : (
+    <input
+      ref={input}
+      name={spec.key}
+      autoComplete="off"
+      defaultValue={value}
+      type={
+        secret && !revealed
+          ? "password"
+          : spec.kind === "email" || spec.kind === "tel"
+            ? spec.kind
+            : "text"
+      }
+      inputMode={spec.kind === "cardNumber" || spec.kind === "expiry" ? "numeric" : undefined}
+      className={spec.kind === "cardNumber" ? "mono" : undefined}
+      placeholder={
+        spec.kind === "url"
+          ? "example.com"
+          : spec.kind === "totp"
+            ? t("edit.totp_placeholder")
+            : spec.kind === "expiry"
+              ? "MM/YY"
+              : undefined
+      }
+    />
+  );
+
+  const actions = [
+    (secret || spec.kind === "multilineSecret") && (
+      <IconButton
+        key="reveal"
+        icon={revealed ? "eye-off" : "eye"}
+        label={t(revealed ? "common.hide" : "common.show")}
+        onClick={() => setRevealed(!revealed)}
+      />
+    ),
+    spec.kind === "password" && (
+      <IconButton
+        key="generate"
+        icon="refresh"
+        label={t("edit.regenerate")}
+        onClick={() => {
+          const generated = generatePassword({ length: 20 });
+          if (input.current) input.current.value = generated.value;
+          setRevealed(true);
+          toast(formatEntropy(generated, t));
+        }}
+      />
+    ),
+    spec.kind === "totp" && (
+      <IconButton
+        key="scan"
+        icon="scan"
+        label={t("edit.scan")}
+        onClick={() =>
+          void scanTotpFromTab(t, setScanHint).then((config) => {
+            if (!config || !input.current) return;
+            input.current.value = config.raw;
+            onScanned(config.issuer);
+          })
+        }
+      />
+    ),
+  ].filter(Boolean);
+
+  return (
+    <>
+      <label>
+        <span>{t(spec.label)}</span>
+        {actions.length === 0 ? (
+          control
+        ) : (
+          <span className="field-with-actions">
+            {control}
+            {actions}
+          </span>
+        )}
+      </label>
+      {scanHint && <p className={scanHint.failed ? "hint error-text" : "hint"}>{scanHint.text}</p>}
+      {spec.kind === "codes" && <p className="hint">{t("field.codes_hint")}</p>}
+      {spec.key === "url" && type === "login" && <WebsitesEditor item={item} />}
+    </>
+  );
+}
+
+export function Editor({ item, type }: { item: VaultItem | null; type: ItemType }) {
+  const t = useT();
+  const form = useRef<HTMLFormElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [customRows, setCustomRows] = useState<CustomRow[]>(() =>
+    (item?.fields ?? []).map((field) => ({
+      key: rowKey(),
+      label: field.label,
+      value: field.value,
+      hidden: field.hidden === true,
+    })),
+  );
+
+  useEffect(() => {
+    form.current?.querySelector<HTMLInputElement>('[name="title"]')?.focus();
+  }, []);
+
+  const titleField = () => form.current?.querySelector<HTMLInputElement>('[name="title"]');
+
+  const submit = async (event: Event) => {
+    event.preventDefault();
+    setError(null);
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    let fields: EditedFields;
+    try {
+      fields = readEditedFields(
+        data,
+        type,
+        customRows.map((row) => row.hidden),
+      );
+    } catch (failure) {
+      setError(
+        failure instanceof InvalidField
+          ? t(failure.messageKey)
+          : t("edit.totp_parse_failed", { reason: describeError(failure, t) }),
+      );
+      return;
+    }
+
+    const key = vaultKey.value;
+    if (!key) return;
+    try {
+      await saveItem(key, {
+        ...item,
+        id: item?.id ?? newItemId(),
+        type,
+        title: String(data.get("title")).trim(),
+        ...fields,
+        usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
+        passwordHistory: HAS_PASSWORD_HISTORY.has(type)
+          ? withPasswordHistory(item, fields.password, Math.floor(nowMs() / 1000))
+          : item?.passwordHistory,
+      });
+      await reloadItems();
+      showList();
+      toast(translator()(item ? "edit.saved" : "edit.added"));
+    } catch (failure) {
+      setError(describeError(failure, t));
+    }
+  };
+
+  const moveToTrash = async () => {
+    if (!item) return;
+    try {
+      await setTrashed(item, true);
+    } catch (failure) {
+      setError(describeError(failure, t));
+    }
+  };
+
+  return (
+    <section id="screen-edit" className="screen">
+      <header className="title-bar">
+        <IconButton icon="back" label={t("common.back")} onClick={showList} />
+        <h1 id="edit-title">{t(item ? "edit.edit_title" : NEW_LABEL[type])}</h1>
+      </header>
+      <form id="form-edit" className="stack" ref={form} onSubmit={(event) => void submit(event)}>
+        <label>
+          <span>{t("edit.name")}</span>
+          <input name="title" required autoComplete="off" defaultValue={item?.title ?? ""} />
+        </label>
+        <div className="stack">
+          {TYPE_FIELDS[type].map((spec) => (
+            <Fragment key={spec.key}>
+              {spec.key === "note" && (
+                <CustomFieldsEditor rows={customRows} onChange={setCustomRows} />
+              )}
+              <EditField
+                spec={spec}
+                item={item}
+                type={type}
+                onScanned={(issuer) => {
+                  const title = titleField();
+                  if (issuer && title && !title.value) title.value = issuer;
+                }}
+              />
+            </Fragment>
+          ))}
+        </div>
+        <label>
+          <span>{t("edit.tags")}</span>
+          <input
+            name="tags"
+            autoComplete="off"
+            placeholder={t("edit.tags_hint")}
+            defaultValue={item?.tags?.join(", ") ?? ""}
+          />
+        </label>
+        <button className="primary" type="submit">
+          {t("edit.save")}
+        </button>
+        <button
+          type="button"
+          className="link danger"
+          id="edit-delete"
+          hidden={!item}
+          onClick={() => void moveToTrash()}
+        >
+          {t("edit.move_to_trash")}
+        </button>
+      </form>
+      <p className="error" id="edit-error" hidden={!error}>
+        {error}
+      </p>
+    </section>
+  );
+}

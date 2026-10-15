@@ -1,4 +1,21 @@
 /* @tokens */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--scrollbar-thumb) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
 * {
   box-sizing: border-box;
 }
@@ -28,8 +45,11 @@ body {
 }
 
 .layout {
+  width: min(100%, 1180px);
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 760px);
+  gap: clamp(32px, 6vw, 76px);
   min-height: 100vh;
 }
 .sidebar {
@@ -37,8 +57,18 @@ body {
   top: 0;
   align-self: start;
   height: 100vh;
-  padding: 28px 16px;
+  padding: 34px 16px 34px 0;
   border-right: 1px solid var(--border);
+}
+.brand-logo {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.brand-logo svg {
+  width: 100%;
+  height: 100%;
 }
 .brand {
   display: flex;
@@ -58,13 +88,14 @@ body {
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 .nav a {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  min-height: 40px;
+  padding: 9px 10px;
   border-radius: var(--radius);
   color: var(--muted);
   font-weight: 500;
@@ -82,11 +113,35 @@ body {
   outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
+.nav-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-action:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.nav-action:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
 
 main {
   width: 100%;
-  max-width: 720px;
-  padding: 40px 40px 80px;
+  max-width: 760px;
+  padding: 56px 0 96px;
 }
 h1 {
   margin: 0 0 24px;
@@ -155,6 +210,13 @@ input:not([type="checkbox"]) {
 }
 select {
   min-width: 180px;
+  appearance: none;
+  padding-right: 40px;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
 }
 select:focus-visible,
 input:focus-visible {
@@ -336,6 +398,8 @@ main > .notice {
   .layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
+    width: 100%;
+    gap: 0;
   }
   .sidebar {
     position: static;
@@ -349,13 +413,24 @@ main > .notice {
   }
   .nav {
     flex-direction: row;
+    align-items: center;
+    min-height: 40px;
     overflow-x: auto;
-    padding-bottom: 8px;
+    gap: 8px;
+    padding-bottom: 10px;
   }
-  .nav a {
+  .nav a,
+  .nav-action {
     flex-shrink: 0;
+    align-self: center;
+    min-height: 40px;
+    margin-top: 0;
+  }
+  .nav-note {
+    display: none;
   }
   main {
+    max-width: none;
     padding: 24px 16px 64px;
   }
   .row {

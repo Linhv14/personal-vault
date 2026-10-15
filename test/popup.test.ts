@@ -69,6 +69,7 @@ const server = {
   received: [] as string[],
   emailVerification: false,
   shareRequests: [] as Record<string, any>[],
+  logoRequests: [] as { domain: string; auth: string | null }[],
 };
 
 function json(body: unknown, status = 200): Response {
@@ -113,6 +114,16 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
 
   if (url.pathname === "/api/time") return json({ serverTime: now });
 
+  if (url.pathname === "/api/logo") {
+    server.logoRequests.push({
+      domain: url.searchParams.get("domain") ?? "",
+      auth: new Headers(init?.headers).get("Authorization"),
+    });
+    return new Response(new Uint8Array([137, 80, 78, 71]), {
+      headers: { "Content-Type": "image/png" },
+    });
+  }
+
   if (url.pathname === "/api/config") {
     return json({ registration: "token", emailVerification: server.emailVerification });
   }
@@ -130,6 +141,11 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
     return json({ id, updatedAt: now });
   }
 
+  if (url.pathname.startsWith("/api/items/") && method === "DELETE") {
+    server.items.delete(url.pathname.split("/").pop()!);
+    return json({ deletedAt: now });
+  }
+
   if (url.pathname === "/api/shares" && method === "POST") {
     server.shareRequests.push(body);
     return json({ id: "share-1", expiresAt: now + 86400, maxViews: body.maxViews }, 201);
@@ -145,10 +161,8 @@ function el<T extends HTMLElement>(id: string): T {
 }
 
 function visibleScreen(): string | null {
-  for (const section of document.querySelectorAll("section[id^='screen-']")) {
-    if (!(section as HTMLElement).hidden) return section.id;
-  }
-  return null;
+  const screen = document.body.dataset["screen"];
+  return screen ? `screen-${screen}` : null;
 }
 
 function setField(form: HTMLFormElement, name: string, value: string): void {
@@ -184,18 +198,19 @@ describe("extension popup", () => {
       value: { writeText: vi.fn(async () => {}), readText: vi.fn(async () => "") },
     });
 
-    await import("../extension/popup/popup.js");
+    const { options } = await import("preact");
+    options.debounceRendering = (render) => render();
+    await import("../extension/popup/main.js");
   });
 
   it("shows the setup screen when nothing is configured", async () => {
     await waitFor(() => visibleScreen() === "screen-setup", "the setup screen");
   });
 
-  it("fills static text from the message catalogue", () => {
-    // A blank label means an element is missing its data-i18n key or the key is
-    // misspelled — invisible to the typechecker.
-    for (const node of document.querySelectorAll<HTMLElement>("[data-i18n]")) {
-      expect(node.textContent?.trim(), node.dataset.i18n).not.toBe("");
+  it("labels every button from the message catalogue", () => {
+    for (const button of document.querySelectorAll<HTMLButtonElement>("#screen-setup button")) {
+      const label = button.textContent?.trim() || button.getAttribute("aria-label");
+      expect(label, button.outerHTML).toBeTruthy();
     }
   });
 
@@ -232,7 +247,7 @@ describe("extension popup", () => {
 
   function addItemOfKind(kind: string): void {
     el("btn-add").dispatchEvent(new Event("click", { bubbles: true }));
-    const option = [...el("add-menu").querySelectorAll<HTMLButtonElement>(".add-option")].find(
+    const option = [...el("add-menu").querySelectorAll<HTMLButtonElement>(".menu-item")].find(
       (button) => button.textContent === kind,
     );
     if (!option) throw new Error(`No "${kind}" in the add menu`);
@@ -263,39 +278,95 @@ describe("extension popup", () => {
     expect(sent).not.toContain(TOTP_SECRET);
   });
 
+  function rows(listId: string): HTMLElement[] {
+    return [...(document.getElementById(listId)?.querySelectorAll<HTMLElement>(".row") ?? [])];
+  }
+
+  function detailButton(label: string): HTMLButtonElement {
+    const button = [...el("detail").querySelectorAll<HTMLButtonElement>("button")].find(
+      (candidate) =>
+        candidate.textContent === label || candidate.getAttribute("aria-label") === label,
+    );
+    if (!button) throw new Error(`No "${label}" button in the detail pane`);
+    return button;
+  }
+
+  function typeOptions(): HTMLButtonElement[] {
+    if (!document.querySelector(".dropdown .menu")) el("type-filter").click();
+    return [...document.querySelectorAll<HTMLButtonElement>(".dropdown .menu .menu-item")];
+  }
+
+  function pickType(label: string): void {
+    const option = typeOptions().find((candidate) => candidate.textContent === label);
+    if (!option) throw new Error(`No "${label}" in the type filter`);
+    option.click();
+  }
+
+  function scopeMenu(): HTMLButtonElement[] {
+    if (!document.querySelector(".scope .menu")) el("scope-menu").click();
+    return [...document.querySelectorAll<HTMLButtonElement>(".scope .menu-item")];
+  }
+
+  function scopes(): string[] {
+    const labels = scopeMenu().map((item) => item.textContent ?? "");
+    el("scope-menu").click();
+    return labels;
+  }
+
+  function openScope(label: string): void {
+    const item = scopeMenu().find((candidate) => candidate.textContent?.startsWith(label));
+    if (!item) throw new Error(`No "${label}" in the scope menu`);
+    item.click();
+  }
+
   it("surfaces the item under the matching-domain heading", async () => {
-    await waitFor(() => !el("matching-section").hidden, "the domain match section");
+    await waitFor(() => rows("matching-list").length > 0, "the domain match section");
     expect(el("matching-title").textContent).toContain("github.com");
     expect(el("matching-list").textContent).toContain("GitHub");
-    const labels = [...el("matching-list").querySelectorAll(".item-head button")].map((button) =>
+    const labels = [...rows("matching-list")[0]!.querySelectorAll("button")].map((button) =>
       button.getAttribute("aria-label"),
     );
     expect(labels).toEqual(["Copy 2FA code", "Copy password"]);
   });
 
-  it("renders a live 2FA code that matches an independent computation", async () => {
-    el("matching-list")
-      .querySelector<HTMLElement>(".item-head")!
-      .dispatchEvent(new Event("click", { bubbles: true }));
-
+  it("shows site logos fetched through the signed-in server", async () => {
     await waitFor(
-      () => /\d{3} \d{3}/.test(el("matching-list").querySelector(".totp-code")?.textContent ?? ""),
+      () => rows("matching-list")[0]?.querySelector(".site-logo img") !== null,
+      "the logo",
+    );
+    expect(server.logoRequests[0]).toEqual({
+      domain: "github.com",
+      auth: "Bearer session-token",
+    });
+  });
+
+  it("drops logos and their requests with website icons turned off", async () => {
+    const { showLogos } = await import("../extension/popup/logos.js");
+    server.logoRequests.length = 0;
+    showLogos.value = false;
+    expect(document.querySelector(".site-logo")).toBeNull();
+    expect(rows("matching-list")[0]!.querySelector(".avatar")!.textContent).toBe("G");
+    expect(server.logoRequests).toEqual([]);
+    showLogos.value = true;
+    await waitFor(() => document.querySelector(".site-logo") !== null, "the logo again");
+  });
+
+  it("renders a live 2FA code that matches an independent computation", async () => {
+    rows("matching-list")[0]!.click();
+    await waitFor(
+      () => /\d{3} \d{3}/.test(el("detail").querySelector(".totp-code")?.textContent ?? ""),
       "the 2FA code",
     );
-
-    const shown = el("matching-list").querySelector(".totp-code")!.textContent!.replace(" ", "");
+    const shown = el("detail").querySelector(".totp-code")!.textContent!.replace(" ", "");
     const { generateTotp } = await import("../src/core/totp.js");
     expect(shown).toBe(await generateTotp({ secret: TOTP_SECRET }));
   });
 
   async function openShareScreen(): Promise<void> {
-    el("share-back").click();
+    document.getElementById("share-back")?.click();
     await waitFor(() => visibleScreen() === "screen-list", "the list");
-    el("matching-list").querySelector<HTMLElement>(".item-head")!.click();
-    const shareButton = [...el("matching-list").querySelectorAll("button")].find(
-      (button) => button.textContent === "Share",
-    )!;
-    shareButton.dispatchEvent(new Event("click", { bubbles: true }));
+    rows("matching-list")[0]!.click();
+    detailButton("Share").click();
     await waitFor(
       () => visibleScreen() === "screen-share" && el("share-result").hidden,
       "the share screen",
@@ -371,7 +442,7 @@ describe("extension popup", () => {
   });
 
   it("saves a card under its own type, checking the expiry", async () => {
-    el("share-back").click();
+    document.getElementById("share-back")?.click();
     await waitFor(() => visibleScreen() === "screen-list", "the list");
     addItemOfKind("Card");
     await waitFor(() => visibleScreen() === "screen-edit", "the card editor");
@@ -390,8 +461,7 @@ describe("extension popup", () => {
     await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
     expect(server.items.size).toBe(2);
 
-    const chips = [...el("type-filter").querySelectorAll<HTMLButtonElement>(".type-chip")];
-    expect(chips.map((chip) => chip.textContent)).toEqual([
+    expect(typeOptions().map((option) => option.textContent)).toEqual([
       "All2",
       "Logins1",
       "Notes0",
@@ -405,21 +475,81 @@ describe("extension popup", () => {
       "Documents0",
       "Licenses0",
     ]);
-    chips.find((chip) => chip.textContent === "Wi-Fi0")!.click();
-    expect(el("list-empty-type").hidden).toBe(false);
-    expect(el("list-add-type").textContent).toBe("New Wi-Fi network");
-    el("type-filter").querySelectorAll<HTMLButtonElement>(".type-chip")[3]!.click();
-    expect(el("matching-section").hidden).toBe(true);
-    expect(el("all-list").querySelectorAll(".item")).toHaveLength(1);
+    pickType("Wi-Fi0");
+    expect(el("list-empty-type").textContent).toContain("New Wi-Fi network");
+    pickType("Cards1");
+    expect(document.getElementById("matching-list")).toBeNull();
+    expect(rows("all-list")).toHaveLength(1);
     expect(el("all-list").textContent).toContain("Ending in 4242");
+    expect(el("detail").textContent).toContain("04/27");
+  });
 
-    el("all-list").querySelector<HTMLElement>(".item-head")!.click();
-    expect(el("all-list").querySelector(".item-body")!.textContent).toContain("04/27");
-    el("type-filter").querySelector<HTMLButtonElement>(".type-chip")!.click();
+  it("favorites, tags and trashes an item, then restores or deletes it", async () => {
+    detailButton("Add to favorites").click();
+    await waitFor(() => scopes().includes("Favorites1"), "the favorite count");
+    expect(rows("all-list")[0]!.querySelector(".favorite-mark")).not.toBeNull();
+
+    detailButton("Edit").click();
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
+    const form = el<HTMLFormElement>("form-edit");
+    setField(form, "tags", "travel, work, travel");
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => scopes().includes("travel1"), "the tag links");
+    expect(scopes()).toContain("work1");
+    expect(el("detail").textContent).toContain("Card · travel · work");
+
+    detailButton("More").click();
+    [...document.querySelectorAll<HTMLButtonElement>(".more .menu-item")]
+      .find((item) => item.textContent === "Move to trash")!
+      .click();
+    await waitFor(() => scopes().includes("Trash1"), "the trash count");
+    expect(scopes()).toContain("Favorites0");
+    expect(scopes()).not.toContain("travel1");
+
+    openScope("Trash");
+    expect(rows("all-list")).toHaveLength(1);
+    detailButton("Restore").click();
+    await waitFor(() => scopes().includes("Trash0"), "the restore");
+    expect(scopes()).toContain("Favorites1");
+
+    pickType("Cards1");
+    detailButton("Edit").click();
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
+    el("edit-delete").click();
+    await waitFor(() => scopes().includes("Trash1"), "the trash count");
+    openScope("Trash");
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    detailButton("Delete forever").click();
+    await waitFor(() => scopes().includes("Trash0"), "the permanent delete");
+    confirm.mockRestore();
+    expect(server.items.size).toBe(1);
+    expect(scopes()).toContain("All items1");
+  });
+
+  it("marks recovery codes used without revealing them", async () => {
+    addItemOfKind("Recovery codes");
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
+    const form = el<HTMLFormElement>("form-edit");
+    setField(form, "title", "Google");
+    form.querySelector<HTMLTextAreaElement>('[name="codes"]')!.value = "1111 2222\n3333 4444";
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
+    pickType("Recovery codes1");
+    await waitFor(() => el("detail").querySelectorAll(".code").length === 2, "the codes");
+
+    expect(el("detail").textContent).not.toContain("1111");
+    expect(rows("all-list")[0]!.textContent).toContain("2 codes");
+    detailButton("Mark as used").click();
+    await waitFor(() => el("detail").textContent!.includes("1 of 2 left"), "the used mark");
+    expect(el("detail").querySelector(".code.used")).not.toBeNull();
+    expect(rows("all-list")[0]!.textContent).toContain("1 of 2 left");
   });
 
   it("clears session storage when locked, keeping the offline cache", async () => {
-    el("btn-lock").dispatchEvent(new Event("click", { bubbles: true }));
+    if (!document.querySelector(".drawer")) el("btn-menu").click();
+    [...document.querySelectorAll<HTMLButtonElement>(".drawer-link")]
+      .find((link) => link.textContent === "Lock now")!
+      .click();
     await waitFor(() => sessionArea.size === 0, "session storage to be cleared");
     expect(localArea.has("items")).toBe(true);
   });

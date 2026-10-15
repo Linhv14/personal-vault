@@ -47,6 +47,8 @@ const common = {
   sourcemap: dev ? "inline" : false,
   minify: !dev,
   logLevel: "info",
+  jsx: "automatic",
+  jsxImportSource: "preact",
   loader: { ".css": "text" },
 };
 
@@ -124,7 +126,7 @@ async function buildExtension() {
   for (const entry of await readdir(source, { recursive: true, withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const relative = path.relative(source, path.join(entry.parentPath, entry.name));
-    if (relative.endsWith(".ts")) continue;
+    if (/\.tsx?$/.test(relative)) continue;
     const target = path.join(outExtension, relative);
     await mkdir(path.dirname(target), { recursive: true });
     if (/\.(css|html)$/.test(relative)) {

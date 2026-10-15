@@ -24,8 +24,9 @@ that opens share links.
 
 ## Components
 
-**Extension.** The popup holds the whole interface: setup, unlock, the item
-list with live 2FA codes, the editor, the generator, sharing and settings. It
+**Extension.** The popup holds the main vault interface: setup, unlock, the item
+list with live 2FA codes, the editor, the generator and sharing. Settings and
+import are standalone pages that reuse the same UI foundation. It
 derives keys, encrypts and decrypts. The service worker does what must outlive
 the popup: the auto-lock alarm, clearing the clipboard 30 seconds after a copy,
 registering the autofill page script, and answering that script. An offscreen
@@ -53,7 +54,7 @@ src/core/     Crypto, TOTP, generator, share payloads. WebCrypto only, no
 src/i18n/     Message catalogues (English, Vietnamese). Only the UI layer uses them.
 src/ui/       Design tokens, logo and icons shared by the popup, page script and share page.
 src/worker/   The Worker: routes, sessions, at-rest protection, email.
-extension/    The MV3 extension: popup, service worker, page script, offscreen document.
+extension/    The MV3 extension: Preact UI pages, service worker, page script, offscreen document.
 share/        The share page, the landing page and the privacy policy.
 migrations/   D1 schema, applied in order by `npm run deploy`.
 scripts/      Build, deploy, preview and packaging tools.
@@ -63,6 +64,37 @@ test/         Unit tests, and end-to-end tests against a live local Worker.
 `src/core` throws `VaultError` with a stable code and never produces prose. If
 it returned sentences, the UI would have to match on them, and every wording
 change would break a translation.
+
+## UI state and rendering
+
+The extension's user-facing pages use Preact with `@preact/signals`. Shared
+components live under `extension/ui`, while storage, crypto, sync and autofill
+remain in `extension/lib` and `src/core`. This keeps the security-sensitive
+logic independent from rendering and lets lock state, locale and item state
+update without manually synchronizing a large DOM template. Injected scripts
+that run in web pages remain framework-free IIFEs.
+
+```
+extension/ui/          Shared by every page: Icon, IconButton, Logo, Toast,
+                       Button, Card, the signal-backed translator, date format.
+extension/popup/
+  main.tsx             Boot and screen switch.
+  state.ts             Signals (items, selection, filters) and shared actions.
+  filters.ts           Pure list logic: scope, type, search, sort, site match.
+  edit-fields.ts       Pure editor logic: FormData to item fields.
+  screens/             Setup, Unlock, Vault (two panes), Detail, Editor,
+                       Generator, Share.
+  components/          Topbar, Drawer, ListPane, Row, FieldRow, Totp, Menu…
+extension/settings/
+  main.tsx             Layout and hash routing.
+  state.ts             Local state, toast, storage watcher.
+  pages/               General, Security, Health, Data, Account.
+extension/import/      One page that walks pick, passphrase, review, done.
+```
+
+Forms are uncontrolled and read with `FormData` on submit; anything that can be
+pure (filtering, editor parsing, recovery code marks) lives outside components
+and has its own unit tests.
 
 ## Data flow
 

@@ -191,7 +191,15 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const now = Math.floor(Date.now() / 1000);
 
   if (url.pathname === "/api/time") return json({ serverTime: now });
+  if (url.pathname === "/api/logo") {
+    return realFetch(`/logo?domain=${encodeURIComponent(url.searchParams.get("domain") ?? "")}`);
+  }
+
   if (url.pathname === "/api/items") return json({ serverTime: now, items: [] });
+  if (url.pathname === "/api/items/batch") {
+    const { items } = JSON.parse(String(init?.body ?? "{}")) as { items: { id: string }[] };
+    return json({ updatedAt: now, created: items.map(({ id }) => id) });
+  }
   if (url.pathname.startsWith("/api/items/")) {
     return json({ id: url.pathname.split("/").pop(), updatedAt: now });
   }
@@ -260,4 +268,4 @@ async function seed(): Promise<void> {
 }
 
 await seed();
-await import("../extension/popup/popup.js");
+await import("../extension/popup/main.js");

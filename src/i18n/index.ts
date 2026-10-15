@@ -12,7 +12,7 @@
 
 import { en, type Catalogue, type MessageKey } from "./en.js";
 import { vi } from "./vi.js";
-import { isVaultError, type ErrorCode } from "../core/errors.js";
+import { isVaultError } from "../core/errors.js";
 
 export type Locale = "en" | "vi";
 /** `auto` follows the browser; an explicit locale overrides it. */
@@ -100,11 +100,6 @@ function isLocalizedApiError(
 ): error is { messageKey: MessageKey; params?: Record<string, string | number> } {
   const messageKey = (error as { messageKey?: unknown } | null)?.messageKey;
   return typeof messageKey === "string" && messageKey in en;
-}
-
-/** Type guard used by the API client, which builds codes dynamically. */
-export function isErrorKey(code: string): code is ErrorCode {
-  return `error.${code}` in en;
 }
 
 export type { MessageKey, Catalogue };

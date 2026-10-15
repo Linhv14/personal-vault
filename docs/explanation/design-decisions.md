@@ -83,6 +83,31 @@ unhandled errors return `server.error` and go to the log only.
 
 ## Extension
 
+**Preact + Signals for extension pages.** The popup and standalone pages need
+reactive state for lock changes, sync, live TOTP codes, async health checks and
+locale changes, but a full framework would add unnecessary weight to a browser
+extension. Preact keeps the component model small, while Signals make shared
+session and locale state observable across pages. The crypto, storage and
+autofill layers stay framework-free, and scripts injected into websites remain
+plain IIFEs to minimize their page-facing surface.
+
+**Popup state lives in the popup.** Items, filters and the open screen are
+signals in `extension/popup/state.ts`, not in the service worker, which MV3
+stops after about 30 seconds idle. Forms stay uncontrolled and are read with
+`FormData` on submit, so the editor renders any `TYPE_FIELDS` entry without one
+piece of state per field.
+
+**Creating a vault and signing in are two visible choices.** Signing in needs no
+registration token; hiding that path behind a link led people setting up a
+second machine to believe they needed a token they do not have.
+
+**Unlock falls back to the offline cache only on a network failure.** A
+rejected password must surface at once, not later as some other error.
+
+**2FA codes use the server-corrected clock.** The popup measures clock skew
+against the Worker and warns above ten seconds, where codes start failing near
+a rollover.
+
 **The vault key lives in `chrome.storage.session`.** MV3 stops an idle service
 worker after about 30 seconds, so a key held in a variable disappears and the
 popup asks for the master password again and again. Session storage is
@@ -138,9 +163,16 @@ when the first copy sits in a hidden screen, every other logo loses its fill.
 
 **One source for colour.** `src/ui/tokens.css` defines every colour. The build
 injects it wherever a stylesheet has a `/* @tokens */` marker (popup, share
-page, privacy page) and bundles it into the page script's shadow root. The
-accent is a deep teal on warm neutrals, lighter in dark mode, where a saturated
-accent vibrates against a dark background.
+page, privacy page) and bundles it into the page script's shadow root. Teal is
+the only accent: deep teal on a warm off-white in light mode, a luminous teal on
+a teal-tinted ink in dark mode. Item icons use the same tint rather than one
+colour per item, so nothing competes with the accent.
+
+**The popup is two panes, 600 × 430.** The list stays on the left and the
+selected item, editor, generator or share form opens on the right, so finding
+and reading an item never collapses the list. Filters live in a type dropdown
+and a scope switcher (favorites, tags, trash) instead of a row of chips that
+scrolls off screen; the side menu holds only app actions.
 
 ## Platform traps
 

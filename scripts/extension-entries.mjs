@@ -1,9 +1,9 @@
 export const EXTENSION_PAGES = [
-  "popup/popup.ts",
+  "popup/main.tsx",
   "background.ts",
   "offscreen/offscreen.ts",
-  "import/import.ts",
-  "settings/settings.ts",
+  "import/main.tsx",
+  "settings/main.tsx",
 ];
 
 export const INJECTED_SCRIPTS = ["content/content.ts", "passkey/page.ts", "passkey/bridge.ts"];

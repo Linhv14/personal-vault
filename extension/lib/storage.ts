@@ -38,6 +38,7 @@ export interface LocalState {
   /** Offset of this machine's clock against the server, in seconds. */
   clockSkew?: number;
   locale?: LocalePreference;
+  showLogos?: boolean;
 }
 
 interface SessionState {
