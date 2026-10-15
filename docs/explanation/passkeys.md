@@ -41,6 +41,18 @@ for a moment and closes. When the site lists a credential 1PW already holds in
 offering a second one, and the site gets the `InvalidStateError` the spec asks
 for.
 
+## Passkeys in the sign-in field
+
+Many sites ask for a passkey quietly when the sign-in page loads
+(`mediation: "conditional"`) and expect it to be offered in the username
+field's autofill. 1PW passes that request on to the browser as usual, so its
+own passkey suggestions still appear, and also lists the passkeys it holds for
+the site in its fill menu on that field. Picking one there is the consent: 1PW
+signs, the site gets the credential, and the browser's pending request is
+cancelled. If the site cancels first, the passkeys leave the menu. The list
+never reaches the page: the fill menu and the passkey bridge share the
+extension's isolated world, which page scripts cannot read.
+
 Sites often check `PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`
 before offering a passkey at all. With autofill on, 1PW answers yes, since it
 is one; without that, sites on machines with no Touch ID or Windows Hello never
@@ -62,9 +74,9 @@ Attestation is `none`.
 
 - **Use another device** in the dialog hands the request back to the browser,
   for a security key, a phone, or the platform's own passkeys.
-- Requests in iframes, requests without ES256, registrations that ask for a
-  `cross-platform` authenticator (a security key), and conditional
-  (autofill-style) requests go straight to the browser.
+- Requests in iframes, requests without ES256, and registrations that ask for
+  a `cross-platform` authenticator (a security key) go straight to the
+  browser.
 - A sign-in on a site where 1PW has no passkey goes straight to the browser
   without a dialog.
 - If 1PW is locked and the vault holds no passkeys, the browser handles the

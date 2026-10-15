@@ -8,6 +8,8 @@ import type {
 } from "../lib/autofill-protocol.js";
 import { icon } from "../../src/ui/icons.js";
 import { logo, wordmark } from "../../src/ui/logo.js";
+import { conditionalPasskeys } from "../lib/passkey/conditional.js";
+import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
 
 const USERNAME_HINT = /user|email|login|account|phone|mobile|identifier/i;
@@ -103,8 +105,16 @@ function wantsNewPassword(password: HTMLInputElement): boolean {
   return NEW_PASSWORD_HINT.test(`${describe(password)} ${formAction} ${location.pathname}`);
 }
 
+function wantsPasskey(input: HTMLInputElement): boolean {
+  return (
+    conditionalPasskeys() !== null &&
+    input.type !== "password" &&
+    input.autocomplete.split(/\s+/).includes("webauthn")
+  );
+}
+
 function isDecoratable(input: HTMLInputElement): boolean {
-  if (input.type === "password") return true;
+  if (input.type === "password" || wantsPasskey(input)) return true;
   return findPasswordFor(input) !== null && findUsernameField(findPasswordFor(input)!) === input;
 }
 
@@ -172,7 +182,7 @@ function avatar(title: string): HTMLElement {
   return node;
 }
 
-function badge(name: "lock" | "wand"): HTMLElement {
+function badge(name: "lock" | "wand" | "key"): HTMLElement {
   const node = document.createElement("span");
   node.className = "badge";
   node.append(icon(name));
@@ -197,16 +207,31 @@ async function fillGenerated(password: HTMLInputElement): Promise<void> {
   for (const field of targets) setValue(field, response.password);
 }
 
+async function offeredPasskeys(input: HTMLInputElement): Promise<PasskeyOption[]> {
+  const passkeys = conditionalPasskeys();
+  if (!passkeys || input.type === "password") return [];
+  return (await passkeys.list()).passkeys;
+}
+
+async function usePasskey(passkey: PasskeyOption): Promise<void> {
+  closeMenu();
+  await conditionalPasskeys()?.use(passkey.credentialId);
+}
+
 async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<void> {
   if (!activeInput) return;
   const input = activeInput;
   const password = findPasswordFor(input) ?? input;
-  const response = await send({ type: "autofill:suggest" });
+  const [response, passkeys] = await Promise.all([
+    send({ type: "autofill:suggest" }),
+    offeredPasskeys(input),
+  ]);
   if (activeInput !== input) return;
   const nothingToOffer =
     response.ok &&
     "suggestions" in response &&
     response.suggestions.length === 0 &&
+    passkeys.length === 0 &&
     !wantsNewPassword(password);
   if (onlyIfUseful && (!response.ok || nothingToOffer)) return;
   menu.replaceChildren();
@@ -226,6 +251,16 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
       }),
     );
   } else if ("suggestions" in response) {
+    for (const passkey of passkeys) {
+      menu.append(
+        menuRow(
+          passkey.userName || passkey.title,
+          `${t("common.passkey")} · ${passkey.title}`,
+          badge("key"),
+          () => void usePasskey(passkey),
+        ),
+      );
+    }
     for (const suggestion of response.suggestions) {
       menu.append(
         menuRow(suggestion.title, suggestion.username, avatar(suggestion.title), () =>
@@ -239,7 +274,7 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
           fillGenerated(password),
         ),
       );
-    } else if (response.suggestions.length === 0) {
+    } else if (response.suggestions.length === 0 && passkeys.length === 0) {
       menu.append(note(t("autofill.no_match", { domain: response.domain })));
     }
   }

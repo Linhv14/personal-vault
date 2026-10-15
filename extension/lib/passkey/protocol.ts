@@ -75,7 +75,9 @@ export const PAGE_REPLY = "1pw-passkey-reply";
 export const PAGE_ABORT = "1pw-passkey-abort";
 
 export type PageRequest =
-  { kind: "create"; options: CreateOptions } | { kind: "get"; options: GetOptions };
+  | { kind: "create"; options: CreateOptions }
+  | { kind: "get"; options: GetOptions }
+  | { kind: "conditional"; options: GetOptions };
 
 export type PageReply =
   | { kind: "fallback" }

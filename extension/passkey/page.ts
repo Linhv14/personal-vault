@@ -161,20 +161,54 @@ credentials.create = async function create(options?: CredentialCreationOptions) 
   );
 };
 
+function getOptions(publicKey: PublicKeyCredentialRequestOptions) {
+  return {
+    rpId: publicKey.rpId,
+    challenge: encode(publicKey.challenge),
+    allowCredentialIds: (publicKey.allowCredentials ?? []).map(({ id }) => encode(id)),
+  };
+}
+
+function isAbort(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function conditionalGet(
+  options: CredentialRequestOptions & { publicKey: PublicKeyCredentialRequestOptions },
+) {
+  const outer = options.signal;
+  if (outer?.aborted)
+    throw outer.reason ?? new DOMException("The operation was aborted.", "AbortError");
+  const controller = new AbortController();
+  const forward = () => controller.abort(outer?.reason);
+  outer?.addEventListener("abort", forward);
+  const native = nativeGet({ ...options, signal: controller.signal });
+  const ours = ask(
+    { kind: "conditional", options: getOptions(options.publicKey) },
+    controller.signal,
+  ).then((reply) =>
+    reply.kind === "assertion"
+      ? assertionCredential(reply.assertion)
+      : new Promise<Credential>(() => {}),
+  );
+  try {
+    return await Promise.any([native, ours]);
+  } catch (error) {
+    const reasons = error instanceof AggregateError ? error.errors : [error];
+    throw reasons.find((reason) => !isAbort(reason)) ?? reasons[0];
+  } finally {
+    outer?.removeEventListener("abort", forward);
+    native.catch(() => {});
+    ours.catch(() => {});
+    controller.abort();
+  }
+}
+
 credentials.get = async function get(options?: CredentialRequestOptions) {
   const publicKey = options?.publicKey;
-  if (!publicKey || options?.mediation === "conditional") return nativeGet(options);
-  const reply = await ask(
-    {
-      kind: "get",
-      options: {
-        rpId: publicKey.rpId,
-        challenge: encode(publicKey.challenge),
-        allowCredentialIds: (publicKey.allowCredentials ?? []).map(({ id }) => encode(id)),
-      },
-    },
-    options?.signal,
-  );
+  if (!publicKey) return nativeGet(options);
+  if (options?.mediation === "conditional") return conditionalGet({ ...options, publicKey });
+  const reply = await ask({ kind: "get", options: getOptions(publicKey) }, options?.signal);
   if (reply.kind === "fallback") return nativeGet(options);
   if (reply.kind === "error") throw failure(reply);
   if (reply.kind !== "assertion") throw new DOMException("Unexpected reply", "UnknownError");

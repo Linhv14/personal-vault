@@ -14,6 +14,7 @@ import {
   type PasskeyMessages,
   type PasskeyOption,
 } from "../lib/passkey/protocol.js";
+import { setConditionalPasskeys } from "../lib/passkey/conditional.js";
 import { PASSKEY_STYLES } from "./styles.js";
 
 const NOT_ALLOWED: PageReply = {
@@ -34,6 +35,9 @@ let closeDialog: (() => void) | null = null;
 
 type CreateRequest = Extract<PageRequest, { kind: "create" }>;
 type GetRequest = Extract<PageRequest, { kind: "get" }>;
+type ConditionalRequest = Extract<PageRequest, { kind: "conditional" }>;
+
+let conditionalId: string | null = null;
 
 async function send<K extends keyof PasskeyMessages>(
   type: K,
@@ -244,15 +248,55 @@ async function handleGet(id: string, request: GetRequest): Promise<void> {
   body.append(list, other(id));
 }
 
+function endConditional(): void {
+  conditionalId = null;
+  setConditionalPasskeys(null);
+}
+
+function startConditional(id: string, request: ConditionalRequest): void {
+  conditionalId = id;
+  const { options } = request;
+  setConditionalPasskeys({
+    async list() {
+      const query = await send("passkey:query", {
+        rpId: options.rpId,
+        allowCredentialIds: options.allowCredentialIds,
+      });
+      if (conditionalId !== id || !query.ok) return { locked: false, passkeys: [] };
+      if (query.state === "locked") return { locked: query.hasPasskeys, passkeys: [] };
+      return { locked: false, passkeys: query.passkeys };
+    },
+    async use(credentialId) {
+      if (conditionalId !== id) return false;
+      const result = await send("passkey:get", { options, credentialId });
+      if (conditionalId !== id || !result.ok) return false;
+      endConditional();
+      window.postMessage(
+        { type: PAGE_REPLY, id, reply: { kind: "assertion", assertion: result.assertion } },
+        location.origin,
+      );
+      return true;
+    },
+  });
+}
+
 window.addEventListener("message", (event) => {
   if (event.source !== window) return;
   const data = event.data as { type?: string; id?: string; request?: PageRequest } | null;
+  if (data?.type === PAGE_ABORT && data.id === conditionalId) {
+    endConditional();
+    return;
+  }
   if (data?.type === PAGE_ABORT && data.id === activeId) {
     activeId = null;
     closeDialog?.();
     return;
   }
   if (data?.type !== PAGE_REQUEST || typeof data.id !== "string" || !data.request) return;
+  if (data.request.kind === "conditional") {
+    startConditional(data.id, data.request);
+    return;
+  }
   if (activeId) reply(activeId, NOT_ALLOWED);
   activeId = data.id;
   if (data.request.kind === "create") void handleCreate(data.id, data.request);
