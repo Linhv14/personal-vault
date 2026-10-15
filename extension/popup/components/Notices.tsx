@@ -1,9 +1,13 @@
 import { Icon } from "../../ui/components/Icon.js";
 import { Logo } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
+import { biometricLabel } from "../../lib/biometric.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import {
   autofillPromo,
+  biometricPromo,
+  dismissBiometricPromo,
+  turnOnBiometric,
   clockWarning,
   dismissAutofillPromo,
   invitesDismissed,
@@ -17,6 +21,14 @@ import {
 export function Notices() {
   const t = useT();
   const problem = syncProblem.value;
+  const showInvites = orgInvites.value.length > 0 && !invitesDismissed.value;
+  const promo = biometricPromo.value
+    ? "biometric"
+    : showInvites
+      ? "invites"
+      : autofillPromo.value
+        ? "autofill"
+        : null;
   return (
     <>
       <div className="sync-bar" hidden={!syncing.value} />
@@ -27,7 +39,23 @@ export function Notices() {
         </p>
       )}
       {clockWarning.value && <p className="notice-line warn">{clockWarning.value}</p>}
-      {orgInvites.value.length > 0 && !invitesDismissed.value && (
+      {promo === "biometric" && (
+        <div className="promo">
+          <span className="promo-icon">
+            <Icon name="fingerprint" />
+          </span>
+          <span className="promo-text">{t("bio.promo", { method: t(biometricLabel()) })}</span>
+          <button className="link" onClick={() => void turnOnBiometric()}>
+            {t("bio.promo_action")}
+          </button>
+          <IconButton
+            icon="close"
+            label={t("common.close")}
+            onClick={() => void dismissBiometricPromo()}
+          />
+        </div>
+      )}
+      {promo === "invites" && (
         <div className="promo">
           <span className="promo-icon">
             <Icon name="users" />
@@ -47,7 +75,7 @@ export function Notices() {
           />
         </div>
       )}
-      {autofillPromo.value && (
+      {promo === "autofill" && (
         <div className="promo">
           <Logo size={22} />
           <span className="promo-text">{t("list.autofill_promo")}</span>

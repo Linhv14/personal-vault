@@ -145,6 +145,8 @@ export const vi: Catalogue = {
   "bio.touch_id": "Touch ID hoặc mật khẩu Mac",
   "bio.windows_hello": "Windows Hello",
   "bio.biometrics": "sinh trắc học",
+  "bio.promo": "Mở khoá bằng {method} thay cho master password",
+  "bio.promo_action": "Bật",
   "bio.title": "Mở khoá bằng {method}",
   "bio.hint":
     "Chỉ trên thiết bị này. Vault mở khi {method} xác nhận là bạn; cần nhập lại master password khi phiên hết hạn sau 30 ngày.",

@@ -146,6 +146,8 @@ export const en = {
   "bio.touch_id": "Touch ID or Mac password",
   "bio.windows_hello": "Windows Hello",
   "bio.biometrics": "biometrics",
+  "bio.promo": "Unlock with {method} instead of your master password",
+  "bio.promo_action": "Turn on",
   "bio.title": "Unlock with {method}",
   "bio.hint":
     "On this device only. The vault opens once {method} confirms it's you; the master password is needed again when the session ends after 30 days.",

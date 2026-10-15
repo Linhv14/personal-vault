@@ -26,7 +26,10 @@ export function Unlock({ email }: { email: string }) {
 
   useEffect(() => {
     void hasPin().then((on) => setMode(on ? "pin" : "password"));
-    void hasBiometric().then(setBiometric);
+    void hasBiometric().then((on) => {
+      setBiometric(on);
+      if (on) void useBiometric(true);
+    });
   }, []);
 
   const finish = async (vaultKeyRaw: string) => {
@@ -34,7 +37,7 @@ export function Unlock({ email }: { email: string }) {
     await enterVault(vaultKeyRaw);
   };
 
-  const useBiometric = async () => {
+  const useBiometric = async (automatic = false) => {
     setError(null);
     setWorking(true);
     try {
@@ -46,7 +49,7 @@ export function Unlock({ email }: { email: string }) {
       } else if (failure instanceof BiometricError && failure.code === "failed") {
         setError(t("bio.failed", { method }));
       } else if (failure instanceof BiometricError) {
-        setError(t("bio.cancelled", { method }));
+        if (!automatic) setError(t("bio.cancelled", { method }));
       } else {
         setError(describeError(failure, t));
       }
@@ -114,7 +117,7 @@ export function Unlock({ email }: { email: string }) {
           className="primary bio-button"
           type="button"
           disabled={working}
-          onClick={() => void useBiometric()}
+          onClick={() => void useBiometric(false)}
         >
           <Icon name="fingerprint" />
           {t("bio.unlock", { method })}

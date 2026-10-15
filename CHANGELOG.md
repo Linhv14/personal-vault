@@ -80,6 +80,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- With Touch ID or the Mac password turned on, the popup asks for it as soon as
+  it opens instead of waiting for a click, and after a master-password unlock
+  the popup offers to turn it on. Only one suggestion banner shows at a time.
 - Vault items move from the shared D1 database to one Durable Object per
   account, copied over on the first request after the upgrade. Each account's
   items now sit in their own database, and D1 keeps only accounts, sessions and

@@ -1,3 +1,9 @@
+import {
+  BiometricError,
+  biometricLabel,
+  biometricSupported,
+  enableBiometric,
+} from "../lib/biometric.js";
 import { listOrgs, myInvites, type MyInvite } from "../lib/orgs.js";
 import { ensureIdentity } from "../lib/identity.js";
 import { signal } from "@preact/signals";
@@ -56,6 +62,7 @@ export const autofillPromo = signal(false);
 export const orgInvites = signal<MyInvite[]>([]);
 export const orgCount = signal(0);
 export const invitesDismissed = signal(false);
+export const biometricPromo = signal(false);
 
 export const editing = signal<{ item: VaultItem | null; type: ItemType; session: number }>({
   item: null,
@@ -221,6 +228,31 @@ export async function enterVault(rawBase64: string): Promise<void> {
   void refreshAutofillPromo();
   void ensureIdentity(vaultKey.value).catch(() => {});
   void refreshOrgs();
+  void refreshBiometricPromo();
+}
+
+async function refreshBiometricPromo(): Promise<void> {
+  const { biometric, biometricPromoDismissed } = await getLocal();
+  biometricPromo.value = !biometric && !biometricPromoDismissed && (await biometricSupported());
+}
+
+export async function dismissBiometricPromo(): Promise<void> {
+  biometricPromo.value = false;
+  await setLocal({ biometricPromoDismissed: true });
+}
+
+export async function turnOnBiometric(): Promise<void> {
+  const t = translator();
+  const method = t(biometricLabel());
+  try {
+    await enableBiometric();
+    biometricPromo.value = false;
+    toast(t("bio.enabled", { method }));
+  } catch (error) {
+    toast(
+      error instanceof BiometricError ? t("bio.cancelled", { method }) : describeError(error, t),
+    );
+  }
 }
 
 async function refreshOrgs(): Promise<void> {
