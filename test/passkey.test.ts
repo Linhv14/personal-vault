@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
 import { encodeCbor } from "../extension/lib/passkey/cbor.js";
-import { createPasskey, signAssertion } from "../extension/lib/passkey/authenticator.js";
+import { AAGUID, createPasskey, signAssertion } from "../extension/lib/passkey/authenticator.js";
 import { fromBase64Url, toBase64Url } from "../extension/lib/passkey/base64url.js";
 import { resolveRpId } from "../extension/lib/passkey/relying-party.js";
 
@@ -78,6 +78,7 @@ describe("passkey authenticator", () => {
     const verification = await verifyRegistration(created);
     expect(verification.verified).toBe(true);
     expect(verification.registrationInfo?.credentialBackedUp).toBe(true);
+    expect(verification.registrationInfo?.aaguid).toBe(AAGUID);
     expect(verification.registrationInfo?.credential.id).toBe(created.registration.credentialId);
   });
 

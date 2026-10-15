@@ -80,6 +80,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- New passkeys carry the 1PW AAGUID `8c3f47c7-7c94-4ad9-9344-8fbe58a9b394`
+  instead of all zeros, so sites can name 1PW as the provider once the AAGUID is
+  in the community list. Existing passkeys keep the zero AAGUID.
+
 - The unlock screen leads with a single fingerprint button when Touch ID or
   Windows Hello is on, with the PIN or master password below it.
 

@@ -9,7 +9,10 @@ const FLAG_BACKED_UP = 0x10;
 const FLAG_ATTESTED_CREDENTIAL = 0x40;
 const SYNCED_PASSKEY_FLAGS =
   FLAG_USER_PRESENT | FLAG_USER_VERIFIED | FLAG_BACKUP_ELIGIBLE | FLAG_BACKED_UP;
-const AAGUID = new Uint8Array(16);
+export const AAGUID = "8c3f47c7-7c94-4ad9-9344-8fbe58a9b394";
+const AAGUID_BYTES = Uint8Array.from(AAGUID.replace(/-/g, "").match(/../g)!, (pair) =>
+  parseInt(pair, 16),
+);
 const EC_ALGORITHM = { name: "ECDSA", namedCurve: "P-256" } as const;
 
 export interface StoredPasskey {
@@ -109,7 +112,7 @@ export async function createPasskey(input: {
   const rawPublicKey = new Uint8Array(await crypto.subtle.exportKey("raw", keys.publicKey));
   const credentialId = crypto.getRandomValues(new Uint8Array(16));
   const attested = concat(
-    AAGUID,
+    AAGUID_BYTES,
     new Uint8Array([credentialId.length >> 8, credentialId.length & 0xff]),
     credentialId,
     coseKey(rawPublicKey),

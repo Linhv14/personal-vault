@@ -68,7 +68,13 @@ and a share link never includes them.
 Passkeys are created as **synced** credentials: the authenticator data marks
 them backup-eligible and backed up, which is accurate, and sites that care can
 tell. The signature counter stays at zero, as with other synced passkeys.
-Attestation is `none`.
+Attestation is `none`, with the 1PW AAGUID
+`8c3f47c7-7c94-4ad9-9344-8fbe58a9b394` in the authenticator data. Sites look
+an AAGUID up in the community
+[passkey-authenticator-aaguids](https://github.com/passkeydeveloper/passkey-authenticator-aaguids)
+list to show the provider's name and icon next to the passkey, so the name
+appears only once 1PW is listed there. Passkeys created before this AAGUID
+carry all zeros and stay unnamed.
 
 ## When 1PW steps aside
 
