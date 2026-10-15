@@ -40,6 +40,10 @@ export type ApiErrorCode =
   | "orgs.already_member"
   | "orgs.limit_reached"
   | "orgs.not_in_team"
+  | "orgs.seat_limit"
+  | "orgs.team_limit"
+  | "orgs.stale_team_key"
+  | "orgs.team_changed"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
@@ -89,6 +93,10 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.already_member": "That person is already a member",
   "orgs.limit_reached": "This organization has reached its limit",
   "orgs.not_in_team": "Only members of the team can add people to it",
+  "orgs.seat_limit": "This plan has no free seats; pending invitations count",
+  "orgs.team_limit": "This plan allows no more teams",
+  "orgs.stale_team_key": "The team key changed; reload and try again",
+  "orgs.team_changed": "The team's members changed; reload and try again",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",

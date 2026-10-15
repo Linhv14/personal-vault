@@ -195,7 +195,7 @@ deleted rows until it rolls over.
 | Table          | Content                                                                           | Reveals                                                                            |
 | -------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `members`      | Copy of the members and roles, checked on every call                              | Same as `org_members`                                                              |
-| `teams`        | `id`, `name`, `rekey_needed`, `created_at`                                        | Team names, in clear                                                               |
+| `teams`        | `id`, `name`, `key_generation`, `rekey_needed`, `created_at`                      | Team names, in clear                                                               |
 | `team_members` | Team, account, the team key wrapped for that account's public key, who added them | Who is in which team; not the key                                                  |
 | `audit`        | `seq`, `at`, `actor`, `action`, `target`, `ip`, `hash`                            | Who did what, when and from where; never secret values or project and secret names |
 

@@ -11,7 +11,6 @@ import {
 import { fail, now, ok, type Result } from "../http.js";
 import type { Env } from "../types.js";
 
-const MAX_TEAMS = 200;
 const AUDIT_PAGE = 100;
 const GENESIS = "genesis";
 
@@ -58,6 +57,17 @@ export class OrgStore extends DurableObject<Env> {
         hash TEXT NOT NULL
       );
     `);
+    this.addColumn("teams", "key_generation INTEGER NOT NULL DEFAULT 0");
+  }
+
+  private addColumn(table: string, definition: string) {
+    const column = definition.split(" ")[0];
+    const columns = this.sql
+      .exec<{ name: string }>(`SELECT name FROM pragma_table_info('${table}')`)
+      .toArray();
+    if (!columns.some((entry) => entry.name === column)) {
+      this.sql.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+    }
   }
 
   private role(accountId: string): OrgRole | null {
@@ -124,8 +134,8 @@ export class OrgStore extends DurableObject<Env> {
   async listTeams(principal: Principal): Promise<Result<TeamView[]>> {
     if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
     const teams = this.sql
-      .exec<{ id: string; name: string; rekey_needed: number }>(
-        "SELECT id, name, rekey_needed FROM teams ORDER BY created_at",
+      .exec<{ id: string; name: string; key_generation: number; rekey_needed: number }>(
+        "SELECT id, name, key_generation, rekey_needed FROM teams ORDER BY created_at",
       )
       .toArray();
     const memberships = this.sql
@@ -148,6 +158,7 @@ export class OrgStore extends DurableObject<Env> {
           id: team.id,
           name: team.name,
           members: members.map((entry) => entry.account_id),
+          generation: team.key_generation,
           rekeyNeeded: team.rekey_needed === 1,
           wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
         };
@@ -158,13 +169,14 @@ export class OrgStore extends DurableObject<Env> {
   async createTeam(
     principal: Principal,
     team: { id: string; name: string; wrappedKey: WrappedKey },
+    maxTeams: number,
     ip: string | null,
   ): Promise<Result<{ id: string }>> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
       return fail(403, "orgs.forbidden");
     }
     const count = this.sql.exec<{ n: number }>("SELECT count(*) AS n FROM teams").one().n;
-    if (count >= MAX_TEAMS) return fail(409, "orgs.limit_reached");
+    if (count >= maxTeams) return fail(409, "orgs.team_limit", { limit: maxTeams });
     if (this.teamExists(team.id)) return fail(409, "orgs.invalid_team");
     const at = now();
     this.ctx.storage.transactionSync(() => {
@@ -196,23 +208,39 @@ export class OrgStore extends DurableObject<Env> {
   }
 
   private teamExists(teamId: string): boolean {
-    return this.sql.exec("SELECT 1 FROM teams WHERE id = ?", teamId).toArray().length > 0;
+    return this.generationOf(teamId) !== null;
+  }
+
+  private generationOf(teamId: string): number | null {
+    const row = this.sql
+      .exec<{ key_generation: number }>("SELECT key_generation FROM teams WHERE id = ?", teamId)
+      .toArray()[0];
+    return row?.key_generation ?? null;
+  }
+
+  private teamMembers(teamId: string): string[] {
+    return this.sql
+      .exec<{ account_id: string }>("SELECT account_id FROM team_members WHERE team_id = ?", teamId)
+      .toArray()
+      .map((row) => row.account_id);
   }
 
   async addTeamMember(
     principal: Principal,
     teamId: string,
-    member: { accountId: string; wrappedKey: WrappedKey },
+    member: { accountId: string; wrappedKey: WrappedKey; generation: number },
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
       return fail(403, "orgs.forbidden");
     }
-    if (!this.teamExists(teamId)) return fail(404, "orgs.not_found");
+    const generation = this.generationOf(teamId);
+    if (generation === null) return fail(404, "orgs.not_found");
     if (!this.inTeam(teamId, principal.accountId)) {
       return fail(403, "orgs.not_in_team");
     }
     if (!this.role(member.accountId)) return fail(404, "orgs.not_found");
+    if (member.generation !== generation) return fail(409, "orgs.stale_team_key");
     this.sql.exec(
       `INSERT INTO team_members (team_id, account_id, wrapped_key, added_by, added_at) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(team_id, account_id) DO UPDATE SET wrapped_key = excluded.wrapped_key,
@@ -252,6 +280,54 @@ export class OrgStore extends DurableObject<Env> {
     });
     await this.record(principal.accountId, "team.member_removed", `${teamId}:${accountId}`, ip);
     return ok({ ok: true as const });
+  }
+
+  async rekeyTeam(
+    principal: Principal,
+    teamId: string,
+    next: { generation: number; wrappedKeys: Record<string, WrappedKey> },
+    ip: string | null,
+  ): Promise<Result<{ generation: number }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
+    }
+    const generation = this.generationOf(teamId);
+    if (generation === null) return fail(404, "orgs.not_found");
+    if (!this.inTeam(teamId, principal.accountId)) return fail(403, "orgs.not_in_team");
+    if (next.generation !== generation + 1) return fail(409, "orgs.stale_team_key");
+    const members = this.teamMembers(teamId);
+    const recipients = Object.keys(next.wrappedKeys);
+    if (
+      recipients.length !== members.length ||
+      !members.every((accountId) => accountId in next.wrappedKeys)
+    ) {
+      return fail(409, "orgs.team_changed");
+    }
+    this.ctx.storage.transactionSync(() => {
+      for (const accountId of members) {
+        this.sql.exec(
+          "UPDATE team_members SET wrapped_key = ? WHERE team_id = ? AND account_id = ?",
+          JSON.stringify(next.wrappedKeys[accountId]),
+          teamId,
+          accountId,
+        );
+      }
+      this.sql.exec(
+        "UPDATE teams SET key_generation = ?, rekey_needed = 0 WHERE id = ?",
+        next.generation,
+        teamId,
+      );
+    });
+    await this.record(principal.accountId, "team.rekeyed", teamId, ip);
+    return ok({ generation: next.generation });
+  }
+
+  async transferOwnership(owner: string, successor: string, ip: string | null): Promise<void> {
+    this.ctx.storage.transactionSync(() => {
+      this.sql.exec("UPDATE members SET role = 'admin' WHERE account_id = ?", owner);
+      this.sql.exec("UPDATE members SET role = 'owner' WHERE account_id = ?", successor);
+    });
+    await this.record(owner, "org.owner_transferred", successor, ip);
   }
 
   async deleteTeam(

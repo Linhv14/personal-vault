@@ -1,4 +1,4 @@
-import { removeMember } from "../../lib/orgs.js";
+import { planLimits, removeMember } from "../../lib/orgs.js";
 import { Button } from "../../ui/components/Button.js";
 import { Fingerprint } from "../../ui/components/Fingerprint.js";
 import { Icon } from "../../ui/components/Icon.js";
@@ -10,7 +10,8 @@ import { ROLE_LABEL } from "./labels.js";
 export function OrgHeader() {
   const t = useT();
   const { detail, identity, isMe, run } = useOrg();
-  const { org, members, teams } = detail;
+  const { org, members, invites, teams } = detail;
+  const limits = planLimits(org.plan);
   const me = members.find((member) => isMe(member.publicKey));
 
   const leave = () => {
@@ -25,7 +26,8 @@ export function OrgHeader() {
       <div className="org-hero-text">
         <h2>{org.name}</h2>
         <p>
-          {t(ROLE_LABEL[org.role])} · {t("orgs.member_count", { count: members.length })} ·{" "}
+          {t(ROLE_LABEL[org.role])} · {t(org.plan === "team" ? "orgs.plan_team" : "orgs.plan_free")}{" "}
+          · {t("orgs.seats", { used: members.length + invites.length, limit: limits.seats })} ·{" "}
           {t("orgs.team_count", { count: teams.length })}
         </p>
         <span className="key-chip" title={t("orgs.fingerprint_hint")}>

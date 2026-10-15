@@ -5,17 +5,25 @@ import {
   canRemove,
   isInvitableRole,
   isOrgAdmin,
+  planLimits,
   type Principal,
 } from "../../core/org-model.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
-import { MAX_MEMBERS_PER_ORG, MAX_ORGS_PER_ACCOUNT, OrgDirectory } from "../orgs/directory.js";
+import { MAX_ORGS_PER_ACCOUNT, OrgDirectory } from "../orgs/directory.js";
 import { sendInvitation } from "../orgs/invitations.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
 import { displayName, isUuid, isWrappedKey } from "../validate.js";
+
+const isGeneration = (value: unknown): value is number =>
+  Number.isSafeInteger(value) && (value as number) >= 0;
+
+async function limitsOf(c: Ctx, orgId: string) {
+  return planLimits((await directory(c).org(orgId))?.plan ?? "free");
+}
 
 type Ctx = Context<AppBindings>;
 type MemberHandler = (c: Ctx, member: Principal, orgId: string) => Promise<Response>;
@@ -84,8 +92,9 @@ orgs.post(
     if (!email || !isInvitableRole(body.role)) return c.json(apiError("orgs.invalid_invite"), 400);
     if (!canInvite(member.role, body.role)) return forbidden(c);
     const dir = directory(c);
-    if ((await dir.memberCount(orgId)) >= MAX_MEMBERS_PER_ORG) {
-      return c.json(apiError("orgs.limit_reached"), 409);
+    const { seats } = await limitsOf(c, orgId);
+    if ((await dir.seatsTaken(orgId, email)) >= seats) {
+      return c.json(apiError("orgs.seat_limit", { limit: seats }), 409);
     }
     if (await dir.hasMemberWithEmail(orgId, email)) {
       return c.json(apiError("orgs.already_member"), 409);
@@ -133,6 +142,27 @@ orgs.patch(
   ),
 );
 
+orgs.post(
+  "/:orgId/owner",
+  asMember(
+    async (c, member, orgId) => {
+      const { accountId } = await readJson(c);
+      if (typeof accountId !== "string" || accountId === member.accountId) {
+        return c.json(apiError("orgs.invalid_role"), 400);
+      }
+      const dir = directory(c);
+      if ((await dir.roleOf(orgId, accountId)) === null) return notFound(c);
+      if ((await dir.ownedCount(accountId)) >= MAX_ORGS_PER_ACCOUNT) {
+        return c.json(apiError("orgs.limit_reached"), 409);
+      }
+      if (!(await dir.transferOwnership(orgId, member.accountId, accountId))) return notFound(c);
+      await orgStore(c.env, orgId).transferOwnership(member.accountId, accountId, clientIp(c));
+      return c.json({ ok: true });
+    },
+    (member) => member.role === "owner",
+  ),
+);
+
 orgs.delete(
   "/:orgId/members/:accountId",
   asMember(async (c, member, orgId) => {
@@ -156,7 +186,12 @@ orgs.post(
       return c.json(apiError("orgs.invalid_team"), 400);
     }
     const team = { id: body.id, name, wrappedKey: body.wrappedKey };
-    return respond(c, await orgStore(c.env, orgId).createTeam(member, team, clientIp(c)), 201);
+    const { teams } = await limitsOf(c, orgId);
+    return respond(
+      c,
+      await orgStore(c.env, orgId).createTeam(member, team, teams, clientIp(c)),
+      201,
+    );
   }),
 );
 
@@ -170,12 +205,36 @@ orgs.delete(
 orgs.put(
   "/:orgId/teams/:teamId/members/:accountId",
   asMember(async (c, member, orgId) => {
-    const { wrappedKey } = await readJson(c);
-    if (!isWrappedKey(wrappedKey)) return c.json(apiError("orgs.invalid_team"), 400);
-    const target = { accountId: param(c, "accountId"), wrappedKey };
+    const { wrappedKey, generation = 0 } = await readJson(c);
+    if (!isWrappedKey(wrappedKey) || !isGeneration(generation)) {
+      return c.json(apiError("orgs.invalid_team"), 400);
+    }
+    const target = { accountId: param(c, "accountId"), wrappedKey, generation };
     return respond(
       c,
       await orgStore(c.env, orgId).addTeamMember(member, param(c, "teamId"), target, clientIp(c)),
+    );
+  }),
+);
+
+orgs.put(
+  "/:orgId/teams/:teamId/key",
+  asMember(async (c, member, orgId) => {
+    const { generation, wrappedKeys } = await readJson(c);
+    const entries =
+      typeof wrappedKeys === "object" && wrappedKeys !== null ? Object.entries(wrappedKeys) : [];
+    if (
+      !isGeneration(generation) ||
+      entries.length === 0 ||
+      entries.length > (await limitsOf(c, orgId)).seats ||
+      !entries.every(([accountId, key]) => isUuid(accountId) && isWrappedKey(key))
+    ) {
+      return c.json(apiError("orgs.invalid_team"), 400);
+    }
+    const next = { generation, wrappedKeys: Object.fromEntries(entries) };
+    return respond(
+      c,
+      await orgStore(c.env, orgId).rekeyTeam(member, param(c, "teamId"), next, clientIp(c)),
     );
   }),
 );

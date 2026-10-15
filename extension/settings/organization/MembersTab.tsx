@@ -5,6 +5,7 @@ import {
   isOrgAdmin,
   removeMember,
   setMemberRole,
+  transferOwnership,
   withdrawInvite,
   type OrgMember,
 } from "../../lib/orgs.js";
@@ -77,10 +78,20 @@ function MemberRow({ member }: { member: OrgMember }) {
           value={member.role}
           aria-label={t("orgs.role")}
           onChange={(event) => {
-            const role = event.currentTarget.value === "admin" ? "admin" : "member";
+            const select = event.currentTarget;
+            if (select.value === "owner") {
+              if (confirm(t("orgs.transfer_confirm", { email: member.email }))) {
+                void run(() => transferOwnership(org.id, member.accountId), "orgs.transferred");
+              } else {
+                select.value = member.role;
+              }
+              return;
+            }
+            const role = select.value === "admin" ? "admin" : "member";
             void run(() => setMemberRole(org.id, member.accountId, role), "orgs.role_saved");
           }}
         >
+          <option value="owner">{t("orgs.role_owner")}</option>
           <option value="admin">{t("orgs.role_admin")}</option>
           <option value="member">{t("orgs.role_member")}</option>
         </select>

@@ -49,7 +49,8 @@ async function person(label: string): Promise<Person> {
   return { email, token: registered.body.token, accountId: registered.body.accountId, identity };
 }
 
-const teamContext = (teamId: string) => utf8Encode(`personal-vault/team-key/${teamId}`);
+const teamContext = (teamId: string, generation = 0) =>
+  utf8Encode(`personal-vault/team-key/${teamId}${generation ? `/${generation}` : ""}`);
 
 describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable Objects", () => {
   let owner: Person;
@@ -228,6 +229,150 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
       "member.removed",
     ]);
     expect(JSON.stringify(audit.body)).not.toContain(Buffer.from(teamKey).toString("base64"));
+  });
+
+  it("replaces a team key only for exactly its current members, one generation at a time", async () => {
+    const put = (who: Person, body: unknown) =>
+      api(`/api/orgs/${orgId}/teams/${teamId}/key`, {
+        method: "PUT",
+        token: who.token,
+        body: JSON.stringify(body),
+      });
+    const nextKey = randomKey();
+    const forOwner = await wrapForRecipient(
+      owner.identity.publicKey,
+      nextKey,
+      teamContext(teamId, 1),
+    );
+    const forAdmin = await wrapForRecipient(
+      admin.identity.publicKey,
+      nextKey,
+      teamContext(teamId, 1),
+    );
+
+    const stale = await put(owner, { generation: 0, wrappedKeys: { [owner.accountId]: forOwner } });
+    expect(stale.body.code).toBe("orgs.stale_team_key");
+    const extra = await put(owner, {
+      generation: 1,
+      wrappedKeys: { [owner.accountId]: forOwner, [admin.accountId]: forAdmin },
+    });
+    expect(extra.body.code).toBe("orgs.team_changed");
+    const outside = await put(admin, {
+      generation: 1,
+      wrappedKeys: { [admin.accountId]: forAdmin },
+    });
+    expect(outside.body.code).toBe("orgs.not_in_team");
+
+    const rekeyed = await put(owner, {
+      generation: 1,
+      wrappedKeys: { [owner.accountId]: forOwner },
+    });
+    expect(rekeyed.status).toBe(200);
+    const view = await api(`/api/orgs/${orgId}`, { token: owner.token });
+    const team = view.body.teams.find((entry: { id: string }) => entry.id === teamId);
+    expect(team).toMatchObject({ generation: 1, rekeyNeeded: false });
+    expect(
+      await unwrapForRecipient(owner.identity, team.wrappedKey, teamContext(teamId, 1)),
+    ).toEqual(nextKey);
+    await expect(
+      unwrapForRecipient(owner.identity, team.wrappedKey, teamContext(teamId, 0)),
+    ).rejects.toThrow();
+
+    const withOldKey = await api(`/api/orgs/${orgId}/teams/${teamId}/members/${admin.accountId}`, {
+      method: "PUT",
+      token: owner.token,
+      body: JSON.stringify({
+        wrappedKey: await wrapForRecipient(admin.identity.publicKey, teamKey, teamContext(teamId)),
+      }),
+    });
+    expect(withOldKey.body.code).toBe("orgs.stale_team_key");
+    const added = await api(`/api/orgs/${orgId}/teams/${teamId}/members/${admin.accountId}`, {
+      method: "PUT",
+      token: owner.token,
+      body: JSON.stringify({ wrappedKey: forAdmin, generation: 1 }),
+    });
+    expect(added.status).toBe(200);
+  });
+
+  it("counts members and pending invitations against the plan's seats", async () => {
+    const invite = (email: string) =>
+      api(`/api/orgs/${orgId}/invites`, {
+        method: "POST",
+        token: owner.token,
+        body: JSON.stringify({ email, role: "member" }),
+      });
+    const stamp = Date.now();
+    for (const n of [1, 2, 3]) {
+      expect((await invite(`seat${n}-${stamp}@example.com`)).status).toBe(201);
+    }
+    expect((await invite(`seat1-${stamp}@example.com`)).status).toBe(201);
+    const full = await invite(`seat4-${stamp}@example.com`);
+    expect(full.status).toBe(409);
+    expect(full.body).toMatchObject({ code: "orgs.seat_limit", params: { limit: 5 } });
+  });
+
+  it("caps the number of teams by plan", async () => {
+    const create = async () => {
+      const id = crypto.randomUUID();
+      return api(`/api/orgs/${orgId}/teams`, {
+        method: "POST",
+        token: owner.token,
+        body: JSON.stringify({
+          id,
+          name: "Extra",
+          wrappedKey: await wrapForRecipient(
+            owner.identity.publicKey,
+            randomKey(),
+            teamContext(id),
+          ),
+        }),
+      });
+    };
+    expect((await create()).status).toBe(201);
+    expect((await create()).status).toBe(201);
+    const over = await create();
+    expect(over.status).toBe(409);
+    expect(over.body).toMatchObject({ code: "orgs.team_limit", params: { limit: 3 } });
+  });
+
+  it("hands ownership to another member, and only the owner can", async () => {
+    const transfer = (who: Person, accountId: string) =>
+      api(`/api/orgs/${orgId}/owner`, {
+        method: "POST",
+        token: who.token,
+        body: JSON.stringify({ accountId }),
+      });
+    expect((await transfer(admin, admin.accountId)).status).toBe(403);
+    expect((await transfer(owner, outsider.accountId)).status).toBe(404);
+    expect((await transfer(owner, admin.accountId)).status).toBe(200);
+
+    const view = await api(`/api/orgs/${orgId}`, { token: admin.token });
+    expect(view.body.org.role).toBe("owner");
+    const roles = Object.fromEntries(
+      view.body.members.map((entry: { accountId: string; role: string }) => [
+        entry.accountId,
+        entry.role,
+      ]),
+    );
+    expect(roles).toMatchObject({ [admin.accountId]: "owner", [owner.accountId]: "admin" });
+    expect((await transfer(owner, admin.accountId)).status).toBe(403);
+    const demote = await api(`/api/orgs/${orgId}/members/${admin.accountId}`, {
+      method: "PATCH",
+      token: owner.token,
+      body: JSON.stringify({ role: "member" }),
+    });
+    expect(demote.status).toBe(403);
+
+    const audit = await api(`/api/orgs/${orgId}/audit`, { token: admin.token });
+    expect(audit.body.verified).toBe(true);
+    expect(audit.body.events.map((event: { action: string }) => event.action)).toContain(
+      "team.rekeyed",
+    );
+    expect(audit.body.events[0]).toMatchObject({
+      action: "org.owner_transferred",
+      actor: owner.accountId,
+      target: admin.accountId,
+    });
   });
 
   it("lets the extension send every method the organization API uses", async () => {

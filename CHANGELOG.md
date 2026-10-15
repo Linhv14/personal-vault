@@ -10,6 +10,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Team re-keying: after someone leaves a team, an admin in the team creates a
+  new key, wrapped for each remaining member in one step. Team keys carry a
+  generation; adding a member with an older generation's key is refused.
+- Ownership transfer: the owner picks Owner in a member's role menu and becomes
+  an admin.
+- Plan limits: the free plan has 5 seats (members plus pending invitations) and
+  3 teams; the organization header shows the plan and seats used.
+
 - Organizations, in Settings → Organization, reachable from a Teams button next
   to the add button and from the popup menu, and announced in the popup when an
   invitation is waiting: create one, invite people by email with a role,

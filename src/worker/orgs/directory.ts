@@ -2,7 +2,6 @@ import type { InvitableRole, OrgRole } from "../../core/org-model.js";
 import { now } from "../http.js";
 
 export const MAX_ORGS_PER_ACCOUNT = 10;
-export const MAX_MEMBERS_PER_ORG = 500;
 export const INVITE_TTL_SECONDS = 14 * 24 * 60 * 60;
 
 export interface OrgSummary {
@@ -98,12 +97,34 @@ export class OrgDirectory {
     return results;
   }
 
-  async memberCount(orgId: string): Promise<number> {
+  async seatsTaken(orgId: string, exceptEmail: string): Promise<number> {
     const row = await this.db
-      .prepare("SELECT count(*) AS n FROM org_members WHERE org_id = ?")
-      .bind(orgId)
+      .prepare(
+        `SELECT (SELECT count(*) FROM org_members WHERE org_id = ?1)
+              + (SELECT count(*) FROM org_invites WHERE org_id = ?1 AND expires_at > ?2 AND email != ?3)
+              AS n`,
+      )
+      .bind(orgId, now(), exceptEmail)
       .first<{ n: number }>();
     return row?.n ?? 0;
+  }
+
+  async transferOwnership(orgId: string, owner: string, successor: string): Promise<boolean> {
+    const [, promoted] = await this.db.batch([
+      this.db
+        .prepare(
+          `UPDATE org_members SET role = 'admin' WHERE org_id = ? AND account_id = ? AND role = 'owner'
+             AND EXISTS (SELECT 1 FROM org_members WHERE org_id = ? AND account_id = ?)`,
+        )
+        .bind(orgId, owner, orgId, successor),
+      this.db
+        .prepare(
+          `UPDATE org_members SET role = 'owner' WHERE org_id = ? AND account_id = ?
+             AND EXISTS (SELECT 1 FROM org_members WHERE org_id = ? AND account_id = ? AND role = 'admin')`,
+        )
+        .bind(orgId, successor, orgId, owner),
+    ]);
+    return (promoted?.meta.changes ?? 0) === 1;
   }
 
   async hasMemberWithEmail(orgId: string, email: string): Promise<boolean> {

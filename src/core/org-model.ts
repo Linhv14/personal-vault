@@ -15,6 +15,7 @@ export interface TeamView {
   id: string;
   name: string;
   members: string[];
+  generation: number;
   rekeyNeeded: boolean;
   wrappedKey: WrappedKey | null;
 }
@@ -55,6 +56,23 @@ export function canRemove(actor: Principal, target: Principal): boolean {
   return actor.role === "owner" || (actor.role === "admin" && target.role === "member");
 }
 
-export function teamKeyContext(teamId: string): Bytes {
-  return utf8Encode(`personal-vault/team-key/${teamId}`);
+export function teamKeyContext(teamId: string, generation: number): Bytes {
+  const base = `personal-vault/team-key/${teamId}`;
+  return utf8Encode(generation === 0 ? base : `${base}/${generation}`);
+}
+
+export interface PlanLimits {
+  seats: number;
+  teams: number;
+}
+
+const FREE_PLAN: PlanLimits = { seats: 5, teams: 3 };
+
+export const PLAN_LIMITS: Record<string, PlanLimits> = {
+  free: FREE_PLAN,
+  team: { seats: 500, teams: 200 },
+};
+
+export function planLimits(plan: string): PlanLimits {
+  return PLAN_LIMITS[plan] ?? FREE_PLAN;
 }

@@ -17,4 +17,6 @@ export const ACTION_LABEL: Record<string, MessageKey> = {
   "team.member_added": "orgs.audit_team_member_added",
   "team.member_removed": "orgs.audit_team_member_removed",
   "team.deleted": "orgs.audit_team_deleted",
+  "team.rekeyed": "orgs.audit_team_rekeyed",
+  "org.owner_transferred": "orgs.audit_owner_transferred",
 };

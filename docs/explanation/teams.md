@@ -33,6 +33,40 @@ Removing a member creates new team and project keys and re-encrypts the
 secrets: the person who left may have kept the old keys, and nothing else
 guarantees they cannot read what is written later.
 
+### Re-keying
+
+The server cannot make a new team key, so removal only flags the team. An
+admin who is in the team then generates a fresh key on their device, wraps it
+for every remaining member, and sends all of them at once with the next key
+generation. The organization's object accepts the set only if it names exactly
+the current members and the generation is the current one plus one, so a
+member added or removed in the meantime, or two admins re-keying at the same
+time, cannot leave someone with a stale key. Each generation has its own
+wrapping context (`personal-vault/team-key/<team>/<generation>`; generation 0
+keeps the original string), so a wrapped key from an older generation does not
+open as the current one. Adding a member names the generation it wrapped for and
+is refused if the team has moved on. Once projects exist (phase 2), re-keying
+also re-wraps their keys under the new team key.
+
+## Plans
+
+| Plan | Seats (members plus pending invitations) | Teams |
+| ---- | ---------------------------------------- | ----- |
+| Free | 5                                        | 3     |
+| Team | 500                                      | 200   |
+
+The limits live in `PLAN_LIMITS` in `src/core/org-model.ts`, shared by the
+Worker and the extension. An organization's plan is the `plan` column in D1;
+until billing exists it is changed by hand. Lowering a limit never removes
+anyone: an organization over it simply cannot add more.
+
+## Ownership
+
+An organization has one owner. The owner can hand ownership to any member, who
+becomes owner while the previous owner becomes an admin, in one D1 batch and
+one audit event. The owner cannot leave or be removed without handing it on
+first.
+
 ## Trust in public keys
 
 The server hands out the public keys. A malicious server could substitute its

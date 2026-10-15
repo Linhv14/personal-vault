@@ -11,10 +11,11 @@ import {
   type InvitableRole,
   type OrgRole,
   type TeamView,
+  type WrappedKey,
 } from "../../src/core/org-model.js";
 import { request } from "./api.js";
 
-export { isOrgAdmin } from "../../src/core/org-model.js";
+export { isOrgAdmin, planLimits } from "../../src/core/org-model.js";
 export type { AuditEvent, OrgRole } from "../../src/core/org-model.js";
 export type Team = TeamView;
 
@@ -114,7 +115,7 @@ export async function declineInvite(inviteId: string): Promise<void> {
 
 export async function createTeam(orgId: string, name: string, me: Identity): Promise<string> {
   const id = crypto.randomUUID();
-  const wrappedKey = await wrapForRecipient(me.publicKey, randomKey(), teamKeyContext(id));
+  const wrappedKey = await wrapForRecipient(me.publicKey, randomKey(), teamKeyContext(id, 0));
   await request(`/api/orgs/${orgId}/teams`, {
     method: "POST",
     body: json({ id, name, wrappedKey }),
@@ -124,7 +125,7 @@ export async function createTeam(orgId: string, name: string, me: Identity): Pro
 
 export async function teamKey(team: Team, me: Identity): Promise<Uint8Array> {
   if (!team.wrappedKey) throw new Error("not in team");
-  return unwrapForRecipient(me, team.wrappedKey, teamKeyContext(team.id));
+  return unwrapForRecipient(me, team.wrappedKey, teamKeyContext(team.id, team.generation));
 }
 
 export async function addTeamMember(
@@ -138,12 +139,35 @@ export async function addTeamMember(
   const wrappedKey = await wrapForRecipient(
     member.publicKey,
     new Uint8Array(key),
-    teamKeyContext(team.id),
+    teamKeyContext(team.id, team.generation),
   );
   await request(`/api/orgs/${orgId}/teams/${team.id}/members/${member.accountId}`, {
     method: "PUT",
-    body: json({ wrappedKey }),
+    body: json({ wrappedKey, generation: team.generation }),
   });
+}
+
+export async function rekeyTeam(orgId: string, team: Team, members: OrgMember[]): Promise<void> {
+  const generation = team.generation + 1;
+  const key = randomKey();
+  const wrappedKeys: Record<string, WrappedKey> = {};
+  for (const accountId of team.members) {
+    const publicKey = members.find((member) => member.accountId === accountId)?.publicKey;
+    if (!publicKey) throw new Error("member has no key yet");
+    wrappedKeys[accountId] = await wrapForRecipient(
+      publicKey,
+      key,
+      teamKeyContext(team.id, generation),
+    );
+  }
+  await request(`/api/orgs/${orgId}/teams/${team.id}/key`, {
+    method: "PUT",
+    body: json({ generation, wrappedKeys }),
+  });
+}
+
+export async function transferOwnership(orgId: string, accountId: string): Promise<void> {
+  await request(`/api/orgs/${orgId}/owner`, { method: "POST", body: json({ accountId }) });
 }
 
 export async function removeTeamMember(

@@ -4,6 +4,7 @@ import {
   createTeam,
   deleteTeam,
   isOrgAdmin,
+  rekeyTeam,
   removeTeamMember,
   type Team,
 } from "../../lib/orgs.js";
@@ -51,6 +52,21 @@ function TeamCard({ team }: { team: Team }) {
         <Icon name="chevron" className="team-chevron" />
       </summary>
       <div className="team-body">
+        {team.rekeyNeeded && (
+          <div className="rekey">
+            <p className="row-hint">
+              {t("orgs.rekey_hint")} {!(admin && team.wrappedKey) && t("orgs.rekey_other")}
+            </p>
+            {admin && team.wrappedKey && (
+              <Button
+                variant="primary"
+                onClick={() => void run(() => rekeyTeam(org.id, team, members), "orgs.rekeyed")}
+              >
+                {t("orgs.rekey")}
+              </Button>
+            )}
+          </div>
+        )}
         <div className="chips">
           {team.members.map((accountId) => (
             <span className="member-chip" key={accountId}>
