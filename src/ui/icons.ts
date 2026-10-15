@@ -39,6 +39,8 @@ const ICONS = {
   "link-off":
     '<path d="M9 15l6-6"/><path d="M11 6l1.5-1.5a4.2 4.2 0 0 1 6 6L17 12M13 18l-1.5 1.5a4.2 4.2 0 0 1-6-6L7 12"/><path d="M3 3l18 18"/>',
   alert: '<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.01"/>',
+  fingerprint:
+    '<path d="M12 10a2 2 0 0 0-2 2c0 1-.1 2.5-.3 4"/><path d="M14 13.1c0 2.4 0 6.4-1 8.9"/><path d="M17.3 21c.1-.6.4-2.3.5-3"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M21.8 16c.2-2 .1-5.4 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .3-2"/><path d="M8.7 22c.2-.7.4-1.3.6-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>',
   note: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
   card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/>',

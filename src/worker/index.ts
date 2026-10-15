@@ -62,6 +62,8 @@ app.use("/api/auth/logout", requireAuth);
 app.use("/api/auth/resume-key", requireAuth);
 app.use("/api/auth/pin", requireAuth);
 app.use("/api/auth/pin/*", requireAuth);
+app.use("/api/auth/biometric", requireAuth);
+app.use("/api/auth/biometric/*", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
 app.use("/api/auth/delete-account", requireAuth);
 

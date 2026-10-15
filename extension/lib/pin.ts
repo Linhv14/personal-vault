@@ -1,18 +1,12 @@
 import { openJson, sealJson } from "../../src/core/crypto.js";
-import {
-  concat,
-  fromBase64,
-  randomBytes,
-  toBase64,
-  utf8Encode,
-  type Bytes,
-} from "../../src/core/bytes.js";
+import { fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
 import * as api from "./api.js";
+import { deviceWrappingKey } from "./device-key.js";
 import { getLocal, getUnlocked, setLocal, unlock } from "./storage.js";
 
 export const PIN_MIN_LENGTH = 6;
 export const PIN_MAX_LENGTH = 12;
-export const PIN_ITERATIONS = 300_000;
+const PIN_ITERATIONS = 300_000;
 const PIN_CONTEXT = utf8Encode("personal-vault/pin");
 
 export class PinError extends Error {
@@ -43,21 +37,8 @@ async function derive(pin: string, salt: Bytes, iterations: number) {
   return { verifier: toBase64(bits.slice(0, 32)), local: bits.slice(32) };
 }
 
-async function wrappingKey(pinKey: string, local: Bytes): Promise<CryptoKey> {
-  const material = await crypto.subtle.importKey(
-    "raw",
-    concat(fromBase64(pinKey), local),
-    "HKDF",
-    false,
-    ["deriveKey"],
-  );
-  return crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: PIN_CONTEXT },
-    material,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
+function wrappingKey(pinKey: string, local: Bytes): Promise<CryptoKey> {
+  return deviceWrappingKey(pinKey, local, "personal-vault/pin");
 }
 
 export async function hasPin(): Promise<boolean> {
@@ -86,6 +67,7 @@ export async function disablePin(): Promise<void> {
 }
 
 export async function unlockWithPin(pin: string): Promise<string> {
+  if (!isValidPin(pin)) throw new PinError("invalid");
   const { pin: stored } = await getLocal();
   if (!stored) throw new PinError("off");
   const { verifier, local } = await derive(pin, fromBase64(stored.salt), stored.iterations);

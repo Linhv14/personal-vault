@@ -10,6 +10,9 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Unlock with Touch ID or the Mac password on macOS, or Windows Hello on
+  Windows (Settings → Security). The server releases the key only for a fresh signature from the
+  device's platform authenticator.
 - Unlock with a PIN (Settings → Security). The vault key stays sealed under the
   PIN and a key the server releases only for the right PIN; five wrong tries,
   sign-out, a password change or the end of the 30-day session turn it off.

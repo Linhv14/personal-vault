@@ -28,11 +28,14 @@ export type ApiErrorCode =
   | "auth.unauthorized"
   | "auth.pin_wrong"
   | "auth.pin_off"
+  | "auth.biometric_off"
+  | "auth.biometric_failed"
   | "items.invalid_id"
   | "items.invalid_payload"
   | "items.forbidden"
   | "items.not_found"
   | "items.quota_exceeded"
+  | "items.conflict"
   | "shares.invalid_payload"
   | "shares.invalid_ttl"
   | "shares.invalid_max_views"
@@ -64,11 +67,14 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.unauthorized": "Not signed in, or the session has expired",
   "auth.pin_wrong": "Wrong PIN",
   "auth.pin_off": "PIN unlock is off for this session",
+  "auth.biometric_off": "Biometric unlock is off for this session",
+  "auth.biometric_failed": "The biometric check did not pass",
   "items.invalid_id": "Item id must be a UUID",
   "items.invalid_payload": "Invalid ciphertext or nonce",
   "items.forbidden": "No access to that item",
   "items.not_found": "Item not found",
   "items.quota_exceeded": "This vault has reached its item limit",
+  "items.conflict": "The item changed on the server since it was read",
   "shares.invalid_payload": "Invalid ciphertext or nonce",
   "shares.invalid_ttl": "ttlSeconds must be between 60 and 2592000 (30 days)",
   "shares.invalid_max_views": "maxViews is out of range",

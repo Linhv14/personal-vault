@@ -275,7 +275,7 @@ async function seed(): Promise<void> {
   if (params.get("locale")) local.set("locale", params.get("locale"));
 
   // `?screen=setup` or `?screen=unlock` to review the locked-out states;
-  // add `&pin=123456` to review unlocking with a PIN.
+  // add `&pin=123456` and `&bio=1` to review PIN and Touch ID unlock.
   const screen = params.get("screen");
   if (screen === "setup") {
     local.delete("apiUrl");
@@ -286,6 +286,14 @@ async function seed(): Promise<void> {
     session.set("lockAt", Date.now() + 3_600_000);
     const pinCode = params.get("pin");
     if (pinCode) await enablePin(pinCode, 1_000);
+    if (params.get("bio")) {
+      local.set("biometric", {
+        token: "preview-token",
+        credentialId: "AA",
+        secret: toBase64(new Uint8Array(32)),
+        sealed: { ciphertext: "AA", nonce: "AA" },
+      });
+    }
     if (screen === "unlock") session.clear();
   }
 }

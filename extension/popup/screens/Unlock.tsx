@@ -1,11 +1,18 @@
 import { useEffect, useState } from "preact/hooks";
 import { describeError } from "../../../src/i18n/index.js";
 import { rememberUnlock } from "../../lib/resume.js";
-import { hasPin, PIN_MAX_LENGTH, PinError, unlockWithPin } from "../../lib/pin.js";
+import { hasPin, PIN_MAX_LENGTH, PIN_MIN_LENGTH, PinError, unlockWithPin } from "../../lib/pin.js";
+import {
+  BiometricError,
+  biometricLabel,
+  hasBiometric,
+  unlockWithBiometric,
+} from "../../lib/biometric.js";
 import { clearAccountData, getUnlocked, lock } from "../../lib/storage.js";
 import { useT } from "../../ui/i18n.js";
 import { signIn } from "../auth.js";
 import { AuthLayout } from "../components/AuthLayout.js";
+import { Icon } from "../../ui/components/Icon.js";
 import { enterVault } from "../state.js";
 
 export function Unlock({ email }: { email: string }) {
@@ -14,9 +21,39 @@ export function Unlock({ email }: { email: string }) {
   const [working, setWorking] = useState(false);
   const [mode, setMode] = useState<"pin" | "password" | null>(null);
 
+  const [biometric, setBiometric] = useState(false);
+  const method = t(biometricLabel());
+
   useEffect(() => {
     void hasPin().then((on) => setMode(on ? "pin" : "password"));
+    void hasBiometric().then(setBiometric);
   }, []);
+
+  const finish = async (vaultKeyRaw: string) => {
+    await rememberUnlock(vaultKeyRaw, (await getUnlocked())?.token);
+    await enterVault(vaultKeyRaw);
+  };
+
+  const useBiometric = async () => {
+    setError(null);
+    setWorking(true);
+    try {
+      await finish(await unlockWithBiometric());
+    } catch (failure) {
+      if (failure instanceof BiometricError && failure.code === "off") {
+        setBiometric(false);
+        setError(t("bio.turned_off", { method }));
+      } else if (failure instanceof BiometricError && failure.code === "failed") {
+        setError(t("bio.failed", { method }));
+      } else if (failure instanceof BiometricError) {
+        setError(t("bio.cancelled", { method }));
+      } else {
+        setError(describeError(failure, t));
+      }
+    } finally {
+      setWorking(false);
+    }
+  };
 
   const submitPin = async (event: Event) => {
     event.preventDefault();
@@ -24,13 +61,13 @@ export function Unlock({ email }: { email: string }) {
     setWorking(true);
     const form = event.currentTarget as HTMLFormElement;
     try {
-      const vaultKeyRaw = await unlockWithPin(String(new FormData(form).get("pin")));
-      await rememberUnlock(vaultKeyRaw, (await getUnlocked())?.token);
-      await enterVault(vaultKeyRaw);
+      await finish(await unlockWithPin(String(new FormData(form).get("pin"))));
     } catch (failure) {
       form.reset();
       if (failure instanceof PinError && failure.code === "wrong") {
         setError(t("pin.wrong", { count: failure.attemptsLeft }));
+      } else if (failure instanceof PinError && failure.code === "invalid") {
+        setError(t("pin.invalid", { min: PIN_MIN_LENGTH, max: PIN_MAX_LENGTH }));
       } else if (failure instanceof PinError) {
         setError(t("pin.turned_off"));
         setMode("password");
@@ -71,6 +108,18 @@ export function Unlock({ email }: { email: string }) {
         <h1>{t("unlock.submit")}</h1>
         <p className="hint">{email}</p>
       </div>
+      {biometric && (
+        <button
+          id="bio-unlock"
+          className="primary bio-button"
+          type="button"
+          disabled={working}
+          onClick={() => void useBiometric()}
+        >
+          <Icon name="fingerprint" />
+          {t("bio.unlock", { method })}
+        </button>
+      )}
       {mode === "pin" && (
         <form id="form-pin-unlock" className="stack" onSubmit={(event) => void submitPin(event)}>
           <input
@@ -85,7 +134,7 @@ export function Unlock({ email }: { email: string }) {
             required
             autoFocus
           />
-          <button className="primary" type="submit" disabled={working}>
+          <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
             {t(working ? "unlock.working" : "unlock.submit")}
           </button>
           <button
@@ -114,7 +163,7 @@ export function Unlock({ email }: { email: string }) {
           required
           autoFocus={mode === "password"}
         />
-        <button className="primary" type="submit" disabled={working}>
+        <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
           {t(working ? "unlock.working" : "unlock.submit")}
         </button>
       </form>

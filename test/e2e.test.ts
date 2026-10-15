@@ -26,6 +26,7 @@ import { toBase64 } from "../src/core/bytes.js";
 import { createShare, openShare } from "../src/core/share.js";
 import { generateTotp } from "../src/core/totp.js";
 import { generatePassword } from "../src/core/generator.js";
+import { createPasskey, signAssertion } from "../extension/lib/passkey/authenticator.js";
 import { expectCodeAsync } from "./helpers.js";
 
 const BASE = process.env.VAULT_E2E_URL ?? "http://127.0.0.1:8787";
@@ -554,7 +555,7 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect(Math.abs(result.body.serverTime - Math.floor(Date.now() / 1000))).toBeLessThan(60);
   });
 
-  describe("PIN unlock", () => {
+  describe("PIN and biometric unlock", () => {
     const verifier = (byte: number) => toBase64(new Uint8Array(32).fill(byte));
     let token: string;
 
@@ -654,6 +655,119 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
         body: JSON.stringify({ verifier: verifier(1) }),
       });
       expect(result.status).toBe(410);
+    });
+
+    it("releases the biometric key for a fresh signature from the registered authenticator only", async () => {
+      const rpId = "eepgmbamigmadeddhcoldncaolikeagm";
+      const origin = `chrome-extension://${rpId}`;
+      const { registration, passkey } = await createPasskey({
+        rpId,
+        origin,
+        challenge: "AA",
+        userHandle: "dXNlcg",
+        userName: "me",
+      });
+      const set = await api("/api/auth/biometric", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({
+          credentialId: registration.credentialId,
+          publicKey: registration.publicKey,
+          algorithm: registration.publicKeyAlgorithm,
+          rpId,
+          origin,
+        }),
+      });
+      expect(set.status).toBe(200);
+
+      const issued = await api("/api/auth/biometric/challenge", { method: "POST", token });
+      expect(issued.body.credentialId).toBe(registration.credentialId);
+      const assertion = await signAssertion(passkey, { origin, challenge: issued.body.challenge });
+      const unlocked = await api("/api/auth/biometric/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify(assertion),
+      });
+      expect(unlocked.status).toBe(200);
+      expect(unlocked.body.bioKey).toBe(set.body.bioKey);
+
+      const replay = await api("/api/auth/biometric/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify(assertion),
+      });
+      expect(replay.status).toBe(403);
+
+      const next = await api("/api/auth/biometric/challenge", { method: "POST", token });
+      const stranger = await createPasskey({
+        rpId,
+        origin,
+        challenge: "AA",
+        userHandle: "dXNlcg",
+        userName: "x",
+      });
+      const forged = await signAssertion(
+        { ...stranger.passkey, credentialId: registration.credentialId },
+        { origin, challenge: next.body.challenge },
+      );
+      const refused = await api("/api/auth/biometric/unlock", {
+        method: "POST",
+        token,
+        body: JSON.stringify(forged),
+      });
+      expect(refused.status).toBe(403);
+      expect(refused.body.code).toBe("auth.biometric_failed");
+    });
+
+    it("only registers an extension origin with its own RP ID", async () => {
+      const result = await api("/api/auth/biometric", {
+        method: "PUT",
+        token,
+        body: JSON.stringify({
+          credentialId: "AQID",
+          publicKey: "AQID",
+          algorithm: -7,
+          rpId: "evil.example",
+          origin: "https://evil.example",
+        }),
+      });
+      expect(result.status).toBe(400);
+      expect((await api("/api/auth/biometric", { method: "DELETE", token })).status).toBe(200);
+      const off = await api("/api/auth/biometric/challenge", { method: "POST", token });
+      expect(off.status).toBe(410);
+    });
+
+    it("writes a conditional update only over the version it was read from", async () => {
+      const id = crypto.randomUUID();
+      const sealed = {
+        ciphertext: toBase64(new Uint8Array(40).fill(1)),
+        nonce: toBase64(new Uint8Array(12)),
+      };
+      const created = await api(`/api/items/${id}`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(sealed),
+      });
+      const stale = await api(`/api/items/${id}?ifUpdatedAt=${created.body.updatedAt - 1}`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(sealed),
+      });
+      expect(stale.status).toBe(409);
+      expect(stale.body.code).toBe("items.conflict");
+      const fresh = await api(`/api/items/${id}?ifUpdatedAt=${created.body.updatedAt}`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(sealed),
+      });
+      expect(fresh.status).toBe(200);
+      await api(`/api/items/${id}`, { method: "DELETE", token });
+      const revived = await api(`/api/items/${id}?ifUpdatedAt=${fresh.body.updatedAt}`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(sealed),
+      });
+      expect(revived.status).toBe(409);
     });
   });
 });

@@ -168,6 +168,32 @@ cannot exceed five.
 
 Authenticated. Turns PIN unlock off for this session. Returns `{ "ok": true }`.
 
+### `PUT /api/auth/biometric`
+
+Authenticated. Body `{ credentialId, publicKey, algorithm, rpId, origin }`: the
+credential a platform authenticator (Touch ID, Windows Hello) just created on
+an extension page, its public key as base64url SPKI, `-7` (ES256) or `-257`
+(RS256), and the extension's origin `chrome-extension://<id>` with that id as
+RP ID. Anything else is `400 auth.invalid_body`. Returns `{ "bioKey": string }`,
+a random 32-byte key for this session.
+
+### `POST /api/auth/biometric/challenge`
+
+Authenticated. Returns `{ challenge, credentialId }`: a one-time base64url
+challenge that expires in two minutes, or `410 auth.biometric_off`.
+
+### `POST /api/auth/biometric/unlock`
+
+Authenticated. Body `{ clientDataJSON, authenticatorData, signature }` from
+`navigator.credentials.get`. The challenge is spent before anything is checked,
+then the server verifies the type, challenge, origin, RP ID hash, the user
+present and user verified flags, and the signature against the registered key.
+Returns `{ "bioKey": string }`, or `403 auth.biometric_failed`.
+
+### `DELETE /api/auth/biometric`
+
+Authenticated. Turns biometric unlock off for this session.
+
 ### `POST /api/auth/logout`
 
 Authenticated. Revokes the current session. Returns `{ "ok": true }`.
@@ -236,6 +262,12 @@ value, ciphertext at most 64 KiB.
 | 403    | `items.forbidden` (the id belongs to another account), `items.quota_exceeded` |
 
 Writing to a deleted item's id restores it.
+
+With `?ifUpdatedAt=<number>` the write is conditional: it replaces the item only
+if it still exists and its `updatedAt` equals that number, and never creates or
+restores one. Otherwise it returns `409 items.conflict`. The extension uses it
+for background writes such as recording when a login was last used, so they
+cannot overwrite an edit or undo a deletion made on another device.
 
 ### `POST /api/items/batch`
 

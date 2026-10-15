@@ -106,6 +106,51 @@ export async function pinUnlock(token: string, verifier: string): Promise<string
   return pinKey;
 }
 
+export async function setBiometric(registration: {
+  credentialId: string;
+  publicKey: string;
+  algorithm: number;
+  rpId: string;
+  origin: string;
+}): Promise<string> {
+  const { bioKey } = await request<{ bioKey: string }>("/api/auth/biometric", {
+    method: "PUT",
+    body: JSON.stringify(registration),
+  });
+  return bioKey;
+}
+
+export async function clearBiometric(token: string): Promise<void> {
+  await request("/api/auth/biometric", {
+    method: "DELETE",
+    auth: false,
+    extraHeaders: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function biometricChallenge(
+  token: string,
+): Promise<{ challenge: string; credentialId: string }> {
+  return request("/api/auth/biometric/challenge", {
+    method: "POST",
+    auth: false,
+    extraHeaders: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function biometricUnlock(
+  token: string,
+  assertion: { clientDataJSON: string; authenticatorData: string; signature: string },
+): Promise<string> {
+  const { bioKey } = await request<{ bioKey: string }>("/api/auth/biometric/unlock", {
+    method: "POST",
+    auth: false,
+    extraHeaders: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(assertion),
+  });
+  return bioKey;
+}
+
 export async function fetchLogo(domain: string): Promise<Blob | null> {
   const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
   if (!apiUrl || !session?.token) return null;
@@ -230,8 +275,13 @@ export async function fetchItems(
   return request(`/api/items?since=${since}`);
 }
 
-export async function putItem(id: string, sealed: SealedData): Promise<{ updatedAt: number }> {
-  return request(`/api/items/${id}`, { method: "PUT", body: JSON.stringify(sealed) });
+export async function putItem(
+  id: string,
+  sealed: SealedData,
+  ifUpdatedAt?: number,
+): Promise<{ updatedAt: number }> {
+  const condition = ifUpdatedAt === undefined ? "" : `?ifUpdatedAt=${ifUpdatedAt}`;
+  return request(`/api/items/${id}${condition}`, { method: "PUT", body: JSON.stringify(sealed) });
 }
 
 export async function createItems(

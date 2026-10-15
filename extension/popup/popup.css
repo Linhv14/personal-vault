@@ -1661,3 +1661,15 @@ details.history .field-row {
 .share-footer .primary {
   width: 100%;
 }
+.bio-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+.bio-button .icon {
+  width: 18px;
+  height: 18px;
+}

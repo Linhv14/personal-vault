@@ -3,6 +3,13 @@ import { rewrapVaultKey } from "../../../src/core/crypto.js";
 import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
 import {
+  biometricLabel,
+  biometricSupported,
+  disableBiometric,
+  enableBiometric,
+  hasBiometric,
+} from "../../lib/biometric.js";
+import {
   disablePin,
   enablePin,
   hasPin,
@@ -59,6 +66,7 @@ export function Security() {
   return (
     <section className="page">
       <h1>{t("settings.section_security")}</h1>
+      <BiometricCard unlocked={Boolean(vaultKey)} />
       <PinCard unlocked={Boolean(vaultKey)} />
       <Card>
         <h2>{t("settings.change_password")}</h2>
@@ -204,6 +212,78 @@ function PinCard({ unlocked }: { unlocked: boolean }) {
             {t("pin.set_up")}
           </Button>
         </div>
+      )}
+    </Card>
+  );
+}
+
+function BiometricCard({ unlocked }: { unlocked: boolean }) {
+  const t = useT();
+  const method = t(biometricLabel());
+  const [state, setState] = useState<{ on: boolean; supported: boolean } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    void Promise.all([hasBiometric(), biometricSupported()]).then(([on, supported]) =>
+      setState({ on, supported }),
+    );
+  }, []);
+
+  const turnOn = async () => {
+    setError(null);
+    setWorking(true);
+    try {
+      await enableBiometric();
+      setState({ on: true, supported: true });
+      showToast(t("bio.enabled", { method }));
+    } catch (failure) {
+      setError(
+        failure instanceof Error && failure.name === "BiometricError"
+          ? t("bio.cancelled", { method })
+          : describeError(failure, t),
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const turnOff = async () => {
+    await disableBiometric();
+    setState({ on: false, supported: state?.supported ?? true });
+    showToast(t("bio.disabled", { method }));
+  };
+
+  if (!state) return null;
+  return (
+    <Card>
+      <h2>{t("bio.title", { method })}</h2>
+      <p className="row-hint">{t("bio.hint", { method })}</p>
+      {state.on ? (
+        <div className="actions">
+          <span className="pin-state">{t("bio.on", { method })}</span>
+          <Button onClick={() => void turnOff()}>{t("pin.turn_off")}</Button>
+        </div>
+      ) : !state.supported ? (
+        <p className="notice">{t("bio.unsupported", { method })}</p>
+      ) : !unlocked ? (
+        <p className="notice">{t("settings.locked_hint")}</p>
+      ) : (
+        <div className="actions">
+          <Button
+            variant="primary"
+            id="bio-enable"
+            disabled={working}
+            onClick={() => void turnOn()}
+          >
+            {t("bio.turn_on", { method })}
+          </Button>
+        </div>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
       )}
     </Card>
   );

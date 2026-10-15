@@ -490,3 +490,18 @@ main > .notice {
     flex-wrap: wrap;
   }
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.pin-state {
+  flex: 1;
+  color: var(--accent);
+  font-weight: 600;
+}
+.card + .card {
+  margin-top: 16px;
+}

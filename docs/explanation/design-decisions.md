@@ -222,3 +222,18 @@ compares, in one `UPDATE … RETURNING`, so parallel requests cannot race past
 the limit, and the fifth miss deletes `pin_key`. The PIN is tied to the session
 whose token it keeps on disk, so the 30-day session expiry, sign-out and a
 password change all end it and the master password is needed again.
+
+### Touch ID and Windows Hello through WebAuthn, checked by the server
+
+Extension pages can call WebAuthn with their own origin, and Chrome hands the
+request to the platform authenticator: Touch ID on a Mac, Windows Hello on
+Windows. The private key never leaves the Secure Enclave or the TPM, so the
+server can treat a signature as proof that the device and its owner were
+there. Setting it up registers the credential's public key with the session and
+returns a random `bio_key`; the vault key is sealed under HKDF of `bio_key` and a
+random secret kept on the device. Unlocking asks for a one-time challenge,
+signs it with user verification, and gets `bio_key` back only if the server
+verifies the signature, so neither the disk nor the server alone opens the
+vault, and a recorded unlock cannot be replayed. This works without the PRF
+extension, which not every Windows Hello setup offers. Like the PIN, it lives
+and dies with the session.

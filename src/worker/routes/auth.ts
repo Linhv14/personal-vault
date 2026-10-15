@@ -2,6 +2,14 @@ import { Hono } from "hono";
 import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
 import { fromBase64, timingSafeEqual, toBase64, utf8Encode } from "../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
+import {
+  checkBiometric,
+  clearBiometric,
+  isAssertion,
+  isRegistration,
+  issueBiometricChallenge,
+  setBiometric,
+} from "../biometric.js";
 import { apiError } from "../errors.js";
 import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
 import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
@@ -337,6 +345,35 @@ auth.post("/pin/unlock", async (c) => {
   if (result.ok) return c.json({ pinKey: result.pinKey });
   if (result.attemptsLeft === 0) return c.json(apiError("auth.pin_off"), 410);
   return c.json(apiError("auth.pin_wrong", { count: result.attemptsLeft }), 403);
+});
+
+auth.put("/biometric", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!isRegistration(body)) return c.json(apiError("auth.invalid_body"), 400);
+  const bioKey = await setBiometric(c.env, c.get("session").tokenHash, body);
+  c.header("Cache-Control", "no-store");
+  return c.json({ bioKey });
+});
+
+auth.delete("/biometric", async (c) => {
+  await clearBiometric(c.env, c.get("session").tokenHash);
+  return c.json({ ok: true });
+});
+
+auth.post("/biometric/challenge", async (c) => {
+  const issued = await issueBiometricChallenge(c.env, c.get("session").tokenHash, now());
+  if (!issued) return c.json(apiError("auth.biometric_off"), 410);
+  c.header("Cache-Control", "no-store");
+  return c.json(issued);
+});
+
+auth.post("/biometric/unlock", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!isAssertion(body)) return c.json(apiError("auth.invalid_body"), 400);
+  const bioKey = await checkBiometric(c.env, c.get("session").tokenHash, body, now());
+  if (!bioKey) return c.json(apiError("auth.biometric_failed"), 403);
+  c.header("Cache-Control", "no-store");
+  return c.json({ bioKey });
 });
 
 auth.post("/logout", async (c) => {

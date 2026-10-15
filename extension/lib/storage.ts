@@ -41,6 +41,7 @@ export interface LocalState {
   showLogos?: boolean;
   resume?: { token: string; sealed: SealedData };
   pin?: { token: string; salt: string; iterations: number; sealed: SealedData };
+  biometric?: { token: string; credentialId: string; secret: string; sealed: SealedData };
 }
 
 interface SessionState {
