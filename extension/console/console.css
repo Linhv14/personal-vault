@@ -1156,19 +1156,180 @@ tr.editing td {
     transform: rotate(360deg);
   }
 }
-#toast {
+.toaster {
   position: fixed;
-  bottom: 24px;
-  left: 50%;
-  z-index: 20;
-  padding: 10px 16px;
+  right: 20px;
+  bottom: 20px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 10px 8px 10px 14px;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--text);
-  color: var(--bg);
+  background: var(--card);
+  color: var(--text);
   font-size: 13.5px;
-  font-weight: 600;
-  transform: translateX(-50%);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.25);
+  font-weight: 500;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
+  pointer-events: auto;
+  animation: toast-in 160ms ease-out;
+}
+.toast > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.toast.success > svg {
+  color: var(--accent);
+}
+.toast.error {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.toast.error > svg {
+  color: var(--danger);
+}
+.toast > span {
+  flex: 1;
+}
+.toast-close {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.toast-close:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.toast-close svg {
+  width: 14px;
+  height: 14px;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms;
+}
+.progress.active {
+  opacity: 1;
+  transition-delay: 80ms;
+}
+.progress::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: var(--accent);
+  animation: progress 1.1s ease-in-out infinite;
+}
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.spin {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: spin 0.7s linear infinite;
+}
+.spin.md {
+  width: 20px;
+  height: 20px;
+}
+[aria-busy="true"].btn,
+.btn[aria-busy="true"]:disabled {
+  opacity: 0.85;
+  cursor: progress;
+}
+
+.skeleton {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--surface) 0%,
+    color-mix(in srgb, var(--surface) 55%, var(--border)) 50%,
+    var(--surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.3s ease-in-out infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.skeleton-table {
+  display: flex;
+  flex-direction: column;
+}
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+.skeleton-row:first-child {
+  border-top: 0;
+}
+.page-skeleton .page-header {
+  margin-bottom: 20px;
+}
+tr.pending-row {
+  opacity: 0.55;
+  transition: opacity 150ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .progress::before,
+  .toast {
+    animation: none;
+  }
 }
 
 @media (max-width: 860px) {
@@ -1265,4 +1426,11 @@ tr.editing td {
   margin-left: 0.18em;
   color: var(--muted);
   font-weight: 600;
+}
+
+.side-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 6px;
 }

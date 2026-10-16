@@ -34,9 +34,11 @@ import {
   Menu,
   MenuItem,
   PageHeader,
+  PageSkeleton,
   SearchInput,
+  SkeletonTable,
 } from "../components.js";
-import { attempt, toast, useConsole } from "../data.js";
+import { attempt, pending$, toast, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
 import {
   AddSecretDialog,
@@ -68,12 +70,13 @@ export function ProjectPage({
   environmentId: string | null;
 }) {
   const t = useT();
-  const { detail, identity, projects, team, run, reload } = useConsole();
+  const { detail, identity, projects, team, run, reload, refreshing } = useConsole();
   const project = projects?.find((entry) => entry.id === projectId);
   const [secrets, setSecrets] = useState<Record<string, Secret[]> | null>(null);
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<Modal>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
   const orgId = detail.org.id;
 
   const load = async () => {
@@ -105,7 +108,7 @@ export function ProjectPage({
     void load();
   }, [project?.id, project?.generation, project?.content.environments.map((env) => env.id).join()]);
 
-  if (!projects) return <span className="spinner" />;
+  if (!projects || (!project && (refreshing || pending$.value))) return <PageSkeleton />;
   if (!project) {
     return (
       <EmptyState
@@ -128,11 +131,33 @@ export function ProjectPage({
   const ciTab = environmentId === CI_TAB;
   const tab = (id: string | null) => href(orgId, { page: "project", projectId, environmentId: id });
 
-  const mutate = async (work: () => Promise<unknown>, done: Parameters<typeof t>[0]) => {
+  const mutate = async (
+    work: () => Promise<unknown>,
+    done: Parameters<typeof t>[0],
+    ids: string[] = [],
+  ) => {
     setError(null);
-    const succeeded = await attempt(work, (failure) => describeError(failure, t));
-    await Promise.all([load(), reload()]);
-    if (succeeded) toast(t(done));
+    const mark = (on: boolean) =>
+      setBusyIds((current) => {
+        const next = new Set(current);
+        for (const id of ids) {
+          if (on) next.add(id);
+          else next.delete(id);
+        }
+        return next;
+      });
+    mark(true);
+    const succeeded = await attempt(
+      async () => {
+        await work();
+        toast(t(done));
+        await load();
+      },
+      (failure) => describeError(failure, t),
+    );
+    if (!succeeded) await load();
+    mark(false);
+    void reload();
     return succeeded;
   };
 
@@ -252,7 +277,9 @@ export function ProjectPage({
           <>
             <a href={href(orgId, { page: "team", teamId: project.teamId })}>{owner?.name}</a>
             <span>·</span>
-            <span>{t("console.secret_count", { count: names.length })}</span>
+            <span>
+              {t("console.secret_count", { count: secrets ? names.length : project.secretCount })}
+            </span>
           </>
         }
         actions={actions}
@@ -347,7 +374,7 @@ export function ProjectPage({
           </div>
 
           {!secrets ? (
-            <span className="spinner" />
+            <SkeletonTable />
           ) : names.length === 0 ? (
             <EmptyState
               icon="key"
@@ -362,8 +389,19 @@ export function ProjectPage({
                 secrets={secrets[environment.id] ?? []}
                 query={query}
                 editable={editable}
-                onSave={(secret, value, kind) =>
-                  mutate(
+                busyIds={busyIds}
+                onSave={(secret, value, kind) => {
+                  setSecrets((current) =>
+                    current
+                      ? {
+                          ...current,
+                          [environment.id]: (current[environment.id] ?? []).map((entry) =>
+                            entry.id === secret.id ? { ...entry, value, kind } : entry,
+                          ),
+                        }
+                      : current,
+                  );
+                  return mutate(
                     () =>
                       saveSecret(orgId, project, environment.id, {
                         id: secret.id,
@@ -372,8 +410,9 @@ export function ProjectPage({
                         kind,
                       }),
                     "projects.saved",
-                  )
-                }
+                    [secret.id],
+                  );
+                }}
                 onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
                 onAccess={(access, secretId) =>
                   noteAccess(orgId, project, environment.id, access, secretId)
@@ -535,12 +574,13 @@ export function ProjectPage({
           submitLabel={t("projects.delete_secret")}
           danger
           onClose={() => setModal(null)}
-          onSubmit={() =>
-            void mutate(async () => {
-              await deleteSecret(orgId, project, modal.secret.id);
-              setModal(null);
-            }, "projects.secret_deleted")
-          }
+          onSubmit={() => {
+            const { secret } = modal;
+            setModal(null);
+            void mutate(() => deleteSecret(orgId, project, secret.id), "projects.secret_deleted", [
+              secret.id,
+            ]);
+          }}
         />
       )}
     </>

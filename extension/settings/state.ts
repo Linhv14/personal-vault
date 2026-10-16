@@ -10,10 +10,9 @@ import { resumeUnlock } from "../lib/resume.js";
 import { getLocal, type LocalState } from "../lib/storage.js";
 import { setUiLocale } from "../ui/i18n.js";
 import { refreshSession } from "../ui/store/session.js";
-import { toast, toast$ } from "../console/data.js";
+import { toast } from "../console/data.js";
 
 export const localState = signal<LocalState>({});
-export const toastMessage = toast$;
 
 export function showToast(message: string): void {
   toast(message);

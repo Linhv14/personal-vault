@@ -179,6 +179,9 @@ export const vi: Catalogue = {
   "orgs.invitations": "Lời mời",
   "orgs.accept": "Chấp nhận",
   "orgs.decline": "Từ chối",
+  "orgs.declined": "Đã từ chối lời mời",
+  "orgs.invite_withdrawn": "Đã thu hồi lời mời",
+  "orgs.team_member_removed": "Đã gỡ khỏi team",
   "orgs.joined": "Bạn đã tham gia tổ chức",
   "orgs.create_title": "Tạo tổ chức",
   "orgs.create_hint": "Chia sẻ mật khẩu và secret cho CI với các team, mã hoá đầu-cuối.",
@@ -346,6 +349,7 @@ export const vi: Catalogue = {
   "console.member": "Thành viên",
   "console.missing": "Thiếu",
   "console.missing_count": "Thiếu {count}",
+  "console.dismiss": "Đóng",
   "console.more": "Thêm",
   "console.name_taken_in": "{name} đã có trong {env}.",
   "console.new_project_hint":

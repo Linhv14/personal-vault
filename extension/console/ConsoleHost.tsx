@@ -5,6 +5,8 @@ import { describeError } from "../../src/i18n/index.js";
 import { ensureIdentity } from "../lib/identity.js";
 import { useT } from "../ui/i18n.js";
 import { ConsoleApp, type PersonalPage } from "./ConsoleApp.js";
+import { ShellSkeleton } from "./components.js";
+import { prefetchConsole } from "./data.js";
 
 export function ConsoleHost({
   vaultKey,
@@ -23,17 +25,19 @@ export function ConsoleHost({
 
   useEffect(() => {
     setIdentity(null);
+    prefetchConsole();
     void ensureIdentity(vaultKey)
       .then(setIdentity)
       .catch((failure) => setError(describeError(failure, t)));
   }, [vaultKey]);
 
-  if (!identity) {
+  if (error) {
     return (
       <div className="console loading">
-        {error ? <p className="alert">{error}</p> : <span className="spinner" />}
+        <p className="alert">{error}</p>
       </div>
     );
   }
+  if (!identity) return <ShellSkeleton />;
   return <ConsoleApp identity={identity} account={account} footer={footer} personal={personal} />;
 }

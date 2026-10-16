@@ -7,10 +7,9 @@ import {
   type InvitePreview,
   type MyInvite,
 } from "../../lib/orgs.js";
-import { Icon } from "../../ui/components/Icon.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { Avatar, EmptyState } from "../components.js";
+import { ActionButton, Avatar, EmptyState, PageSkeleton } from "../components.js";
 import type { Run } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { navigate } from "../router.js";
@@ -36,7 +35,7 @@ export function InvitePage({
     );
   }, [inviteId]);
 
-  if (!state) return <span className="spinner" />;
+  if (!state) return <PageSkeleton />;
   const { invite, preview } = state;
   const home = (
     <a className="btn" href="#/">
@@ -81,31 +80,29 @@ export function InvitePage({
       </dl>
       <p className="muted">{t("invite.explain")}</p>
       <div className="invite-actions">
-        <button
-          type="button"
+        <ActionButton
           className="btn primary"
+          icon="check"
           onClick={() =>
-            void run(async () => {
+            run(async () => {
               const orgId = await acceptInvite(invite.id);
               navigate(orgId, { page: "projects" });
             }, "orgs.joined")
           }
         >
-          <Icon name="check" />
           {t("orgs.accept")}
-        </button>
-        <button
-          type="button"
+        </ActionButton>
+        <ActionButton
           className="btn ghost"
           onClick={() =>
-            void run(async () => {
+            run(async () => {
               await declineInvite(invite.id);
               location.hash = "#/";
-            })
+            }, "orgs.declined")
           }
         >
           {t("orgs.decline")}
-        </button>
+        </ActionButton>
       </div>
     </section>
   );

@@ -12,6 +12,7 @@ import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
 import {
+  ActionButton,
   Avatar,
   Badge,
   Dialog,
@@ -20,9 +21,10 @@ import {
   Menu,
   MenuItem,
   PageHeader,
+  PageSkeleton,
   When,
 } from "../components.js";
-import { useConsole } from "../data.js";
+import { pending$, useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { href, navigate } from "../router.js";
 import { TypeToConfirmDialog } from "./project-dialogs.js";
@@ -71,11 +73,12 @@ function AddMemberDialog({
 
 export function TeamPage({ teamId }: { teamId: string }) {
   const t = useT();
-  const { detail, identity, projects, team: findTeam, run } = useConsole();
+  const { detail, identity, projects, team: findTeam, run, refreshing } = useConsole();
   const [modal, setModal] = useState<Modal>(null);
   const team = findTeam(teamId);
   const orgId = detail.org.id;
 
+  if (!team && (refreshing || pending$.value)) return <PageSkeleton />;
   if (!team) {
     return (
       <EmptyState
@@ -138,16 +141,15 @@ export function TeamPage({ teamId }: { teamId: string }) {
             {t("orgs.rekey_hint")} {!(admin && inTeam) && t("orgs.rekey_other")}
           </span>
           {admin && inTeam && (
-            <button
-              type="button"
+            <ActionButton
               className="btn primary"
+              icon="key"
               onClick={() =>
-                void run(() => rekeyTeam(orgId, team, detail.members, identity), "orgs.rekeyed")
+                run(() => rekeyTeam(orgId, team, detail.members, identity), "orgs.rekeyed")
               }
             >
-              <Icon name="key" />
               {t("orgs.rekey")}
-            </button>
+            </ActionButton>
           )}
         </div>
       )}
@@ -226,10 +228,14 @@ export function TeamPage({ teamId }: { teamId: string }) {
           candidates={candidates}
           onClose={() => setModal(null)}
           onAdd={(member) =>
-            void run(async () => {
-              await addTeamMember(orgId, team, member, identity);
-              setModal(null);
-            }, "orgs.team_member_added")
+            void run(
+              async () => {
+                await addTeamMember(orgId, team, member, identity);
+                setModal(null);
+              },
+              "orgs.team_member_added",
+              "org",
+            )
           }
         />
       )}
@@ -247,7 +253,7 @@ export function TeamPage({ teamId }: { teamId: string }) {
             void run(async () => {
               await removeTeamMember(orgId, team.id, modal.member.accountId);
               setModal(null);
-            })
+            }, "orgs.team_member_removed")
           }
         />
       )}

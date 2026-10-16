@@ -10,6 +10,13 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Console and dashboard: buttons show a spinner while their action runs and
+  ignore repeated clicks, dialogs keep their submit busy until the work is done,
+  a thin progress bar marks background refreshes, pages load behind skeletons,
+  and toasts stack with success and error variants. Editing or deleting a secret
+  updates the row at once; withdrawing an invitation or removing a member drops
+  the row as soon as the server confirms.
+
 - Invitations: the email shows the organization, who invited, the role and the
   expiry, with an "Accept invitation" button. Someone without an account
   creates one on the page the link opens, with the invited address filled in,
@@ -128,6 +135,11 @@ version may change the API or storage format; such releases list the steps in
   built for the server it is served from.
 
 ### Changed
+
+- `GET /api/orgs/:id` includes the caller's projects per team, and the console
+  fetches it in parallel with the organization list and the identity check. A
+  page load or a refresh after an action takes one round trip instead of three,
+  and the success message no longer waits for that refresh.
 
 - Renamed to Trust1 Vault: extension, popup, console, dashboard, emails, site and
   docs. The CLI is `trust1` with `TRUST1_KEY`, `TRUST1_LINK` and `TRUST1_SERVER`,

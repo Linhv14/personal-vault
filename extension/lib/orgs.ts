@@ -13,6 +13,7 @@ import {
   type TeamView,
 } from "../../src/core/org-model.js";
 import type { Bytes } from "../../src/core/bytes.js";
+import type { SealedData } from "../../src/core/crypto.js";
 import { request } from "./api.js";
 import { getLocal } from "./storage.js";
 
@@ -46,6 +47,18 @@ export interface OrgDetail {
   members: OrgMember[];
   invites: OrgInvite[];
   teams: Team[];
+  projects?: Record<string, TeamProjects>;
+}
+
+export interface TeamProjects {
+  generation: number;
+  projects: {
+    id: string;
+    sealed: SealedData;
+    createdAt: number;
+    secretCount: number;
+    updatedAt: number;
+  }[];
 }
 
 export interface MyInvite {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { previewInvite, type InvitePreview } from "../extension/lib/orgs.js";
 import * as api from "../extension/lib/api.js";
+import { Spinner } from "../extension/console/components.js";
 import { ROLE_LABEL } from "../extension/console/labels.js";
 import { Wordmark } from "../extension/ui/components/Logo.js";
 import { describeError } from "../src/i18n/index.js";
@@ -174,7 +175,13 @@ export function SignIn() {
             {error}
           </p>
         )}
-        <button className="btn primary" type="submit" disabled={working}>
+        <button
+          className="btn primary"
+          type="submit"
+          disabled={working}
+          aria-busy={working || undefined}
+        >
+          {working && <Spinner />}
           {label}
         </button>
         <p className="field-hint">

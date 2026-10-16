@@ -14,6 +14,7 @@ import {
   deleteProject,
   importSecrets,
   listProjects,
+  openProjects,
   listSecrets,
   flushAccess,
   noteAccess,
@@ -157,6 +158,14 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
     expect(raw.text).not.toContain("Payments");
     expect((await api(path, { token: admin.token })).body.code).toBe("orgs.not_in_team");
     expect((await api(path, { token: outsider.token })).status).toBe(404);
+
+    const overview = await api(`/api/orgs/${orgId}`, { token: member.token });
+    const listed = overview.body.projects[team.id];
+    expect(listed.projects.map((entry: { id: string }) => entry.id)).toEqual([project.id]);
+    const opened = await openProjects(memberTeam, listed, member.identity);
+    expect(opened[0]!.content.name).toBe("Payments API");
+    const adminView = await api(`/api/orgs/${orgId}`, { token: admin.token });
+    expect(adminView.body.projects).toEqual({});
   });
 
   it("stores secrets per environment that only the team can read", async () => {

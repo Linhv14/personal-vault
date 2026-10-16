@@ -16,6 +16,7 @@ import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import {
+  ActionButton,
   Avatar,
   Badge,
   Dialog,
@@ -25,7 +26,7 @@ import {
   Usage,
   When,
 } from "../components.js";
-import { toast, useConsole } from "../data.js";
+import { pending$, toast, useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 
 type Modal =
@@ -41,7 +42,12 @@ export function MembersPage() {
   const { detail, me, run } = useConsole();
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<Modal>(null);
-  const { org, members, invites, teams } = detail;
+  const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
+  const hide = (id: string) => setGone((current) => new Set(current).add(id));
+  const { org } = detail;
+  const members = detail.members.filter((member) => !gone.has(member.accountId));
+  const invites = detail.invites.filter((invite) => !gone.has(invite.id));
+  const { teams } = detail;
   const orgId = org.id;
   const seats = planLimits(org.plan).seats;
   const used = members.length + invites.length;
@@ -102,6 +108,7 @@ export function MembersPage() {
                         className="compact"
                         value={member.role}
                         aria-label={t("orgs.role")}
+                        disabled={pending$.value}
                         onChange={(event) => {
                           const select = event.currentTarget;
                           if (select.value === "owner") {
@@ -113,6 +120,7 @@ export function MembersPage() {
                           void run(
                             () => setMemberRole(orgId, member.accountId, role),
                             "orgs.role_saved",
+                            "org",
                           );
                         }}
                       >
@@ -194,34 +202,49 @@ export function MembersPage() {
                           .then(() => toast(t("projects.copied")))
                       }
                     />
-                    <button
-                      type="button"
+                    <ActionButton
                       className="btn ghost sm"
                       onClick={() =>
-                        void run(async () => {
-                          const sent = await inviteMember(
-                            orgId,
-                            invite.email,
-                            invite.role,
-                            localeSignal.value,
-                          );
-                          if (!sent.emailed) {
-                            setModal({ kind: "share-link", email: invite.email, link: sent.link });
-                          } else {
-                            toast(t("invite.sent", { email: invite.email }));
-                          }
-                        })
+                        run(
+                          async () => {
+                            const sent = await inviteMember(
+                              orgId,
+                              invite.email,
+                              invite.role,
+                              localeSignal.value,
+                            );
+                            if (!sent.emailed) {
+                              setModal({
+                                kind: "share-link",
+                                email: invite.email,
+                                link: sent.link,
+                              });
+                            } else {
+                              toast(t("invite.sent", { email: invite.email }));
+                            }
+                          },
+                          undefined,
+                          "org",
+                        )
                       }
                     >
                       {t("invite.resend")}
-                    </button>
-                    <button
-                      type="button"
+                    </ActionButton>
+                    <ActionButton
                       className="btn ghost sm"
-                      onClick={() => void run(() => withdrawInvite(orgId, invite.id))}
+                      onClick={() =>
+                        run(
+                          async () => {
+                            await withdrawInvite(orgId, invite.id);
+                            hide(invite.id);
+                          },
+                          "orgs.invite_withdrawn",
+                          "org",
+                        )
+                      }
                     >
                       {t("orgs.withdraw")}
-                    </button>
+                    </ActionButton>
                   </td>
                 </tr>
               ))}
@@ -239,15 +262,19 @@ export function MembersPage() {
             const data = new FormData(form);
             const role = data.get("role") === "admin" ? "admin" : "member";
             const email = String(data.get("email")).trim();
-            void run(async () => {
-              const sent = await inviteMember(orgId, email, role, localeSignal.value);
-              if (sent.emailed) {
-                setModal(null);
-                toast(t("invite.sent", { email }));
-              } else {
-                setModal({ kind: "share-link", email, link: sent.link });
-              }
-            });
+            void run(
+              async () => {
+                const sent = await inviteMember(orgId, email, role, localeSignal.value);
+                if (sent.emailed) {
+                  setModal(null);
+                  toast(t("invite.sent", { email }));
+                } else {
+                  setModal({ kind: "share-link", email, link: sent.link });
+                }
+              },
+              undefined,
+              "org",
+            );
           }}
         >
           <Field label={t("orgs.invite_email")}>
@@ -271,10 +298,15 @@ export function MembersPage() {
           danger
           onClose={() => setModal(null)}
           onSubmit={() =>
-            void run(async () => {
-              await removeMember(orgId, modal.member.accountId);
-              setModal(null);
-            }, "orgs.removed")
+            void run(
+              async () => {
+                await removeMember(orgId, modal.member.accountId);
+                hide(modal.member.accountId);
+                setModal(null);
+              },
+              "orgs.removed",
+              "org",
+            )
           }
         />
       )}
@@ -318,10 +350,14 @@ export function MembersPage() {
           danger
           onClose={() => setModal(null)}
           onSubmit={() =>
-            void run(async () => {
-              await transferOwnership(orgId, modal.member.accountId);
-              setModal(null);
-            }, "orgs.transferred")
+            void run(
+              async () => {
+                await transferOwnership(orgId, modal.member.accountId);
+                setModal(null);
+              },
+              "orgs.transferred",
+              "org",
+            )
           }
         />
       )}

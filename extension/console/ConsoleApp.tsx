@@ -8,10 +8,9 @@ import { logoSvg } from "../../src/ui/logo.js";
 import { acceptInvite, declineInvite, type OrgSummary } from "../lib/orgs.js";
 import { flushAccess } from "../lib/projects.js";
 import { Icon } from "../ui/components/Icon.js";
-import { Toast } from "../ui/components/Toast.js";
 import { useT } from "../ui/i18n.js";
-import { Avatar } from "./components.js";
-import { ConsoleContext, failure$, toast$, useConsoleLoader, type ConsoleData } from "./data.js";
+import { ActionButton, Avatar, PageSkeleton, ProgressBar, Toaster } from "./components.js";
+import { ConsoleContext, useConsoleLoader, type ConsoleData } from "./data.js";
 import { ROLE_LABEL } from "./labels.js";
 import { ActivityPage } from "./pages/ActivityPage.js";
 import { MembersPage } from "./pages/MembersPage.js";
@@ -95,25 +94,23 @@ function Invitations({ data }: { data: Pick<ConsoleData, "invites" | "run"> }) {
             {t("orgs.invited_to", { name: invite.orgName })} ·{" "}
             <span className="muted">{t(ROLE_LABEL[invite.role])}</span>
           </span>
-          <button
-            type="button"
+          <ActionButton
             className="btn primary sm"
             onClick={() =>
-              void data.run(async () => {
+              data.run(async () => {
                 const orgId = await acceptInvite(invite.id);
                 navigate(orgId, { page: "projects" });
               }, "orgs.joined")
             }
           >
             {t("orgs.accept")}
-          </button>
-          <button
-            type="button"
+          </ActionButton>
+          <ActionButton
             className="btn ghost sm"
-            onClick={() => void data.run(() => declineInvite(invite.id))}
+            onClick={() => data.run(() => declineInvite(invite.id), "orgs.declined")}
           >
             {t("orgs.decline")}
-          </button>
+          </ActionButton>
         </div>
       ))}
     </div>
@@ -202,7 +199,8 @@ export function ConsoleApp({
             </>
           )}
         </main>
-        <Toast message={toast$.value} />
+        <ProgressBar />
+        <Toaster />
       </div>
     );
   }
@@ -226,9 +224,9 @@ export function ConsoleApp({
   ) : data ? (
     <>
       <Invitations data={data} />
-      {(failure$.value ?? data.error) && (
+      {data.error && (
         <p className="alert" role="alert">
-          {failure$.value ?? data.error}
+          {data.error}
         </p>
       )}
       <Page data={data} />
@@ -236,7 +234,7 @@ export function ConsoleApp({
   ) : loader.error ? (
     <p className="alert">{loader.error}</p>
   ) : (
-    <span className="spinner" />
+    <PageSkeleton />
   );
 
   const shell = (
@@ -296,7 +294,8 @@ export function ConsoleApp({
   return (
     <>
       {data ? <ConsoleContext.Provider value={data}>{shell}</ConsoleContext.Provider> : shell}
-      <Toast message={toast$.value} />
+      <ProgressBar />
+      <Toaster />
     </>
   );
 }

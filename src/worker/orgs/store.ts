@@ -180,6 +180,28 @@ export class OrgStore extends DurableObject<Env> {
     );
   }
 
+  async overview(principal: Principal): Promise<
+    Result<{
+      teams: TeamView[];
+      projects: Record<string, { generation: number; projects: ProjectRecord[] }>;
+    }>
+  > {
+    const teams = await this.listTeams(principal);
+    if (!teams.ok) return teams;
+    const projects: Record<string, { generation: number; projects: ProjectRecord[] }> = {};
+    for (const team of teams.value) {
+      if (!team.wrappedKey) continue;
+      const listed = await this.listProjects(principal, team.id);
+      if (listed.ok) {
+        projects[team.id] = {
+          generation: listed.value.generation,
+          projects: listed.value.projects,
+        };
+      }
+    }
+    return ok({ teams: teams.value, projects });
+  }
+
   async createTeam(
     principal: Principal,
     team: { id: string; name: string; wrappedKey: WrappedKey },

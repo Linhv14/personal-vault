@@ -13,20 +13,66 @@ import {
   type OrgSummary,
   type Team,
 } from "../lib/orgs.js";
-import { listProjects, type Project } from "../lib/projects.js";
+import { listProjects, openProjects, type Project } from "../lib/projects.js";
 import { useT } from "../ui/i18n.js";
 import { location$, navigate } from "./router.js";
 
-export const toast$ = signal<string | null>(null);
-let toastTimer: ReturnType<typeof setTimeout> | undefined;
+export type ToastKind = "success" | "error" | "info";
 
-export function toast(message: string): void {
-  toast$.value = message;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toast$.value = null), 2400);
+export interface ToastEntry {
+  id: number;
+  kind: ToastKind;
+  message: string;
+}
+
+export const toasts$ = signal<ToastEntry[]>([]);
+const MAX_TOASTS = 3;
+const TOAST_MS: Record<ToastKind, number> = { success: 2800, info: 2800, error: 6000 };
+let toastId = 0;
+
+export function dismissToast(id: number): void {
+  toasts$.value = toasts$.value.filter((entry) => entry.id !== id);
+}
+
+export function toast(message: string, kind: ToastKind = "success"): void {
+  const id = ++toastId;
+  const rest = toasts$.value.filter((entry) => entry.message !== message);
+  toasts$.value = [...rest, { id, kind, message }].slice(-MAX_TOASTS);
+  setTimeout(() => dismissToast(id), TOAST_MS[kind]);
+}
+
+export const refreshing$ = signal(false);
+
+function dialogOpen(): boolean {
+  return typeof document !== "undefined" && document.querySelector("dialog[open]") !== null;
 }
 
 let lastOrgId: string | null = null;
+
+interface Snapshot {
+  guess: string | null;
+  list: OrgSummary[];
+  pending: MyInvite[];
+  early: OrgDetail | null;
+}
+
+let prefetched: Promise<Snapshot> | null = null;
+
+async function snapshot(): Promise<Snapshot> {
+  const id = location$.value.orgId ?? lastOrgId;
+  const guess = id && id !== "new" ? id : null;
+  const [list, pending, early] = await Promise.all([
+    listOrgs(),
+    myInvites(),
+    guess ? getOrg(guess).catch(() => null) : Promise.resolve(null),
+  ]);
+  return { guess, list, pending, early };
+}
+
+export function prefetchConsole(): void {
+  prefetched = snapshot();
+  prefetched.catch(() => (prefetched = null));
+}
 
 export const pending$ = signal(false);
 export const failure$ = signal<string | null>(null);
@@ -42,14 +88,22 @@ export async function attempt(
     await work();
     return true;
   } catch (failure) {
-    failure$.value = describe(failure);
+    const message = describe(failure);
+    if (dialogOpen()) failure$.value = message;
+    else toast(message, "error");
     return false;
   } finally {
     pending$.value = false;
   }
 }
 
-export type Run = (work: () => Promise<unknown>, done?: MessageKey) => Promise<boolean>;
+export type ReloadScope = "all" | "org";
+
+export type Run = (
+  work: () => Promise<unknown>,
+  done?: MessageKey,
+  scope?: ReloadScope,
+) => Promise<boolean>;
 
 export interface ConsoleData {
   identity: Identity;
@@ -60,7 +114,8 @@ export interface ConsoleData {
   me: OrgMember | undefined;
   error: string | null;
   run: Run;
-  reload: () => Promise<void>;
+  reload: (scope?: ReloadScope) => Promise<void>;
+  refreshing: boolean;
   emailOf: (accountId: string) => string;
   team: (teamId: string) => Team | undefined;
   myTeams: Team[];
@@ -83,11 +138,13 @@ export function useConsoleLoader(identity: Identity) {
   const [error, setError] = useState<string | null>(null);
   const wanted = location$.value.orgId ?? lastOrgId;
 
-  const reload = async () => {
-    const [list, pending] = await Promise.all([listOrgs(), myInvites()]);
+  const fetchAll = async () => {
+    const ready = prefetched ?? snapshot();
+    prefetched = null;
+    const { guess, list, pending, early } = await ready;
     setOrgs(list);
     setInvites(pending);
-    const current = list.find((org) => org.id === (location$.value.orgId ?? lastOrgId)) ?? list[0];
+    const current = list.find((org) => org.id === guess) ?? list[0];
     if (!current) {
       setDetail(null);
       setProjects([]);
@@ -98,23 +155,52 @@ export function useConsoleLoader(identity: Identity) {
     if (route.page !== "me" && route.page !== "invite" && current.id !== orgId) {
       navigate(current.id, route);
     }
-    const next = await getOrg(current.id);
+    const next = (current.id === guess && early) || (await getOrg(current.id));
     setDetail(next);
-    const mine = next.teams.filter((team) => team.wrappedKey);
-    const lists = await Promise.all(mine.map((team) => listProjects(next.org.id, team, identity)));
-    setProjects(lists.flat().sort((a, b) => a.content.name.localeCompare(b.content.name)));
+    setProjects(await projectsOf(next));
   };
 
-  const run: Run = async (work, done) => {
+  const projectsOf = async (next: OrgDetail) => {
+    const mine = next.teams.filter((team) => team.wrappedKey);
+    const lists = await Promise.all(
+      mine.map((team) => {
+        const listed = next.projects?.[team.id];
+        return listed
+          ? openProjects(team, listed, identity)
+          : listProjects(next.org.id, team, identity);
+      }),
+    );
+    return lists.flat().sort((a, b) => a.content.name.localeCompare(b.content.name));
+  };
+
+  const fetchOrg = async () => {
+    const orgId = location$.value.orgId ?? lastOrgId;
+    if (!orgId || orgId !== detail?.org.id) return fetchAll();
+    const next = await getOrg(orgId);
+    const opened = await projectsOf(next);
+    setDetail(next);
+    setProjects(opened);
+  };
+
+  const reload = async (scope: ReloadScope = "all") => {
+    refreshing$.value = true;
+    try {
+      await (scope === "org" ? fetchOrg() : fetchAll());
+    } finally {
+      refreshing$.value = false;
+    }
+  };
+
+  const run: Run = async (work, done, scope = "all") => {
     setError(null);
     const succeeded = await attempt(
       async () => {
         await work();
-        await reload();
+        if (done) toast(t(done));
+        await reload(scope);
       },
       (failure) => describeError(failure, t),
     );
-    if (succeeded && done) toast(t(done));
     return succeeded;
   };
 
@@ -134,6 +220,7 @@ export function useConsoleLoader(identity: Identity) {
           error,
           run,
           reload,
+          refreshing: refreshing$.value,
           emailOf: (accountId) =>
             detail.members.find((member) => member.accountId === accountId)?.email ??
             t("console.former_member"),

@@ -68,14 +68,14 @@ orgs.get(
   "/:orgId",
   asMember(async (c, member, orgId) => {
     const dir = directory(c);
-    const [org, members, invites, teams] = await Promise.all([
+    const [org, members, invites, overview] = await Promise.all([
       dir.org(orgId),
       dir.members(orgId),
       isOrgAdmin(member.role) ? dir.invites(orgId) : Promise.resolve([]),
-      orgStore(c.env, orgId).listTeams(member),
+      orgStore(c.env, orgId).overview(member),
     ]);
-    if (!teams.ok) return respond(c, teams);
-    return c.json({ org: { ...org, role: member.role }, members, invites, teams: teams.value });
+    if (!overview.ok) return respond(c, overview);
+    return c.json({ org: { ...org, role: member.role }, members, invites, ...overview.value });
   }),
 );
 

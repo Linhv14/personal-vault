@@ -4,7 +4,7 @@ import { auditLog, type AuditEvent } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { Avatar, Badge, PageHeader, When } from "../components.js";
+import { ActionButton, Avatar, Badge, PageHeader, SkeletonTable, When } from "../components.js";
 import { useConsole } from "../data.js";
 import { ACTION_LABEL } from "../labels.js";
 
@@ -106,45 +106,51 @@ export function ActivityPage() {
             ))}
           </div>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t("console.when")}</th>
-              <th>{t("console.who")}</th>
-              <th>{t("console.what")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((event) => {
-              const label = ACTION_LABEL[event.action];
-              return (
-                <tr key={event.seq}>
-                  <td
-                    className="muted nowrap"
-                    title={`${formatDateTime(event.at, localeSignal.value)}${event.ip ? ` · ${event.ip}` : ""}`}
-                  >
-                    <When at={event.at} />
-                  </td>
-                  <td>
-                    <span className="cell-title">
-                      <Avatar text={who(event.actor)} size="sm" />
-                      {who(event.actor)}
-                    </span>
-                  </td>
-                  <td>
-                    {label ? t(label) : event.action} <strong>{target(event)}</strong>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {visible.length === 0 && <p className="table-empty">{t("console.no_match")}</p>}
+        {verified === null && !error ? (
+          <SkeletonTable rows={8} />
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t("console.when")}</th>
+                <th>{t("console.who")}</th>
+                <th>{t("console.what")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((event) => {
+                const label = ACTION_LABEL[event.action];
+                return (
+                  <tr key={event.seq}>
+                    <td
+                      className="muted nowrap"
+                      title={`${formatDateTime(event.at, localeSignal.value)}${event.ip ? ` · ${event.ip}` : ""}`}
+                    >
+                      <When at={event.at} />
+                    </td>
+                    <td>
+                      <span className="cell-title">
+                        <Avatar text={who(event.actor)} size="sm" />
+                        {who(event.actor)}
+                      </span>
+                    </td>
+                    <td>
+                      {label ? t(label) : event.action} <strong>{target(event)}</strong>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+        {verified !== null && visible.length === 0 && (
+          <p className="table-empty">{t("console.no_match")}</p>
+        )}
         {more && (
           <div className="table-more">
-            <button type="button" className="btn" onClick={() => void load(events.at(-1)?.seq)}>
+            <ActionButton onClick={() => load(events.at(-1)?.seq)}>
               {t("console.load_more")}
-            </button>
+            </ActionButton>
           </div>
         )}
       </section>

@@ -15,12 +15,14 @@ function copy(value: string, done: string) {
 function SecretRow({
   secret,
   editable,
+  busy,
   onSave,
   onDelete,
   onAccess,
 }: {
   secret: Secret;
   editable: boolean;
+  busy: boolean;
   onSave: (value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: () => void;
   onAccess: (access: SecretAccess) => void;
@@ -33,7 +35,10 @@ function SecretRow({
   const [kind, setKind] = useState<SecretKind>(secret.kind ?? "secret");
 
   return (
-    <tr className={draft !== null ? "editing" : ""}>
+    <tr
+      className={draft !== null ? "editing" : busy ? "pending-row" : ""}
+      aria-busy={busy || undefined}
+    >
       <td className="secret-name">
         <code>{secret.name}</code>
         {variable && <Badge>{t("console.kind_variable")}</Badge>}
@@ -44,7 +49,11 @@ function SecretRow({
             className="inline-edit"
             onSubmit={(event) => {
               event.preventDefault();
-              void onSave(draft, kind).then((saved) => saved && setDraft(null));
+              const value = draft;
+              setDraft(null);
+              void onSave(value, kind).then((saved) => {
+                if (!saved) setDraft(value);
+              });
             }}
           >
             <textarea
@@ -127,6 +136,7 @@ export function SecretsTable({
   secrets,
   query,
   editable,
+  busyIds,
   onSave,
   onDelete,
   onAccess,
@@ -134,6 +144,7 @@ export function SecretsTable({
   secrets: Secret[];
   query: string;
   editable: boolean;
+  busyIds: ReadonlySet<string>;
   onSave: (secret: Secret, value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: (secret: Secret) => void;
   onAccess: (access: SecretAccess, secretId: string) => void;
@@ -159,6 +170,7 @@ export function SecretsTable({
               key={secret.id}
               secret={secret}
               editable={editable}
+              busy={busyIds.has(secret.id)}
               onSave={(value, kind) => onSave(secret, value, kind)}
               onDelete={() => onDelete(secret)}
               onAccess={(access) => onAccess(access, secret.id)}

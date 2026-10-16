@@ -180,6 +180,9 @@ export const en = {
   "orgs.invitations": "Invitations",
   "orgs.accept": "Accept",
   "orgs.decline": "Decline",
+  "orgs.declined": "Invitation declined",
+  "orgs.invite_withdrawn": "Invitation withdrawn",
+  "orgs.team_member_removed": "Removed from the team",
   "orgs.joined": "You joined the organization",
   "orgs.create_title": "Create an organization",
   "orgs.create_hint": "Share passwords and CI secrets with your teams, encrypted end to end.",
@@ -351,6 +354,7 @@ export const en = {
   "console.member": "Member",
   "console.missing": "Missing",
   "console.missing_count": "{count} missing",
+  "console.dismiss": "Dismiss",
   "console.more": "More",
   "console.name_taken_in": "{name} already exists in {env}.",
   "console.new_project_hint":

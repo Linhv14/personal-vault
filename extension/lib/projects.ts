@@ -69,10 +69,20 @@ const address = (project: Project, environmentId: string, secretId: string) => (
 });
 
 export async function listProjects(orgId: string, team: Team, me: Identity): Promise<Project[]> {
-  const { generation, projects } = await request<{
-    generation: number;
-    projects: ProjectRecord[];
-  }>(`${teamPath(orgId, team.id)}/projects`);
+  return openProjects(
+    team,
+    await request<{ generation: number; projects: ProjectRecord[] }>(
+      `${teamPath(orgId, team.id)}/projects`,
+    ),
+    me,
+  );
+}
+
+export async function openProjects(
+  team: Team,
+  { generation, projects }: { generation: number; projects: ProjectRecord[] },
+  me: Identity,
+): Promise<Project[]> {
   const key = await teamKey({ ...team, generation }, me);
   return Promise.all(
     projects.map(async (record) => ({
