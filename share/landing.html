@@ -310,6 +310,7 @@
         text-decoration: none;
       }
       .pill span {
+        line-height: 1.4;
         padding: 2px 9px;
         border-radius: 999px;
         background: rgb(79 224 195 / 0.15);
@@ -348,12 +349,17 @@
         color: var(--l-muted);
         font-size: 13.5px;
       }
+      .trust span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
       .trust span::before {
-        content: "●";
-        margin-right: 8px;
-        color: var(--l-accent);
-        font-size: 9px;
-        vertical-align: 2px;
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--l-accent);
       }
       .browser {
         position: relative;
@@ -579,6 +585,7 @@
         color: var(--l-accent);
       }
       .soon {
+        line-height: 1.4;
         align-self: flex-start;
         margin-bottom: 4px;
         padding: 2px 9px;

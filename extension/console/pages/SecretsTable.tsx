@@ -187,7 +187,8 @@ export function SecretsTable({
       </table>
       {visible.length === 0 && (
         <p className="table-empty">
-          <Icon name="search" /> {t("console.no_match")}
+          <Icon name="search" />
+          {t("console.no_match")}
         </p>
       )}
     </>

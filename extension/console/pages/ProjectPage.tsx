@@ -625,11 +625,13 @@ function Matrix({
       <p className="matrix-summary">
         {incomplete === 0 ? (
           <Badge tone="ok">
-            <Icon name="check" /> {t("console.all_present")}
+            <Icon name="check" />
+            {t("console.all_present")}
           </Badge>
         ) : (
           <Badge tone="warn">
-            <Icon name="alert" /> {t("console.incomplete", { count: incomplete })}
+            <Icon name="alert" />
+            {t("console.incomplete", { count: incomplete })}
           </Badge>
         )}
       </p>

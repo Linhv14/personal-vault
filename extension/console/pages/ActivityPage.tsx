@@ -84,11 +84,13 @@ export function ActivityPage() {
           verified !== null &&
           (verified ? (
             <Badge tone="ok">
-              <Icon name="check" /> {t("console.chain_ok")}
+              <Icon name="check" />
+              {t("console.chain_ok")}
             </Badge>
           ) : (
             <Badge tone="danger">
-              <Icon name="alert" /> {t("orgs.audit_broken")}
+              <Icon name="alert" />
+              {t("orgs.audit_broken")}
             </Badge>
           ))
         }
