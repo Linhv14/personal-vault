@@ -8,6 +8,19 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Added
+
+- New landing page: product video (English and Vietnamese, 35 seconds, recorded
+  from the real UI), fresh screenshots, features, use cases, team and CI
+  sections, pricing and FAQ. Canonical and hreflang links, Open Graph and
+  Twitter cards with 1200×630 images, JSON-LD for the app and the FAQ, and
+  generated `robots.txt` and `sitemap.xml`. The header no longer links to the
+  dashboard.
+- `/api/migration/export` and `/api/migration/import` (only with the
+  `MIGRATION_TOKEN` secret) copy every Durable Object store between
+  deployments, and `READ_ONLY=1` refuses writes while moving.
+- `ALIAS_ORIGINS` lets CI tokens issued for an old address keep working.
+
 ### Changed
 
 - The product is now **7key**, independent of Trust1: name, wordmark ("7key"

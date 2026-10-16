@@ -106,7 +106,11 @@ async function buildSharePage() {
     path.join(outPublic, "security.html"),
     await injectTokens(filled, "share/security.html"),
   );
-  const landing = await readFile(path.join(root, "share", "landing.html"), "utf8");
+  const site = (deployedServerUrl() || "https://7key.online").replace(/\/$/, "");
+  const landing = (await readFile(path.join(root, "share", "landing.html"), "utf8")).replaceAll(
+    "{{site}}",
+    site,
+  );
   for (const [lang, file] of [
     ["en", "index.html"],
     ["vi", "vi.html"],
@@ -116,6 +120,17 @@ async function buildSharePage() {
       await injectTokens(localizePage(landing, lang), "share/landing.html"),
     );
   }
+  await writeFile(
+    path.join(outPublic, "robots.txt"),
+    `User-agent: *\nAllow: /\nDisallow: /app/\nDisallow: /api/\nDisallow: /s/\n\nSitemap: ${site}/sitemap.xml\n`,
+  );
+  const pages = ["/", "/vi", "/privacy", "/security"];
+  await writeFile(
+    path.join(outPublic, "sitemap.xml"),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages
+      .map((page) => `  <url><loc>${site}${page}</loc></url>`)
+      .join("\n")}\n</urlset>\n`,
+  );
   await cp(path.join(root, "share", "assets"), path.join(outPublic, "assets"), { recursive: true });
   await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
 }

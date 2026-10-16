@@ -1,10 +1,10 @@
 {
-  "accountId": "e894b81be63301546cb422b102e6641a",
-  "databaseId": "55cf48ab-6424-4951-b76d-f21935d2c1b4",
-  "workerUrl": "https://1pw.online",
-  "registrationMode": "open",
-  "customDomain": "1pw.online",
-  "emailFrom": "no-reply@1pw.online",
+  "accountId": "1784ddbc646ae15517b735e8c7239dc2",
+  "databaseId": "dd394371-f298-4788-978d-30702675afe1",
+  "workerUrl": "https://7key.online",
+  "registrationMode": "token",
+  "customDomain": "7key.online",
+  "emailFrom": "",
   "emailProvider": "resend",
   "aliasDomains": []
 }
