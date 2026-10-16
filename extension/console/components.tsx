@@ -1,9 +1,12 @@
 import type { ComponentChildren, JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { IconName } from "../../src/ui/icons.js";
+import type { OrgRole } from "../../src/core/org-model.js";
+import { Fingerprint } from "../ui/components/Fingerprint.js";
 import { Icon } from "../ui/components/Icon.js";
 import { localeSignal, useT } from "../ui/i18n.js";
 import { dismissToast, failure$, pending$, refreshing$, toasts$, type ToastKind } from "./data.js";
+import { ROLE_LABEL } from "./labels.js";
 
 export function Spinner({ size = "sm" }: { size?: "sm" | "md" }) {
   return <span className={`spin ${size}`} aria-hidden="true" />;
@@ -201,6 +204,7 @@ export function Dialog({
   submitLabel,
   danger = false,
   busy = false,
+  hideCancel = false,
   children,
 }: {
   title: string;
@@ -210,6 +214,7 @@ export function Dialog({
   submitLabel: string;
   danger?: boolean;
   busy?: boolean;
+  hideCancel?: boolean;
   children?: ComponentChildren;
 }) {
   const t = useT();
@@ -264,15 +269,17 @@ export function Dialog({
           </p>
         )}
         <footer className="dialog-foot">
-          <button type="button" className="btn" onClick={close} disabled={working}>
-            {t("pin.cancel")}
-          </button>
+          {!hideCancel && (
+            <button type="button" className="btn" onClick={close} disabled={working}>
+              {t("pin.cancel")}
+            </button>
+          )}
           <button
             type="submit"
             className={danger ? "btn danger" : "btn primary"}
             disabled={busy || working}
             aria-busy={working || undefined}
-            autoFocus={!children}
+            autoFocus={!children || hideCancel}
           >
             {working && <Spinner />}
             {submitLabel}
@@ -476,4 +483,20 @@ export function PanelHead({
       {action && <div className="panel-head-action">{action}</div>}
     </header>
   );
+}
+
+export function KeyCheck({ email, publicKey }: { email: string; publicKey: string | null }) {
+  const t = useT();
+  return (
+    <div className="key-check">
+      <span className="field-label">{t("console.key_of", { email })}</span>
+      <Fingerprint publicKey={publicKey} large />
+      <p className="field-hint">{t("console.verify_hint")}</p>
+    </div>
+  );
+}
+
+export function RoleBadge({ role }: { role: OrgRole }) {
+  const t = useT();
+  return <Badge tone={role === "owner" ? "accent" : "neutral"}>{t(ROLE_LABEL[role])}</Badge>;
 }

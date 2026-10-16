@@ -1537,3 +1537,21 @@ tr.pending-row {
 .btn .icon {
   flex: none;
 }
+
+.key-check {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fingerprint.large {
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  gap: 6px 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}

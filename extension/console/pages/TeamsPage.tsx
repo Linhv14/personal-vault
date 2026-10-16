@@ -63,7 +63,7 @@ export function TeamsPage() {
           <table className="table clickable">
             <thead>
               <tr>
-                <th>{t("orgs.team_name")}</th>
+                <th>{t("console.secret_name")}</th>
                 <th>{t("orgs.members")}</th>
                 <th className="num">{t("projects.tab")}</th>
               </tr>

@@ -352,7 +352,7 @@ export const en = {
   "console.key_fingerprint": "Key fingerprint",
   "console.key_status": "Key",
   "console.keys_match_add": "Keys match, add",
-  "console.last_change": "Last change",
+  "console.last_change": "Updated",
   "console.load_more": "Load older",
   "console.locked_text": "Unlock Trust1 Vault from the toolbar, then come back to this tab.",
   "console.locked_title": "Trust1 Vault is locked",
@@ -371,6 +371,13 @@ export const en = {
   "orgs.invite_domains_hint": "Only addresses at {domains}",
   "console.remove_duplicates_text":
     "For each name that appears twice in an environment, the most recently changed value is kept and the older ones are deleted.",
+  "console.key_of": "Key of {email}",
+  "console.verify_text":
+    "Encryption keys are compared person to person, so not even the server can swap one in.",
+  "console.email": "Email",
+  "console.current": "Current",
+  "console.leave_text":
+    "You lose access to this organization's teams and projects. An admin has to invite you again to come back.",
   "console.dismiss": "Dismiss",
   "console.more": "More",
   "console.name_taken_in": "{name} already exists in {env}.",
@@ -416,13 +423,14 @@ export const en = {
   "console.type_to_confirm": "Type {phrase} to confirm",
   "console.used_of": "{used} of {limit} used.",
   "console.verify_hint":
-    "Ask them to read the key shown under Settings on their own device. Add them only if it matches.",
+    "Ask them to read the key under Settings → Your key, on a call or in person. If any group differs, don't add them.",
   "console.what": "Action",
   "console.when": "Time",
   "console.who": "By",
   "console.your_access": "Your access",
   "console.your_key_hint": "Teammates compare this with what they see before adding you to a team.",
-  "console.organizations_hint": "Use a separate organization for another company or client.",
+  "console.organizations_hint":
+    "Organizations you belong to. Create another one for a separate company or client.",
   "console.your_key": "Your key",
   "console.filter_all": "All",
   "console.filter_member": "People",

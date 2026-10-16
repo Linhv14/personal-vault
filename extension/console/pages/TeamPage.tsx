@@ -7,7 +7,6 @@ import {
   type OrgMember,
 } from "../../lib/orgs.js";
 import { rekeyTeam } from "../../lib/projects.js";
-import { Fingerprint } from "../../ui/components/Fingerprint.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
@@ -18,6 +17,8 @@ import {
   Dialog,
   EmptyState,
   Field,
+  KeyCheck,
+  RoleBadge,
   Menu,
   MenuItem,
   PageHeader,
@@ -25,7 +26,6 @@ import {
   When,
 } from "../components.js";
 import { pending$, useConsole } from "../data.js";
-import { ROLE_LABEL } from "../labels.js";
 import { href, navigate } from "../router.js";
 import { TypeToConfirmDialog } from "./project-dialogs.js";
 
@@ -60,13 +60,7 @@ function AddMemberDialog({
           ))}
         </select>
       </Field>
-      {member && (
-        <div className="verify">
-          <span className="field-label">{t("console.their_key")}</span>
-          <Fingerprint publicKey={member.publicKey} />
-          <p className="field-hint">{t("console.verify_hint")}</p>
-        </div>
-      )}
+      {member && <KeyCheck email={member.email} publicKey={member.publicKey} />}
     </Dialog>
   );
 }
@@ -175,7 +169,9 @@ export function TeamPage({ teamId }: { teamId: string }) {
                     {member.publicKey === identity.publicKey && <Badge>{t("orgs.you")}</Badge>}
                   </span>
                 </td>
-                <td className="muted">{t(ROLE_LABEL[member.role])}</td>
+                <td>
+                  <RoleBadge role={member.role} />
+                </td>
                 <td className="row-actions">
                   <div className="row-actions-inner">
                     {admin && (
@@ -203,7 +199,7 @@ export function TeamPage({ teamId }: { teamId: string }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t("projects.name")}</th>
+                  <th>{t("console.secret_name")}</th>
                   <th className="num">{t("console.secrets")}</th>
                   <th>{t("console.last_change")}</th>
                 </tr>

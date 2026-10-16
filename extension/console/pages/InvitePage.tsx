@@ -9,7 +9,7 @@ import {
 } from "../../lib/orgs.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { ActionButton, EmptyState, PageHeader, PageSkeleton } from "../components.js";
+import { ActionButton, EmptyState, PageHeader, PageSkeleton, RoleBadge } from "../components.js";
 import type { Run } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { navigate } from "../router.js";
@@ -89,7 +89,9 @@ export function InvitePage({
         <dl className="facts">
           <div>
             <dt>{t("orgs.role")}</dt>
-            <dd>{t(ROLE_LABEL[invite.role])}</dd>
+            <dd>
+              <RoleBadge role={invite.role} />
+            </dd>
           </div>
           <div>
             <dt>{t("invite.for")}</dt>

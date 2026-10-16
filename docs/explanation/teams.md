@@ -79,6 +79,28 @@ project or secret is missing or extra. Until that happens, the team is flagged
 and every write to its projects is refused, so nothing new is written under keys
 the departed member holds.
 
+## Roles
+
+The Worker and the organization's Durable Object enforce every row; the console
+only hides what a role cannot use.
+
+| Action                                                                 | Owner                | Admin                                                  | Member             |
+| ---------------------------------------------------------------------- | -------------------- | ------------------------------------------------------ | ------------------ |
+| See the organization and its member list                               | yes                  | yes                                                    | yes                |
+| See team names                                                         | all                  | all                                                    | own teams          |
+| Read and write secrets                                                 | teams they are in    | teams they are in                                      | teams they are in  |
+| Create, rename and delete projects and environments, link repositories | teams they are in    | teams they are in                                      | no                 |
+| Create and delete teams, add and remove team members                   | yes                  | yes (adding needs a seat in the team, to wrap its key) | no                 |
+| Invite                                                                 | admins and members   | members                                                | no                 |
+| Remove members                                                         | anyone but the owner | members                                                | themselves (leave) |
+| Change roles, transfer ownership, set email domains                    | yes                  | no                                                     | no                 |
+| Activity log, plan and seat usage, pending invitations                 | yes                  | yes                                                    | no                 |
+
+Any account can create an organization and owns up to ten
+(`MAX_ORGS_PER_ACCOUNT`). Creating one is an account action, so it sits next to
+the list of the account's organizations in Settings rather than inside any one
+organization's settings.
+
 ## Email domains
 
 An owner can restrict an organization to a list of email domains. The check is

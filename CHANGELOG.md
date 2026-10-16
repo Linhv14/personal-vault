@@ -148,6 +148,15 @@ version may change the API or storage format; such releases list the steps in
   table; tables, toolbars and panel titles share one 18px gutter; page actions
   line up with the title; activity columns have fixed widths and show invited
   addresses instead of "Former member".
+- Consistent display rules: tables name the entity column "Name" and the time
+  column "Updated"; roles always show as a badge; absolute dates always carry
+  the year; a project's secret count is the same number in the list, the
+  header and the sum of its environment tabs.
+- Scope by role: members no longer see plan usage, seat usage or email domains;
+  Settings lists the organizations you belong to, with creating a new one next
+  to that list. The roles table is in `docs/explanation/teams.md`.
+- The key verification dialog shows the key in large groups with one Done
+  button and says why keys are compared person to person.
 - Row actions line up on one axis at one height; destructive actions are marked
   as such (withdraw, remove, delete and unlink turn red on hover or are red
   text), and removing duplicate secrets now asks for confirmation.

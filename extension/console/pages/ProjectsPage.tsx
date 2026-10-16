@@ -121,7 +121,7 @@ export function ProjectsPage() {
           <table className="table clickable">
             <thead>
               <tr>
-                <th>{t("projects.name")}</th>
+                <th>{t("console.secret_name")}</th>
                 <th>{t("projects.team")}</th>
                 <th>{t("projects.environments")}</th>
                 <th className="num">{t("console.secrets")}</th>

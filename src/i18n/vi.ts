@@ -347,7 +347,7 @@ export const vi: Catalogue = {
   "console.key_fingerprint": "Fingerprint khoá",
   "console.key_status": "Khoá",
   "console.keys_match_add": "Khoá khớp, thêm",
-  "console.last_change": "Sửa gần nhất",
+  "console.last_change": "Cập nhật",
   "console.load_more": "Tải cũ hơn",
   "console.locked_text": "Mở khoá Trust1 Vault trên thanh công cụ rồi quay lại tab này.",
   "console.locked_title": "Trust1 Vault đang khoá",
@@ -365,6 +365,13 @@ export const vi: Catalogue = {
   "orgs.invite_domains_hint": "Chỉ email thuộc {domains}",
   "console.remove_duplicates_text":
     "Với mỗi tên bị trùng trong một môi trường, giá trị sửa gần nhất được giữ lại, các bản cũ hơn bị xoá.",
+  "console.key_of": "Khoá của {email}",
+  "console.verify_text":
+    "Khoá mã hoá được đối chiếu trực tiếp giữa hai người, nên ngay cả server cũng không thể tráo khoá.",
+  "console.email": "Email",
+  "console.current": "Đang xem",
+  "console.leave_text":
+    "Bạn sẽ mất quyền truy cập team và dự án của tổ chức này. Muốn quay lại phải được quản trị viên mời lại.",
   "console.dismiss": "Đóng",
   "console.more": "Thêm",
   "console.name_taken_in": "{name} đã có trong {env}.",
@@ -411,13 +418,14 @@ export const vi: Catalogue = {
   "console.type_to_confirm": "Gõ {phrase} để xác nhận",
   "console.used_of": "Đã dùng {used}/{limit}.",
   "console.verify_hint":
-    "Nhờ họ đọc khoá trong mục Cài đặt trên máy của chính họ. Chỉ thêm khi khớp.",
+    "Nhờ họ đọc khoá ở Cài đặt → Khoá của bạn, qua cuộc gọi hoặc trực tiếp. Nếu có nhóm nào khác, đừng thêm họ.",
   "console.what": "Hành động",
   "console.when": "Thời gian",
   "console.who": "Người làm",
   "console.your_access": "Quyền của bạn",
   "console.your_key_hint": "Đồng đội so khớp chuỗi này trước khi thêm bạn vào team.",
-  "console.organizations_hint": "Dùng tổ chức riêng cho công ty hoặc khách hàng khác.",
+  "console.organizations_hint":
+    "Các tổ chức bạn tham gia. Tạo tổ chức riêng cho công ty hoặc khách hàng khác.",
   "console.your_key": "Khoá của bạn",
   "console.filter_all": "Tất cả",
   "console.filter_member": "Người",

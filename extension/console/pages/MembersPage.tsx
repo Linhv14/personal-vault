@@ -16,7 +16,6 @@ import {
   withdrawInvite,
   type OrgMember,
 } from "../../lib/orgs.js";
-import { Fingerprint } from "../../ui/components/Fingerprint.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
@@ -26,13 +25,14 @@ import {
   Badge,
   Dialog,
   Field,
+  KeyCheck,
+  RoleBadge,
   PageHeader,
   SearchInput,
   Usage,
   When,
 } from "../components.js";
 import { failure$, pending$, toast, useConsole } from "../data.js";
-import { ROLE_LABEL } from "../labels.js";
 
 type Modal =
   | { kind: "invite" }
@@ -87,7 +87,7 @@ export function MembersPage() {
       <section className="panel">
         <div className="toolbar">
           <SearchInput value={query} onInput={setQuery} placeholder={t("console.search_members")} />
-          <Usage label={t("console.seats")} used={used} limit={seats} />
+          {isOrgAdmin(org.role) && <Usage label={t("console.seats")} used={used} limit={seats} />}
         </div>
         <table className="table">
           <thead>
@@ -139,9 +139,7 @@ export function MembersPage() {
                         <option value="member">{t("orgs.role_member")}</option>
                       </select>
                     ) : (
-                      <Badge tone={member.role === "owner" ? "accent" : "neutral"}>
-                        {t(ROLE_LABEL[member.role])}
-                      </Badge>
+                      <RoleBadge role={member.role} />
                     )}
                   </td>
                   <td>
@@ -186,7 +184,7 @@ export function MembersPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>{t("orgs.invite_email")}</th>
+                <th>{t("console.email")}</th>
                 <th>{t("orgs.role")}</th>
                 <th>{t("console.expires")}</th>
                 <th aria-label={t("console.actions")} />
@@ -202,7 +200,9 @@ export function MembersPage() {
                       {outside(invite.email)}
                     </span>
                   </td>
-                  <td className="muted">{t(ROLE_LABEL[invite.role])}</td>
+                  <td>
+                    <RoleBadge role={invite.role} />
+                  </td>
                   <td className="muted">
                     <When at={invite.expiresAt} />
                   </td>
@@ -347,15 +347,13 @@ export function MembersPage() {
       {modal?.kind === "verify" && (
         <Dialog
           title={t("console.verify_key")}
+          description={t("console.verify_text")}
           submitLabel={t("console.done")}
+          hideCancel
           onClose={() => setModal(null)}
           onSubmit={() => setModal(null)}
         >
-          <div className="verify">
-            <span className="field-label">{modal.member.email}</span>
-            <Fingerprint publicKey={modal.member.publicKey} />
-            <p className="field-hint">{t("console.verify_hint")}</p>
-          </div>
+          <KeyCheck email={modal.member.email} publicKey={modal.member.publicKey} />
         </Dialog>
       )}
       {modal?.kind === "share-link" && (

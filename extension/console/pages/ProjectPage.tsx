@@ -279,7 +279,7 @@ export function ProjectPage({
             <a href={href(orgId, { page: "team", teamId: project.teamId })}>{owner?.name}</a>
             <span>·</span>
             <span>
-              {t("console.secret_count", { count: secrets ? names.length : project.secretCount })}
+              {t("console.secret_count", { count: secrets ? all.length : project.secretCount })}
             </span>
           </>
         }
