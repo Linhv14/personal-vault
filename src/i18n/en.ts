@@ -537,6 +537,8 @@ export const en = {
   "error.orgs.invite_domain_blocked": "This organization no longer accepts your email domain.",
   "error.orgs.transfer_needs_admin": "Ownership can only go to an admin. Make them an admin first.",
   "error.orgs.transfer_needs_key": "They haven't finished setting up their account yet.",
+  "error.server.read_only":
+    "7key is moving to a new home and accepts no changes for a few minutes. Your data is safe; try again shortly.",
   "error.orgs.seat_limit": "This plan has {limit} seats, pending invitations included.",
   "error.orgs.team_limit": "This plan allows {limit} teams.",
   "error.orgs.stale_team_key": "The team changed meanwhile. Try again.",

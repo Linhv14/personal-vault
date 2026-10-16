@@ -74,6 +74,8 @@ export type ApiErrorCode =
   | "shares.invalid_code"
   | "shares.code_expired"
   | "server.rate_limited"
+  | "server.read_only"
+  | "server.import_conflict"
   | "server.not_found"
   | "server.error";
 
@@ -142,6 +144,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "shares.invalid_code": "That code is not correct",
   "shares.code_expired": "The code expired; request a new one",
   "server.rate_limited": "Too many requests, slow down",
+  "server.import_conflict": "The target already holds data for one of these stores",
+  "server.read_only": "The server is moving and accepts no changes for a few minutes",
   "server.not_found": "No such endpoint",
   "server.error": "Server error",
 };

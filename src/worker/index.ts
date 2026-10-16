@@ -10,6 +10,7 @@ import deviceUnlock from "./routes/device-unlock.js";
 import items from "./routes/items.js";
 import orgs, { invites } from "./routes/orgs.js";
 import logos from "./routes/logos.js";
+import migration from "./routes/migration.js";
 import shares from "./routes/shares.js";
 import { emailVerificationEnabled } from "./email-verification.js";
 import { clientIp, isOpenRegistration } from "./request.js";
@@ -41,6 +42,14 @@ app.use("/api/*", async (c, next) => {
     headers.set("Strict-Transport-Security", "max-age=31536000");
   }
   if (!headers.has("Cache-Control")) headers.set("Cache-Control", "no-store");
+});
+
+app.use("/api/*", async (c, next) => {
+  const reading = c.req.method === "GET" || c.req.method === "OPTIONS";
+  if (c.env.READ_ONLY === "1" && !reading && !c.req.path.startsWith("/api/migration/")) {
+    return c.json(apiError("server.read_only"), 503);
+  }
+  await next();
 });
 
 const limitByClientIp: MiddlewareHandler<AppBindings> = async (c, next) => {
@@ -134,6 +143,7 @@ app.route("/api/items", items);
 app.route("/api/logo", logos);
 app.route("/api/shares", shares);
 app.route("/api/ci", ci);
+app.route("/api/migration", migration);
 
 /**
  * Lets the extension measure clock drift at unlock. A machine whose clock is off

@@ -11,6 +11,7 @@ import {
   type WrappedKey,
 } from "../../core/org-model.js";
 import { fail, now, ok, type Result } from "../http.js";
+import { dumpStore, restoreStore, type StoreDump } from "../migration.js";
 import type { Env } from "../types.js";
 import { ruleAllows, type GithubClaims } from "../../core/ci.js";
 import { LinkTables, type LinkRecord } from "./link-tables.js";
@@ -771,5 +772,13 @@ export class OrgStore extends DurableObject<Env> {
       previous = row.hash;
     }
     return true;
+  }
+
+  async exportState(): Promise<StoreDump> {
+    return dumpStore(this.sql);
+  }
+
+  async importState(dump: StoreDump): Promise<number> {
+    return restoreStore(this.ctx.storage, dump);
   }
 }

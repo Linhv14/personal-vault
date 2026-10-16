@@ -533,6 +533,8 @@ export const vi: Catalogue = {
   "error.orgs.transfer_needs_admin":
     "Chỉ chuyển quyền sở hữu cho quản trị viên. Hãy đặt họ làm quản trị viên trước.",
   "error.orgs.transfer_needs_key": "Người này chưa hoàn tất thiết lập tài khoản.",
+  "error.server.read_only":
+    "7key đang chuyển nhà và tạm không nhận thay đổi trong vài phút. Dữ liệu của bạn an toàn; hãy thử lại sau ít phút.",
   "error.orgs.seat_limit": "Gói này có {limit} chỗ, tính cả lời mời đang chờ.",
   "error.orgs.team_limit": "Gói này cho tối đa {limit} team.",
   "error.orgs.stale_team_key": "Team vừa thay đổi. Thử lại.",

@@ -433,6 +433,8 @@ async function dev() {
     `CI_TEST_JWKS:${testJwks}`,
     "--var",
     `CI_TEST_ISSUER:${CI_TEST_ISSUER}`,
+    "--var",
+    "MIGRATION_TOKEN:local-migration-token",
   ]);
 }
 

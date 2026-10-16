@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { fail, now, ok, type Result } from "./http.js";
+import { dumpStore, restoreStore, type StoreDump } from "./migration.js";
 import type { Env } from "./types.js";
 
 export const MAX_ITEMS_PER_ACCOUNT = 5_000;
@@ -183,5 +184,13 @@ export class UserStore extends DurableObject<Env> {
     const owner = this.meta("owner");
     if (owner !== null && owner !== accountId) return;
     await this.ctx.storage.deleteAll();
+  }
+
+  async exportState(): Promise<StoreDump> {
+    return dumpStore(this.sql);
+  }
+
+  async importState(dump: StoreDump): Promise<number> {
+    return restoreStore(this.ctx.storage, dump);
   }
 }
