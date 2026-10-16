@@ -63,6 +63,13 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     vaultKey = created.vaultKey;
   });
 
+  it("marks API responses as uncacheable and not to be sniffed", async () => {
+    const response = await fetch(`${BASE}/api/config`);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  });
+
   it("refuses registration without the token", async () => {
     const result = await api("/api/auth/register", {
       method: "POST",

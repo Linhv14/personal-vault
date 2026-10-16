@@ -42,6 +42,16 @@ working against the migrated database while the new one rolls out.
 - **Data went wrong:** restore the database to a time before the deploy; see
   [Back up and restore](back-up-and-restore.md#restore-to-a-point-in-time).
 
+## From 0.2.x to 0.3.0
+
+1. `npm run deploy`. Migrations `0009_orgs.sql` and `0010_org_domains.sql`
+   add the organization tables and a column; nothing is rewritten.
+2. Reload the extension. Its ID changes once, because the manifest now carries
+   a fixed key: sign in again on each machine and turn PIN or device unlock
+   back on. After this, the ID stays the same.
+3. Remove the old copy of the extension from `chrome://extensions` once the new
+   one has synced.
+
 ## From 0.1.x to 0.2.0
 
 0.2.0 changes the API and the at-rest format. Do these in order:

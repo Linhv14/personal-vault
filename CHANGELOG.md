@@ -8,6 +8,20 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-16
+
+Organizations, projects and CI secrets; the product is now Trust1 Vault. See
+[Upgrade a deployment](docs/how-to/upgrade.md#from-02x-to-030).
+
+### Security
+
+- Every page sends `Strict-Transport-Security`; API responses send
+  `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and
+  `Referrer-Policy: no-referrer`.
+- The extension manifest carries a fixed `key`, so unpacked installs keep one
+  extension ID (and one origin for device unlock) wherever they are loaded
+  from. `npm run package` leaves it out of the Chrome Web Store upload.
+
 ### Added
 
 - Organization email domains (Settings, owner only): when set, invitations,
@@ -437,6 +451,7 @@ Requires the upgrade steps in
 - English and Vietnamese interface.
 - One-command deployment to your own Cloudflare account.
 
-[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Linhv14/personal-vault/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Linhv14/personal-vault/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Linhv14/personal-vault/releases/tag/v0.1.0

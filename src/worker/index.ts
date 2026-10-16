@@ -31,6 +31,18 @@ app.use(
   }),
 );
 
+app.use("/api/*", async (c, next) => {
+  await next();
+  c.res = new Response(c.res.body, c.res);
+  const headers = c.res.headers;
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Referrer-Policy", "no-referrer");
+  if (new URL(c.req.url).protocol === "https:") {
+    headers.set("Strict-Transport-Security", "max-age=31536000");
+  }
+  if (!headers.has("Cache-Control")) headers.set("Cache-Control", "no-store");
+});
+
 const limitByClientIp: MiddlewareHandler<AppBindings> = async (c, next) => {
   const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp(c) });
   if (!success) return c.json(apiError("server.rate_limited"), 429);

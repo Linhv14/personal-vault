@@ -21,7 +21,12 @@ npm run deploy      # make sure the baked-in server URL is current
 npm run package
 ```
 
-This writes `dist/personal-vault-extension-<version>.zip`. Bump `version` in
+This writes `dist/trust1-vault-extension-<version>.zip` without the manifest's
+`key` field, which the store refuses. The key stays in `extension/manifest.json`
+so unpacked installs (development, the download on the site) keep the same
+extension ID, and with it the same origin for device unlock. Its private half is
+kept outside the repository; to keep that ID on the store, upload it once as
+`key.pem` in the first submission's zip. Bump `version` in
 both `package.json` and `extension/manifest.json` before each new upload; the
 store rejects a version it has already seen.
 
