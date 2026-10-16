@@ -98,9 +98,13 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
       expect(invited.body.link).toBe(`${BASE}/app/#/invite/${invited.body.id}`);
       const preview = await api(`/api/invites/${invited.body.id}/preview`);
       expect(preview.status).toBe(200);
-      expect(preview.body).toMatchObject({ orgName: "Acme Inc", inviter: owner.email, role });
-      expect(preview.body.email).not.toBe(who.email);
-      expect(preview.body.email).toContain("•");
+      expect(preview.body).toMatchObject({
+        orgName: "Acme Inc",
+        inviter: owner.email,
+        email: who.email,
+        role,
+        hasAccount: true,
+      });
     }
     const strangers = await api("/api/invites", { token: outsider.token });
     expect(strangers.body.invites).toEqual([]);
@@ -300,6 +304,43 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
       body: JSON.stringify({ wrappedKey: forAdmin, generation: 1 }),
     });
     expect(added.status).toBe(200);
+  });
+
+  it("lets an invited address create its account from the invitation and join at once", async () => {
+    const email = `newcomer-${Date.now()}@example.com`;
+    const invited = await api(`/api/orgs/${orgId}/invites`, {
+      method: "POST",
+      token: owner.token,
+      body: JSON.stringify({ email, role: "member" }),
+    });
+    const preview = await api(`/api/invites/${invited.body.id}/preview`);
+    expect(preview.body).toMatchObject({ email, hasAccount: false });
+
+    const register = async (as: string, inviteId: string) =>
+      api("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          email: as,
+          ...(await createAccount(as, "newcomer password", 100_000)).record,
+          inviteId,
+        }),
+      });
+    const stranger = await register(`stranger-${Date.now()}@example.com`, invited.body.id);
+    expect(stranger.status).toBe(403);
+    expect(stranger.body.code).toBe("auth.bad_registration_token");
+
+    const created = await register(email, invited.body.id);
+    expect(created.status).toBe(201);
+    expect(created.body.orgId).toBe(orgId);
+    const mine = await api("/api/orgs", { token: created.body.token });
+    expect(mine.body.orgs).toEqual([expect.objectContaining({ id: orgId, role: "member" })]);
+    expect((await api(`/api/invites/${invited.body.id}/preview`)).status).toBe(404);
+
+    const removed = await api(`/api/orgs/${orgId}/members/${created.body.accountId}`, {
+      method: "DELETE",
+      token: owner.token,
+    });
+    expect(removed.status).toBe(200);
   });
 
   it("counts members and pending invitations against the plan's seats", async () => {

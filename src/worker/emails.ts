@@ -51,9 +51,9 @@ const STRINGS = {
       accept: "Accept invitation",
       newTitle: `New to ${APP_NAME}?`,
       steps: (site: string, email: string) => [
-        `Install the ${APP_NAME} extension from ${site}.`,
-        `Create an account with ${email}.`,
-        "Open this invitation again and accept it.",
+        `Click "Accept invitation" and create your account with ${email} on the page that opens.`,
+        "You join the organization as soon as the account is created.",
+        `Optional: install the browser extension from ${site} to fill passwords and codes.`,
       ],
       ignore: "If you don't know the sender, ignore this email. Nothing happens unless you accept.",
     },
@@ -98,9 +98,9 @@ const STRINGS = {
       accept: "Chấp nhận lời mời",
       newTitle: `Chưa dùng ${APP_NAME}?`,
       steps: (site: string, email: string) => [
-        `Cài extension ${APP_NAME} từ ${site}.`,
-        `Tạo tài khoản bằng ${email}.`,
-        "Mở lại lời mời này và chấp nhận.",
+        `Bấm "Chấp nhận lời mời" và tạo tài khoản bằng ${email} ngay trên trang mở ra.`,
+        "Bạn vào tổ chức ngay khi tài khoản được tạo.",
+        `Tuỳ chọn: cài extension từ ${site} để tự điền mật khẩu và mã.`,
       ],
       ignore:
         "Nếu bạn không biết người gửi, hãy bỏ qua email này. Không có gì xảy ra nếu bạn không chấp nhận.",

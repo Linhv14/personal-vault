@@ -204,17 +204,27 @@ export class OrgDirectory {
     email: string;
     role: InvitableRole;
     expiresAt: number;
+    hasAccount: boolean;
   } | null> {
-    return this.db
+    const row = await this.db
       .prepare(
-        `SELECT o.name AS orgName, a.email AS inviter, i.email, i.role, i.expires_at AS expiresAt
+        `SELECT o.name AS orgName, a.email AS inviter, i.email, i.role, i.expires_at AS expiresAt,
+                EXISTS (SELECT 1 FROM accounts WHERE email = i.email) AS hasAccount
            FROM org_invites i
            JOIN orgs o ON o.id = i.org_id
            LEFT JOIN accounts a ON a.id = i.invited_by
           WHERE i.id = ? AND i.expires_at > ?`,
       )
       .bind(inviteId, now())
-      .first();
+      .first<{
+        orgName: string;
+        inviter: string | null;
+        email: string;
+        role: InvitableRole;
+        expiresAt: number;
+        hasAccount: number;
+      }>();
+    return row && { ...row, hasAccount: row.hasAccount === 1 };
   }
 
   async withdrawInvite(orgId: string, inviteId: string): Promise<void> {

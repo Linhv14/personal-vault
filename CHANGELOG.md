@@ -11,9 +11,10 @@ version may change the API or storage format; such releases list the steps in
 ### Added
 
 - Invitations: the email shows the organization, who invited, the role and the
-  expiry, with an "Accept invitation" button and steps for someone without an
-  account. The link opens the invitation in the console or dashboard; signed
-  out, the sign-in page says who invited you and with which address. Pending
+  expiry, with an "Accept invitation" button. Someone without an account
+  creates one on the page the link opens, with the invited address filled in,
+  and lands in the organization; no extension needed, and no registration code
+  on token-only servers. Someone with an account signs in and accepts. Pending
   invitations can be resent or their link copied, and when no email provider is
   configured the console shows the link to share by hand.
 - Emails share one layout and component set (`src/worker/email/`).

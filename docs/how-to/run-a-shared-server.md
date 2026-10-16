@@ -17,6 +17,10 @@ Anyone with the extension can now create an account without a registration
 token. The setting is saved in `.cf-state.json` and reused by later deploys;
 `--token-registration` turns it back off.
 
+You do not need open registration to onboard a team. On a token-only server,
+someone invited to an organization creates their account from the invitation
+link without the token, and only with the invited address.
+
 Abuse limits that apply from then on are listed in
 [Limits](../reference/limits.md): accounts per network per day, items per
 account, writes per minute, and sessions per account.

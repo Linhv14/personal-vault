@@ -27,16 +27,22 @@
   width: 100%;
   margin: 4px 0 0;
 }
-.invite-context {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--accent-soft);
-  font-size: 13px;
+.invite-lead {
+  margin: -6px 0 2px;
+  color: var(--muted);
 }
-.invite-context span {
+.sign-in-card .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.sign-in-card .link:hover {
+  text-decoration: underline;
+}
+.sign-in-card input[readonly] {
+  background: transparent;
   color: var(--muted);
 }

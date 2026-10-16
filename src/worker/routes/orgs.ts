@@ -10,7 +10,7 @@ import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { MAX_ORGS_PER_ACCOUNT } from "../orgs/directory.js";
-import { invitationLink, sendInvitation } from "../orgs/invitations.js";
+import { invitationLink, joinFromInvite, sendInvitation } from "../orgs/invitations.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
@@ -289,30 +289,23 @@ invites.get("/:inviteId/preview", async (c) => {
   if (!success) return c.json(apiError("server.rate_limited"), 429);
   const invite = await directory(c).preview(inviteId);
   if (!invite) return notFound(c);
-  return c.json({ ...invite, email: maskEmail(invite.email) });
+  return c.json(invite);
 });
 
 invites.post("/:inviteId/accept", async (c) => {
-  const accountId = c.get("session").accountId;
-  const invite = await directory(c).accept(param(c, "inviteId"), await myEmail(c), accountId);
-  if (!invite) return notFound(c);
-  await orgStore(c.env, invite.orgId).setMember(
-    accountId,
-    { accountId, role: invite.role },
-    "member.joined",
-    clientIp(c),
-  );
-  return c.json({ orgId: invite.orgId });
+  const orgId = await joinFromInvite(c.env, directory(c), {
+    id: param(c, "inviteId"),
+    email: await myEmail(c),
+    accountId: c.get("session").accountId,
+    ip: clientIp(c),
+  });
+  if (!orgId) return notFound(c);
+  return c.json({ orgId });
 });
 
 invites.delete("/:inviteId", async (c) => {
   await directory(c).decline(param(c, "inviteId"), await myEmail(c));
   return c.json({ ok: true });
 });
-
-function maskEmail(email: string): string {
-  const [local = "", domain = ""] = email.split("@");
-  return `${local.slice(0, Math.min(2, local.length - 1))}•••@${domain}`;
-}
 
 export default orgs;

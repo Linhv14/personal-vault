@@ -1,4 +1,11 @@
-import { deriveAuthKey, deriveMasterKey, deriveWrappingKey, open } from "../src/core/crypto.js";
+import {
+  createAccount,
+  deriveAuthKey,
+  deriveMasterKey,
+  deriveWrappingKey,
+  open,
+  unlockVault,
+} from "../src/core/crypto.js";
 import { toBase64 } from "../src/core/bytes.js";
 import { signal } from "@preact/signals";
 import * as api from "../extension/lib/api.js";
@@ -48,6 +55,23 @@ export async function signIn(email: string, password: string): Promise<void> {
   await unlock(toBase64(vaultKeyRaw), token);
   accountEmail.value = email;
   await refreshSession();
+}
+
+export async function registerFromInvite(
+  email: string,
+  password: string,
+  inviteId: string,
+  verificationCode: string | undefined,
+): Promise<string | undefined> {
+  const { record } = await createAccount(email, password);
+  const { token, orgId } = await api.register(email, record, "", verificationCode, inviteId);
+  const { vaultKeyRaw } = await unlockVault(email, password, record);
+  await setLocal({ email, kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
+  if (orgId) location.hash = `#/${orgId}/projects`;
+  await unlock(toBase64(vaultKeyRaw), token);
+  accountEmail.value = email;
+  await refreshSession();
+  return orgId;
 }
 
 export async function signOut(): Promise<void> {

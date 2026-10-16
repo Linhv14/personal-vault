@@ -2,6 +2,7 @@ import type { InvitableRole } from "../../core/org-model.js";
 import { orgInviteEmail } from "../emails.js";
 import { createMailer } from "../mailer.js";
 import type { Env } from "../types.js";
+import { orgStore } from "../stores.js";
 import type { OrgDirectory } from "./directory.js";
 
 export function invitationLink(siteUrl: string, inviteId: string): string {
@@ -46,4 +47,20 @@ export async function sendInvitation(
   } catch {
     return false;
   }
+}
+
+export async function joinFromInvite(
+  env: Env,
+  directory: OrgDirectory,
+  invite: { id: string; email: string; accountId: string; ip: string | null },
+): Promise<string | null> {
+  const accepted = await directory.accept(invite.id, invite.email, invite.accountId);
+  if (!accepted) return null;
+  await orgStore(env, accepted.orgId).setMember(
+    invite.accountId,
+    { accountId: invite.accountId, role: accepted.role },
+    "member.joined",
+    invite.ip,
+  );
+  return accepted.orgId;
 }

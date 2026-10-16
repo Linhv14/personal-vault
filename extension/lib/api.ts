@@ -104,13 +104,17 @@ export async function register(
   record: AccountCryptoRecord,
   registrationToken: string,
   verificationCode?: string,
-): Promise<{ accountId: string; token: string }> {
-  const result = await request<{ accountId: string; token: string }>("/api/auth/register", {
-    method: "POST",
-    auth: false,
-    extraHeaders: { "X-Registration-Token": registrationToken },
-    body: JSON.stringify({ email, ...record, verificationCode }),
-  });
+  inviteId?: string,
+): Promise<{ accountId: string; token: string; orgId?: string }> {
+  const result = await request<{ accountId: string; token: string; orgId?: string }>(
+    "/api/auth/register",
+    {
+      method: "POST",
+      auth: false,
+      extraHeaders: { "X-Registration-Token": registrationToken },
+      body: JSON.stringify({ email, ...record, verificationCode, inviteId }),
+    },
+  );
   await setToken(result.token);
   return result;
 }

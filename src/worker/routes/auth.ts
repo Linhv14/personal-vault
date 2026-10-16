@@ -12,8 +12,9 @@ import { createMailer } from "../mailer.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, revokeAllSessions, revokeSession, sessionResumeKey } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
-import { isBase64 } from "../validate.js";
+import { isBase64, isUuid } from "../validate.js";
 import { OrgDirectory } from "../orgs/directory.js";
+import { joinFromInvite } from "../orgs/invitations.js";
 import { orgStore, userStore } from "../stores.js";
 
 const auth = new Hono<AppBindings>();
@@ -72,15 +73,6 @@ async function sameSecret(provided: string, expected: string): Promise<boolean> 
 }
 
 auth.post("/register", async (c) => {
-  const openRegistration = isOpenRegistration(c.env);
-  if (!openRegistration) {
-    const provided = c.req.header("x-registration-token") ?? "";
-    const expected = c.env.REGISTRATION_TOKEN;
-    if (!expected || !(await sameSecret(provided, expected))) {
-      return c.json(apiError("auth.bad_registration_token"), 403);
-    }
-  }
-
   const body = await c.req.json().catch(() => null);
   if (typeof body !== "object" || body === null) {
     return c.json(apiError("auth.invalid_body"), 400);
@@ -92,8 +84,22 @@ auth.post("/register", async (c) => {
     authKey,
     wrappedVaultKey,
     verificationCode,
+    inviteId,
   } = body as Record<string, unknown>;
   const email = normalizeEmail(rawEmail);
+  const directory = new OrgDirectory(c.env.DB);
+  const invite = isUuid(inviteId) ? await directory.preview(inviteId) : null;
+  const invited = invite !== null && invite.email === email;
+
+  const openRegistration = isOpenRegistration(c.env);
+  if (!openRegistration && !invited) {
+    const provided = c.req.header("x-registration-token") ?? "";
+    const expected = c.env.REGISTRATION_TOKEN;
+    if (!expected || !(await sameSecret(provided, expected))) {
+      return c.json(apiError("auth.bad_registration_token"), 403);
+    }
+  }
+
   if (!email) return c.json(apiError("auth.invalid_email"), 400);
   if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
   if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
@@ -140,7 +146,15 @@ auth.post("/register", async (c) => {
   }
 
   const session = await createSession(c.env, accountId, timestamp);
-  return c.json({ accountId, ...session }, 201);
+  const orgId = invited
+    ? await joinFromInvite(c.env, directory, {
+        id: inviteId as string,
+        email,
+        accountId,
+        ip: clientIp(c),
+      })
+    : null;
+  return c.json({ accountId, ...session, ...(orgId ? { orgId } : {}) }, 201);
 });
 
 auth.post("/verify-email", async (c) => {

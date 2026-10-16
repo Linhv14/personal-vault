@@ -83,6 +83,7 @@ export interface InvitePreview {
   email: string;
   role: InvitableRole;
   expiresAt: number;
+  hasAccount: boolean;
 }
 
 export async function inviteMember(
