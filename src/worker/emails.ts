@@ -12,8 +12,8 @@ export interface RenderedEmail {
 }
 
 const LOGO: InlineImage = {
-  contentId: "1pw-logo",
-  filename: "1pw.png",
+  contentId: "trust1-vault-logo",
+  filename: "trust1-vault.png",
   contentType: "image/png",
   base64: EMAIL_LOGO_PNG_BASE64,
 };

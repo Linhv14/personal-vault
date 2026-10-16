@@ -1222,3 +1222,9 @@ tr.editing td {
 .copy-field.block {
   align-items: flex-start;
 }
+
+.wordmark-product {
+  margin-left: 0.18em;
+  color: var(--muted);
+  font-weight: 600;
+}

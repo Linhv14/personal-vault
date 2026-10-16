@@ -120,6 +120,15 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Renamed to Trust1 Vault: extension, popup, console, dashboard, emails, site and
+  docs. The CLI is `trust1` with `TRUST1_KEY`, `TRUST1_LINK` and `TRUST1_SERVER`,
+  the download is `trust1-vault-extension.zip`, and exports are named
+  `trust1-vault-export-*`. Encryption contexts, the export format and stored
+  data are unchanged, so existing vaults, exports and repository keys keep
+  working.
+- Deploys can serve alias domains next to the main one (`aliasDomains` in the
+  deploy state).
+
 - Build and deploy scripts are TypeScript, run directly by Node 22.18 or later
   and type-checked by `npm run typecheck`; the hand-written `.d.mts` files are
   gone and `.node-version` pins Node 22 for Workers Builds.

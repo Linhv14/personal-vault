@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 import { githubEnvBlock, githubIdToken, maskCommands } from "../cli/ci-client.js";
 import { parseArgs } from "../cli/main.js";
 
-describe("1pw CLI", () => {
+describe("trust1 CLI", () => {
   it("reads the link and server from flags or the environment", () => {
-    expect(parseArgs(["run", "--", "npm", "test"], { ONEPW_LINK: "o.l" })).toEqual({
+    expect(parseArgs(["run", "--", "npm", "test"], { TRUST1_LINK: "o.l" })).toEqual({
       command: "run",
       link: "o.l",
-      server: "https://1pw.online",
+      server: "https://vault.trust1.io",
       rest: ["npm", "test"],
     });
     expect(
@@ -32,13 +32,13 @@ describe("1pw CLI", () => {
     const delimiter = first!.split("<<")[1]!;
     expect(first).toBe(`CERT<<${delimiter}`);
     expect(rest).toEqual(["a", "b", delimiter]);
-    expect(delimiter).toMatch(/^ONEPW_[0-9a-f]{24}$/);
+    expect(delimiter).toMatch(/^TRUST1_[0-9a-f]{24}$/);
   });
 
   it("asks GitHub for an OIDC token for the server's audience", async () => {
     const seen: string[] = [];
     const token = await githubIdToken(
-      "https://1pw.online",
+      "https://vault.trust1.io",
       {
         ACTIONS_ID_TOKEN_REQUEST_URL: "https://runner.example/token?api-version=2.0",
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: "runner",
@@ -50,9 +50,9 @@ describe("1pw CLI", () => {
     );
     expect(token).toBe("jwt");
     expect(seen[0]).toBe(
-      "https://runner.example/token?api-version=2.0&audience=https%3A%2F%2F1pw.online",
+      "https://runner.example/token?api-version=2.0&audience=https%3A%2F%2Fvault.trust1.io",
     );
     expect(seen[1]).toBe("Bearer runner");
-    await expect(githubIdToken("https://1pw.online", {})).rejects.toThrow("id-token: write");
+    await expect(githubIdToken("https://vault.trust1.io", {})).rejects.toThrow("id-token: write");
   });
 });

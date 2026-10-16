@@ -46,8 +46,8 @@ showing those limits are worse than documented are in scope.
 
 ## Audit status
 
-1PW has not had an independent security audit. If you need an audited password
-manager, use Bitwarden or 1Password. What 1PW offers instead is a codebase
+Trust1 Vault has not had an independent security audit. If you need an audited password
+manager, use Bitwarden or 1Password. What Trust1 Vault offers instead is a codebase
 small enough to read end to end, infrastructure you control, and a
 [threat model](docs/explanation/threat-model.md) that says what it does not
 protect.

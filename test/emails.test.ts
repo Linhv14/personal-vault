@@ -23,8 +23,8 @@ describe("verificationCodeEmail", () => {
     expect(email.text).toContain("https://1pw.online/privacy");
     expect(email.html).not.toMatch(/url\(/);
     const sources = [...email.html.matchAll(/src="([^"]*)"/g)].map((match) => match[1]);
-    expect(sources).toEqual(["cid:1pw-logo"]);
-    expect(email.inlineImages.map((image) => image.contentId)).toEqual(["1pw-logo"]);
+    expect(sources).toEqual(["cid:trust1-vault-logo"]);
+    expect(email.inlineImages.map((image) => image.contentId)).toEqual(["trust1-vault-logo"]);
   });
 
   it("embeds the extension icon as the logo, so the two never drift apart", () => {
@@ -34,7 +34,7 @@ describe("verificationCodeEmail", () => {
 
   it("speaks the requested language", () => {
     const vietnamese = verificationCodeEmail({ ...context, locale: "vi" }, "042917");
-    expect(vietnamese.subject).toBe("042917 là mã xác minh 1PW của bạn");
+    expect(vietnamese.subject).toBe("042917 là mã xác minh Trust1 Vault của bạn");
     expect(vietnamese.html).toContain('lang="vi"');
   });
 });
@@ -56,7 +56,7 @@ describe("existingAccountEmail", () => {
 describe("email footer", () => {
   it("is one line: copyright, the site and the privacy policy", () => {
     const email = verificationCodeEmail(context, "042917");
-    expect(email.html).toContain(`© ${new Date().getUTCFullYear()} 1PW`);
+    expect(email.html).toContain(`© ${new Date().getUTCFullYear()} Trust1 Vault`);
     expect(email.html).toContain('href="https://1pw.online"');
     expect(email.text).toContain("© ");
   });

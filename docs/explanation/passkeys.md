@@ -1,12 +1,12 @@
 # Passkeys
 
-1PW can create and use passkeys on websites, so signing in needs neither a
+Trust1 Vault can create and use passkeys on websites, so signing in needs neither a
 password nor a phone. It is part of **Settings → Preferences → Autofill and
 passkeys on websites** and is off until that is turned on.
 
 ## How a passkey is made and used
 
-Chrome has no API that lets an extension act as a passkey provider, so 1PW
+Chrome has no API that lets an extension act as a passkey provider, so Trust1 Vault
 does what other password managers do: it replaces `navigator.credentials.create`
 and `navigator.credentials.get` on the page and answers them itself.
 
@@ -34,9 +34,9 @@ page script (MAIN world)        isolated script            service worker
 
 The prompt is a small panel in the top-right corner, like the browser's own
 password prompts, not a modal over the page: the site stays readable and
-usable while it is open. It offers **Save in 1PW** when a site creates a
+usable while it is open. It offers **Save in Trust1 Vault** when a site creates a
 passkey and the saved accounts when it asks for one. After a save it confirms
-for a moment and closes. When the site lists a credential 1PW already holds in
+for a moment and closes. When the site lists a credential Trust1 Vault already holds in
 `excludeCredentials`, the panel says the passkey is already saved instead of
 offering a second one, and the site gets the `InvalidStateError` the spec asks
 for.
@@ -45,16 +45,16 @@ for.
 
 Many sites ask for a passkey quietly when the sign-in page loads
 (`mediation: "conditional"`) and expect it to be offered in the username
-field's autofill. 1PW passes that request on to the browser as usual, so its
+field's autofill. Trust1 Vault passes that request on to the browser as usual, so its
 own passkey suggestions still appear, and also lists the passkeys it holds for
-the site in its fill menu on that field. Picking one there is the consent: 1PW
+the site in its fill menu on that field. Picking one there is the consent: Trust1 Vault
 signs, the site gets the credential, and the browser's pending request is
 cancelled. If the site cancels first, the passkeys leave the menu. The list
 never reaches the page: the fill menu and the passkey bridge share the
 extension's isolated world, which page scripts cannot read.
 
 Sites often check `PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()`
-before offering a passkey at all. With autofill on, 1PW answers yes, since it
+before offering a passkey at all. With autofill on, Trust1 Vault answers yes, since it
 is one; without that, sites on machines with no Touch ID or Windows Hello never
 ask.
 
@@ -68,27 +68,27 @@ and a share link never includes them.
 Passkeys are created as **synced** credentials: the authenticator data marks
 them backup-eligible and backed up, which is accurate, and sites that care can
 tell. The signature counter stays at zero, as with other synced passkeys.
-Attestation is `none`, with the 1PW AAGUID
+Attestation is `none`, with the Trust1 Vault AAGUID
 `8c3f47c7-7c94-4ad9-9344-8fbe58a9b394` in the authenticator data. Sites look
 an AAGUID up in the community
 [passkey-authenticator-aaguids](https://github.com/passkeydeveloper/passkey-authenticator-aaguids)
 list to show the provider's name and icon next to the passkey, so the name
-appears only once 1PW is listed there. Passkeys created before this AAGUID
+appears only once Trust1 Vault is listed there. Passkeys created before this AAGUID
 carry all zeros and stay unnamed.
 
-## When 1PW steps aside
+## When Trust1 Vault steps aside
 
 - **Use another device** in the dialog hands the request back to the browser,
   for a security key, a phone, or the platform's own passkeys.
 - Requests in iframes, requests without ES256, and registrations that ask for
   a `cross-platform` authenticator (a security key) go straight to the
   browser.
-- A sign-in on a site where 1PW has no passkey goes straight to the browser
+- A sign-in on a site where Trust1 Vault has no passkey goes straight to the browser
   without a dialog.
-- If 1PW is locked and the vault holds no passkeys, the browser handles the
+- If Trust1 Vault is locked and the vault holds no passkeys, the browser handles the
   request without a dialog. The only thing stored to decide this is one
   yes-or-no flag per device, never the list of sites.
-- If 1PW is locked and the vault holds passkeys, the dialog asks to unlock it
+- If Trust1 Vault is locked and the vault holds passkeys, the dialog asks to unlock it
   and continues on its own once the vault opens.
 
 ## Limits
@@ -96,7 +96,7 @@ carry all zeros and stay unnamed.
 - Chrome desktop only. Mobile browsers do not let extensions do this.
 - Passkeys can be imported from Proton Pass and Bitwarden JSON exports.
   1Password and browsers do not export passkeys, so on those sites add a new
-  passkey with 1PW.
+  passkey with Trust1 Vault.
 - A synced passkey is protected by the master password and the devices that
   hold the vault, not by a hardware-bound key. That is the usual trade-off of
   password-manager passkeys.

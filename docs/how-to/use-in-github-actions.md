@@ -9,9 +9,9 @@ A workflow reads one environment of a project, for example Production of
 2. Select **Link a repository**, enter `owner/repo`, choose the environment, and
    say where reads are allowed from: a branch (`main`) or a GitHub environment
    (`production`). Only admins who are in the project's team can link.
-3. Copy **ONEPW_KEY** into the repository's secrets (Settings, Secrets and
+3. Copy **TRUST1_KEY** into the repository's secrets (Settings, Secrets and
    variables, Actions, New repository secret). The console shows it once and
-   1PW does not keep it; if it is lost, unlink and link again.
+   Trust1 Vault does not keep it; if it is lost, unlink and link again.
 
 ## Add the step
 
@@ -27,7 +27,7 @@ jobs:
       - uses: Linhv14/personal-vault/action@main
         with:
           link: <the link shown in the console>
-          key: ${{ secrets.ONEPW_KEY }}
+          key: ${{ secrets.TRUST1_KEY }}
       - run: ./deploy.sh
 ```
 
@@ -41,13 +41,13 @@ Access** allows it.
 
 ## Without the Action
 
-`dist/cli/1pw.mjs` (from `npm run build`) does the same from a shell, with
-`ONEPW_KEY` and `ONEPW_LINK` in the environment:
+`dist/cli/trust1.mjs` (from `npm run build`) does the same from a shell, with
+`TRUST1_KEY` and `TRUST1_LINK` in the environment:
 
 ```bash
-node 1pw.mjs run -- npm run deploy    # values only for this command
-node 1pw.mjs env                      # values for the later steps
-node 1pw.mjs dotenv > .env            # a .env file
+node trust1.mjs run -- npm run deploy    # values only for this command
+node trust1.mjs env                      # values for the later steps
+node trust1.mjs dotenv > .env            # a .env file
 ```
 
 ## What is checked

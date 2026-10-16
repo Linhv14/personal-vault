@@ -1,6 +1,6 @@
 import type { IconName } from "../../../src/ui/icons.js";
 import { Icon } from "../../ui/components/Icon.js";
-import { Logo } from "../../ui/components/Logo.js";
+import { Wordmark, Logo } from "../../ui/components/Logo.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { inVault, live, tagsOf } from "../filters.js";
 import {
@@ -100,9 +100,7 @@ export function Drawer() {
       <nav className="drawer" ref={ref} aria-label={t("list.menu")}>
         <div className="drawer-brand">
           <Logo size={24} />
-          <span className="wordmark">
-            <span className="wordmark-accent">1</span>PW
-          </span>
+          <Wordmark />
         </div>
         <ScopeLinks onPick={close} />
         <div className="drawer-section drawer-actions">

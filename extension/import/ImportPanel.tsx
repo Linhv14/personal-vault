@@ -32,7 +32,7 @@ const SKIP_KEYS: Record<SkipReason, MessageKey> = {
 };
 
 const SOURCES: [string, MessageKey][] = [
-  ["1PW", "import.source_1pw"],
+  ["Trust1 Vault", "import.source_1pw"],
   ["Proton Pass", "import.source_proton"],
   ["Bitwarden", "import.source_bitwarden"],
   ["1Password", "import.source_1password"],
@@ -40,7 +40,7 @@ const SOURCES: [string, MessageKey][] = [
 ];
 
 const SOURCE_NAMES: Record<Exclude<ImportFormat, "recovery">, string> = {
-  "1pw": "1PW",
+  "1pw": "Trust1 Vault",
   proton: "Proton Pass",
   bitwarden: "Bitwarden",
   "1password": "1Password",

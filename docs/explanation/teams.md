@@ -1,6 +1,6 @@
 # Teams and CI secrets
 
-1PW is becoming a hosted service where companies keep secrets for their teams and
+Trust1 Vault is becoming a hosted service where companies keep secrets for their teams and
 hand them to CI without the server ever being able to read them. This page is
 the design; it grows with each phase.
 
@@ -124,7 +124,7 @@ How it is built:
   first time an admin or member opens the project.
 - Linking creates a key pair in the browser. The environment key is wrapped for
   its public key (context `personal-vault/link-key/<link>/<generation>`), the
-  private key is shown once as `ONEPW_KEY`, and the server stores the public key,
+  private key is shown once as `TRUST1_KEY`, and the server stores the public key,
   the wrapped key and the rule.
 - `POST /api/ci/secrets` verifies the token against GitHub's published keys
   (issuer `token.actions.githubusercontent.com`, audience = this server's
@@ -144,13 +144,13 @@ test issuer as variables, and production never has them.
 
 ## Architecture
 
-| Layer         | Runs on                                                                                                          | Holds                                                                                                       |
-| ------------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Clients       | Chrome extension (Preact), web dashboard (Preact, same UI kit), `1pw` CLI and GitHub Action (TypeScript on Node) | Keys and plaintext, only while unlocked                                                                     |
-| Edge API      | One Cloudflare Worker (Hono)                                                                                     | No state; authenticates, routes to the right store                                                          |
-| Control plane | D1, shared                                                                                                       | Accounts, sessions, organizations, memberships, invitations, plans and billing, one-time codes, share links |
-| Data plane    | One SQLite-backed Durable Object per tenant: `user:<accountId>` and `org:<orgId>`                                | Vault items; teams, projects, environments, secrets, wrapped keys, repository links, audit log              |
-| Email         | Resend                                                                                                           | Codes and invitations                                                                                       |
+| Layer         | Runs on                                                                                                             | Holds                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Clients       | Chrome extension (Preact), web dashboard (Preact, same UI kit), `trust1` CLI and GitHub Action (TypeScript on Node) | Keys and plaintext, only while unlocked                                                                     |
+| Edge API      | One Cloudflare Worker (Hono)                                                                                        | No state; authenticates, routes to the right store                                                          |
+| Control plane | D1, shared                                                                                                          | Accounts, sessions, organizations, memberships, invitations, plans and billing, one-time codes, share links |
+| Data plane    | One SQLite-backed Durable Object per tenant: `user:<accountId>` and `org:<orgId>`                                   | Vault items; teams, projects, environments, secrets, wrapped keys, repository links, audit log              |
+| Email         | Resend                                                                                                              | Codes and invitations                                                                                       |
 
 Why this split:
 
@@ -226,5 +226,5 @@ treated as enough on its own:
    companies, teams, invitations, roles, audit log.
 2. Projects, environments, secrets, re-keying on removal, fingerprints in the UI
    (done: a fingerprint check before adding someone to a team).
-3. Repository links, the `1pw` CLI and the GitHub Action.
+3. Repository links, the `trust1` CLI and the GitHub Action.
 4. Other targets (Cloudflare, Vercel), SSO and SCIM, billing.

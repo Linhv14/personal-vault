@@ -18,7 +18,7 @@ downloads the encrypted items and decrypts them locally.
 
 ### If the build points at someone else's server
 
-A build made by another operator, such as a published 1PW extension, signs in to
+A build made by another operator, such as a published Trust1 Vault extension, signs in to
 their server by default. To use yours, press **Use your own server** under the
 button and enter your Worker URL. `npm run status` prints it.
 

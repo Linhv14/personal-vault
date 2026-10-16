@@ -32,7 +32,7 @@ function TransferApp() {
   }, []);
 
   useEffect(() => {
-    document.title = `${t("transfer.title")} · 1PW`;
+    document.title = `${t("transfer.title")} · Trust1 Vault`;
     document.documentElement.lang = localeSignal.value;
   }, [t]);
 

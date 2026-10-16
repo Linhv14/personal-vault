@@ -58,7 +58,7 @@ describe("passkey page hook", () => {
     expect(requests).toHaveLength(0);
   });
 
-  it("offers platform registrations to 1PW", async () => {
+  it("offers platform registrations to Trust1 Vault", async () => {
     void navigator.credentials.create({ publicKey });
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(requests).toMatchObject([{ kind: "create", options: { userName: "me" } }]);
@@ -75,7 +75,7 @@ describe("passkey page hook", () => {
     ).resolves.toBe(true);
   });
 
-  it("offers 1PW passkeys for a conditional sign-in and cancels the browser's own prompt", async () => {
+  it("offers Trust1 Vault passkeys for a conditional sign-in and cancels the browser's own prompt", async () => {
     requests.length = 0;
     ids.length = 0;
     const pending = navigator.credentials.get({

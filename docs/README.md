@@ -1,4 +1,4 @@
-# 1PW documentation
+# Trust1 Vault documentation
 
 The documentation follows the [Diátaxis](https://diataxis.fr) framework: each
 page answers one kind of question, so you can tell from where it lives whether
@@ -16,7 +16,7 @@ it teaches, instructs, describes or explains.
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
 | [Add another device](how-to/add-another-device.md)                       | Use the same vault on a second computer or browser profile                             |
 | [Import passwords](how-to/import-passwords.md)                           | Bring items from Proton Pass, Bitwarden, 1Password, a browser or a recovery codes file |
-| [Export your vault](how-to/export-your-vault.md)                         | Save an encrypted 1PW file or a CSV for another app                                    |
+| [Export your vault](how-to/export-your-vault.md)                         | Save an encrypted Trust1 Vault file or a CSV for another app                           |
 | [Use secrets in GitHub Actions](how-to/use-in-github-actions.md)         | Link a repository to an environment and read it from a workflow                        |
 | [Run a shared server](how-to/run-a-shared-server.md)                     | Let other people sign up, with email verification and a domain                         |
 | [Back up and restore](how-to/back-up-and-restore.md)                     | Survive a lost database, a bad deploy or a lost secret                                 |
@@ -45,12 +45,12 @@ it teaches, instructs, describes or explains.
 - [Teams and CI secrets](explanation/teams.md): the design for company teams and secrets in CI.
   | [Share links](explanation/share-links.md) | How a link carries its own key, and the controls on it |
   | [Autofill](explanation/autofill.md) | How the page script decides what to show and where |
-  | [Passkeys](explanation/passkeys.md) | How 1PW creates and uses passkeys, and what it refuses |
+  | [Passkeys](explanation/passkeys.md) | How Trust1 Vault creates and uses passkeys, and what it refuses |
   | [Design decisions](explanation/design-decisions.md) | Choices that look odd, platform traps, tooling |
 
 ## Elsewhere in the repository
 
-- [`README.md`](../README.md): what 1PW is and the shortest path to running it.
+- [`README.md`](../README.md): what Trust1 Vault is and the shortest path to running it.
 - [`SECURITY.md`](../SECURITY.md): how to report a vulnerability.
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md): development setup and house rules.
 - [`CHANGELOG.md`](../CHANGELOG.md): what changed in each release.

@@ -11,7 +11,7 @@ function App() {
   const t = useT();
   const locale = localeSignal.value;
   useEffect(() => {
-    document.title = `${t("web.title")} · 1PW`;
+    document.title = `${t("web.title")} · Trust1 Vault`;
     document.documentElement.lang = locale;
   }, [locale, t]);
 

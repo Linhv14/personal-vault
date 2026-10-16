@@ -1794,3 +1794,9 @@ details.history .field-row {
 .teams-cta.pending {
   visibility: hidden;
 }
+
+.wordmark-product {
+  margin-left: 0.18em;
+  color: var(--muted);
+  font-weight: 600;
+}

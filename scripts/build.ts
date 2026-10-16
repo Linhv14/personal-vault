@@ -167,7 +167,7 @@ async function buildCli() {
   await build({
     ...node,
     entryPoints: [path.join(root, "cli", "bin.ts")],
-    outfile: path.join(root, "dist", "cli", "1pw.mjs"),
+    outfile: path.join(root, "dist", "cli", "trust1.mjs"),
     banner: { js: "#!/usr/bin/env node" },
   });
   await build({
@@ -228,7 +228,7 @@ async function copyConsoleTokens() {
 
 async function packageForDownload() {
   if (!existsSync(outExtension)) return;
-  const target = path.join(outPublic, "download", "1pw-extension.zip");
+  const target = path.join(outPublic, "download", "trust1-vault-extension.zip");
   await mkdir(path.dirname(target), { recursive: true });
   const zip = spawnSync("zip", ["-r", "-X", "-q", target, "."], { cwd: outExtension });
   if (zip.error || zip.status !== 0) {

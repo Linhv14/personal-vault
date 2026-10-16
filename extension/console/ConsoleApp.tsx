@@ -1,4 +1,5 @@
 import type { ComponentChildren, ComponentType } from "preact";
+import { Wordmark } from "../ui/components/Logo.js";
 import type { MessageKey } from "../../src/i18n/index.js";
 import { useEffect } from "preact/hooks";
 import type { Identity } from "../../src/core/identity.js";
@@ -179,9 +180,7 @@ export function ConsoleApp({
         aria-hidden="true"
         dangerouslySetInnerHTML={{ __html: logoSvg("console-logo") }}
       />
-      <span className="wordmark">
-        <span className="wordmark-accent">1</span>PW
-      </span>
+      <Wordmark />
     </div>
   );
 

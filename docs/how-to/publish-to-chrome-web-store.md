@@ -31,14 +31,14 @@ Everything the dashboard asks for, ready to paste.
 
 ### Store listing
 
-**Name:** 1PW
+**Name:** Trust1 Vault
 
 **Summary (≤132 characters):**
 End-to-end encrypted password manager with built-in 2FA codes, autofill and self-destructing share links.
 
 **Description:**
 
-> 1PW keeps your passwords and 2FA codes encrypted on your device.
+> Trust1 Vault keeps your passwords and 2FA codes encrypted on your device.
 > The server only ever stores ciphertext: nobody, including whoever runs it, can
 > read your vault.
 >

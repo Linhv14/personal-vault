@@ -100,6 +100,17 @@ describe("renderConfig", () => {
     expect(config.workers_dev).toBe(true);
   });
 
+  it("serves alias domains next to the main one", () => {
+    const config = render({ customDomain: "vault.example.com", aliasDomains: ["old.example.com"] });
+    expect(config.routes).toEqual([
+      { pattern: "vault.example.com", custom_domain: true },
+      { pattern: "old.example.com", custom_domain: true },
+    ]);
+    expect(() =>
+      render({ customDomain: "vault.example.com", aliasDomains: ["not a host"] }),
+    ).toThrow();
+  });
+
   it("declares the secrets a deploy must find on the Worker", () => {
     expect(render().secrets.required).toEqual([
       "REGISTRATION_TOKEN",

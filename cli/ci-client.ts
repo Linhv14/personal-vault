@@ -3,7 +3,7 @@ import { appendFile } from "node:fs/promises";
 import { openCiResponse, parseLinkReference, type CiResponse } from "../src/core/ci.js";
 import type { SecretContent } from "../src/core/projects.js";
 
-export const DEFAULT_SERVER = "https://1pw.online";
+export const DEFAULT_SERVER = "https://vault.trust1.io";
 
 export interface FetchOptions {
   server: string;
@@ -49,7 +49,9 @@ export async function fetchSecrets(options: FetchOptions): Promise<SecretContent
   });
   if (!response.ok) {
     const { error } = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new CiError(`1PW refused the request (${response.status}): ${error ?? "unknown error"}`);
+    throw new CiError(
+      `Trust1 Vault refused the request (${response.status}): ${error ?? "unknown error"}`,
+    );
   }
   return openCiResponse(options.repoKey, reference.linkId, (await response.json()) as CiResponse);
 }
@@ -65,7 +67,7 @@ export function maskCommands(secrets: SecretContent[]): string[] {
 export function githubEnvBlock(secrets: SecretContent[]): string {
   return secrets
     .map(({ name, value }) => {
-      const delimiter = `ONEPW_${randomBytes(12).toString("hex")}`;
+      const delimiter = `TRUST1_${randomBytes(12).toString("hex")}`;
       return `${name}<<${delimiter}\n${value}\n${delimiter}\n`;
     })
     .join("");

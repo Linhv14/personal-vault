@@ -1,6 +1,6 @@
 # Architecture
 
-1PW is three programs sharing one cryptographic core: a browser extension that
+Trust1 Vault is three programs sharing one cryptographic core: a browser extension that
 holds every key, a Cloudflare Worker that stores ciphertext, and a static page
 that opens share links.
 

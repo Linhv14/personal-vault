@@ -3,6 +3,7 @@ import { parse, stringify } from "smol-toml";
 export interface DeployOptions {
   registrationMode: "token" | "open";
   customDomain: string | null;
+  aliasDomains: string[];
   emailFrom: string | null;
   emailProvider: EmailProvider;
 }
@@ -14,6 +15,7 @@ const EMAIL_PROVIDERS = ["resend", "cloudflare"] as const;
 export const DEFAULT_DEPLOY_OPTIONS: Readonly<DeployOptions> = Object.freeze({
   registrationMode: "token",
   customDomain: null,
+  aliasDomains: [],
   emailFrom: null,
   emailProvider: "resend",
 });
@@ -118,7 +120,11 @@ export function renderConfig(
   config.vars = vars;
 
   if (options.customDomain) {
-    config.routes = [{ pattern: options.customDomain, custom_domain: true }];
+    const domains = [options.customDomain, ...options.aliasDomains];
+    for (const domain of domains) {
+      if (!HOSTNAME.test(domain)) throw new Error(`Not a hostname: ${domain}`);
+    }
+    config.routes = domains.map((pattern) => ({ pattern, custom_domain: true }));
     config.workers_dev = true;
   }
   if (options.emailFrom) {

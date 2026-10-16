@@ -1,9 +1,9 @@
-# 1PW
+# Trust1 Vault
 
 [![CI](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**[1pw.online](https://1pw.online)** · An end-to-end encrypted password manager with built-in 2FA codes, as a browser
+**[vault.trust1.io](https://vault.trust1.io)** · An end-to-end encrypted password manager with built-in 2FA codes, as a browser
 extension backed by a Cloudflare Worker you deploy yourself. The server stores
 ciphertext and holds no key that opens it.
 
@@ -83,5 +83,5 @@ Everything is indexed in [`docs/README.md`](docs/README.md).
 
 ## License
 
-[MIT](LICENSE), without warranty. 1PW has not had an independent security
+[MIT](LICENSE), without warranty. Trust1 Vault has not had an independent security
 audit; if you need an audited password manager, use Bitwarden or 1Password.

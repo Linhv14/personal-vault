@@ -39,7 +39,7 @@ export function encodeRepoKey(identity: Identity): string {
 export function decodeRepoKey(text: string): Identity {
   const [prefix, publicKey, privateKey] = text.trim().split(".");
   if (prefix !== REPO_KEY_PREFIX || !publicKey || !privateKey) {
-    throw new Error("Not a 1PW repository key");
+    throw new Error("Not a Trust1 Vault repository key");
   }
   return { publicKey: toBase64(fromBase64Url(publicKey)), privateKey: fromBase64Url(privateKey) };
 }

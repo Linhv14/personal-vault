@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { Wordmark } from "../extension/ui/components/Logo.js";
 import { describeError } from "../src/i18n/index.js";
 import { logoSvg } from "../src/ui/logo.js";
 import { useT } from "../extension/ui/i18n.js";
@@ -37,9 +38,7 @@ export function SignIn() {
             aria-hidden="true"
             dangerouslySetInnerHTML={{ __html: logoSvg("web-logo") }}
           />
-          <span className="wordmark">
-            <span className="wordmark-accent">1</span>PW
-          </span>
+          <Wordmark />
         </header>
         <h1>{t("web.sign_in_title")}</h1>
         <label className="field">

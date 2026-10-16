@@ -1,6 +1,6 @@
 # Deploy your own vault
 
-In this tutorial you deploy 1PW to your own Cloudflare account, load the
+In this tutorial you deploy Trust1 Vault to your own Cloudflare account, load the
 extension into Chrome, create a vault, save a login with a 2FA code, and check
 that the server holds nothing readable. It takes about ten minutes.
 
@@ -46,11 +46,11 @@ When it finishes, it prints the Worker URL. It has also written
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode** (top right).
 3. Choose **Load unpacked** and select the `dist/extension` folder.
-4. Pin 1PW from the puzzle-piece menu so its icon stays in the toolbar.
+4. Pin Trust1 Vault from the puzzle-piece menu so its icon stays in the toolbar.
 
 ## 4. Create your vault
 
-Open the 1PW popup and choose **Create a new vault**. Enter:
+Open the Trust1 Vault popup and choose **Create a new vault**. Enter:
 
 - your email address, which is your account name;
 - the `REGISTRATION_TOKEN` from `.secrets.local.txt`;

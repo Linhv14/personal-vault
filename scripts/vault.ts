@@ -337,7 +337,7 @@ async function ensureSecrets(configPath: string, options: DeployOptions): Promis
     if (!existsSync(SECRETS_NOTE)) {
       writeFileSync(
         SECRETS_NOTE,
-        "Secrets for this 1PW deployment (gitignored — do not commit or share).\n\n",
+        "Secrets for this Trust1 Vault deployment (gitignored — do not commit or share).\n\n",
       );
     }
     appendFileSync(SECRETS_NOTE, lines.join("\n"));

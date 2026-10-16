@@ -36,8 +36,8 @@ function workflow(reference: string, server: string): string {
     "  - uses: Linhv14/personal-vault/action@main",
     "    with:",
     `      link: ${reference}`,
-    "      key: ${{ secrets.ONEPW_KEY }}",
-    ...(server === "https://1pw.online" ? [] : [`      server: ${server}`]),
+    "      key: ${{ secrets.TRUST1_KEY }}",
+    ...(server === "https://vault.trust1.io" ? [] : [`      server: ${server}`]),
   ].join("\n");
 }
 
@@ -45,7 +45,7 @@ function CreatedDialog({ created, onClose }: { created: Created; onClose: () => 
   const t = useT();
   const snippet = workflow(
     created.reference,
-    location.origin.startsWith("chrome-extension") ? "https://1pw.online" : location.origin,
+    location.origin.startsWith("chrome-extension") ? "https://vault.trust1.io" : location.origin,
   );
   return (
     <Dialog
@@ -54,7 +54,7 @@ function CreatedDialog({ created, onClose }: { created: Created; onClose: () => 
       onClose={onClose}
       onSubmit={onClose}
     >
-      <Field label="ONEPW_KEY" hint={t("ci.key_hint")}>
+      <Field label="TRUST1_KEY" hint={t("ci.key_hint")}>
         <div className="copy-field">
           <code>{created.repoKey}</code>
           <IconButton

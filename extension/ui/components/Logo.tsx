@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { APP_NAME } from "../../../src/core/brand.js";
+import { APP_NAME, WORDMARK } from "../../../src/core/brand.js";
 import { logoSvg } from "../../../src/ui/logo.js";
 
 let logoCount = 0;
@@ -17,9 +17,10 @@ export function Logo({ size }: { size: number }) {
 
 export function Wordmark() {
   return (
-    <span className="wordmark">
-      <span className="wordmark-accent">{APP_NAME.slice(0, 1)}</span>
-      {APP_NAME.slice(1)}
+    <span className="wordmark" aria-label={APP_NAME}>
+      {WORDMARK.lead}
+      <span className="wordmark-accent">{WORDMARK.accent}</span>{" "}
+      <span className="wordmark-product">{WORDMARK.product}</span>
     </span>
   );
 }

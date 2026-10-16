@@ -11,8 +11,8 @@ try {
     repoKey: input("key"),
   });
   await exportToGithubEnv(secrets);
-  console.log(`1PW: loaded ${secrets.length} values into the job environment`);
+  console.log(`Trust1 Vault: loaded ${secrets.length} values into the job environment`);
 } catch (error) {
-  console.log(`::error::1PW: ${error instanceof Error ? error.message : String(error)}`);
+  console.log(`::error::Trust1 Vault: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }

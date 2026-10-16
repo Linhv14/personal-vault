@@ -136,7 +136,7 @@ var REPO_KEY_PREFIX = "1pw1";
 function decodeRepoKey(text) {
   const [prefix, publicKey, privateKey] = text.trim().split(".");
   if (prefix !== REPO_KEY_PREFIX || !publicKey || !privateKey) {
-    throw new Error("Not a 1PW repository key");
+    throw new Error("Not a Trust1 Vault repository key");
   }
   return { publicKey: toBase64(fromBase64Url(publicKey)), privateKey: fromBase64Url(privateKey) };
 }
@@ -173,7 +173,7 @@ async function openCiResponse(repoKey, linkId, response) {
 }
 
 // cli/ci-client.ts
-var DEFAULT_SERVER = "https://1pw.online";
+var DEFAULT_SERVER = "https://vault.trust1.io";
 var CiError = class extends Error {
 };
 async function githubIdToken(audience, env = process.env, request = fetch) {
@@ -205,7 +205,9 @@ async function fetchSecrets(options) {
   });
   if (!response.ok) {
     const { error } = await response.json().catch(() => ({}));
-    throw new CiError(`1PW refused the request (${response.status}): ${error ?? "unknown error"}`);
+    throw new CiError(
+      `Trust1 Vault refused the request (${response.status}): ${error ?? "unknown error"}`
+    );
   }
   return openCiResponse(options.repoKey, reference.linkId, await response.json());
 }
@@ -214,7 +216,7 @@ function maskCommands(secrets) {
 }
 function githubEnvBlock(secrets) {
   return secrets.map(({ name, value }) => {
-    const delimiter = `ONEPW_${randomBytes2(12).toString("hex")}`;
+    const delimiter = `TRUST1_${randomBytes2(12).toString("hex")}`;
     return `${name}<<${delimiter}
 ${value}
 ${delimiter}
@@ -239,8 +241,8 @@ try {
     repoKey: input("key")
   });
   await exportToGithubEnv(secrets);
-  console.log(`1PW: loaded ${secrets.length} values into the job environment`);
+  console.log(`Trust1 Vault: loaded ${secrets.length} values into the job environment`);
 } catch (error) {
-  console.log(`::error::1PW: ${error instanceof Error ? error.message : String(error)}`);
+  console.log(`::error::Trust1 Vault: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }

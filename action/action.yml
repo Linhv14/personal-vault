@@ -1,16 +1,16 @@
-name: 1PW secrets
-description: Load one environment of a 1PW project into the job, with secret values masked.
+name: Trust1 Vault secrets
+description: Load one environment of a Trust1 Vault project into the job, with secret values masked.
 inputs:
   link:
-    description: Repository link from the 1PW console (organization.link).
+    description: Repository link from the Trust1 Vault console (organization.link).
     required: true
   key:
-    description: Repository key from the 1PW console. Store it as a GitHub secret.
+    description: Repository key from the Trust1 Vault console. Store it as a GitHub secret.
     required: true
   server:
-    description: 1PW server.
+    description: Trust1 Vault server.
     required: false
-    default: https://1pw.online
+    default: https://vault.trust1.io
 runs:
   using: node20
   main: dist/index.mjs
