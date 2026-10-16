@@ -3,3 +3,5 @@ node_modules/
 src/core/wordlist.ts
 package-lock.json
 action/dist
+tools/demo-video/site
+tools/demo-video/out

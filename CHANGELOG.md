@@ -10,12 +10,17 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
-- New landing page: product video (English and Vietnamese, 35 seconds, recorded
-  from the real UI), fresh screenshots, features, use cases, team and CI
+- New landing page: product video (English and Vietnamese, about 50 seconds,
+  recorded from the real UI on a demo workspace, with zoomed close-ups, a
+  zero-knowledge and team key diagram, a GitHub Actions run and an AI agents
+  preview), fresh screenshots, features, use cases, team and CI
   sections, pricing and FAQ. Canonical and hreflang links, Open Graph and
   Twitter cards with 1200×630 images, JSON-LD for the app and the FAQ, and
   generated `robots.txt` and `sitemap.xml`. The header no longer links to the
   dashboard.
+- `tools/demo-video/` records the landing video, posters and Open Graph
+  images from a local Worker; see
+  [Record the demo video](docs/how-to/record-the-demo-video.md).
 - `/api/migration/export` and `/api/migration/import` (only with the
   `MIGRATION_TOKEN` secret) copy every Durable Object store between
   deployments, and `READ_ONLY=1` refuses writes while moving.

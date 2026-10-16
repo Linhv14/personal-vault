@@ -23,6 +23,7 @@ it teaches, instructs, describes or explains.
 | [Rotate secrets](how-to/rotate-secrets.md)                               | Replace a leaked token or API key without locking anyone out                           |
 | [Upgrade a deployment](how-to/upgrade.md)                                | Move to a newer release safely                                                         |
 | [Publish to the Chrome Web Store](how-to/publish-to-chrome-web-store.md) | Ship the extension to people who will not build it                                     |
+| [Record the demo video](how-to/record-the-demo-video.md)                 | Re-record the landing page video and images from the real UI                           |
 
 ## Reference: facts to look up
 
