@@ -121,17 +121,32 @@ export class OrgDirectory {
     return row?.n ?? 0;
   }
 
+  async transferCandidate(
+    orgId: string,
+    accountId: string,
+  ): Promise<{ role: OrgRole; email: string; hasKey: boolean } | null> {
+    const row = await this.db
+      .prepare(
+        `SELECT m.role, a.email, a.public_key IS NOT NULL AS hasKey
+           FROM org_members m JOIN accounts a ON a.id = m.account_id
+          WHERE m.org_id = ? AND m.account_id = ?`,
+      )
+      .bind(orgId, accountId)
+      .first<{ role: OrgRole; email: string; hasKey: number }>();
+    return row && { role: row.role, email: row.email, hasKey: row.hasKey === 1 };
+  }
+
   async transferOwnership(orgId: string, owner: string, successor: string): Promise<boolean> {
     const [, promoted] = await this.db.batch([
       this.db
         .prepare(
           `UPDATE org_members SET role = 'admin' WHERE org_id = ? AND account_id = ? AND role = 'owner'
-             AND EXISTS (SELECT 1 FROM org_members WHERE org_id = ? AND account_id = ?)`,
+             AND EXISTS (SELECT 1 FROM org_members WHERE org_id = ? AND account_id = ? AND role = 'admin')`,
         )
         .bind(orgId, owner, orgId, successor),
       this.db
         .prepare(
-          `UPDATE org_members SET role = 'owner' WHERE org_id = ? AND account_id = ?
+          `UPDATE org_members SET role = 'owner' WHERE org_id = ? AND account_id = ? AND role = 'admin'
              AND EXISTS (SELECT 1 FROM org_members WHERE org_id = ? AND account_id = ? AND role = 'admin')`,
         )
         .bind(orgId, successor, orgId, owner),

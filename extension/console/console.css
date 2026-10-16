@@ -1555,3 +1555,12 @@ tr.pending-row {
   font-size: 16px;
   letter-spacing: 0.08em;
 }
+
+.consequences {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+}

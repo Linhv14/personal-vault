@@ -18,6 +18,8 @@ import {
 } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
+import { ApiError } from "../../lib/api.js";
+import { currentAuthKey } from "../../lib/reauth.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import {
   ActionButton,
@@ -134,7 +136,9 @@ export function MembersPage() {
                           );
                         }}
                       >
-                        <option value="owner">{t("orgs.role_owner")}</option>
+                        {member.role === "admin" && (
+                          <option value="owner">{t("orgs.role_owner")}</option>
+                        )}
                         <option value="admin">{t("orgs.role_admin")}</option>
                         <option value="member">{t("orgs.role_member")}</option>
                       </select>
@@ -377,21 +381,40 @@ export function MembersPage() {
       {modal?.kind === "transfer" && (
         <Dialog
           title={t("console.transfer_title")}
-          description={t("orgs.transfer_confirm", { email: modal.member.email })}
+          description={t("console.transfer_text", { email: modal.member.email })}
           submitLabel={t("console.transfer")}
           danger
           onClose={() => setModal(null)}
-          onSubmit={() =>
+          onSubmit={(form) => {
+            const password = String(new FormData(form).get("password"));
             void run(
               async () => {
-                await transferOwnership(orgId, modal.member.accountId);
+                const authKey = await currentAuthKey(password);
+                if (!authKey) throw new ApiError("error.crypto.wrong_password", 403);
+                await transferOwnership(orgId, modal.member.accountId, authKey);
                 setModal(null);
               },
               "orgs.transferred",
               "org",
-            )
-          }
-        />
+            );
+          }}
+        >
+          <ul className="consequences">
+            <li>{t("console.transfer_they", { email: modal.member.email })}</li>
+            <li>{t("console.transfer_you")}</li>
+            <li>{t("console.transfer_undo")}</li>
+          </ul>
+          <Field label={t("console.confirm_password")}>
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              autoFocus
+              onInput={() => (failure$.value = null)}
+            />
+          </Field>
+        </Dialog>
       )}
     </>
   );

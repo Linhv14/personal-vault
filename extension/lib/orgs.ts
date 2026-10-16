@@ -193,8 +193,15 @@ export async function addTeamMember(
   });
 }
 
-export async function transferOwnership(orgId: string, accountId: string): Promise<void> {
-  await request(`/api/orgs/${orgId}/owner`, { method: "POST", body: json({ accountId }) });
+export async function transferOwnership(
+  orgId: string,
+  accountId: string,
+  authKey: string,
+): Promise<void> {
+  await request(`/api/orgs/${orgId}/owner`, {
+    method: "POST",
+    body: json({ accountId, authKey }),
+  });
 }
 
 export async function removeTeamMember(

@@ -44,6 +44,8 @@ export type ApiErrorCode =
   | "orgs.domain_not_allowed"
   | "orgs.invalid_domains"
   | "orgs.invite_domain_blocked"
+  | "orgs.transfer_needs_admin"
+  | "orgs.transfer_needs_key"
   | "orgs.team_limit"
   | "orgs.stale_team_key"
   | "orgs.team_changed"
@@ -109,6 +111,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.domain_not_allowed": "This organization only accepts addresses on its allowed domains",
   "orgs.invalid_domains": "Allowed domains must be up to 10 valid domain names",
   "orgs.invite_domain_blocked": "This organization no longer accepts this email domain",
+  "orgs.transfer_needs_admin": "Ownership can only go to an admin; make them an admin first",
+  "orgs.transfer_needs_key": "That member has not finished setting up their account yet",
   "orgs.team_limit": "This plan allows no more teams",
   "orgs.stale_team_key": "The team key changed; reload and try again",
   "orgs.team_changed": "The team's members changed; reload and try again",

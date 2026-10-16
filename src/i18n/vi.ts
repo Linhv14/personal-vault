@@ -372,6 +372,12 @@ export const vi: Catalogue = {
   "console.current": "Đang xem",
   "console.leave_text":
     "Bạn sẽ mất quyền truy cập team và dự án của tổ chức này. Muốn quay lại phải được quản trị viên mời lại.",
+  "console.transfer_text": "Chuyển quyền sở hữu tổ chức này cho {email}.",
+  "console.transfer_they":
+    "{email} trở thành owner: có quyền đổi vai trò, đặt domain email và chuyển quyền sở hữu.",
+  "console.transfer_you": "Bạn trở thành quản trị viên, vẫn giữ các team và dự án của mình.",
+  "console.transfer_undo": "Chỉ owner mới có thể chuyển lại cho bạn.",
+  "console.confirm_password": "Master password của bạn",
   "console.dismiss": "Đóng",
   "console.more": "Thêm",
   "console.name_taken_in": "{name} đã có trong {env}.",
@@ -506,7 +512,6 @@ export const vi: Catalogue = {
     "Có người đã rời team và có thể còn giữ khoá cũ. Khoá mới chặn họ đọc những gì ghi sau này.",
   "orgs.rekey_other": "Cần một quản trị viên trong team tạo khoá mới.",
   "orgs.rekeyed": "Đã thay khoá team",
-  "orgs.transfer_confirm": "Chuyển quyền chủ sở hữu cho {email}? Bạn sẽ thành quản trị viên.",
   "orgs.transferred": "Đã chuyển quyền sở hữu",
   "orgs.plan_free": "Gói miễn phí",
   "orgs.plan_team": "Gói Team",
@@ -516,6 +521,9 @@ export const vi: Catalogue = {
   "error.orgs.domain_not_allowed": "Tổ chức này chỉ nhận email thuộc {domains}.",
   "error.orgs.invalid_domains": "Nhập tối đa 10 domain, ví dụ acme.com.",
   "error.orgs.invite_domain_blocked": "Tổ chức này không còn nhận domain email của bạn.",
+  "error.orgs.transfer_needs_admin":
+    "Chỉ chuyển quyền sở hữu cho quản trị viên. Hãy đặt họ làm quản trị viên trước.",
+  "error.orgs.transfer_needs_key": "Người này chưa hoàn tất thiết lập tài khoản.",
   "error.orgs.seat_limit": "Gói này có {limit} chỗ, tính cả lời mời đang chờ.",
   "error.orgs.team_limit": "Gói này cho tối đa {limit} team.",
   "error.orgs.stale_team_key": "Team vừa thay đổi. Thử lại.",

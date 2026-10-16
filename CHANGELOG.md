@@ -142,6 +142,13 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Transferring ownership is stricter: the owner re-enters their master password
+  (checked by the server), the new owner must already be an admin with a
+  finished account and, when email domains are set, an allowed address. The
+  dialog lists what changes for both people. `POST /api/orgs/:id/owner` now
+  takes `authKey` and answers `400 orgs.transfer_needs_admin`,
+  `400 orgs.transfer_needs_key` or `403 auth.invalid_credentials`.
+
 - Console layout: empty states are left-aligned rows with their action on the
   right instead of centered dashed boxes; settings panels put their action in
   the panel header; the invitation page is an ordinary page with a details

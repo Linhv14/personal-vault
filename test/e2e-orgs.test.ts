@@ -24,6 +24,7 @@ async function api(path: string, init: RequestInit & { token?: string } = {}) {
 
 interface Person {
   email: string;
+  authKey: string;
   token: string;
   accountId: string;
   identity: Identity;
@@ -46,7 +47,13 @@ async function person(label: string): Promise<Person> {
       wrappedPrivateKey: { ciphertext: "AAAA", nonce: "AAAAAAAAAAAAAAAA" },
     }),
   });
-  return { email, token: registered.body.token, accountId: registered.body.accountId, identity };
+  return {
+    email,
+    authKey: record.authKey,
+    token: registered.body.token,
+    accountId: registered.body.accountId,
+    identity,
+  };
 }
 
 const teamContext = (teamId: string, generation = 0) =>
@@ -451,14 +458,31 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
   });
 
   it("hands ownership to another member, and only the owner can", async () => {
-    const transfer = (who: Person, accountId: string) =>
+    const transfer = (who: Person, accountId: string, authKey = who.authKey) =>
       api(`/api/orgs/${orgId}/owner`, {
         method: "POST",
         token: who.token,
-        body: JSON.stringify({ accountId }),
+        body: JSON.stringify({ accountId, authKey }),
       });
     expect((await transfer(admin, admin.accountId)).status).toBe(403);
+    const wrongPassword = await transfer(owner, admin.accountId, admin.authKey);
+    expect(wrongPassword.status).toBe(403);
+    expect(wrongPassword.body.code).toBe("auth.invalid_credentials");
     expect((await transfer(owner, outsider.accountId)).status).toBe(404);
+    const pending = (await api(`/api/orgs/${orgId}`, { token: owner.token })).body.invites;
+    for (const entry of pending as { id: string }[]) {
+      await api(`/api/orgs/${orgId}/invites/${entry.id}`, { method: "DELETE", token: owner.token });
+    }
+    const plain = await person("plain");
+    const invited = await api(`/api/orgs/${orgId}/invites`, {
+      method: "POST",
+      token: owner.token,
+      body: JSON.stringify({ email: plain.email, role: "member" }),
+    });
+    await api(`/api/invites/${invited.body.id}/accept`, { method: "POST", token: plain.token });
+    const toMember = await transfer(owner, plain.accountId);
+    expect(toMember.status).toBe(400);
+    expect(toMember.body.code).toBe("orgs.transfer_needs_admin");
     expect((await transfer(owner, admin.accountId)).status).toBe(200);
 
     const view = await api(`/api/orgs/${orgId}`, { token: admin.token });

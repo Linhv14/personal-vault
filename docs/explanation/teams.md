@@ -101,6 +101,15 @@ Any account can create an organization and owns up to ten
 the list of the account's organizations in Settings rather than inside any one
 organization's settings.
 
+## Transferring ownership
+
+Ownership moves only to an admin who has finished setting up their account,
+and, when email domains are set, whose address is allowed. The owner re-enters
+their master password; the server checks it like a sign-in, so a session left
+open on someone else's machine cannot give the organization away. The old owner
+becomes an admin and keeps their teams; team keys do not change, because
+ownership grants rights over people and settings, not access to secrets.
+
 ## Email domains
 
 An owner can restrict an organization to a list of email domains. The check is

@@ -9,6 +9,7 @@ import {
   parseDomains,
   planLimits,
 } from "../../core/org-model.js";
+import { verifyAuthKey } from "../at-rest.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
@@ -17,7 +18,14 @@ import { invitationLink, joinFromInvite, sendInvitation } from "../orgs/invitati
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
-import { displayName, isUuid, isSealedProject, isSealedSecret, isWrappedKey } from "../validate.js";
+import {
+  displayName,
+  isBase64,
+  isUuid,
+  isSealedProject,
+  isSealedSecret,
+  isWrappedKey,
+} from "../validate.js";
 import {
   admins,
   asMember,
@@ -171,12 +179,25 @@ orgs.post(
   "/:orgId/owner",
   asMember(
     async (c, member, orgId) => {
-      const { accountId } = await readJson(c);
+      const { accountId, authKey } = await readJson(c);
       if (typeof accountId !== "string" || accountId === member.accountId) {
         return c.json(apiError("orgs.invalid_role"), 400);
       }
+      if (!isBase64(authKey, 32) || !(await ownerProof(c, member.accountId, authKey))) {
+        return c.json(apiError("auth.invalid_credentials"), 403);
+      }
       const dir = directory(c);
-      if ((await dir.roleOf(orgId, accountId)) === null) return notFound(c);
+      const successor = await dir.transferCandidate(orgId, accountId);
+      if (!successor) return notFound(c);
+      if (successor.role !== "admin") return c.json(apiError("orgs.transfer_needs_admin"), 400);
+      if (!successor.hasKey) return c.json(apiError("orgs.transfer_needs_key"), 400);
+      const org = await dir.org(orgId);
+      if (!isDomainAllowed(successor.email, org?.allowedDomains ?? [])) {
+        return c.json(
+          apiError("orgs.domain_not_allowed", { domains: (org?.allowedDomains ?? []).join(", ") }),
+          400,
+        );
+      }
       if ((await dir.ownedCount(accountId)) >= MAX_ORGS_PER_ACCOUNT) {
         return c.json(apiError("orgs.limit_reached"), 409);
       }
@@ -300,6 +321,13 @@ orgs.get(
     return respond(c, await orgStore(c.env, orgId).audit(member, cursor));
   }),
 );
+
+async function ownerProof(c: Ctx, accountId: string, authKey: string): Promise<boolean> {
+  const row = await c.env.DB.prepare("SELECT auth_key_hash FROM accounts WHERE id = ?")
+    .bind(accountId)
+    .first<{ auth_key_hash: string }>();
+  return row ? (await verifyAuthKey(c.env, authKey, row.auth_key_hash)).matches : false;
+}
 
 export const invites = new Hono<AppBindings>();
 
