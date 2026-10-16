@@ -171,8 +171,8 @@ export const vi: Catalogue = {
   "orgs.pending": "Lời mời đang chờ",
   "orgs.teams_hint":
     "Mỗi team có khoá riêng, được bọc cho từng thành viên. Chỉ thành viên mới đọc được những gì team chia sẻ.",
-  "orgs.cta_start": "Dùng thử Team",
-  "orgs.cta_open": "Team",
+  "orgs.cta_start": "Tổ chức",
+  "orgs.cta_open": "Tổ chức",
   "orgs.cta_hint": "Chia sẻ mật khẩu và secret cho CI với team của bạn",
   "orgs.open_dashboard": "Mở dashboard",
   "orgs.title": "Tổ chức",
@@ -546,6 +546,7 @@ export const vi: Catalogue = {
   "detail.empty": "Chọn một mục để xem ở đây.",
   "item.more": "Thêm",
   "item.modified": "Sửa lúc {date}",
+  "item.created_label": "Tạo",
   "item.created": "Tạo lúc {date}",
   "vault.all": "Tất cả vault",
   "vault.personal": "Cá nhân",

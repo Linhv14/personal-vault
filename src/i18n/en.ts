@@ -172,8 +172,8 @@ export const en = {
   "orgs.pending": "Pending invitations",
   "orgs.teams_hint":
     "Each team has its own key, wrapped for every member. Only members can read what the team shares.",
-  "orgs.cta_start": "Try Teams",
-  "orgs.cta_open": "Teams",
+  "orgs.cta_start": "Organizations",
+  "orgs.cta_open": "Organizations",
   "orgs.cta_hint": "Share passwords and CI secrets with your team",
   "orgs.open_dashboard": "Open dashboard",
   "orgs.title": "Organization",
@@ -551,6 +551,7 @@ export const en = {
   "detail.empty": "Pick an item to see it here.",
   "item.more": "More",
   "item.modified": "Modified {date}",
+  "item.created_label": "Created",
   "item.created": "Created {date}",
   "vault.all": "All vaults",
   "vault.personal": "Personal",

@@ -157,6 +157,11 @@ version may change the API or storage format; such releases list the steps in
   to that list. The roles table is in `docs/explanation/teams.md`.
 - The key verification dialog shows the key in large groups with one Done
   button and says why keys are compared person to person.
+- Extension popup follows the same rules: only "+" is a primary button in the
+  top bar (the vault and Organizations buttons are neutral, and the latter is
+  named like the drawer entry), list group labels are sentence case, empty
+  states are left-aligned, the add menu no longer wraps labels, updated and
+  created dates sit on their own lines, and the toast matches the console.
 - Row actions line up on one axis at one height; destructive actions are marked
   as such (withdraw, remove, delete and unlink turn red on hover or are red
   text), and removing duplicate secrets now asks for confirmation.

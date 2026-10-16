@@ -14,7 +14,6 @@ import {
 import type { VaultItem } from "../../lib/vault.js";
 import { vaultOf } from "../../lib/vaults.js";
 import { Icon } from "../../ui/components/Icon.js";
-import { Logo } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
 import { MenuList } from "../components/Menu.js";
 import { IconButton } from "../../ui/components/IconButton.js";
@@ -278,7 +277,6 @@ export function Detail({ item }: { item: VaultItem | null }) {
   if (!item) {
     return (
       <section className="screen detail-empty" id="detail">
-        <Logo size={40} />
         <p>{t("detail.empty")}</p>
       </section>
     );
@@ -370,14 +368,20 @@ export function Detail({ item }: { item: VaultItem | null }) {
 
         <PasswordHistory item={item} />
 
-        <p className="detail-meta">
-          {[
-            item.updatedAt ? t("item.modified", { date: formatDate(item.updatedAt) }) : "",
-            item.createdAt ? t("item.created", { date: formatDate(item.createdAt) }) : "",
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
+        <dl className="detail-meta">
+          {item.updatedAt && (
+            <div>
+              <dt>{t("console.last_change")}</dt>
+              <dd>{formatDate(item.updatedAt)}</dd>
+            </div>
+          )}
+          {item.createdAt && (
+            <div>
+              <dt>{t("item.created_label")}</dt>
+              <dd>{formatDate(item.createdAt)}</dd>
+            </div>
+          )}
+        </dl>
       </div>
     </section>
   );
