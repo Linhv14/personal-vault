@@ -54,8 +54,10 @@ export function ActivityPage() {
     return env ? `${found.content.name} · ${env.name}` : found.content.name;
   };
   const target = ({ action, actor, target }: AuditEvent) => {
+    if (action === "org.domains_changed") {
+      return target ? target.replaceAll(",", ", ") : t("console.domains_any");
+    }
     if (!target || target === actor) return "";
-    if (action === "org.domains_changed") return target.replaceAll(",", ", ");
     const [first = "", second] = target.split(":");
     if (action.startsWith("secret") || action.startsWith("ci.") || action.startsWith("link.")) {
       return projectLabel(first, second);
@@ -66,6 +68,7 @@ export function ActivityPage() {
         : teamName(first);
     }
     if (second) return `${emailOf(second)} → ${teamName(first)}`;
+    if (target.includes("@")) return target;
     return action.startsWith("team.") ? teamName(target) : emailOf(target);
   };
   const who = (actor: string) => (actor.startsWith("github:") ? actor.slice(7) : emailOf(actor));
@@ -110,7 +113,7 @@ export function ActivityPage() {
         {verified === null && !error ? (
           <SkeletonTable rows={8} />
         ) : (
-          <table className="table">
+          <table className="table activity-table">
             <thead>
               <tr>
                 <th>{t("console.when")}</th>

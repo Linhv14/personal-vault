@@ -1,13 +1,12 @@
 export const COLORS = {
-  page: "#faf9f6",
+  page: "#f4f4f2",
   card: "#ffffff",
-  border: "#e0dcd4",
-  text: "#1c1b19",
-  muted: "#6b675f",
+  border: "#e4e2dd",
+  text: "#1b1b19",
+  muted: "#6b6a65",
   accent: "#0b6e6b",
   accentText: "#ffffff",
-  soft: "#ecf8f6",
-  panel: "#f6f4ef",
+  panel: "#f6f5f2",
 } as const;
 
 export const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";

@@ -7,7 +7,7 @@ import {
 import { setAllowedDomains } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
-import { ActionButton } from "../components.js";
+import { ActionButton, PanelHead } from "../components.js";
 import { useConsole } from "../data.js";
 
 export function DomainsPanel() {
@@ -42,8 +42,7 @@ export function DomainsPanel() {
 
   return (
     <section className="panel">
-      <h2 className="panel-title">{t("console.domains_title")}</h2>
-      <p className="panel-text">{t("console.domains_text")}</p>
+      <PanelHead title={t("console.domains_title")} text={t("console.domains_text")} />
       <div className="domain-editor">
         {domains.length === 0 && !editable && (
           <span className="muted">{t("console.domains_any")}</span>

@@ -21,8 +21,7 @@ export type Block =
   | { kind: "text"; text: string; tone?: "body" | "muted" | "small" }
   | { kind: "code"; code: string }
   | { kind: "button"; label: string; href: string }
-  | { kind: "details"; rows: [label: string, value: string][] }
-  | { kind: "steps"; title?: string; items: string[] }
+  | { kind: "link"; label: string; href: string }
   | { kind: "divider" };
 
 export interface EmailSpec {
@@ -59,7 +58,7 @@ function siteHost(siteUrl: string): string {
 const TEXT_STYLE = {
   body: `margin:0 0 16px;font:400 15px/1.6 ${FONT};color:${COLORS.text}`,
   muted: `margin:0 0 16px;font:400 14px/1.6 ${FONT};color:${COLORS.muted}`,
-  small: `margin:0;font:400 13px/1.6 ${FONT};color:${COLORS.muted}`,
+  small: `margin:0 0 12px;font:400 13px/1.6 ${FONT};color:${COLORS.muted}`,
 };
 
 function blockHtml(block: Block): string {
@@ -67,25 +66,13 @@ function blockHtml(block: Block): string {
     case "text":
       return `<p style="${TEXT_STYLE[block.tone ?? "body"]}">${escape(block.text)}</p>`;
     case "code":
-      return `<div style="margin:8px 0 24px;padding:18px 12px;border-radius:12px;background:${COLORS.soft};text-align:center;font:700 34px/1 ${MONO};letter-spacing:10px;color:${COLORS.accent}">${escape(block.code)}</div>`;
+      return `<p style="margin:4px 0 20px;padding:14px 18px;border-radius:6px;background:${COLORS.panel};font:600 28px/1 ${MONO};letter-spacing:6px;color:${COLORS.text}">${escape(block.code)}</p>`;
     case "button":
-      return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px"><tr><td style="border-radius:10px;background:${COLORS.accent}"><a href="${escape(block.href)}" style="display:inline-block;padding:13px 22px;font:650 15px/1 ${FONT};color:${COLORS.accentText};text-decoration:none;border-radius:10px">${escape(block.label)}</a></td></tr></table>`;
-    case "details":
-      return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 20px;border-radius:12px;background:${COLORS.panel}">${block.rows
-        .map(
-          ([label, value], index) =>
-            `<tr><td style="padding:${index === 0 ? "14px" : "6px"} 16px ${index === block.rows.length - 1 ? "14px" : "6px"};width:38%;font:400 13px/1.5 ${FONT};color:${COLORS.muted};vertical-align:top">${escape(label)}</td><td style="padding:${index === 0 ? "14px" : "6px"} 16px ${index === block.rows.length - 1 ? "14px" : "6px"} 0;font:600 14px/1.5 ${FONT};color:${COLORS.text}">${escape(value)}</td></tr>`,
-        )
-        .join("")}</table>`;
-    case "steps":
-      return `${block.title ? `<p style="margin:0 0 10px;font:650 14px/1.5 ${FONT};color:${COLORS.text}">${escape(block.title)}</p>` : ""}<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px">${block.items
-        .map(
-          (item, index) =>
-            `<tr><td style="padding:0 10px 8px 0;vertical-align:top"><span style="display:inline-block;width:22px;height:22px;border-radius:11px;background:${COLORS.soft};color:${COLORS.accent};font:700 12px/22px ${FONT};text-align:center">${index + 1}</span></td><td style="padding:2px 0 8px;font:400 14px/1.5 ${FONT};color:${COLORS.text}">${escape(item)}</td></tr>`,
-        )
-        .join("")}</table>`;
+      return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px"><tr><td style="border-radius:6px;background:${COLORS.accent}"><a href="${escape(block.href)}" style="display:inline-block;padding:11px 18px;font:600 14px/1.2 ${FONT};color:${COLORS.accentText};text-decoration:none;border-radius:6px">${escape(block.label)}</a></td></tr></table>`;
+    case "link":
+      return `<p style="margin:0 0 4px;font:400 13px/1.6 ${FONT};color:${COLORS.muted}">${escape(block.label)}</p><p style="margin:0 0 16px;font:400 13px/1.5 ${MONO};word-break:break-all"><a href="${escape(block.href)}" style="color:${COLORS.accent};text-decoration:none">${escape(block.href)}</a></p>`;
     case "divider":
-      return `<div style="height:1px;margin:4px 0 20px;background:${COLORS.border}"></div>`;
+      return `<div style="height:1px;margin:20px 0 20px;background:${COLORS.border}"></div>`;
   }
 }
 
@@ -97,12 +84,8 @@ function blockText(block: Block): string {
       return `    ${block.code}`;
     case "button":
       return `${block.label}: ${block.href}`;
-    case "details":
-      return block.rows.map(([label, value]) => `${label}: ${value}`).join("\n");
-    case "steps":
-      return [block.title, ...block.items.map((item, index) => `${index + 1}. ${item}`)]
-        .filter(Boolean)
-        .join("\n");
+    case "link":
+      return `${block.label}\n${block.href}`;
     case "divider":
       return "—";
   }
@@ -111,7 +94,7 @@ function blockText(block: Block): string {
 function layout(context: EmailContext, spec: EmailSpec): string {
   const privacy = FOOTER[context.locale].privacy;
   const privacyUrl = `${context.siteUrl}/privacy`;
-  const wordmark = `${escape(WORDMARK.lead)}<span style="color:${COLORS.accent}">${escape(WORDMARK.accent)}</span> <span style="color:${COLORS.muted};font-weight:600">${escape(WORDMARK.product)}</span>`;
+  const wordmark = `${escape(WORDMARK.lead)}<span style="color:${COLORS.accent}">${escape(WORDMARK.accent)}</span> <span style="color:${COLORS.muted};font-weight:500">${escape(WORDMARK.product)}</span>`;
   return `<!doctype html>
 <html lang="${context.locale}">
 <head>
@@ -123,14 +106,14 @@ function layout(context: EmailContext, spec: EmailSpec): string {
 <body style="margin:0;padding:0;background:${COLORS.page}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escape(spec.preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.page}">
-<tr><td align="center" style="padding:32px 16px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px">
-<tr><td style="padding:0 4px 20px"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:10px;vertical-align:middle"><img src="cid:${LOGO.contentId}" width="32" height="32" alt="" style="display:block;border:0;border-radius:8px"></td><td style="vertical-align:middle;font:750 22px/1 ${FONT};letter-spacing:-0.4px;color:${COLORS.text}">${wordmark}</td></tr></table></td></tr>
-<tr><td style="padding:32px 28px;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:16px">
-<h1 style="margin:0 0 12px;font:650 22px/1.3 ${FONT};color:${COLORS.text}">${escape(spec.heading)}</h1>
+<tr><td align="center" style="padding:40px 16px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+<tr><td style="padding:32px;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:8px">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px"><tr><td style="padding-right:8px;vertical-align:middle"><img src="cid:${LOGO.contentId}" width="24" height="24" alt="" style="display:block;border:0;border-radius:6px"></td><td style="vertical-align:middle;font:700 16px/1 ${FONT};letter-spacing:-0.2px;color:${COLORS.text}">${wordmark}</td></tr></table>
+<h1 style="margin:0 0 16px;font:600 20px/1.35 ${FONT};color:${COLORS.text}">${escape(spec.heading)}</h1>
 ${spec.blocks.map(blockHtml).join("\n")}
 </td></tr>
-<tr><td style="padding:24px 4px 0;font:400 12px/1.6 ${FONT};color:${COLORS.muted}">© ${new Date().getUTCFullYear()} ${escape(APP_NAME)} &nbsp;·&nbsp; <a href="${escape(context.siteUrl)}" style="color:${COLORS.muted}">${escape(siteHost(context.siteUrl))}</a> &nbsp;·&nbsp; <a href="${escape(privacyUrl)}" style="color:${COLORS.muted}">${escape(privacy)}</a></td></tr>
+<tr><td style="padding:20px 32px 0;font:400 12px/1.6 ${FONT};color:${COLORS.muted}">${escape(APP_NAME)} &nbsp;·&nbsp; <a href="${escape(context.siteUrl)}" style="color:${COLORS.muted}">${escape(siteHost(context.siteUrl))}</a> &nbsp;·&nbsp; <a href="${escape(privacyUrl)}" style="color:${COLORS.muted}">${escape(privacy)}</a></td></tr>
 </table>
 </td></tr>
 </table>
@@ -141,7 +124,7 @@ ${spec.blocks.map(blockHtml).join("\n")}
 export function renderEmail(context: EmailContext, spec: EmailSpec): RenderedEmail {
   const footer = [
     "—",
-    `© ${new Date().getUTCFullYear()} ${APP_NAME} · ${siteHost(context.siteUrl)}`,
+    `${APP_NAME} · ${siteHost(context.siteUrl)}`,
     `${FOOTER[context.locale].privacy}: ${context.siteUrl}/privacy`,
   ];
   return {

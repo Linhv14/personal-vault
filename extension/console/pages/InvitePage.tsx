@@ -9,7 +9,7 @@ import {
 } from "../../lib/orgs.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { ActionButton, Avatar, EmptyState, PageSkeleton } from "../components.js";
+import { ActionButton, EmptyState, PageHeader, PageSkeleton } from "../components.js";
 import type { Run } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { navigate } from "../router.js";
@@ -76,45 +76,56 @@ export function InvitePage({
   }
 
   return (
-    <section className="invite-card panel">
-      <Avatar text={invite.orgName} size="lg" />
-      <h1>{t("invite.title", { org: invite.orgName })}</h1>
-      <dl className="invite-facts">
-        <div>
-          <dt>{t("orgs.role")}</dt>
-          <dd>{t(ROLE_LABEL[invite.role])}</dd>
-        </div>
-        <div>
-          <dt>{t("console.expires")}</dt>
-          <dd>{formatDateTime(invite.expiresAt, localeSignal.value)}</dd>
-        </div>
-      </dl>
-      <p className="muted">{t("invite.explain")}</p>
-      <div className="invite-actions">
-        <ActionButton
-          className="btn primary"
-          icon="check"
-          onClick={() =>
-            run(async () => {
-              const orgId = await acceptInvite(invite.id);
-              navigate(orgId, { page: "projects" });
-            }, "orgs.joined")
-          }
-        >
-          {t("orgs.accept")}
-        </ActionButton>
-        <ActionButton
-          className="btn ghost"
-          onClick={() =>
-            run(async () => {
-              await declineInvite(invite.id);
-              location.hash = "#/";
-            }, "orgs.declined")
-          }
-        >
-          {t("orgs.decline")}
-        </ActionButton>
-      </div>
-    </section>
+    <>
+      <PageHeader
+        title={t("invite.title", { org: invite.orgName })}
+        meta={
+          preview?.inviter
+            ? t("invite.lead", { inviter: preview.inviter, role: t(ROLE_LABEL[invite.role]) })
+            : t("invite.lead_anonymous", { role: t(ROLE_LABEL[invite.role]) })
+        }
+      />
+      <section className="panel narrow">
+        <dl className="facts">
+          <div>
+            <dt>{t("orgs.role")}</dt>
+            <dd>{t(ROLE_LABEL[invite.role])}</dd>
+          </div>
+          <div>
+            <dt>{t("invite.for")}</dt>
+            <dd>{account}</dd>
+          </div>
+          <div>
+            <dt>{t("console.expires")}</dt>
+            <dd>{formatDateTime(invite.expiresAt, localeSignal.value)}</dd>
+          </div>
+        </dl>
+        <p className="panel-note">{t("invite.explain")}</p>
+        <footer className="panel-foot">
+          <ActionButton
+            className="btn primary"
+            onClick={() =>
+              run(async () => {
+                const orgId = await acceptInvite(invite.id);
+                navigate(orgId, { page: "projects" });
+              }, "orgs.joined")
+            }
+          >
+            {t("orgs.accept")}
+          </ActionButton>
+          <ActionButton
+            className="btn"
+            onClick={() =>
+              run(async () => {
+                await declineInvite(invite.id);
+                location.hash = "#/";
+              }, "orgs.declined")
+            }
+          >
+            {t("orgs.decline")}
+          </ActionButton>
+        </footer>
+      </section>
+    </>
   );
 }

@@ -81,9 +81,11 @@ export function ProjectsPage() {
           title={t("console.no_team_title")}
           text={t("projects.join_team")}
           action={
-            <a className="btn" href={href(orgId, { page: "teams" })}>
-              {t("console.go_teams")}
-            </a>
+            isOrgAdmin(detail.org.role) && (
+              <a className="btn" href={href(orgId, { page: "teams" })}>
+                {t("console.go_teams")}
+              </a>
+            )
           }
         />
       ) : projects?.length === 0 ? (

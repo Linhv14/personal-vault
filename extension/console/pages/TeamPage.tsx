@@ -197,28 +197,38 @@ export function TeamPage({ teamId }: { teamId: string }) {
           {teamProjects.length === 0 ? (
             <p className="table-empty">{t("projects.none")}</p>
           ) : (
-            <ul className="link-list">
-              {teamProjects.map((project) => (
-                <li key={project.id}>
-                  <a
-                    href={href(orgId, {
-                      page: "project",
-                      projectId: project.id,
-                      environmentId: null,
-                    })}
-                  >
-                    <Icon name="braces" />
-                    <span>{project.content.name}</span>
-                    <span className="muted">
-                      {t("console.secret_count", { count: project.secretCount })}
-                    </span>
-                    <span className="muted">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("projects.name")}</th>
+                  <th className="num">{t("console.secrets")}</th>
+                  <th>{t("console.last_change")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamProjects.map((project) => (
+                  <tr key={project.id}>
+                    <td>
+                      <a
+                        className="cell-title"
+                        href={href(orgId, {
+                          page: "project",
+                          projectId: project.id,
+                          environmentId: null,
+                        })}
+                      >
+                        <Icon name="braces" />
+                        {project.content.name}
+                      </a>
+                    </td>
+                    <td className="num">{project.secretCount}</td>
+                    <td className="muted nowrap">
                       <When at={project.updatedAt} />
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </section>
       )}

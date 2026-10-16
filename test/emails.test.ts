@@ -18,7 +18,7 @@ describe("verificationCodeEmail", () => {
   it("puts the code in the subject, the inbox preview, the body and the text part", () => {
     expect(email.subject).toContain("042917");
     expect(email.html).toMatch(/display:none[^>]*>Your code is 042917/);
-    expect(email.html).toContain(">042917</div>");
+    expect(email.html).toContain(">042917</p>");
     expect(email.text).toContain("042917");
   });
 
@@ -68,36 +68,35 @@ describe("orgInviteEmail", () => {
   };
   const email = orgInviteEmail(context, invite);
 
-  it("names the organization and who sent it", () => {
-    expect(email.subject).toContain("Acme <Inc>");
+  it("says who invited whom to which organization, with the role in the sentence", () => {
+    expect(email.subject).toBe("owner@acme.test invited you to join Acme <Inc> on Trust1 Vault");
     expect(email.html).toContain("Acme &#60;Inc&#62;");
     expect(email.html).not.toContain("Acme <Inc>");
-    expect(email.html).toContain("owner@acme.test");
+    expect(email.text).toContain("as an admin");
   });
 
-  it("links the invitation from a button and from the text part", () => {
-    expect(email.html).toContain(`href="${invite.link}"`);
+  it("links the invitation from a button and as a plain fallback link", () => {
+    expect(email.html.split(`href="${invite.link}"`).length - 1).toBe(2);
     expect(email.text).toContain(invite.link);
   });
 
-  it("lists the role and the expiry date, and tells newcomers which email to sign up with", () => {
-    expect(email.html).toContain("Admin");
-    expect(email.html).toContain("2026");
-    expect(email.text).toContain("me@example.com");
+  it("names the invited address and the expiry date", () => {
+    expect(email.text).toContain(
+      "This invitation is for me@example.com and expires on 30 October 2026.",
+    );
   });
 
   it("speaks the requested language", () => {
-    const vietnamese = orgInviteEmail({ ...context, locale: "vi" }, invite);
+    const vietnamese = orgInviteEmail({ ...context, locale: "vi" }, { ...invite, role: "member" });
     expect(vietnamese.html).toContain('lang="vi"');
-    expect(vietnamese.subject).not.toBe(email.subject);
+    expect(vietnamese.text).toContain("với vai trò thành viên");
   });
 });
 
 describe("email footer", () => {
-  it("is one line: copyright, the site and the privacy policy", () => {
+  it("is one line: the product, the site and the privacy policy", () => {
     const email = verificationCodeEmail(context, "042917");
-    expect(email.html).toContain(`© ${new Date().getUTCFullYear()} Trust1 Vault`);
     expect(email.html).toContain('href="https://1pw.online"');
-    expect(email.text).toContain("© ");
+    expect(email.text).toContain("Trust1 Vault · 1pw.online");
   });
 });

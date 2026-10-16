@@ -2,7 +2,7 @@ import { useState } from "preact/hooks";
 import { createOrg, planLimits, removeMember } from "../../lib/orgs.js";
 import { Fingerprint } from "../../ui/components/Fingerprint.js";
 import { useT } from "../../ui/i18n.js";
-import { Dialog, Field, PageHeader, Usage } from "../components.js";
+import { Dialog, Field, PageHeader, PanelHead, Usage } from "../components.js";
 import { useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { navigate } from "../router.js";
@@ -22,11 +22,10 @@ export function SettingsPage() {
       <PageHeader title={t("console.settings")} meta={org.name} />
 
       <section className="panel">
-        <h2 className="panel-title">{t("console.plan")}</h2>
-        <p className="panel-text">
-          {t(org.plan === "team" ? "orgs.plan_team" : "orgs.plan_free")} ·{" "}
-          {t("orgs.your_role", { role: t(ROLE_LABEL[org.role]) })}
-        </p>
+        <PanelHead
+          title={t("console.plan")}
+          text={`${t(org.plan === "team" ? "orgs.plan_team" : "orgs.plan_free")} · ${t("orgs.your_role", { role: t(ROLE_LABEL[org.role]) })}`}
+        />
         <div className="usage-grid">
           <Usage
             label={t("console.seats")}
@@ -41,24 +40,33 @@ export function SettingsPage() {
       <DomainsPanel key={detail.org.allowedDomains.join()} />
 
       <section className="panel">
-        <h2 className="panel-title">{t("console.your_key")}</h2>
+        <PanelHead title={t("console.your_key")} text={t("console.your_key_hint")} />
         <Fingerprint publicKey={identity.publicKey} />
       </section>
 
       <section className="panel">
-        <h2 className="panel-title">{t("console.organizations")}</h2>
-        <button type="button" className="btn" onClick={() => setModal("create")}>
-          {t("orgs.create_title")}
-        </button>
+        <PanelHead
+          title={t("console.organizations")}
+          text={t("console.organizations_hint")}
+          action={
+            <button type="button" className="btn" onClick={() => setModal("create")}>
+              {t("orgs.create_title")}
+            </button>
+          }
+        />
       </section>
 
       {org.role !== "owner" && me && (
         <section className="panel danger-zone">
-          <h2 className="panel-title">{t("orgs.leave")}</h2>
-          <p className="panel-text">{t("orgs.leave_confirm", { name: org.name })}</p>
-          <button type="button" className="btn danger" onClick={() => setModal("leave")}>
-            {t("orgs.leave")}
-          </button>
+          <PanelHead
+            title={t("orgs.leave")}
+            text={t("orgs.leave_confirm", { name: org.name })}
+            action={
+              <button type="button" className="btn danger" onClick={() => setModal("leave")}>
+                {t("orgs.leave")}
+              </button>
+            }
+          />
         </section>
       )}
 

@@ -142,6 +142,16 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Console layout: empty states are left-aligned rows with their action on the
+  right instead of centered dashed boxes; settings panels put their action in
+  the panel header; the invitation page is an ordinary page with a details
+  table; tables, toolbars and panel titles share one 18px gutter; page actions
+  line up with the title; activity columns have fixed widths and show invited
+  addresses instead of "Former member".
+- Emails: one left-aligned layout with the logo inside the message, a smaller
+  button and a plain fallback link. The invitation states who invited you, the
+  role and the expiry in two sentences instead of a table and numbered steps.
+
 - `GET /api/orgs/:id` includes the caller's projects per team, and the console
   fetches it in parallel with the organization list and the identity check. A
   page load or a refresh after an action takes one round trip instead of three,

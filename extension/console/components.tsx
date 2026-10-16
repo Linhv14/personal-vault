@@ -184,9 +184,11 @@ export function EmptyState({
       <span className="empty-icon">
         <Icon name={icon} />
       </span>
-      <strong>{title}</strong>
-      {text && <p>{text}</p>}
-      {action}
+      <div className="empty-body">
+        <strong>{title}</strong>
+        {text && <p>{text}</p>}
+      </div>
+      {action && <div className="empty-action">{action}</div>}
     </div>
   );
 }
@@ -453,5 +455,25 @@ export function ShellSkeleton() {
         <PageSkeleton />
       </main>
     </div>
+  );
+}
+
+export function PanelHead({
+  title,
+  text,
+  action,
+}: {
+  title: string;
+  text?: ComponentChildren;
+  action?: ComponentChildren;
+}) {
+  return (
+    <header className="panel-head">
+      <div>
+        <h2>{title}</h2>
+        {text && <p>{text}</p>}
+      </div>
+      {action && <div className="panel-head-action">{action}</div>}
+    </header>
   );
 }

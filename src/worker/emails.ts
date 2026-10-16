@@ -38,24 +38,18 @@ const STRINGS = {
       ignore: "If you didn't request this, you can ignore this email.",
     },
     invite: {
-      subject: (org: string) => `You're invited to ${org} on ${APP_NAME}`,
-      preheader: (inviter: string, org: string) => `${inviter} invited you to ${org}.`,
-      heading: (org: string) => `Join ${org}`,
-      intro: (inviter: string, org: string) =>
-        `${inviter} invited you to ${org} on ${APP_NAME}, where teams share passwords and CI secrets, encrypted end to end.`,
-      organization: "Organization",
-      invitedBy: "Invited by",
-      role: "Role",
-      expires: "Expires",
-      roles: { admin: "Admin", member: "Member" },
+      subject: (inviter: string, org: string) =>
+        `${inviter} invited you to join ${org} on ${APP_NAME}`,
+      preheader: (org: string, expires: string) =>
+        `Accept to get access to ${org}. The invitation expires on ${expires}.`,
+      heading: (org: string) => `Join ${org} on ${APP_NAME}`,
+      intro: (inviter: string, org: string, role: InvitableRole) =>
+        `${inviter} has invited you to join the ${org} organization on ${APP_NAME} as ${role === "admin" ? "an admin" : "a member"}.`,
       accept: "Accept invitation",
-      newTitle: `New to ${APP_NAME}?`,
-      steps: (site: string, email: string) => [
-        `Click "Accept invitation" and create your account with ${email} on the page that opens.`,
-        "You join the organization as soon as the account is created.",
-        `Optional: install the browser extension from ${site} to fill passwords and codes.`,
-      ],
-      ignore: "If you don't know the sender, ignore this email. Nothing happens unless you accept.",
+      terms: (email: string, expires: string) =>
+        `This invitation is for ${email} and expires on ${expires}. If you don't have an account yet, you'll create one when you accept.`,
+      fallback: "If the button doesn't work, paste this link into your browser:",
+      ignore: "If you weren't expecting this invitation, you can ignore this email.",
     },
   },
   vi: {
@@ -85,25 +79,18 @@ const STRINGS = {
       ignore: "Nếu bạn không yêu cầu mã này, hãy bỏ qua email.",
     },
     invite: {
-      subject: (org: string) => `Bạn được mời vào ${org} trên ${APP_NAME}`,
-      preheader: (inviter: string, org: string) => `${inviter} mời bạn vào ${org}.`,
-      heading: (org: string) => `Tham gia ${org}`,
-      intro: (inviter: string, org: string) =>
-        `${inviter} mời bạn vào ${org} trên ${APP_NAME}, nơi các team chia sẻ mật khẩu và secret cho CI, được mã hoá đầu-cuối.`,
-      organization: "Tổ chức",
-      invitedBy: "Người mời",
-      role: "Vai trò",
-      expires: "Hết hạn",
-      roles: { admin: "Quản trị", member: "Thành viên" },
+      subject: (inviter: string, org: string) =>
+        `${inviter} mời bạn tham gia ${org} trên ${APP_NAME}`,
+      preheader: (org: string, expires: string) =>
+        `Chấp nhận để truy cập ${org}. Lời mời hết hạn ngày ${expires}.`,
+      heading: (org: string) => `Tham gia ${org} trên ${APP_NAME}`,
+      intro: (inviter: string, org: string, role: InvitableRole) =>
+        `${inviter} đã mời bạn tham gia tổ chức ${org} trên ${APP_NAME} với vai trò ${role === "admin" ? "quản trị viên" : "thành viên"}.`,
       accept: "Chấp nhận lời mời",
-      newTitle: `Chưa dùng ${APP_NAME}?`,
-      steps: (site: string, email: string) => [
-        `Bấm "Chấp nhận lời mời" và tạo tài khoản bằng ${email} ngay trên trang mở ra.`,
-        "Bạn vào tổ chức ngay khi tài khoản được tạo.",
-        `Tuỳ chọn: cài extension từ ${site} để tự điền mật khẩu và mã.`,
-      ],
-      ignore:
-        "Nếu bạn không biết người gửi, hãy bỏ qua email này. Không có gì xảy ra nếu bạn không chấp nhận.",
+      terms: (email: string, expires: string) =>
+        `Lời mời dành cho ${email} và hết hạn ngày ${expires}. Nếu chưa có tài khoản, bạn sẽ tạo tài khoản khi chấp nhận.`,
+      fallback: "Nếu nút không hoạt động, hãy dán liên kết này vào trình duyệt:",
+      ignore: "Nếu bạn không biết về lời mời này, hãy bỏ qua email.",
     },
   },
 } as const;
@@ -163,25 +150,17 @@ export interface InviteDetails {
 
 export function orgInviteEmail(context: EmailContext, invite: InviteDetails): RenderedEmail {
   const strings = STRINGS[context.locale].invite;
-  const site = new URL(context.siteUrl).host;
+  const expires = formatDate(invite.expiresAt, context.locale);
   return renderEmail(context, {
-    subject: strings.subject(invite.org),
-    preheader: strings.preheader(invite.inviter, invite.org),
+    subject: strings.subject(invite.inviter, invite.org),
+    preheader: strings.preheader(invite.org, expires),
     heading: strings.heading(invite.org),
     blocks: [
-      { kind: "text", text: strings.intro(invite.inviter, invite.org) },
-      {
-        kind: "details",
-        rows: [
-          [strings.organization, invite.org],
-          [strings.invitedBy, invite.inviter],
-          [strings.role, strings.roles[invite.role]],
-          [strings.expires, formatDate(invite.expiresAt, context.locale)],
-        ],
-      },
+      { kind: "text", text: strings.intro(invite.inviter, invite.org, invite.role) },
       { kind: "button", label: strings.accept, href: invite.link },
+      { kind: "text", text: strings.terms(invite.email, expires), tone: "small" },
       { kind: "divider" },
-      { kind: "steps", title: strings.newTitle, items: strings.steps(site, invite.email) },
+      { kind: "link", label: strings.fallback, href: invite.link },
       { kind: "text", text: strings.ignore, tone: "small" },
     ],
   });

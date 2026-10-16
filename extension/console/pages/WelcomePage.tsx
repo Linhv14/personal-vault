@@ -5,22 +5,12 @@ import { Field, Spinner } from "../components.js";
 import { pending$, type Run } from "../data.js";
 import { navigate } from "../router.js";
 
-const STEPS = ["console.step_org", "console.step_team", "console.step_project"] as const;
-
 export function WelcomePage({ run, error }: { run: Run; error: string | null }) {
   const t = useT();
   return (
     <section className="welcome">
       <h1>{t("orgs.create_title")}</h1>
       <p className="muted">{t("orgs.create_hint")}</p>
-      <ol className="steps">
-        {STEPS.map((step, index) => (
-          <li key={step}>
-            <span className="step-index">{index + 1}</span>
-            {t(step)}
-          </li>
-        ))}
-      </ol>
       <form
         className="panel welcome-form"
         onSubmit={(event) => {
