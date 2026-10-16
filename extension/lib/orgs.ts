@@ -197,10 +197,11 @@ export async function transferOwnership(
   orgId: string,
   accountId: string,
   authKey: string,
+  locale: string,
 ): Promise<void> {
   await request(`/api/orgs/${orgId}/owner`, {
     method: "POST",
-    body: json({ accountId, authKey }),
+    body: json({ accountId, authKey, locale }),
   });
 }
 

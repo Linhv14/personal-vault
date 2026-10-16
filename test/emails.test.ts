@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   existingAccountEmail,
   orgInviteEmail,
+  ownershipEmail,
   verificationCodeEmail,
 } from "../src/worker/emails.js";
 
@@ -98,5 +99,19 @@ describe("email footer", () => {
     const email = verificationCodeEmail(context, "042917");
     expect(email.html).toContain('href="https://1pw.online"');
     expect(email.text).toContain("Trust1 Vault · 1pw.online");
+  });
+});
+
+describe("ownershipEmail", () => {
+  const email = ownershipEmail(context, {
+    org: "Acme",
+    previous: "old@acme.test",
+    link: "https://1pw.online/app/#/org-1/settings",
+  });
+
+  it("says who handed over which organization and links its settings", () => {
+    expect(email.subject).toBe("You're now the owner of Acme on Trust1 Vault");
+    expect(email.text).toContain("old@acme.test transferred ownership of Acme to you.");
+    expect(email.html).toContain('href="https://1pw.online/app/#/org-1/settings"');
   });
 });

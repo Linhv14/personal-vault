@@ -14,7 +14,12 @@ import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { MAX_ORGS_PER_ACCOUNT } from "../orgs/directory.js";
-import { invitationLink, joinFromInvite, sendInvitation } from "../orgs/invitations.js";
+import {
+  invitationLink,
+  joinFromInvite,
+  notifyNewOwner,
+  sendInvitation,
+} from "../orgs/invitations.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
@@ -179,7 +184,7 @@ orgs.post(
   "/:orgId/owner",
   asMember(
     async (c, member, orgId) => {
-      const { accountId, authKey } = await readJson(c);
+      const { accountId, authKey, locale } = await readJson(c);
       if (typeof accountId !== "string" || accountId === member.accountId) {
         return c.json(apiError("orgs.invalid_role"), 400);
       }
@@ -203,6 +208,15 @@ orgs.post(
       }
       if (!(await dir.transferOwnership(orgId, member.accountId, accountId))) return notFound(c);
       await orgStore(c.env, orgId).transferOwnership(member.accountId, accountId, clientIp(c));
+      c.executionCtx.waitUntil(
+        notifyNewOwner(c.env, dir, {
+          orgId,
+          from: member.accountId,
+          to: accountId,
+          locale: locale === "vi" ? "vi" : "en",
+          siteUrl: new URL(c.req.url).origin,
+        }),
+      );
       return c.json({ ok: true });
     },
     (member) => member.role === "owner",

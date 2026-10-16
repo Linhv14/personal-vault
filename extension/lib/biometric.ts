@@ -14,16 +14,28 @@ const TIMEOUT_MS = 60_000;
 const ES256 = -7;
 const RS256 = -257;
 
-export type BiometricKind = "touch-id" | "windows-hello" | "biometrics";
+export type BiometricKind = "touch-id" | "windows-hello" | "chromeos" | "screen-lock";
 
 const LABEL: Record<BiometricKind, MessageKey> = {
   "touch-id": "bio.touch_id",
   "windows-hello": "bio.windows_hello",
-  biometrics: "bio.biometrics",
+  chromeos: "bio.chromeos",
+  "screen-lock": "bio.screen_lock",
+};
+
+const SETUP: Record<BiometricKind, MessageKey> = {
+  "touch-id": "bio.setup_mac",
+  "windows-hello": "bio.setup_windows",
+  chromeos: "bio.setup_chromeos",
+  "screen-lock": "bio.setup_other",
 };
 
 export function biometricLabel(): MessageKey {
   return LABEL[biometricKind()];
+}
+
+export function biometricSetupHint(): MessageKey {
+  return SETUP[biometricKind()];
 }
 
 export class BiometricError extends Error {
@@ -39,7 +51,8 @@ function biometricKind(): BiometricKind {
     navigator.platform;
   if (/mac/i.test(platform)) return "touch-id";
   if (/win/i.test(platform)) return "windows-hello";
-  return "biometrics";
+  if (/cros|chrome ?os/i.test(platform)) return "chromeos";
+  return "screen-lock";
 }
 
 export async function biometricSupported(): Promise<boolean> {

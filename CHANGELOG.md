@@ -142,6 +142,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Device unlock names the platform's own method: Touch ID or Mac password,
+  Windows Hello, ChromeOS PIN or fingerprint, or screen lock elsewhere. When it
+  isn't set up, Settings says where to turn it on for that system.
+- The new owner gets an email after a transfer, with a link to the
+  organization's settings, when an email provider is configured.
 - Transferring ownership is stricter: the owner re-enters their master password
   (checked by the server), the new owner must already be an admin with a
   finished account and, when email domains are set, an allowed address. The

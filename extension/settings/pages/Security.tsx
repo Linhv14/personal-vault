@@ -4,6 +4,7 @@ import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
 import {
   biometricLabel,
+  biometricSetupHint,
   biometricSupported,
   disableBiometric,
   enableBiometric,
@@ -265,7 +266,9 @@ function BiometricCard({ unlocked }: { unlocked: boolean }) {
           <Button onClick={() => void turnOff()}>{t("pin.turn_off")}</Button>
         </div>
       ) : !state.supported ? (
-        <p className="notice">{t("bio.unsupported", { method })}</p>
+        <p className="notice">
+          {t("bio.unsupported", { method })} {t(biometricSetupHint())}
+        </p>
       ) : !unlocked ? (
         <p className="notice">{t("settings.locked_hint")}</p>
       ) : (

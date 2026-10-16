@@ -1,5 +1,5 @@
 import type { InvitableRole } from "../../core/org-model.js";
-import { orgInviteEmail } from "../emails.js";
+import { orgInviteEmail, ownershipEmail } from "../emails.js";
 import { createMailer } from "../mailer.js";
 import type { Env } from "../types.js";
 import { orgStore } from "../stores.js";
@@ -63,4 +63,32 @@ export async function joinFromInvite(
     invite.ip,
   );
   return accepted.orgId;
+}
+
+export async function notifyNewOwner(
+  env: Env,
+  directory: OrgDirectory,
+  transfer: { orgId: string; from: string; to: string; locale: "en" | "vi"; siteUrl: string },
+): Promise<void> {
+  const mailer = createMailer(env);
+  if (!mailer) return;
+  const [org, previous, recipient] = await Promise.all([
+    directory.org(transfer.orgId),
+    directory.emailOf(transfer.from),
+    directory.emailOf(transfer.to),
+  ]);
+  if (!org || !previous || !recipient) return;
+  const message = ownershipEmail(
+    { locale: transfer.locale, siteUrl: transfer.siteUrl },
+    {
+      org: org.name,
+      previous,
+      link: `${transfer.siteUrl}/app/#/${transfer.orgId}/settings`,
+    },
+  );
+  try {
+    await mailer.send({ to: recipient, ...message });
+  } catch {
+    return;
+  }
 }

@@ -128,8 +128,14 @@ vi.stubGlobal(
   }),
 );
 
-const { enableBiometric, disableBiometric, hasBiometric, unlockWithBiometric, biometricLabel } =
-  await import("../extension/lib/biometric.js");
+const {
+  enableBiometric,
+  disableBiometric,
+  hasBiometric,
+  unlockWithBiometric,
+  biometricLabel,
+  biometricSetupHint,
+} = await import("../extension/lib/biometric.js");
 const { getUnlocked, lock } = await import("../extension/lib/storage.js");
 
 const VAULT_KEY = toBase64(new Uint8Array(32).fill(9));
@@ -146,8 +152,18 @@ beforeEach(() => {
 });
 
 describe("biometric unlock", () => {
-  it("names Touch ID on a Mac", () => {
-    expect(biometricLabel()).toBe("bio.touch_id");
+  it("names the platform's own unlock and where to set it up", () => {
+    const cases = [
+      ["MacIntel", "bio.touch_id", "bio.setup_mac"],
+      ["Win32", "bio.windows_hello", "bio.setup_windows"],
+      ["CrOS x86_64", "bio.chromeos", "bio.setup_chromeos"],
+      ["Linux x86_64", "bio.screen_lock", "bio.setup_other"],
+    ] as const;
+    for (const [platform, label, setup] of cases) {
+      (navigator as { platform: string }).platform = platform;
+      expect([biometricLabel(), biometricSetupHint()]).toEqual([label, setup]);
+    }
+    (navigator as { platform: string }).platform = "MacIntel";
   });
 
   it("registers the extension origin and reopens the vault after a lock", async () => {

@@ -51,6 +51,18 @@ const STRINGS = {
       fallback: "If the button doesn't work, paste this link into your browser:",
       ignore: "If you weren't expecting this invitation, you can ignore this email.",
     },
+    owner: {
+      subject: (org: string) => `You're now the owner of ${org} on ${APP_NAME}`,
+      preheader: (previous: string) => `${previous} transferred ownership to you.`,
+      heading: (org: string) => `You own ${org} now`,
+      intro: (previous: string, org: string) =>
+        `${previous} transferred ownership of ${org} to you. They are now an admin.`,
+      rights:
+        "As the owner you can change roles, set the allowed email domains and transfer ownership again.",
+      open: "Open organization settings",
+      ignore: (previous: string) =>
+        `If you didn't expect this, contact ${previous} or your organization's admins.`,
+    },
   },
   vi: {
     code: {
@@ -91,6 +103,18 @@ const STRINGS = {
         `Lời mời dành cho ${email} và hết hạn ngày ${expires}. Nếu chưa có tài khoản, bạn sẽ tạo tài khoản khi chấp nhận.`,
       fallback: "Nếu nút không hoạt động, hãy dán liên kết này vào trình duyệt:",
       ignore: "Nếu bạn không biết về lời mời này, hãy bỏ qua email.",
+    },
+    owner: {
+      subject: (org: string) => `Bạn đã trở thành owner của ${org} trên ${APP_NAME}`,
+      preheader: (previous: string) => `${previous} đã chuyển quyền sở hữu cho bạn.`,
+      heading: (org: string) => `Bạn là owner của ${org}`,
+      intro: (previous: string, org: string) =>
+        `${previous} đã chuyển quyền sở hữu ${org} cho bạn. Họ giờ là quản trị viên.`,
+      rights:
+        "Là owner, bạn có quyền đổi vai trò, đặt domain email được phép và chuyển quyền sở hữu tiếp.",
+      open: "Mở cài đặt tổ chức",
+      ignore: (previous: string) =>
+        `Nếu bạn không biết về việc này, hãy liên hệ ${previous} hoặc quản trị viên của tổ chức.`,
     },
   },
 } as const;
@@ -162,6 +186,24 @@ export function orgInviteEmail(context: EmailContext, invite: InviteDetails): Re
       { kind: "divider" },
       { kind: "link", label: strings.fallback, href: invite.link },
       { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
+}
+
+export function ownershipEmail(
+  context: EmailContext,
+  details: { org: string; previous: string; link: string },
+): RenderedEmail {
+  const strings = STRINGS[context.locale].owner;
+  return renderEmail(context, {
+    subject: strings.subject(details.org),
+    preheader: strings.preheader(details.previous),
+    heading: strings.heading(details.org),
+    blocks: [
+      { kind: "text", text: strings.intro(details.previous, details.org) },
+      { kind: "text", text: strings.rights },
+      { kind: "button", label: strings.open, href: details.link },
+      { kind: "text", text: strings.ignore(details.previous), tone: "small" },
     ],
   });
 }

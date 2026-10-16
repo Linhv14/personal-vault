@@ -144,7 +144,16 @@ export const vi: Catalogue = {
   "error.auth.pin_off": "Mở khoá bằng PIN đang tắt. Dùng master password.",
   "bio.touch_id": "Touch ID hoặc mật khẩu Mac",
   "bio.windows_hello": "Windows Hello",
-  "bio.biometrics": "sinh trắc học",
+  "bio.chromeos": "PIN hoặc vân tay ChromeOS",
+  "bio.screen_lock": "Khoá màn hình",
+  "bio.setup_mac":
+    "Đặt mật khẩu đăng nhập Mac, hoặc thêm vân tay ở Cài đặt hệ thống → Touch ID & Mật khẩu, rồi mở lại trang này.",
+  "bio.setup_windows":
+    "Thiết lập PIN, vân tay hoặc khuôn mặt ở Settings → Accounts → Sign-in options của Windows, rồi mở lại trang này.",
+  "bio.setup_chromeos":
+    "Thiết lập PIN hoặc vân tay ở Cài đặt ChromeOS → Bảo mật và quyền riêng tư → Màn hình khoá, rồi mở lại trang này.",
+  "bio.setup_other":
+    "Trình duyệt này không dùng được khoá màn hình của thiết bị. Hãy dùng PIN hoặc master password.",
   "bio.promo": "Mở khoá bằng {method} thay cho master password",
   "bio.promo_action": "Bật",
   "bio.title": "Mở khoá bằng {method}",

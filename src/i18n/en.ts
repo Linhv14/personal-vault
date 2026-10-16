@@ -145,7 +145,16 @@ export const en = {
   "error.auth.pin_off": "PIN unlock is off. Use your master password.",
   "bio.touch_id": "Touch ID or Mac password",
   "bio.windows_hello": "Windows Hello",
-  "bio.biometrics": "biometrics",
+  "bio.chromeos": "ChromeOS PIN or fingerprint",
+  "bio.screen_lock": "Screen lock",
+  "bio.setup_mac":
+    "Set a login password, or add a fingerprint under System Settings → Touch ID & Password, then reopen this page.",
+  "bio.setup_windows":
+    "Set up a PIN, fingerprint or face under Windows Settings → Accounts → Sign-in options, then reopen this page.",
+  "bio.setup_chromeos":
+    "Set up a PIN or fingerprint under ChromeOS Settings → Security and privacy → Lock screen, then reopen this page.",
+  "bio.setup_other":
+    "This browser can't use the device's screen lock here. Use a PIN or your master password instead.",
   "bio.promo": "Unlock with {method} instead of your master password",
   "bio.promo_action": "Turn on",
   "bio.title": "Unlock with {method}",
