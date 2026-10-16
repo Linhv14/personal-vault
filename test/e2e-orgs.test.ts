@@ -343,6 +343,67 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
     expect(removed.status).toBe(200);
   });
 
+  it("limits invitations and joining to the organization's email domains", async () => {
+    const domains = (token: string, list: unknown) =>
+      api(`/api/orgs/${orgId}/domains`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify({ domains: list }),
+      });
+    const invite = (email: string) =>
+      api(`/api/orgs/${orgId}/invites`, {
+        method: "POST",
+        token: owner.token,
+        body: JSON.stringify({ email, role: "member" }),
+      });
+
+    const lateEmail = `late-${Date.now()}@other.test`;
+    const { record } = await createAccount(lateEmail, "late password", 100_000);
+    const late = await api("/api/auth/register", {
+      method: "POST",
+      headers: { "x-registration-token": REGISTRATION_TOKEN },
+      body: JSON.stringify({ email: lateEmail, ...record }),
+    });
+    const pending = await invite(lateEmail);
+    expect(pending.status).toBe(201);
+
+    expect((await domains(admin.token, ["example.com"])).status).toBe(403);
+    expect((await domains(owner.token, ["example.com", "nope"])).body.code).toBe(
+      "orgs.invalid_domains",
+    );
+    const set = await domains(owner.token, ["Example.COM", "example.com"]);
+    expect(set.body).toEqual({ allowedDomains: ["example.com"] });
+    const view = await api(`/api/orgs/${orgId}`, { token: owner.token });
+    expect(view.body.org.allowedDomains).toEqual(["example.com"]);
+
+    const refused = await invite(`someone-${Date.now()}@other.test`);
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({
+      code: "orgs.domain_not_allowed",
+      params: { domains: "example.com" },
+    });
+
+    const preview = await api(`/api/invites/${pending.body.id}/preview`);
+    expect(preview.body.domainAllowed).toBe(false);
+    const accepted = await api(`/api/invites/${pending.body.id}/accept`, {
+      method: "POST",
+      token: late.body.token,
+    });
+    expect(accepted.status).toBe(403);
+    expect(accepted.body.code).toBe("orgs.invite_domain_blocked");
+
+    const audit = await api(`/api/orgs/${orgId}/audit`, { token: owner.token });
+    expect(audit.body.events.map((event: { action: string }) => event.action)).toContain(
+      "org.domains_changed",
+    );
+
+    expect((await domains(owner.token, [])).body).toEqual({ allowedDomains: [] });
+    await api(`/api/orgs/${orgId}/invites/${pending.body.id}`, {
+      method: "DELETE",
+      token: owner.token,
+    });
+  });
+
   it("counts members and pending invitations against the plan's seats", async () => {
     const invite = (email: string) =>
       api(`/api/orgs/${orgId}/invites`, {

@@ -89,7 +89,7 @@ auth.post("/register", async (c) => {
   const email = normalizeEmail(rawEmail);
   const directory = new OrgDirectory(c.env.DB);
   const invite = isUuid(inviteId) ? await directory.preview(inviteId) : null;
-  const invited = invite !== null && invite.email === email;
+  const invited = invite !== null && invite.email === email && invite.domainAllowed;
 
   const openRegistration = isOpenRegistration(c.env);
   if (!openRegistration && !invited) {
@@ -146,7 +146,7 @@ auth.post("/register", async (c) => {
   }
 
   const session = await createSession(c.env, accountId, timestamp);
-  const orgId = invited
+  const joined = invited
     ? await joinFromInvite(c.env, directory, {
         id: inviteId as string,
         email,
@@ -154,6 +154,7 @@ auth.post("/register", async (c) => {
         ip: clientIp(c),
       })
     : null;
+  const orgId = joined && joined !== "domain" ? joined : null;
   return c.json({ accountId, ...session, ...(orgId ? { orgId } : {}) }, 201);
 });
 

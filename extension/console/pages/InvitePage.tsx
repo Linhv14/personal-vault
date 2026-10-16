@@ -43,6 +43,17 @@ export function InvitePage({
     </a>
   );
 
+  if (preview && !preview.domainAllowed) {
+    return (
+      <EmptyState
+        icon="mail"
+        title={t("invite.domain_title")}
+        text={t("invite.domain_text", { org: preview.orgName })}
+        action={home}
+      />
+    );
+  }
+
   if (!invite) {
     if (!preview) {
       return (

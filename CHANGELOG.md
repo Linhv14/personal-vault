@@ -10,6 +10,12 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Organization email domains (Settings, owner only): when set, invitations,
+  account creation from an invitation and accepting one only work for
+  addresses on those domains. Members already outside keep their access and
+  are marked in the member list; the invite dialog shows the allowed domains.
+  Needs migration `0010_org_domains.sql`.
+
 - Console and dashboard: buttons show a spinner while their action runs and
   ignore repeated clicks, dialogs keep their submit busy until the work is done,
   a thin progress bar marks background refreshes, pages load behind skeletons,

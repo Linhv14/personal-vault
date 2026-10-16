@@ -79,6 +79,20 @@ project or secret is missing or extra. Until that happens, the team is flagged
 and every write to its projects is refused, so nothing new is written under keys
 the departed member holds.
 
+## Email domains
+
+An owner can restrict an organization to a list of email domains. The check is
+an exact match on the part after the last `@`, so `acme.com` does not admit
+`eu.acme.com` or `acme.com.evil.io`; subdomains are listed separately. It runs
+when an invitation is sent, when it is accepted and when an account is created
+from it, so an invitation sent before the restriction cannot be used to get in
+afterwards.
+
+The list restricts, it never admits: nobody joins because of their domain alone,
+which is why it needs no proof that the organization owns the domain. Members
+already outside the list keep their access and are marked in the member list,
+so removing them stays a deliberate decision.
+
 ## Plans
 
 | Plan | Seats (members plus pending invitations) | Teams |

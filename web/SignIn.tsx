@@ -95,6 +95,25 @@ export function SignIn() {
     );
   }
 
+  if (invite && !invite.domainAllowed) {
+    return (
+      <main className="sign-in">
+        <div className="panel sign-in-card">
+          <header className="brand">
+            <span
+              className="brand-logo"
+              aria-hidden="true"
+              dangerouslySetInnerHTML={{ __html: logoSvg("web-logo") }}
+            />
+            <Wordmark />
+          </header>
+          <h1>{t("invite.domain_title")}</h1>
+          <p className="invite-lead">{t("invite.domain_text", { org: invite.orgName })}</p>
+        </div>
+      </main>
+    );
+  }
+
   const registering = mode === "register" && invite !== null;
   const title = invite ? t("invite.title", { org: invite.orgName }) : t("web.sign_in_title");
   const label = working

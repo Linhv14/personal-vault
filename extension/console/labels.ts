@@ -9,6 +9,7 @@ export const ROLE_LABEL: Record<OrgRole, MessageKey> = {
 
 export const ACTION_LABEL: Record<string, MessageKey> = {
   "org.created": "orgs.audit_org_created",
+  "org.domains_changed": "orgs.audit_org_domains_changed",
   "member.invited": "orgs.audit_member_invited",
   "member.joined": "orgs.audit_member_joined",
   "member.removed": "orgs.audit_member_removed",

@@ -1,4 +1,4 @@
-import type { InvitableRole, OrgRole } from "../../core/org-model.js";
+import { isDomainAllowed, type InvitableRole, type OrgRole } from "../../core/org-model.js";
 import { now } from "../http.js";
 
 export const MAX_ORGS_PER_ACCOUNT = 10;
@@ -69,11 +69,23 @@ export class OrgDirectory {
     ]);
   }
 
-  async org(orgId: string): Promise<{ id: string; name: string; plan: string } | null> {
-    return this.db
-      .prepare("SELECT id, name, plan FROM orgs WHERE id = ?")
+  async org(
+    orgId: string,
+  ): Promise<{ id: string; name: string; plan: string; allowedDomains: string[] } | null> {
+    const row = await this.db
+      .prepare("SELECT id, name, plan, allowed_domains FROM orgs WHERE id = ?")
       .bind(orgId)
-      .first<{ id: string; name: string; plan: string }>();
+      .first<{ id: string; name: string; plan: string; allowed_domains: string }>();
+    if (!row) return null;
+    const { allowed_domains, ...org } = row;
+    return { ...org, allowedDomains: JSON.parse(allowed_domains) as string[] };
+  }
+
+  async setAllowedDomains(orgId: string, domains: string[]): Promise<void> {
+    await this.db
+      .prepare("UPDATE orgs SET allowed_domains = ? WHERE id = ?")
+      .bind(JSON.stringify(domains), orgId)
+      .run();
   }
 
   async roleOf(orgId: string, accountId: string): Promise<OrgRole | null> {
@@ -205,10 +217,12 @@ export class OrgDirectory {
     role: InvitableRole;
     expiresAt: number;
     hasAccount: boolean;
+    domainAllowed: boolean;
   } | null> {
     const row = await this.db
       .prepare(
         `SELECT o.name AS orgName, a.email AS inviter, i.email, i.role, i.expires_at AS expiresAt,
+                o.allowed_domains AS allowedDomains,
                 EXISTS (SELECT 1 FROM accounts WHERE email = i.email) AS hasAccount
            FROM org_invites i
            JOIN orgs o ON o.id = i.org_id
@@ -222,9 +236,16 @@ export class OrgDirectory {
         email: string;
         role: InvitableRole;
         expiresAt: number;
+        allowedDomains: string;
         hasAccount: number;
       }>();
-    return row && { ...row, hasAccount: row.hasAccount === 1 };
+    if (!row) return null;
+    const { allowedDomains, ...invite } = row;
+    return {
+      ...invite,
+      hasAccount: row.hasAccount === 1,
+      domainAllowed: isDomainAllowed(row.email, JSON.parse(allowedDomains) as string[]),
+    };
   }
 
   async withdrawInvite(orgId: string, inviteId: string): Promise<void> {
@@ -246,16 +267,23 @@ export class OrgDirectory {
     return results;
   }
 
-  async accept(inviteId: string, email: string, accountId: string): Promise<MyInviteRow | null> {
-    const invite = await this.db
+  async accept(
+    inviteId: string,
+    email: string,
+    accountId: string,
+  ): Promise<MyInviteRow | "domain" | null> {
+    const row = await this.db
       .prepare(
-        `SELECT i.id, i.org_id AS orgId, o.name AS orgName, i.role, i.expires_at AS expiresAt
+        `SELECT i.id, i.org_id AS orgId, o.name AS orgName, i.role, i.expires_at AS expiresAt,
+                o.allowed_domains AS allowedDomains
            FROM org_invites i JOIN orgs o ON o.id = i.org_id
           WHERE i.id = ? AND i.email = ? AND i.expires_at > ?`,
       )
       .bind(inviteId, email, now())
-      .first<MyInviteRow>();
-    if (!invite) return null;
+      .first<MyInviteRow & { allowedDomains: string }>();
+    if (!row) return null;
+    const { allowedDomains, ...invite } = row;
+    if (!isDomainAllowed(email, JSON.parse(allowedDomains) as string[])) return "domain";
     await this.db.batch([
       this.db
         .prepare(

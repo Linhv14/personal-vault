@@ -6,6 +6,7 @@ import { Dialog, Field, PageHeader, Usage } from "../components.js";
 import { useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { navigate } from "../router.js";
+import { DomainsPanel } from "./DomainsPanel.js";
 
 type Modal = "create" | "leave" | null;
 
@@ -36,6 +37,8 @@ export function SettingsPage() {
           <Usage label={t("projects.tab")} used={projects?.length ?? 0} limit={limits.projects} />
         </div>
       </section>
+
+      <DomainsPanel key={detail.org.allowedDomains.join()} />
 
       <section className="panel">
         <h2 className="panel-title">{t("console.your_key")}</h2>

@@ -53,9 +53,9 @@ export async function joinFromInvite(
   env: Env,
   directory: OrgDirectory,
   invite: { id: string; email: string; accountId: string; ip: string | null },
-): Promise<string | null> {
+): Promise<string | "domain" | null> {
   const accepted = await directory.accept(invite.id, invite.email, invite.accountId);
-  if (!accepted) return null;
+  if (!accepted || accepted === "domain") return accepted;
   await orgStore(env, accepted.orgId).setMember(
     invite.accountId,
     { accountId: invite.accountId, role: accepted.role },

@@ -55,6 +55,7 @@ export function ActivityPage() {
   };
   const target = ({ action, actor, target }: AuditEvent) => {
     if (!target || target === actor) return "";
+    if (action === "org.domains_changed") return target.replaceAll(",", ", ");
     const [first = "", second] = target.split(":");
     if (action.startsWith("secret") || action.startsWith("ci.") || action.startsWith("link.")) {
       return projectLabel(first, second);

@@ -1434,3 +1434,55 @@ tr.pending-row {
   gap: 16px;
   padding: 4px 6px;
 }
+
+.domain-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 18px 16px;
+}
+.domain-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.domain-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12.5px;
+}
+.domain-chip button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.domain-chip button:hover {
+  background: var(--card);
+  color: var(--text);
+}
+.domain-chip svg {
+  width: 12px;
+  height: 12px;
+}
+.domain-add {
+  display: flex;
+  gap: 8px;
+  max-width: 520px;
+}
+.domain-add input {
+  flex: 1;
+  min-width: 0;
+}

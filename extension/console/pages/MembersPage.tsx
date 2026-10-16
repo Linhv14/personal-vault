@@ -1,5 +1,10 @@
 import { useState } from "preact/hooks";
-import { canChangeRoles, canInvite, canRemove } from "../../../src/core/org-model.js";
+import {
+  canChangeRoles,
+  canInvite,
+  canRemove,
+  isDomainAllowed,
+} from "../../../src/core/org-model.js";
 import {
   inviteLink,
   inviteMember,
@@ -26,7 +31,7 @@ import {
   Usage,
   When,
 } from "../components.js";
-import { pending$, toast, useConsole } from "../data.js";
+import { failure$, pending$, toast, useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 
 type Modal =
@@ -48,6 +53,10 @@ export function MembersPage() {
   const members = detail.members.filter((member) => !gone.has(member.accountId));
   const invites = detail.invites.filter((invite) => !gone.has(invite.id));
   const { teams } = detail;
+  const domains = org.allowedDomains;
+  const domainList = domains.map((domain) => `@${domain}`).join(", ");
+  const outside = (email: string) =>
+    !isDomainAllowed(email, domains) && <Badge tone="warn">{t("console.outside_domain")}</Badge>;
   const orgId = org.id;
   const seats = planLimits(org.plan).seats;
   const used = members.length + invites.length;
@@ -100,6 +109,7 @@ export function MembersPage() {
                       <Avatar text={member.email} size="sm" />
                       {member.email}
                       {isMe && <Badge>{t("orgs.you")}</Badge>}
+                      {outside(member.email)}
                     </span>
                   </td>
                   <td>
@@ -186,6 +196,7 @@ export function MembersPage() {
                     <span className="cell-title">
                       <Avatar text={invite.email} size="sm" />
                       {invite.email}
+                      {outside(invite.email)}
                     </span>
                   </td>
                   <td className="muted">{t(ROLE_LABEL[invite.role])}</td>
@@ -262,6 +273,10 @@ export function MembersPage() {
             const data = new FormData(form);
             const role = data.get("role") === "admin" ? "admin" : "member";
             const email = String(data.get("email")).trim();
+            if (!isDomainAllowed(email, domains)) {
+              failure$.value = t("error.orgs.domain_not_allowed", { domains: domainList });
+              return;
+            }
             void run(
               async () => {
                 const sent = await inviteMember(orgId, email, role, localeSignal.value);
@@ -277,8 +292,22 @@ export function MembersPage() {
             );
           }}
         >
-          <Field label={t("orgs.invite_email")}>
-            <input name="email" type="email" required autoFocus placeholder="name@company.com" />
+          <Field
+            label={t("orgs.invite_email")}
+            hint={
+              domains.length > 0
+                ? t("orgs.invite_domains_hint", { domains: domainList })
+                : undefined
+            }
+          >
+            <input
+              name="email"
+              type="email"
+              required
+              autoFocus
+              placeholder={`name@${domains[0] ?? "company.com"}`}
+              onInput={() => (failure$.value = null)}
+            />
           </Field>
           <Field label={t("orgs.role")}>
             <select name="role">

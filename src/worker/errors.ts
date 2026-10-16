@@ -41,6 +41,9 @@ export type ApiErrorCode =
   | "orgs.limit_reached"
   | "orgs.not_in_team"
   | "orgs.seat_limit"
+  | "orgs.domain_not_allowed"
+  | "orgs.invalid_domains"
+  | "orgs.invite_domain_blocked"
   | "orgs.team_limit"
   | "orgs.stale_team_key"
   | "orgs.team_changed"
@@ -103,6 +106,9 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.limit_reached": "This organization has reached its limit",
   "orgs.not_in_team": "Only members of the team can add people to it",
   "orgs.seat_limit": "This plan has no free seats; pending invitations count",
+  "orgs.domain_not_allowed": "This organization only accepts addresses on its allowed domains",
+  "orgs.invalid_domains": "Allowed domains must be up to 10 valid domain names",
+  "orgs.invite_domain_blocked": "This organization no longer accepts this email domain",
   "orgs.team_limit": "This plan allows no more teams",
   "orgs.stale_team_key": "The team key changed; reload and try again",
   "orgs.team_changed": "The team's members changed; reload and try again",

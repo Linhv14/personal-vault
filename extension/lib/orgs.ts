@@ -43,7 +43,7 @@ export interface OrgInvite {
 }
 
 export interface OrgDetail {
-  org: OrgSummary;
+  org: OrgSummary & { allowedDomains: string[] };
   members: OrgMember[];
   invites: OrgInvite[];
   teams: Team[];
@@ -97,6 +97,7 @@ export interface InvitePreview {
   role: InvitableRole;
   expiresAt: number;
   hasAccount: boolean;
+  domainAllowed: boolean;
 }
 
 export async function inviteMember(
@@ -218,3 +219,12 @@ export async function auditLog(orgId: string, before?: number): Promise<AuditPag
 }
 
 export { fingerprint };
+
+export async function setAllowedDomains(orgId: string, domains: string[]): Promise<string[]> {
+  return (
+    await request<{ allowedDomains: string[] }>(`/api/orgs/${orgId}/domains`, {
+      method: "PUT",
+      body: json({ domains }),
+    })
+  ).allowedDomains;
+}

@@ -56,6 +56,35 @@ export function canRemove(actor: Principal, target: Principal): boolean {
   return actor.role === "owner" || (actor.role === "admin" && target.role === "member");
 }
 
+export const MAX_ALLOWED_DOMAINS = 10;
+
+const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+export function normalizeDomain(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const domain = value.trim().toLowerCase().replace(/^@/, "").replace(/\.$/, "");
+  return DOMAIN.test(domain) ? domain : null;
+}
+
+export function parseDomains(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length > MAX_ALLOWED_DOMAINS) return null;
+  const domains: string[] = [];
+  for (const entry of value) {
+    const domain = normalizeDomain(entry);
+    if (!domain) return null;
+    if (!domains.includes(domain)) domains.push(domain);
+  }
+  return domains;
+}
+
+export function emailDomain(email: string): string {
+  return email.slice(email.lastIndexOf("@") + 1).toLowerCase();
+}
+
+export function isDomainAllowed(email: string, domains: readonly string[]): boolean {
+  return domains.length === 0 || domains.includes(emailDomain(email));
+}
+
 export function teamKeyContext(teamId: string, generation: number): Bytes {
   const base = `personal-vault/team-key/${teamId}`;
   return utf8Encode(generation === 0 ? base : `${base}/${generation}`);

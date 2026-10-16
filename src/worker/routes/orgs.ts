@@ -3,8 +3,11 @@ import {
   canChangeRoles,
   canInvite,
   canRemove,
+  isDomainAllowed,
   isInvitableRole,
   isOrgAdmin,
+  parseDomains,
+  planLimits,
 } from "../../core/org-model.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
@@ -87,7 +90,12 @@ orgs.post(
     if (!email || !isInvitableRole(body.role)) return c.json(apiError("orgs.invalid_invite"), 400);
     if (!canInvite(member.role, body.role)) return forbidden(c);
     const dir = directory(c);
-    const { seats } = await limitsOf(c, orgId);
+    const org = await dir.org(orgId);
+    const { seats } = planLimits(org?.plan ?? "free");
+    const allowed = org?.allowedDomains ?? [];
+    if (!isDomainAllowed(email, allowed)) {
+      return c.json(apiError("orgs.domain_not_allowed", { domains: allowed.join(", ") }), 400);
+    }
     if ((await dir.seatsTaken(orgId, email)) >= seats) {
       return c.json(apiError("orgs.seat_limit", { limit: seats }), 409);
     }
@@ -116,6 +124,25 @@ orgs.delete(
     await directory(c).withdrawInvite(orgId, param(c, "inviteId"));
     return c.json({ ok: true });
   }, admins),
+);
+
+orgs.put(
+  "/:orgId/domains",
+  asMember(
+    async (c, member, orgId) => {
+      const domains = parseDomains((await readJson(c)).domains);
+      if (!domains) return c.json(apiError("orgs.invalid_domains"), 400);
+      await directory(c).setAllowedDomains(orgId, domains);
+      await orgStore(c.env, orgId).note(
+        member.accountId,
+        "org.domains_changed",
+        domains.join(",") || null,
+        clientIp(c),
+      );
+      return c.json({ allowedDomains: domains });
+    },
+    (member) => member.role === "owner",
+  ),
 );
 
 orgs.patch(
@@ -299,6 +326,7 @@ invites.post("/:inviteId/accept", async (c) => {
     accountId: c.get("session").accountId,
     ip: clientIp(c),
   });
+  if (orgId === "domain") return c.json(apiError("orgs.invite_domain_blocked"), 403);
   if (!orgId) return notFound(c);
   return c.json({ orgId });
 });
