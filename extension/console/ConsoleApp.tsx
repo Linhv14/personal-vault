@@ -20,6 +20,7 @@ import { ProjectsPage } from "./pages/ProjectsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { TeamPage } from "./pages/TeamPage.js";
 import { TeamsPage } from "./pages/TeamsPage.js";
+import { InvitePage } from "./pages/InvitePage.js";
 import { WelcomePage } from "./pages/WelcomePage.js";
 import {
   href,
@@ -52,7 +53,7 @@ const SECTIONS: {
 ];
 
 function sectionOf(route: Route): Section | null {
-  if (route.page === "me") return null;
+  if (route.page === "me" || route.page === "invite") return null;
   if (route.page === "project") return "projects";
   if (route.page === "team") return "teams";
   return route.page;
@@ -185,26 +186,35 @@ export function ConsoleApp({
   );
 
   const noOrg = loader.orgs !== null && loader.orgs.length === 0;
+  const { route } = location$.value;
+  const invitePage = route.page === "invite" && loader.orgs !== null && (
+    <InvitePage inviteId={route.inviteId} account={account} run={loader.run} />
+  );
   if (noOrg && personal.length === 0) {
     return (
       <div className="console solo">
         <header className="solo-head">{brand}</header>
         <main className="solo-main">
-          <Invitations data={{ invites: loader.invites, run: loader.run }} />
-          <WelcomePage run={loader.run} error={loader.error} />
+          {invitePage || (
+            <>
+              <Invitations data={{ invites: loader.invites, run: loader.run }} />
+              <WelcomePage run={loader.run} error={loader.error} />
+            </>
+          )}
         </main>
         <Toast message={toast$.value} />
       </div>
     );
   }
 
-  const { route } = location$.value;
   const current = sectionOf(route);
   const personalPage =
     route.page === "me" ? personal.find((page) => page.section === route.section) : undefined;
   const orgId = data?.detail.org.id;
 
-  const main = personalPage ? (
+  const main = invitePage ? (
+    invitePage
+  ) : personalPage ? (
     <div className="personal">
       <personalPage.view />
     </div>

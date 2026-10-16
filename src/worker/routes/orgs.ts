@@ -10,7 +10,7 @@ import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { MAX_ORGS_PER_ACCOUNT } from "../orgs/directory.js";
-import { sendInvitation } from "../orgs/invitations.js";
+import { invitationLink, sendInvitation } from "../orgs/invitations.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
@@ -94,16 +94,19 @@ orgs.post(
     if (await dir.hasMemberWithEmail(orgId, email)) {
       return c.json(apiError("orgs.already_member"), 409);
     }
-    await dir.invite(orgId, email, body.role, member.accountId);
+    const stored = await dir.invite(orgId, email, body.role, member.accountId);
     await orgStore(c.env, orgId).note(member.accountId, "member.invited", email, clientIp(c));
-    await sendInvitation(c.env, dir, {
+    const siteUrl = new URL(c.req.url).origin;
+    const emailed = await sendInvitation(c.env, dir, {
+      ...stored,
       orgId,
       email,
+      role: body.role,
       invitedBy: member.accountId,
       locale: body.locale === "vi" ? "vi" : "en",
-      siteUrl: new URL(c.req.url).origin,
+      siteUrl,
     });
-    return c.json({ ok: true }, 201);
+    return c.json({ ...stored, emailed, link: invitationLink(siteUrl, stored.id) }, 201);
   }, admins),
 );
 
@@ -279,6 +282,16 @@ async function myEmail(c: Ctx): Promise<string> {
 
 invites.get("/", async (c) => c.json({ invites: await directory(c).invitesFor(await myEmail(c)) }));
 
+invites.get("/:inviteId/preview", async (c) => {
+  const inviteId = param(c, "inviteId");
+  if (!isUuid(inviteId)) return notFound(c);
+  const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp(c) ?? "unknown" });
+  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  const invite = await directory(c).preview(inviteId);
+  if (!invite) return notFound(c);
+  return c.json({ ...invite, email: maskEmail(invite.email) });
+});
+
 invites.post("/:inviteId/accept", async (c) => {
   const accountId = c.get("session").accountId;
   const invite = await directory(c).accept(param(c, "inviteId"), await myEmail(c), accountId);
@@ -296,5 +309,10 @@ invites.delete("/:inviteId", async (c) => {
   await directory(c).decline(param(c, "inviteId"), await myEmail(c));
   return c.json({ ok: true });
 });
+
+function maskEmail(email: string): string {
+  const [local = "", domain = ""] = email.split("@");
+  return `${local.slice(0, Math.min(2, local.length - 1))}•••@${domain}`;
+}
 
 export default orgs;

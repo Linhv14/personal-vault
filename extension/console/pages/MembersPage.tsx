@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import { canChangeRoles, canInvite, canRemove } from "../../../src/core/org-model.js";
 import {
+  inviteLink,
   inviteMember,
   isOrgAdmin,
   planLimits,
@@ -24,7 +25,7 @@ import {
   Usage,
   When,
 } from "../components.js";
-import { useConsole } from "../data.js";
+import { toast, useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 
 type Modal =
@@ -32,6 +33,7 @@ type Modal =
   | { kind: "remove"; member: OrgMember }
   | { kind: "transfer"; member: OrgMember }
   | { kind: "verify"; member: OrgMember }
+  | { kind: "share-link"; email: string; link: string }
   | null;
 
 export function MembersPage() {
@@ -183,6 +185,36 @@ export function MembersPage() {
                     <When at={invite.expiresAt} />
                   </td>
                   <td className="row-actions">
+                    <IconButton
+                      icon="link"
+                      label={t("invite.copy_link")}
+                      onClick={() =>
+                        void inviteLink(invite.id)
+                          .then((link) => navigator.clipboard.writeText(link))
+                          .then(() => toast(t("projects.copied")))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() =>
+                        void run(async () => {
+                          const sent = await inviteMember(
+                            orgId,
+                            invite.email,
+                            invite.role,
+                            localeSignal.value,
+                          );
+                          if (!sent.emailed) {
+                            setModal({ kind: "share-link", email: invite.email, link: sent.link });
+                          } else {
+                            toast(t("invite.sent", { email: invite.email }));
+                          }
+                        })
+                      }
+                    >
+                      {t("invite.resend")}
+                    </button>
                     <button
                       type="button"
                       className="btn ghost sm"
@@ -206,10 +238,16 @@ export function MembersPage() {
           onSubmit={(form) => {
             const data = new FormData(form);
             const role = data.get("role") === "admin" ? "admin" : "member";
+            const email = String(data.get("email")).trim();
             void run(async () => {
-              await inviteMember(orgId, String(data.get("email")).trim(), role, localeSignal.value);
-              setModal(null);
-            }, "orgs.invited");
+              const sent = await inviteMember(orgId, email, role, localeSignal.value);
+              if (sent.emailed) {
+                setModal(null);
+                toast(t("invite.sent", { email }));
+              } else {
+                setModal({ kind: "share-link", email, link: sent.link });
+              }
+            });
           }}
         >
           <Field label={t("orgs.invite_email")}>
@@ -251,6 +289,24 @@ export function MembersPage() {
             <span className="field-label">{modal.member.email}</span>
             <Fingerprint publicKey={modal.member.publicKey} />
             <p className="field-hint">{t("console.verify_hint")}</p>
+          </div>
+        </Dialog>
+      )}
+      {modal?.kind === "share-link" && (
+        <Dialog
+          title={t("invite.share_title")}
+          description={t("invite.share_text", { email: modal.email })}
+          submitLabel={t("projects.copy")}
+          onClose={() => setModal(null)}
+          onSubmit={() =>
+            void navigator.clipboard.writeText(modal.link).then(() => {
+              toast(t("projects.copied"));
+              setModal(null);
+            })
+          }
+        >
+          <div className="copy-field">
+            <code>{modal.link}</code>
           </div>
         </Dialog>
       )}

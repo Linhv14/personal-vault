@@ -174,7 +174,12 @@ export class OrgDirectory {
     return results;
   }
 
-  async invite(orgId: string, email: string, role: InvitableRole, by: string): Promise<void> {
+  async invite(
+    orgId: string,
+    email: string,
+    role: InvitableRole,
+    by: string,
+  ): Promise<{ id: string; expiresAt: number }> {
     const at = now();
     await this.db
       .prepare(
@@ -185,6 +190,31 @@ export class OrgDirectory {
       )
       .bind(crypto.randomUUID(), orgId, email, role, by, at, at + INVITE_TTL_SECONDS)
       .run();
+    const row = await this.db
+      .prepare("SELECT id, expires_at AS expiresAt FROM org_invites WHERE org_id = ? AND email = ?")
+      .bind(orgId, email)
+      .first<{ id: string; expiresAt: number }>();
+    if (!row) throw new Error("Invitation was not stored");
+    return row;
+  }
+
+  async preview(inviteId: string): Promise<{
+    orgName: string;
+    inviter: string | null;
+    email: string;
+    role: InvitableRole;
+    expiresAt: number;
+  } | null> {
+    return this.db
+      .prepare(
+        `SELECT o.name AS orgName, a.email AS inviter, i.email, i.role, i.expires_at AS expiresAt
+           FROM org_invites i
+           JOIN orgs o ON o.id = i.org_id
+           LEFT JOIN accounts a ON a.id = i.invited_by
+          WHERE i.id = ? AND i.expires_at > ?`,
+      )
+      .bind(inviteId, now())
+      .first();
   }
 
   async withdrawInvite(orgId: string, inviteId: string): Promise<void> {

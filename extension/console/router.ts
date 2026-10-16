@@ -5,6 +5,7 @@ export type PersonalSection = (typeof PERSONAL_SECTIONS)[number];
 
 export type Route =
   | { page: "me"; section: PersonalSection }
+  | { page: "invite"; inviteId: string }
   | { page: "projects" }
   | { page: "project"; projectId: string; environmentId: string | null }
   | { page: "teams" }
@@ -20,6 +21,9 @@ export interface Location {
 
 export function parseHash(hash: string): Location {
   const [orgId = "", page = "", id, sub] = hash.replace(/^#\/?/, "").split("/");
+  if (orgId === "invite" && page) {
+    return { orgId: null, route: { page: "invite", inviteId: page } };
+  }
   if (orgId === "me") {
     const section = PERSONAL_SECTIONS.find((entry) => entry === page) ?? "general";
     return { orgId: null, route: { page: "me", section } };
@@ -39,6 +43,8 @@ export function href(orgId: string, route: Route): string {
   switch (route.page) {
     case "me":
       return `#/me/${route.section}`;
+    case "invite":
+      return `#/invite/${route.inviteId}`;
     case "project":
       return `#/${orgId}/projects/${route.projectId}${route.environmentId ? `/${route.environmentId}` : ""}`;
     case "team":

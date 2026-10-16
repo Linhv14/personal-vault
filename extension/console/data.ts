@@ -95,7 +95,9 @@ export function useConsoleLoader(identity: Identity) {
     }
     lastOrgId = current.id;
     const { orgId, route } = location$.value;
-    if (route.page !== "me" && current.id !== orgId) navigate(current.id, route);
+    if (route.page !== "me" && route.page !== "invite" && current.id !== orgId) {
+      navigate(current.id, route);
+    }
     const next = await getOrg(current.id);
     setDetail(next);
     const mine = next.teams.filter((team) => team.wrappedKey);

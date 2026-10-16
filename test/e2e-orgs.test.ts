@@ -94,6 +94,13 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
         body: JSON.stringify({ email: who.email, role }),
       });
       expect(invited.status).toBe(201);
+      expect(invited.body).toMatchObject({ emailed: false });
+      expect(invited.body.link).toBe(`${BASE}/app/#/invite/${invited.body.id}`);
+      const preview = await api(`/api/invites/${invited.body.id}/preview`);
+      expect(preview.status).toBe(200);
+      expect(preview.body).toMatchObject({ orgName: "Acme Inc", inviter: owner.email, role });
+      expect(preview.body.email).not.toBe(who.email);
+      expect(preview.body.email).toContain("•");
     }
     const strangers = await api("/api/invites", { token: outsider.token });
     expect(strangers.body.invites).toEqual([]);
@@ -113,6 +120,7 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
         token: who.token,
       });
       expect(accepted.body).toEqual({ orgId });
+      expect((await api(`/api/invites/${invite.id}/preview`)).status).toBe(404);
     }
 
     const view = await api(`/api/orgs/${orgId}`, { token: owner.token });
@@ -302,10 +310,15 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
         body: JSON.stringify({ email, role: "member" }),
       });
     const stamp = Date.now();
-    for (const n of [1, 2, 3]) {
+    const first = await invite(`seat1-${stamp}@example.com`);
+    expect(first.status).toBe(201);
+    for (const n of [2, 3]) {
       expect((await invite(`seat${n}-${stamp}@example.com`)).status).toBe(201);
     }
-    expect((await invite(`seat1-${stamp}@example.com`)).status).toBe(201);
+    const resent = await invite(`seat1-${stamp}@example.com`);
+    expect(resent.status).toBe(201);
+    expect(resent.body.id).toBe(first.body.id);
+    expect(resent.body.link).toBe(first.body.link);
     const full = await invite(`seat4-${stamp}@example.com`);
     expect(full.status).toBe(409);
     expect(full.body).toMatchObject({ code: "orgs.seat_limit", params: { limit: 5 } });

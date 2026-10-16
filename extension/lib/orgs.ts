@@ -14,6 +14,7 @@ import {
 } from "../../src/core/org-model.js";
 import type { Bytes } from "../../src/core/bytes.js";
 import { request } from "./api.js";
+import { getLocal } from "./storage.js";
 
 export { isOrgAdmin, planLimits } from "../../src/core/org-model.js";
 export type { AuditEvent, OrgRole } from "../../src/core/org-model.js";
@@ -69,16 +70,44 @@ export async function getOrg(orgId: string): Promise<OrgDetail> {
   return request(`/api/orgs/${orgId}`);
 }
 
+export interface SentInvite {
+  id: string;
+  expiresAt: number;
+  emailed: boolean;
+  link: string;
+}
+
+export interface InvitePreview {
+  orgName: string;
+  inviter: string | null;
+  email: string;
+  role: InvitableRole;
+  expiresAt: number;
+}
+
 export async function inviteMember(
   orgId: string,
   email: string,
   role: InvitableRole,
   locale: string,
-): Promise<void> {
-  await request(`/api/orgs/${orgId}/invites`, {
+): Promise<SentInvite> {
+  return request(`/api/orgs/${orgId}/invites`, {
     method: "POST",
     body: json({ email, role, locale }),
   });
+}
+
+export async function previewInvite(inviteId: string): Promise<InvitePreview | null> {
+  try {
+    return await request<InvitePreview>(`/api/invites/${inviteId}/preview`, { auth: false });
+  } catch {
+    return null;
+  }
+}
+
+export async function inviteLink(inviteId: string): Promise<string> {
+  const { apiUrl = "" } = await getLocal();
+  return `${apiUrl.replace(/\/$/, "")}/app/#/invite/${inviteId}`;
 }
 
 export async function withdrawInvite(orgId: string, inviteId: string): Promise<void> {

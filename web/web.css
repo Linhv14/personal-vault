@@ -27,3 +27,16 @@
   width: 100%;
   margin: 4px 0 0;
 }
+.invite-context {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+.invite-context span {
+  color: var(--muted);
+}

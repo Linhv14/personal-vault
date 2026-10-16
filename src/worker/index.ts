@@ -74,7 +74,9 @@ app.use("/api/account/*", requireAuth);
 app.use("/api/orgs", requireAuth);
 app.use("/api/orgs/*", requireAuth);
 app.use("/api/invites", requireAuth);
-app.use("/api/invites/*", requireAuth);
+app.use("/api/invites/*", async (c, next) =>
+  c.req.method === "GET" && c.req.path.endsWith("/preview") ? next() : requireAuth(c, next),
+);
 app.use("/api/auth/delete-account", requireAuth);
 
 // Creating a share needs a session; reading one must not, since the recipient

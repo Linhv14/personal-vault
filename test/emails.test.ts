@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { existingAccountEmail, verificationCodeEmail } from "../src/worker/emails.js";
+import {
+  existingAccountEmail,
+  orgInviteEmail,
+  verificationCodeEmail,
+} from "../src/worker/emails.js";
 
 const context = {
   locale: "en" as const,
@@ -50,6 +54,42 @@ describe("existingAccountEmail", () => {
     const email = existingAccountEmail({ ...context, siteUrl: 'https://x.test/"><script>' });
     expect(email.html).not.toContain("<script>");
     expect(email.html).toContain("&#34;&#62;&#60;script&#62;");
+  });
+});
+
+describe("orgInviteEmail", () => {
+  const invite = {
+    org: "Acme <Inc>",
+    inviter: "owner@acme.test",
+    email: "me@example.com",
+    role: "admin" as const,
+    expiresAt: Date.UTC(2026, 9, 30, 12) / 1000,
+    link: "https://1pw.online/app/#/invite/0b9c6f1e-1111-4222-8333-444455556666",
+  };
+  const email = orgInviteEmail(context, invite);
+
+  it("names the organization and who sent it", () => {
+    expect(email.subject).toContain("Acme <Inc>");
+    expect(email.html).toContain("Acme &#60;Inc&#62;");
+    expect(email.html).not.toContain("Acme <Inc>");
+    expect(email.html).toContain("owner@acme.test");
+  });
+
+  it("links the invitation from a button and from the text part", () => {
+    expect(email.html).toContain(`href="${invite.link}"`);
+    expect(email.text).toContain(invite.link);
+  });
+
+  it("lists the role and the expiry date, and tells newcomers which email to sign up with", () => {
+    expect(email.html).toContain("Admin");
+    expect(email.html).toContain("2026");
+    expect(email.text).toContain("me@example.com");
+  });
+
+  it("speaks the requested language", () => {
+    const vietnamese = orgInviteEmail({ ...context, locale: "vi" }, invite);
+    expect(vietnamese.html).toContain('lang="vi"');
+    expect(vietnamese.subject).not.toBe(email.subject);
   });
 });
 

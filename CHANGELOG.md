@@ -10,6 +10,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Invitations: the email shows the organization, who invited, the role and the
+  expiry, with an "Accept invitation" button and steps for someone without an
+  account. The link opens the invitation in the console or dashboard; signed
+  out, the sign-in page says who invited you and with which address. Pending
+  invitations can be resent or their link copied, and when no email provider is
+  configured the console shows the link to share by hand.
+- Emails share one layout and component set (`src/worker/email/`).
+
 - GitHub Actions: link a repository to one environment of a project (console,
   project, CI tab) and read it from a workflow with the `action/` step or the
   `1pw` CLI (`run`, `env`, `dotenv`). The workflow proves its repository and

@@ -1,40 +1,14 @@
 import { APP_NAME } from "../core/brand.js";
-import { EMAIL_LOGO_PNG_BASE64 } from "./email-logo.js";
-import type { InlineImage } from "./mailer.js";
+import type { InvitableRole } from "../core/org-model.js";
+import {
+  formatDate,
+  renderEmail,
+  type EmailContext,
+  type EmailLocale,
+  type RenderedEmail,
+} from "./email/kit.js";
 
-export type EmailLocale = "en" | "vi";
-
-export interface RenderedEmail {
-  subject: string;
-  text: string;
-  html: string;
-  inlineImages: InlineImage[];
-}
-
-const LOGO: InlineImage = {
-  contentId: "trust1-vault-logo",
-  filename: "trust1-vault.png",
-  contentType: "image/png",
-  base64: EMAIL_LOGO_PNG_BASE64,
-};
-
-interface EmailContext {
-  locale: EmailLocale;
-  siteUrl: string;
-}
-
-const COLORS = {
-  page: "#faf9f6",
-  card: "#ffffff",
-  border: "#e0dcd4",
-  text: "#1c1b19",
-  muted: "#6b675f",
-  accent: "#0b6e6b",
-  codeBackground: "#ecf8f6",
-};
-
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const MONO = "ui-monospace,'SF Mono',Menlo,Consolas,monospace";
+export type { EmailLocale, RenderedEmail };
 
 const STRINGS = {
   en: {
@@ -65,15 +39,24 @@ const STRINGS = {
     },
     invite: {
       subject: (org: string) => `You're invited to ${org} on ${APP_NAME}`,
-      preheader: (inviter: string) => `${inviter} invited you to share secrets with the team.`,
-      heading: (org: string) => `Join ${org} on ${APP_NAME}`,
+      preheader: (inviter: string, org: string) => `${inviter} invited you to ${org}.`,
+      heading: (org: string) => `Join ${org}`,
       intro: (inviter: string, org: string) =>
-        `${inviter} invited you to ${org}. Teams there share passwords and CI secrets, encrypted end to end.`,
-      next: (site: string) =>
-        `Sign in at ${site}/app with this email address and accept the invitation there or in the ${APP_NAME} extension. No account yet? Install the extension from ${site} first. It expires in 14 days.`,
+        `${inviter} invited you to ${org} on ${APP_NAME}, where teams share passwords and CI secrets, encrypted end to end.`,
+      organization: "Organization",
+      invitedBy: "Invited by",
+      role: "Role",
+      expires: "Expires",
+      roles: { admin: "Admin", member: "Member" },
+      accept: "Accept invitation",
+      newTitle: `New to ${APP_NAME}?`,
+      steps: (site: string, email: string) => [
+        `Install the ${APP_NAME} extension from ${site}.`,
+        `Create an account with ${email}.`,
+        "Open this invitation again and accept it.",
+      ],
       ignore: "If you don't know the sender, ignore this email. Nothing happens unless you accept.",
     },
-    privacy: "Privacy policy",
   },
   vi: {
     code: {
@@ -103,169 +86,103 @@ const STRINGS = {
     },
     invite: {
       subject: (org: string) => `Bạn được mời vào ${org} trên ${APP_NAME}`,
-      preheader: (inviter: string) => `${inviter} mời bạn cùng chia sẻ secret với team.`,
-      heading: (org: string) => `Tham gia ${org} trên ${APP_NAME}`,
+      preheader: (inviter: string, org: string) => `${inviter} mời bạn vào ${org}.`,
+      heading: (org: string) => `Tham gia ${org}`,
       intro: (inviter: string, org: string) =>
-        `${inviter} mời bạn vào ${org}. Các team ở đó chia sẻ mật khẩu và secret cho CI, được mã hoá đầu-cuối.`,
-      next: (site: string) =>
-        `Đăng nhập tại ${site}/app bằng địa chỉ email này rồi chấp nhận lời mời ở đó hoặc trong extension ${APP_NAME}. Chưa có tài khoản? Cài extension từ ${site} trước. Lời mời hết hạn sau 14 ngày.`,
+        `${inviter} mời bạn vào ${org} trên ${APP_NAME}, nơi các team chia sẻ mật khẩu và secret cho CI, được mã hoá đầu-cuối.`,
+      organization: "Tổ chức",
+      invitedBy: "Người mời",
+      role: "Vai trò",
+      expires: "Hết hạn",
+      roles: { admin: "Quản trị", member: "Thành viên" },
+      accept: "Chấp nhận lời mời",
+      newTitle: `Chưa dùng ${APP_NAME}?`,
+      steps: (site: string, email: string) => [
+        `Cài extension ${APP_NAME} từ ${site}.`,
+        `Tạo tài khoản bằng ${email}.`,
+        "Mở lại lời mời này và chấp nhận.",
+      ],
       ignore:
         "Nếu bạn không biết người gửi, hãy bỏ qua email này. Không có gì xảy ra nếu bạn không chấp nhận.",
     },
-    privacy: "Chính sách quyền riêng tư",
   },
 } as const;
 
-function escape(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
-}
-
-function paragraph(text: string, tone: "body" | "muted" | "small" = "body"): string {
-  const style = {
-    body: `margin:0 0 16px;font:400 15px/1.6 ${FONT};color:${COLORS.text}`,
-    muted: `margin:0 0 16px;font:400 14px/1.6 ${FONT};color:${COLORS.muted}`,
-    small: `margin:0;font:400 13px/1.6 ${FONT};color:${COLORS.muted}`,
-  }[tone];
-  return `<p style="${style}">${escape(text)}</p>`;
-}
-
-function codeBlock(code: string): string {
-  return `<div style="margin:8px 0 24px;padding:18px 12px;border-radius:12px;background:${COLORS.codeBackground};text-align:center;font:700 34px/1 ${MONO};letter-spacing:10px;color:${COLORS.accent}">${escape(code)}</div>`;
-}
-
-function layout(
-  context: EmailContext,
-  email: { subject: string; preheader: string; heading: string; body: string },
-): string {
-  const strings = STRINGS[context.locale];
-  const privacyUrl = `${context.siteUrl}/privacy`;
-  const wordmark = `<span style="color:${COLORS.accent}">${escape(APP_NAME.slice(0, 1))}</span>${escape(APP_NAME.slice(1))}`;
-  return `<!doctype html>
-<html lang="${context.locale}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light only">
-<title>${escape(email.subject)}</title>
-</head>
-<body style="margin:0;padding:0;background:${COLORS.page}">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escape(email.preheader)}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.page}">
-<tr><td align="center" style="padding:32px 16px">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px">
-<tr><td style="padding:0 4px 20px"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="padding-right:10px;vertical-align:middle"><img src="cid:${LOGO.contentId}" width="32" height="32" alt="" style="display:block;border:0;border-radius:8px"></td><td style="vertical-align:middle;font:750 24px/1 ${FONT};letter-spacing:-0.5px;color:${COLORS.text}">${wordmark}</td></tr></table></td></tr>
-<tr><td style="padding:32px 28px;background:${COLORS.card};border:1px solid ${COLORS.border};border-radius:16px">
-<h1 style="margin:0 0 12px;font:650 22px/1.3 ${FONT};color:${COLORS.text}">${escape(email.heading)}</h1>
-${email.body}
-</td></tr>
-<tr><td style="padding:24px 4px 0;font:400 12px/1.6 ${FONT};color:${COLORS.muted}">© ${new Date().getUTCFullYear()} ${escape(APP_NAME)} &nbsp;·&nbsp; <a href="${escape(context.siteUrl)}" style="color:${COLORS.muted}">${escape(siteHost(context.siteUrl))}</a> &nbsp;·&nbsp; <a href="${escape(privacyUrl)}" style="color:${COLORS.muted}">${escape(strings.privacy)}</a></td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
-}
-
-function siteHost(siteUrl: string): string {
-  try {
-    return new URL(siteUrl).host;
-  } catch {
-    return siteUrl;
-  }
-}
-
-function plainText(context: EmailContext, blocks: string[]): string {
-  const strings = STRINGS[context.locale];
-  return [
-    ...blocks,
-    "—",
-    `© ${new Date().getUTCFullYear()} ${APP_NAME} · ${siteHost(context.siteUrl)}`,
-    `${strings.privacy}: ${context.siteUrl}/privacy`,
-  ].join("\n\n");
-}
-
 export function verificationCodeEmail(context: EmailContext, code: string): RenderedEmail {
   const strings = STRINGS[context.locale].code;
-  const subject = strings.subject(code);
-  return {
-    subject,
-    text: plainText(context, [
-      strings.heading,
-      strings.intro,
-      `    ${code}`,
-      strings.expiry,
-      strings.ignore,
-    ]),
-    inlineImages: [LOGO],
-    html: layout(context, {
-      subject,
-      preheader: strings.preheader(code),
-      heading: strings.heading,
-      body:
-        paragraph(strings.intro) +
-        codeBlock(code) +
-        paragraph(strings.expiry, "muted") +
-        paragraph(strings.ignore, "small"),
-    }),
-  };
+  return renderEmail(context, {
+    subject: strings.subject(code),
+    preheader: strings.preheader(code),
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      { kind: "code", code },
+      { kind: "text", text: strings.expiry, tone: "muted" },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
 }
 
 export function existingAccountEmail(context: EmailContext): RenderedEmail {
   const strings = STRINGS[context.locale].existing;
-  return {
+  return renderEmail(context, {
     subject: strings.subject,
-    text: plainText(context, [strings.heading, strings.intro, strings.next, strings.ignore]),
-    inlineImages: [LOGO],
-    html: layout(context, {
-      subject: strings.subject,
-      preheader: strings.preheader,
-      heading: strings.heading,
-      body: paragraph(strings.intro) + paragraph(strings.next) + paragraph(strings.ignore, "small"),
-    }),
-  };
+    preheader: strings.preheader,
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      { kind: "text", text: strings.next },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
 }
 
 export function shareAccessEmail(context: EmailContext, code: string): RenderedEmail {
   const strings = STRINGS[context.locale].share;
-  const subject = strings.subject(code);
-  return {
-    subject,
-    text: plainText(context, [
-      strings.heading,
-      strings.intro,
-      `    ${code}`,
-      strings.expiry,
-      strings.ignore,
-    ]),
-    inlineImages: [LOGO],
-    html: layout(context, {
-      subject,
-      preheader: strings.preheader(code),
-      heading: strings.heading,
-      body:
-        paragraph(strings.intro) +
-        codeBlock(code) +
-        paragraph(strings.expiry, "muted") +
-        paragraph(strings.ignore, "small"),
-    }),
-  };
+  return renderEmail(context, {
+    subject: strings.subject(code),
+    preheader: strings.preheader(code),
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      { kind: "code", code },
+      { kind: "text", text: strings.expiry, tone: "muted" },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
 }
 
-export function orgInviteEmail(context: EmailContext, org: string, inviter: string): RenderedEmail {
+export interface InviteDetails {
+  org: string;
+  inviter: string;
+  email: string;
+  role: InvitableRole;
+  expiresAt: number;
+  link: string;
+}
+
+export function orgInviteEmail(context: EmailContext, invite: InviteDetails): RenderedEmail {
   const strings = STRINGS[context.locale].invite;
-  const subject = strings.subject(org);
-  const heading = strings.heading(org);
-  const intro = strings.intro(inviter, org);
-  const next = strings.next(context.siteUrl);
-  return {
-    subject,
-    text: plainText(context, [heading, intro, next, strings.ignore]),
-    inlineImages: [LOGO],
-    html: layout(context, {
-      subject,
-      preheader: strings.preheader(inviter),
-      heading,
-      body: paragraph(intro) + paragraph(next) + paragraph(strings.ignore, "small"),
-    }),
-  };
+  const site = new URL(context.siteUrl).host;
+  return renderEmail(context, {
+    subject: strings.subject(invite.org),
+    preheader: strings.preheader(invite.inviter, invite.org),
+    heading: strings.heading(invite.org),
+    blocks: [
+      { kind: "text", text: strings.intro(invite.inviter, invite.org) },
+      {
+        kind: "details",
+        rows: [
+          [strings.organization, invite.org],
+          [strings.invitedBy, invite.inviter],
+          [strings.role, strings.roles[invite.role]],
+          [strings.expires, formatDate(invite.expiresAt, context.locale)],
+        ],
+      },
+      { kind: "button", label: strings.accept, href: invite.link },
+      { kind: "divider" },
+      { kind: "steps", title: strings.newTitle, items: strings.steps(site, invite.email) },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
 }
