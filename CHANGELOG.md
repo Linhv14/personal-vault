@@ -8,6 +8,14 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Changed
+
+- The GitHub Action and the CLI are published from the public repository
+  `Linhv14/trust1-vault-action` (`uses: Linhv14/trust1-vault-action@v1`, CLI as
+  a release asset), so any repository can use them. `npm run publish:action`
+  releases a new version. The console's workflow snippet points there, and the
+  default server is `https://1pw.online` (it was a domain that is not live).
+
 ## [0.3.0] - 2026-10-16
 
 Organizations, projects and CI secrets; the product is now Trust1 Vault. See

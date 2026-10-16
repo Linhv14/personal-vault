@@ -3,7 +3,7 @@ import { appendFile } from "node:fs/promises";
 import { openCiResponse, parseLinkReference, type CiResponse } from "../src/core/ci.js";
 import type { SecretContent } from "../src/core/projects.js";
 
-export const DEFAULT_SERVER = "https://vault.trust1.io";
+export { DEFAULT_SERVER } from "../src/core/brand.js";
 
 export interface FetchOptions {
   server: string;

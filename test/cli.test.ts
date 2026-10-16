@@ -7,7 +7,7 @@ describe("trust1 CLI", () => {
     expect(parseArgs(["run", "--", "npm", "test"], { TRUST1_LINK: "o.l" })).toEqual({
       command: "run",
       link: "o.l",
-      server: "https://vault.trust1.io",
+      server: "https://1pw.online",
       rest: ["npm", "test"],
     });
     expect(

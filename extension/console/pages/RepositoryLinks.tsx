@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { ACTION_MAJOR, ACTION_REPOSITORY, DEFAULT_SERVER } from "../../../src/core/brand.js";
 import { isBranch, isGithubEnvironment, isRepository } from "../../../src/core/ci.js";
 import { describeError } from "../../../src/i18n/index.js";
 import {
@@ -8,6 +9,7 @@ import {
   type Project,
   type RepoLink,
 } from "../../lib/projects.js";
+import { getLocal } from "../../lib/storage.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
@@ -33,20 +35,24 @@ function workflow(reference: string, server: string): string {
     "  contents: read",
     "",
     "steps:",
-    "  - uses: Linhv14/personal-vault/action@main",
+    `  - uses: ${ACTION_REPOSITORY}@${ACTION_MAJOR}`,
     "    with:",
     `      link: ${reference}`,
     "      key: ${{ secrets.TRUST1_KEY }}",
-    ...(server === "https://vault.trust1.io" ? [] : [`      server: ${server}`]),
+    ...(server === DEFAULT_SERVER ? [] : [`      server: ${server}`]),
   ].join("\n");
 }
 
 function CreatedDialog({ created, onClose }: { created: Created; onClose: () => void }) {
   const t = useT();
-  const snippet = workflow(
-    created.reference,
-    location.origin.startsWith("chrome-extension") ? "https://vault.trust1.io" : location.origin,
+  const [server, setServer] = useState(
+    location.origin.startsWith("chrome-extension") ? DEFAULT_SERVER : location.origin,
   );
+  useEffect(() => {
+    if (!location.origin.startsWith("chrome-extension")) return;
+    void getLocal().then(({ apiUrl }) => apiUrl && setServer(apiUrl.replace(/\/$/, "")));
+  }, []);
+  const snippet = workflow(created.reference, server);
   return (
     <Dialog
       title={t("ci.created_title", { repository: created.repository })}

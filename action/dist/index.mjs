@@ -172,8 +172,10 @@ async function openCiResponse(repoKey, linkId, response) {
   return opened.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+// src/core/brand.ts
+var DEFAULT_SERVER = "https://1pw.online";
+
 // cli/ci-client.ts
-var DEFAULT_SERVER = "https://vault.trust1.io";
 var CiError = class extends Error {
 };
 async function githubIdToken(audience, env = process.env, request = fetch) {

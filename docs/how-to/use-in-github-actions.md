@@ -24,7 +24,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: Linhv14/personal-vault/action@main
+      - uses: Linhv14/trust1-vault-action@v1
         with:
           link: <the link shown in the console>
           key: ${{ secrets.TRUST1_KEY }}
@@ -35,14 +35,18 @@ Every value becomes an environment variable for the later steps of the job.
 Secret values are masked in the logs; variables are not. `id-token: write` lets
 the job ask GitHub for the token that proves its repository and branch.
 
-While the repository holding the Action is private, GitHub only lets workflows
-in repositories of the same owner use it, and only after **Settings, Actions,
-Access** allows it.
+The Action lives in the public repository
+[`Linhv14/trust1-vault-action`](https://github.com/Linhv14/trust1-vault-action),
+so any repository can use it. `@v1` follows the latest 1.x release; pin
+`@v1.0.0` or a commit SHA to control upgrades. Add `server:` when your vault is
+not `https://1pw.online`.
 
 ## Without the Action
 
-`dist/cli/trust1.mjs` (from `npm run build`) does the same from a shell, with
-`TRUST1_KEY` and `TRUST1_LINK` in the environment:
+Download `trust1.mjs` from the
+[latest release](https://github.com/Linhv14/trust1-vault-action/releases/latest)
+(Node 20 or later; the release lists its SHA-256). It does the same from a
+shell, with `TRUST1_KEY` and `TRUST1_LINK` in the environment:
 
 ```bash
 node trust1.mjs run -- npm run deploy    # values only for this command
@@ -57,3 +61,15 @@ token was issued for this server, the repository matches exactly, and the
 branch or GitHub environment matches the link. `pull_request_target` runs are
 refused. Every read appears in the activity log as the repository and ref.
 Unlinking stops reads at once.
+
+## Publish a new version
+
+From this repository, with the GitHub CLI signed in:
+
+```bash
+npm run publish:action -- 1.0.1
+```
+
+It builds, copies `action.yml`, the bundle and the README into the public
+repository, tags `v1.0.1`, moves `v1`, and attaches `trust1.mjs` with its
+checksum to a release.

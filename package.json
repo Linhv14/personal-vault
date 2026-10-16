@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "backup": "node scripts/vault.ts backup",
-    "package": "node scripts/package.ts"
+    "package": "node scripts/package.ts",
+    "publish:action": "node scripts/publish-action.ts"
   },
   "dependencies": {
     "@preact/signals": "2.5.0",

@@ -10,7 +10,7 @@ inputs:
   server:
     description: Trust1 Vault server.
     required: false
-    default: https://vault.trust1.io
+    default: https://1pw.online
 runs:
   using: node20
   main: dist/index.mjs
