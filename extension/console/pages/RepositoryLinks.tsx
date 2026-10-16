@@ -239,13 +239,16 @@ export function RepositoryLinks({ project, canManage }: { project: Project; canM
                   {link.lastUsedAt ? <When at={link.lastUsedAt} /> : t("ci.never")}
                 </td>
                 <td className="row-actions">
-                  {canManage && (
-                    <IconButton
-                      icon="trash"
-                      label={t("ci.unlink")}
-                      onClick={() => setRemoving(link)}
-                    />
-                  )}
+                  <div className="row-actions-inner">
+                    {canManage && (
+                      <IconButton
+                        icon="trash"
+                        className="danger"
+                        label={t("ci.unlink")}
+                        onClick={() => setRemoving(link)}
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

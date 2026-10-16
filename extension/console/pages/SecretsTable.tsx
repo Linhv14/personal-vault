@@ -105,28 +105,35 @@ function SecretRow({
         <When at={secret.updatedAt} />
       </td>
       <td className="row-actions">
-        <IconButton
-          icon="copy"
-          label={t("projects.copy")}
-          onClick={() => {
-            if (!variable) onAccess("copied");
-            copy(secret.value, t("console.copied_name", { name: secret.name }));
-          }}
-        />
-        {editable && (
-          <>
-            <IconButton
-              icon="pencil"
-              label={t("projects.edit")}
-              onClick={() => {
-                if (!variable) onAccess("revealed");
-                setKind(secret.kind ?? "secret");
-                setDraft(secret.value);
-              }}
-            />
-            <IconButton icon="trash" label={t("projects.delete_secret")} onClick={onDelete} />
-          </>
-        )}
+        <div className="row-actions-inner">
+          <IconButton
+            icon="copy"
+            label={t("projects.copy")}
+            onClick={() => {
+              if (!variable) onAccess("copied");
+              copy(secret.value, t("console.copied_name", { name: secret.name }));
+            }}
+          />
+          {editable && (
+            <>
+              <IconButton
+                icon="pencil"
+                label={t("projects.edit")}
+                onClick={() => {
+                  if (!variable) onAccess("revealed");
+                  setKind(secret.kind ?? "secret");
+                  setDraft(secret.value);
+                }}
+              />
+              <IconButton
+                icon="trash"
+                className="danger"
+                label={t("projects.delete_secret")}
+                onClick={onDelete}
+              />
+            </>
+          )}
+        </div>
       </td>
     </tr>
   );

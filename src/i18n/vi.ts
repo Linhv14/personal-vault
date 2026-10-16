@@ -363,6 +363,8 @@ export const vi: Catalogue = {
   "console.domains_outside": "{count} thành viên dùng domain khác và vẫn giữ quyền truy cập.",
   "console.outside_domain": "Domain khác",
   "orgs.invite_domains_hint": "Chỉ email thuộc {domains}",
+  "console.remove_duplicates_text":
+    "Với mỗi tên bị trùng trong một môi trường, giá trị sửa gần nhất được giữ lại, các bản cũ hơn bị xoá.",
   "console.dismiss": "Đóng",
   "console.more": "Thêm",
   "console.name_taken_in": "{name} đã có trong {env}.",

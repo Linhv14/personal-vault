@@ -148,6 +148,9 @@ version may change the API or storage format; such releases list the steps in
   table; tables, toolbars and panel titles share one 18px gutter; page actions
   line up with the title; activity columns have fixed widths and show invited
   addresses instead of "Former member".
+- Row actions line up on one axis at one height; destructive actions are marked
+  as such (withdraw, remove, delete and unlink turn red on hover or are red
+  text), and removing duplicate secrets now asks for confirmation.
 - Emails: one left-aligned layout with the logo inside the message, a smaller
   button and a plain fallback link. The invitation states who invited you, the
   role and the expiry in two sentences instead of a table and numbered steps.

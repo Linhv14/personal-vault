@@ -369,6 +369,8 @@ export const en = {
     "{count, plural, one {# member uses} other {# members use}} another domain and keeps access.",
   "console.outside_domain": "Other domain",
   "orgs.invite_domains_hint": "Only addresses at {domains}",
+  "console.remove_duplicates_text":
+    "For each name that appears twice in an environment, the most recently changed value is kept and the older ones are deleted.",
   "console.dismiss": "Dismiss",
   "console.more": "More",
   "console.name_taken_in": "{name} already exists in {env}.",

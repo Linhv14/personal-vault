@@ -1508,3 +1508,32 @@ tr.pending-row {
 .table td:last-child {
   padding-right: 18px;
 }
+
+.row-actions-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.table .icon-button {
+  width: 28px;
+  height: 28px;
+}
+.icon-button.danger:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.btn.danger-text {
+  color: var(--danger);
+}
+.btn.danger-text:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.btn.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 88%, #000);
+}
+.btn .spin,
+.btn .icon {
+  flex: none;
+}

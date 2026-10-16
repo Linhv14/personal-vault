@@ -155,20 +155,23 @@ export function MembersPage() {
                     </div>
                   </td>
                   <td className="row-actions">
-                    {member.publicKey && !isMe && (
-                      <IconButton
-                        icon="key"
-                        label={t("console.verify_key")}
-                        onClick={() => setModal({ kind: "verify", member })}
-                      />
-                    )}
-                    {removable && (
-                      <IconButton
-                        icon="close"
-                        label={t("orgs.remove")}
-                        onClick={() => setModal({ kind: "remove", member })}
-                      />
-                    )}
+                    <div className="row-actions-inner">
+                      {member.publicKey && !isMe && (
+                        <IconButton
+                          icon="key"
+                          label={t("console.verify_key")}
+                          onClick={() => setModal({ kind: "verify", member })}
+                        />
+                      )}
+                      {removable && (
+                        <IconButton
+                          icon="close"
+                          className="danger"
+                          label={t("orgs.remove")}
+                          onClick={() => setModal({ kind: "remove", member })}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -204,58 +207,60 @@ export function MembersPage() {
                     <When at={invite.expiresAt} />
                   </td>
                   <td className="row-actions">
-                    <IconButton
-                      icon="link"
-                      label={t("invite.copy_link")}
-                      onClick={() =>
-                        void inviteLink(invite.id)
-                          .then((link) => navigator.clipboard.writeText(link))
-                          .then(() => toast(t("projects.copied")))
-                      }
-                    />
-                    <ActionButton
-                      className="btn ghost sm"
-                      onClick={() =>
-                        run(
-                          async () => {
-                            const sent = await inviteMember(
-                              orgId,
-                              invite.email,
-                              invite.role,
-                              localeSignal.value,
-                            );
-                            if (!sent.emailed) {
-                              setModal({
-                                kind: "share-link",
-                                email: invite.email,
-                                link: sent.link,
-                              });
-                            } else {
-                              toast(t("invite.sent", { email: invite.email }));
-                            }
-                          },
-                          undefined,
-                          "org",
-                        )
-                      }
-                    >
-                      {t("invite.resend")}
-                    </ActionButton>
-                    <ActionButton
-                      className="btn ghost sm"
-                      onClick={() =>
-                        run(
-                          async () => {
-                            await withdrawInvite(orgId, invite.id);
-                            hide(invite.id);
-                          },
-                          "orgs.invite_withdrawn",
-                          "org",
-                        )
-                      }
-                    >
-                      {t("orgs.withdraw")}
-                    </ActionButton>
+                    <div className="row-actions-inner">
+                      <IconButton
+                        icon="link"
+                        label={t("invite.copy_link")}
+                        onClick={() =>
+                          void inviteLink(invite.id)
+                            .then((link) => navigator.clipboard.writeText(link))
+                            .then(() => toast(t("projects.copied")))
+                        }
+                      />
+                      <ActionButton
+                        className="btn sm"
+                        onClick={() =>
+                          run(
+                            async () => {
+                              const sent = await inviteMember(
+                                orgId,
+                                invite.email,
+                                invite.role,
+                                localeSignal.value,
+                              );
+                              if (!sent.emailed) {
+                                setModal({
+                                  kind: "share-link",
+                                  email: invite.email,
+                                  link: sent.link,
+                                });
+                              } else {
+                                toast(t("invite.sent", { email: invite.email }));
+                              }
+                            },
+                            undefined,
+                            "org",
+                          )
+                        }
+                      >
+                        {t("invite.resend")}
+                      </ActionButton>
+                      <ActionButton
+                        className="btn ghost sm danger-text"
+                        onClick={() =>
+                          run(
+                            async () => {
+                              await withdrawInvite(orgId, invite.id);
+                              hide(invite.id);
+                            },
+                            "orgs.invite_withdrawn",
+                            "org",
+                          )
+                        }
+                      >
+                        {t("orgs.withdraw")}
+                      </ActionButton>
+                    </div>
                   </td>
                 </tr>
               ))}

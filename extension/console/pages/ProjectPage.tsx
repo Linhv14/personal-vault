@@ -60,6 +60,7 @@ type Modal =
   | { kind: "delete-env" }
   | { kind: "delete-project" }
   | { kind: "delete-secret"; secret: Secret }
+  | { kind: "remove-duplicates" }
   | null;
 
 export function ProjectPage({
@@ -234,7 +235,7 @@ export function ProjectPage({
             <MenuItem
               icon="trash"
               label={t("console.remove_duplicates", { count: duplicates.length })}
-              onSelect={removeDuplicates}
+              onSelect={() => setModal({ kind: "remove-duplicates" })}
             />
           )}
           <MenuItem
@@ -288,7 +289,11 @@ export function ProjectPage({
       {duplicates.length > 0 && editable && (
         <div className="alert warn action">
           <span>{t("console.duplicates_found", { count: duplicates.length })}</span>
-          <button type="button" className="btn" onClick={removeDuplicates}>
+          <button
+            type="button"
+            className="btn danger sm"
+            onClick={() => setModal({ kind: "remove-duplicates" })}
+          >
             {t("console.remove_duplicates", { count: duplicates.length })}
           </button>
         </div>
@@ -562,6 +567,19 @@ export function ProjectPage({
               navigate(orgId, { page: "projects" });
             }, "projects.deleted")
           }
+        />
+      )}
+      {modal?.kind === "remove-duplicates" && (
+        <Dialog
+          title={t("console.remove_duplicates", { count: duplicates.length })}
+          description={t("console.remove_duplicates_text")}
+          submitLabel={t("console.remove_duplicates", { count: duplicates.length })}
+          danger
+          onClose={() => setModal(null)}
+          onSubmit={() => {
+            setModal(null);
+            removeDuplicates();
+          }}
         />
       )}
       {modal?.kind === "delete-secret" && (

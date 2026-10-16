@@ -177,13 +177,16 @@ export function TeamPage({ teamId }: { teamId: string }) {
                 </td>
                 <td className="muted">{t(ROLE_LABEL[member.role])}</td>
                 <td className="row-actions">
-                  {admin && (
-                    <IconButton
-                      icon="close"
-                      label={t("orgs.remove")}
-                      onClick={() => setModal({ kind: "remove", member })}
-                    />
-                  )}
+                  <div className="row-actions-inner">
+                    {admin && (
+                      <IconButton
+                        icon="close"
+                        className="danger"
+                        label={t("orgs.remove")}
+                        onClick={() => setModal({ kind: "remove", member })}
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
