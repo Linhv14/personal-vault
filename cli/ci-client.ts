@@ -49,9 +49,7 @@ export async function fetchSecrets(options: FetchOptions): Promise<SecretContent
   });
   if (!response.ok) {
     const { error } = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new CiError(
-      `Trust1 Vault refused the request (${response.status}): ${error ?? "unknown error"}`,
-    );
+    throw new CiError(`7key refused the request (${response.status}): ${error ?? "unknown error"}`);
   }
   return openCiResponse(options.repoKey, reference.linkId, (await response.json()) as CiResponse);
 }
@@ -67,7 +65,7 @@ export function maskCommands(secrets: SecretContent[]): string[] {
 export function githubEnvBlock(secrets: SecretContent[]): string {
   return secrets
     .map(({ name, value }) => {
-      const delimiter = `TRUST1_${randomBytes(12).toString("hex")}`;
+      const delimiter = `SEVENKEY_${randomBytes(12).toString("hex")}`;
       return `${name}<<${delimiter}\n${value}\n${delimiter}\n`;
     })
     .join("");

@@ -6,7 +6,7 @@ records what was decided and why; the cryptographic choices are in
 
 ## Scope
 
-Trust1 Vault is a password manager for one person or a small group, built so that
+7key is a password manager for one person or a small group, built so that
 signing in no longer needs a phone for the 2FA code.
 
 In scope: logins with passwords, notes and 2FA secrets; password generation;

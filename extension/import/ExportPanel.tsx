@@ -27,9 +27,7 @@ function download(name: string, text: string, type: string): void {
 
 function fileName(format: Format): string {
   const date = new Date().toISOString().slice(0, 10);
-  return format === "encrypted"
-    ? `trust1-vault-export-${date}.json`
-    : `trust1-vault-logins-${date}.csv`;
+  return format === "encrypted" ? `7key-export-${date}.json` : `7key-logins-${date}.csv`;
 }
 
 export function ExportPanel() {

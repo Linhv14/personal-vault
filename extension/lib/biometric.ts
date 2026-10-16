@@ -80,11 +80,11 @@ function asCancelled(error: unknown): never {
 export async function enableBiometric(): Promise<void> {
   const session = await signedInSession();
   if (!(await biometricSupported())) throw new BiometricError("unsupported");
-  const { email = "Trust1 Vault" } = await getLocal();
+  const { email = "7key" } = await getLocal();
   const credential = (await navigator.credentials
     .create({
       publicKey: {
-        rp: { name: "Trust1 Vault" },
+        rp: { name: "7key" },
         user: { id: randomBytes(16), name: email, displayName: email },
         challenge: randomBytes(32),
         pubKeyCredParams: [

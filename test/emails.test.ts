@@ -28,8 +28,8 @@ describe("verificationCodeEmail", () => {
     expect(email.text).toContain("https://1pw.online/privacy");
     expect(email.html).not.toMatch(/url\(/);
     const sources = [...email.html.matchAll(/src="([^"]*)"/g)].map((match) => match[1]);
-    expect(sources).toEqual(["cid:trust1-vault-logo"]);
-    expect(email.inlineImages.map((image) => image.contentId)).toEqual(["trust1-vault-logo"]);
+    expect(sources).toEqual(["cid:7key-logo"]);
+    expect(email.inlineImages.map((image) => image.contentId)).toEqual(["7key-logo"]);
   });
 
   it("embeds the extension icon as the logo, so the two never drift apart", () => {
@@ -39,7 +39,7 @@ describe("verificationCodeEmail", () => {
 
   it("speaks the requested language", () => {
     const vietnamese = verificationCodeEmail({ ...context, locale: "vi" }, "042917");
-    expect(vietnamese.subject).toBe("042917 là mã xác minh Trust1 Vault của bạn");
+    expect(vietnamese.subject).toBe("042917 là mã xác minh 7key của bạn");
     expect(vietnamese.html).toContain('lang="vi"');
   });
 });
@@ -70,7 +70,7 @@ describe("orgInviteEmail", () => {
   const email = orgInviteEmail(context, invite);
 
   it("says who invited whom to which organization, with the role in the sentence", () => {
-    expect(email.subject).toBe("owner@acme.test invited you to join Acme <Inc> on Trust1 Vault");
+    expect(email.subject).toBe("owner@acme.test invited you to join Acme <Inc> on 7key");
     expect(email.html).toContain("Acme &#60;Inc&#62;");
     expect(email.html).not.toContain("Acme <Inc>");
     expect(email.text).toContain("as an admin");
@@ -98,7 +98,7 @@ describe("email footer", () => {
   it("is one line: the product, the site and the privacy policy", () => {
     const email = verificationCodeEmail(context, "042917");
     expect(email.html).toContain('href="https://1pw.online"');
-    expect(email.text).toContain("Trust1 Vault · 1pw.online");
+    expect(email.text).toContain("7key · 1pw.online");
   });
 });
 
@@ -110,7 +110,7 @@ describe("ownershipEmail", () => {
   });
 
   it("says who handed over which organization and links its settings", () => {
-    expect(email.subject).toBe("You're now the owner of Acme on Trust1 Vault");
+    expect(email.subject).toBe("You're now the owner of Acme on 7key");
     expect(email.text).toContain("old@acme.test transferred ownership of Acme to you.");
     expect(email.html).toContain('href="https://1pw.online/app/#/org-1/settings"');
   });

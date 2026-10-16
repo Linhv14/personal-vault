@@ -10,6 +10,13 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The product is now **7key**, independent of Trust1: name, wordmark ("7key"
+  with the 7 in the accent colour), emails, site and docs. The CLI is `7key`
+  (`7key.mjs`), its variables are `SEVENKEY_KEY`, `SEVENKEY_LINK` and
+  `SEVENKEY_SERVER`, and the Action moved to `Linhv14/7key-action` (the old
+  name redirects). Downloads and exports are named `7key-…`. Stored data, keys
+  and storage names are unchanged.
+
 - The GitHub Action and the CLI are published from the public repository
   `Linhv14/trust1-vault-action` (`uses: Linhv14/trust1-vault-action@v1`, CLI as
   a release asset), so any repository can use them. `npm run publish:action`

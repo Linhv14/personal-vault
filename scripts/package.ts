@@ -7,7 +7,7 @@ const extension = path.join(root, "dist", "extension");
 const { version } = JSON.parse(
   readFileSync(path.join(root, "extension", "manifest.json"), "utf8"),
 ) as { version: string };
-const output = path.join(root, "dist", `trust1-vault-extension-${version}.zip`);
+const output = path.join(root, "dist", `7key-extension-${version}.zip`);
 const staging = path.join(root, "dist", "store-extension");
 
 const build = spawnSync(process.execPath, [path.join(root, "scripts", "build.ts")], {

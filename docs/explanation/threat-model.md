@@ -1,6 +1,6 @@
 # Threat model
 
-What Trust1 Vault protects, against whom, and where the protection ends. The mechanisms
+What 7key protects, against whom, and where the protection ends. The mechanisms
 behind each claim are in [Cryptography](cryptography.md); the tests that
 enforce them are listed at the end.
 
@@ -44,7 +44,7 @@ enforce them are listed at the end.
 
 An encrypted export is as strong as its passphrase: PBKDF2-SHA-256 with 600,000
 iterations and AES-256-GCM, with a fresh salt per file. Anyone holding the file
-can guess the passphrase offline at that cost, so Trust1 Vault requires at least 10
+can guess the passphrase offline at that cost, so 7key requires at least 10
 characters. A CSV export is plain text and offers no protection once copied.
 
 ## What the server learns

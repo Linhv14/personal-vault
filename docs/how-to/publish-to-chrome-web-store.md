@@ -21,7 +21,7 @@ npm run deploy      # make sure the baked-in server URL is current
 npm run package
 ```
 
-This writes `dist/trust1-vault-extension-<version>.zip` without the manifest's
+This writes `dist/7key-extension-<version>.zip` without the manifest's
 `key` field, which the store refuses. The key stays in `extension/manifest.json`
 so unpacked installs (development, the download on the site) keep the same
 extension ID, and with it the same origin for device unlock. Its private half is
@@ -36,14 +36,14 @@ Everything the dashboard asks for, ready to paste.
 
 ### Store listing
 
-**Name:** Trust1 Vault
+**Name:** 7key
 
 **Summary (≤132 characters):**
 End-to-end encrypted password manager with built-in 2FA codes, autofill and self-destructing share links.
 
 **Description:**
 
-> Trust1 Vault keeps your passwords and 2FA codes encrypted on your device.
+> 7key keeps your passwords and 2FA codes encrypted on your device.
 > The server only ever stores ciphertext: nobody, including whoever runs it, can
 > read your vault.
 >

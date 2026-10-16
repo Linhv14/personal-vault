@@ -3,13 +3,13 @@
 Save a copy of your items to move them to another account, another password
 manager, or an offline backup.
 
-1. Unlock Trust1 Vault and open **Import / Export** from the popup menu (☰), then the
+1. Unlock 7key and open **Import / Export** from the popup menu (☰), then the
    **Export** tab.
 2. If you have more than one vault, choose one or **All vaults**.
 3. Choose a format:
-   - **Encrypted Trust1 Vault file** (recommended): every item type, sealed with
+   - **Encrypted 7key file** (recommended): every item type, sealed with
      AES-256-GCM under a key derived from a passphrase you choose (PBKDF2,
-     600,000 iterations). Only Trust1 Vault opens it, through **Import**.
+     600,000 iterations). Only 7key opens it, through **Import**.
    - **CSV for other apps**: logins only (name, website, username, password,
      note and the 2FA secret as an `otpauth://` link), in plain text. Browsers
      and most password managers import it.

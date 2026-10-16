@@ -18,9 +18,8 @@ export function Logo({ size }: { size: number }) {
 export function Wordmark() {
   return (
     <span className="wordmark" aria-label={APP_NAME}>
-      {WORDMARK.lead}
-      <span className="wordmark-accent">{WORDMARK.accent}</span>{" "}
-      <span className="wordmark-product">{WORDMARK.product}</span>
+      <span className="wordmark-accent">{WORDMARK.accent}</span>
+      {WORDMARK.rest}
     </span>
   );
 }

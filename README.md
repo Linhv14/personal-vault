@@ -1,4 +1,4 @@
-# Trust1 Vault
+# 7key
 
 [![CI](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -83,5 +83,5 @@ Everything is indexed in [`docs/README.md`](docs/README.md).
 
 ## License
 
-[MIT](LICENSE), without warranty. Trust1 Vault has not had an independent security
+[MIT](LICENSE), without warranty. 7key has not had an independent security
 audit; if you need an audited password manager, use Bitwarden or 1Password.

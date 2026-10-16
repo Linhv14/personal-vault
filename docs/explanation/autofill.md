@@ -11,7 +11,7 @@ to a page.
 
 Clicking into a login field opens the list of matching logins by itself when
 there is something to offer: a matching login, a strong password for a sign-up
-form, or a prompt to unlock Trust1 Vault. It stays closed when a page focuses the field
+form, or a prompt to unlock 7key. It stays closed when a page focuses the field
 on load, and when nothing matches; the icon in the field opens it on demand.
 Typing closes it, ↓ moves into it, Enter picks a login and Esc closes it.
 

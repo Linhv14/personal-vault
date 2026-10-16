@@ -31,7 +31,7 @@ const file = (text: string, passphrase?: string) => ({
   recoveryTitle: "Recovery codes",
 });
 
-describe("encrypted Trust1 Vault export", () => {
+describe("encrypted 7key export", () => {
   it("round-trips live items through the importer and leaves out trash and vault records", async () => {
     const text = await encryptExport(items, "correct horse battery", 1_000);
     expect(text).not.toContain("GitHub");

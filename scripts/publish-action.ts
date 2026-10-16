@@ -27,7 +27,7 @@ function run(command: string, args: string[], cwd = root): string {
 
 run(process.execPath, [path.join(root, "scripts", "build.ts")]);
 
-const work = mkdtempSync(path.join(tmpdir(), "trust1-action-"));
+const work = mkdtempSync(path.join(tmpdir(), "7key-action-"));
 try {
   run("gh", ["repo", "clone", ACTION_REPOSITORY, work]);
   run("git", ["checkout", "-B", "main"], work);
@@ -47,10 +47,10 @@ try {
   run("git", ["push", "origin", tag], work);
   run("git", ["push", "--force", "origin", ACTION_MAJOR], work);
 
-  const cli = path.join(root, "dist", "cli", "trust1.mjs");
+  const cli = path.join(root, "dist", "cli", "7key.mjs");
   const sum = createHash("sha256").update(readFileSync(cli)).digest("hex");
-  const sumFile = path.join(work, "trust1.mjs.sha256");
-  writeFileSync(sumFile, `${sum}  trust1.mjs\n`);
+  const sumFile = path.join(work, "7key.mjs.sha256");
+  writeFileSync(sumFile, `${sum}  7key.mjs\n`);
   run("gh", [
     "release",
     "create",
@@ -62,7 +62,7 @@ try {
     "--title",
     tag,
     "--notes",
-    `Trust1 Vault Action and CLI ${tag}. \`trust1.mjs\` SHA-256: \`${sum}\``,
+    `7key Action and CLI ${tag}. \`7key.mjs\` SHA-256: \`${sum}\``,
   ]);
   console.log(`Published ${ACTION_REPOSITORY}@${tag} and moved ${ACTION_MAJOR}`);
 } finally {

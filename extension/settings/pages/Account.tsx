@@ -108,7 +108,7 @@ export function Account() {
         </Card>
       )}
       <p className="about">
-        <span>Trust1 Vault v{chrome.runtime.getManifest().version}</span> ·{" "}
+        <span>7key v{chrome.runtime.getManifest().version}</span> ·{" "}
         {local.apiUrl && (
           <a href={`${local.apiUrl.replace(/\/$/, "")}/privacy`} target="_blank" rel="noopener">
             {t("settings.privacy")}

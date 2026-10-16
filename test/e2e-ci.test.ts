@@ -187,9 +187,9 @@ describe.skipIf(!enabled)("GitHub Actions reading linked secrets", () => {
       ...process.env,
       ACTIONS_ID_TOKEN_REQUEST_URL: `http://127.0.0.1:${port}/token?api-version=2.0`,
       ACTIONS_ID_TOKEN_REQUEST_TOKEN: "runner-token",
-      TRUST1_KEY: repoKey,
-      TRUST1_LINK: reference,
-      TRUST1_SERVER: BASE,
+      SEVENKEY_KEY: repoKey,
+      SEVENKEY_LINK: reference,
+      SEVENKEY_SERVER: BASE,
       GITHUB_ENV: githubEnv,
     };
     const logged: string[] = [];
@@ -200,7 +200,9 @@ describe.skipIf(!enabled)("GitHub Actions reading linked secrets", () => {
     } finally {
       console.log = log;
     }
-    expect(await readFile(githubEnv, "utf8")).toMatch(/API_KEY<<TRUST1_\w+\nprod-key\nTRUST1_\w+/);
+    expect(await readFile(githubEnv, "utf8")).toMatch(
+      /API_KEY<<SEVENKEY_\w+\nprod-key\nSEVENKEY_\w+/,
+    );
     expect(logged).toContain("::add-mask::prod-key");
 
     const output = path.join(folder, "out");
@@ -210,7 +212,7 @@ describe.skipIf(!enabled)("GitHub Actions reading linked secrets", () => {
         "--",
         process.execPath,
         "-e",
-        `require("fs").writeFileSync(${JSON.stringify(output)}, process.env.API_KEY + "|" + (process.env.TRUST1_KEY ?? "gone"))`,
+        `require("fs").writeFileSync(${JSON.stringify(output)}, process.env.API_KEY + "|" + (process.env.SEVENKEY_KEY ?? "gone"))`,
       ],
       env,
     );

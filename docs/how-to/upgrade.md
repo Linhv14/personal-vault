@@ -19,7 +19,7 @@ sender), so you do not repeat the flags.
 Then update the extension everywhere it runs:
 
 - **Loaded unpacked:** `dist/extension` was rebuilt by the deploy. Copy it to
-  each machine that uses its own copy, then press the reload icon on Trust1 Vault in
+  each machine that uses its own copy, then press the reload icon on 7key in
   `chrome://extensions`.
 - **Published:** run `npm run package` and upload the zip; see
   [Publish to the Chrome Web Store](publish-to-chrome-web-store.md).

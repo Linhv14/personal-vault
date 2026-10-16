@@ -38,7 +38,7 @@ function ExtensionConsole() {
   const t = useT();
   useEffect(() => watchStorage(), []);
   useEffect(() => {
-    document.title = `${t("settings.title")} · Trust1 Vault`;
+    document.title = `${t("settings.title")} · 7key`;
   }, [t]);
 
   const lockNow = async () => {

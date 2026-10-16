@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Trust1 Vault",
+  "name": "7key",
   "version": "0.3.0",
   "description": "End-to-end encrypted personal vault: passwords, self-refreshing 2FA codes, and temporary share links.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtD5elq8kKjifq7hGEg/GjjXhPqRCldrXJPnsJoS5uz2c/tU/ongM7HH8gzJ3vtTIL0qpGJcaC1lkb3KAPakBTMLcp21N+0fYnnI/LtMbp4fSlHDBJ3ro1MwY/W/c7i8JvFErpyuOcm7plKu55b2si7GXcUapOXTSEEjD9nuY6fhYMWmrDWqXURpGPzr2D+wtXh4YCDIFRE0aeUrdOKHz3kL/2SHDwDuGYMHqdFjLD6havno9qkMlsKWavy6azTUZ5SPCDxGhpV40wcU6q4gI6sEqNUwdYtg94pIgHwjlQ4npSjgMCKSByXMNoIag5UknUZuewUohURh0XPmqRNC4BQIDAQAB",
@@ -15,7 +15,7 @@
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Trust1 Vault",
+    "default_title": "7key",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"

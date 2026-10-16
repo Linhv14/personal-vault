@@ -1,7 +1,7 @@
 # Import passwords
 
 Move logins, notes, cards, addresses, Wi-Fi networks and passkeys from Proton
-Pass, Bitwarden, 1Password or a browser into Trust1 Vault, and recovery codes from the
+Pass, Bitwarden, 1Password or a browser into 7key, and recovery codes from the
 files sites give you.
 
 ## Export from the app you use now
@@ -21,7 +21,7 @@ Vault → Export vault**. Choose the **.json (Encrypted)** format with the
 identities, custom fields and passkeys; CSV keeps only logins and notes.
 
 An **Account restricted** export can be opened only by Bitwarden itself, so
-Trust1 Vault asks for a password-protected one instead. A password-protected export of
+7key asks for a password-protected one instead. A password-protected export of
 an account that uses Argon2id cannot be opened yet: export plain .json and
 delete it after importing.
 
@@ -33,29 +33,29 @@ does not export passkeys.
 
 ### A browser or another manager
 
-Export passwords as CSV. Trust1 Vault reads any CSV with a password column and a name or
+Export passwords as CSV. 7key reads any CSV with a password column and a name or
 website column, which covers Chrome, Edge, Firefox and Safari.
 
-### Another Trust1 Vault account
+### Another 7key account
 
-Export an **Encrypted Trust1 Vault file** from the other account (see
+Export an **Encrypted 7key file** from the other account (see
 [Export your vault](export-your-vault.md)) and enter its passphrase when asked.
 
 ### Recovery codes
 
 Choose the file a site lets you download, such as `github-recovery-codes.txt`,
-or a text or CSV file you saved the codes in. Trust1 Vault finds the codes among the
+or a text or CSV file you saved the codes in. 7key finds the codes among the
 surrounding text, numbering and columns, and names the item after the file. To
 type them in instead, add a **Recovery codes** item in the popup and paste the
 codes as the site shows them.
 
-## Import into Trust1 Vault
+## Import into 7key
 
-1. Unlock Trust1 Vault.
+1. Unlock 7key.
 2. Open **Import / Export** from the popup menu (☰) or **Settings → Data**, or
    press **Import from another app** on an empty vault. A page opens in a new tab; browsers close the popup
    when a file picker opens, so the import runs there.
-3. Choose the file (`.zip`, `.pgp`, `.json`, `.1pux`, `.csv` or `.txt`). Trust1 Vault
+3. Choose the file (`.zip`, `.pgp`, `.json`, `.1pux`, `.csv` or `.txt`). 7key
    recognises where it came from.
 4. For an encrypted export, enter the password you set when exporting.
 5. Review the summary and press **Import**.
@@ -67,7 +67,7 @@ device, in batches of up to 100.
 
 ## What is imported
 
-| From                     | Becomes in Trust1 Vault                                                                  |
+| From                     | Becomes in 7key                                                                          |
 | ------------------------ | ---------------------------------------------------------------------------------------- |
 | Login                    | Login with title, websites, username, password, 2FA secret, passkey and password history |
 | Extra fields             | Custom fields, hidden when they were hidden; a 2FA field is used if there is no main one |
@@ -105,5 +105,5 @@ unsupported instead of being guessed at.
   AES with an integrity check (SEIPD v1), optional compression.
 - **Bitwarden** derives a key with PBKDF2-SHA256 from the password and the
   file's salt, expands it with HKDF into an encryption and a MAC key, and seals
-  the data with AES-256-CBC and HMAC-SHA256. Trust1 Vault checks the MAC before
+  the data with AES-256-CBC and HMAC-SHA256. 7key checks the MAC before
   decrypting, so a wrong password is reported as such.

@@ -32,8 +32,8 @@ export interface EmailSpec {
 }
 
 const LOGO: InlineImage = {
-  contentId: "trust1-vault-logo",
-  filename: "trust1-vault.png",
+  contentId: "7key-logo",
+  filename: "7key.png",
   contentType: "image/png",
   base64: EMAIL_LOGO_PNG_BASE64,
 };
@@ -94,7 +94,7 @@ function blockText(block: Block): string {
 function layout(context: EmailContext, spec: EmailSpec): string {
   const privacy = FOOTER[context.locale].privacy;
   const privacyUrl = `${context.siteUrl}/privacy`;
-  const wordmark = `${escape(WORDMARK.lead)}<span style="color:${COLORS.accent}">${escape(WORDMARK.accent)}</span> <span style="color:${COLORS.muted};font-weight:500">${escape(WORDMARK.product)}</span>`;
+  const wordmark = `<span style="color:${COLORS.accent}">${escape(WORDMARK.accent)}</span>${escape(WORDMARK.rest)}`;
   return `<!doctype html>
 <html lang="${context.locale}">
 <head>

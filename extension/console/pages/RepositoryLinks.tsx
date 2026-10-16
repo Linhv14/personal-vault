@@ -38,7 +38,7 @@ function workflow(reference: string, server: string): string {
     `  - uses: ${ACTION_REPOSITORY}@${ACTION_MAJOR}`,
     "    with:",
     `      link: ${reference}`,
-    "      key: ${{ secrets.TRUST1_KEY }}",
+    "      key: ${{ secrets.SEVENKEY_KEY }}",
     ...(server === DEFAULT_SERVER ? [] : [`      server: ${server}`]),
   ].join("\n");
 }
@@ -60,7 +60,7 @@ function CreatedDialog({ created, onClose }: { created: Created; onClose: () => 
       onClose={onClose}
       onSubmit={onClose}
     >
-      <Field label="TRUST1_KEY" hint={t("ci.key_hint")}>
+      <Field label="SEVENKEY_KEY" hint={t("ci.key_hint")}>
         <div className="copy-field">
           <code>{created.repoKey}</code>
           <IconButton

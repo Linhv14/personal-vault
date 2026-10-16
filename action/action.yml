@@ -1,14 +1,14 @@
-name: Trust1 Vault secrets
-description: Load one environment of a Trust1 Vault project into the job, with secret values masked.
+name: 7key secrets
+description: Load one environment of a 7key project into the job, with secret values masked.
 inputs:
   link:
-    description: Repository link from the Trust1 Vault console (organization.link).
+    description: Repository link from the 7key console (organization.link).
     required: true
   key:
-    description: Repository key from the Trust1 Vault console. Store it as a GitHub secret.
+    description: Repository key from the 7key console. Store it as a GitHub secret.
     required: true
   server:
-    description: Trust1 Vault server.
+    description: 7key server.
     required: false
     default: https://1pw.online
 runs:
