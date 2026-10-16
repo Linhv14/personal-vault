@@ -19,6 +19,7 @@ export interface Env {
   EMAIL_PROBE_SECRET: string;
   AT_REST_SECRET: string;
   MIGRATION_TOKEN?: string;
+  ALIAS_ORIGINS?: string;
   READ_ONLY?: string;
   CI_TEST_JWKS?: string;
   CI_TEST_ISSUER?: string;

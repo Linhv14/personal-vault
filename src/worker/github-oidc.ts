@@ -34,13 +34,14 @@ function decodeJson(part: string): Record<string, unknown> | null {
   }
 }
 
-function audienceMatches(aud: unknown, expected: string): boolean {
-  return Array.isArray(aud) ? aud.includes(expected) : aud === expected;
+function audienceMatches(aud: unknown, expected: readonly string[]): boolean {
+  const given = Array.isArray(aud) ? aud : [aud];
+  return given.some((entry) => typeof entry === "string" && expected.includes(entry));
 }
 
 export async function verifyGithubToken(
   token: string,
-  options: { audience: string; issuer?: string; now: number; jwks: JwksSource },
+  options: { audience: string | readonly string[]; issuer?: string; now: number; jwks: JwksSource },
 ): Promise<GithubClaims | null> {
   if (token.length > MAX_TOKEN_LENGTH) return null;
   const [headerPart, payloadPart, signaturePart, extra] = token.split(".");
@@ -74,7 +75,8 @@ export async function verifyGithubToken(
 
   const { iss, aud, exp, nbf, repository, ref, environment, event_name } = payload;
   if (iss !== (options.issuer ?? GITHUB_ISSUER)) return null;
-  if (!audienceMatches(aud, options.audience)) return null;
+  const audiences = typeof options.audience === "string" ? [options.audience] : options.audience;
+  if (!audienceMatches(aud, audiences)) return null;
   if (typeof exp !== "number" || exp + CLOCK_SKEW_SECONDS < options.now) return null;
   if (typeof nbf === "number" && nbf - CLOCK_SKEW_SECONDS > options.now) return null;
   if (typeof repository !== "string" || typeof ref !== "string") return null;

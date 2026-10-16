@@ -65,6 +65,18 @@ describe("GitHub Actions OIDC tokens", () => {
     expect(await verify(await sign(claims(), "other-key"))).toBeNull();
   });
 
+  it("accepts any of the server's own addresses as the audience, and nothing else", async () => {
+    const both = (token: string) =>
+      verifyGithubToken(token, {
+        audience: [AUDIENCE, "https://old.example"],
+        now: NOW,
+        jwks: async () => [jwk],
+      });
+    expect(await both(await sign(claims({ aud: "https://old.example" })))).not.toBeNull();
+    expect(await both(await sign(claims({ aud: ["x", AUDIENCE] })))).not.toBeNull();
+    expect(await both(await sign(claims({ aud: "https://elsewhere.example" })))).toBeNull();
+  });
+
   it("rejects a token whose payload was changed after signing", async () => {
     const [header, , signature] = (await sign(claims())).split(".");
     const forged = toBase64Url(utf8Encode(JSON.stringify(claims({ repository: "evil/api" }))));

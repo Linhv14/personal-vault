@@ -37,7 +37,13 @@ ci.post("/secrets", async (c) => {
 
   const token = c.req.header("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   const claims = await verifyGithubToken(token, {
-    audience: new URL(c.req.url).origin,
+    audience: [
+      new URL(c.req.url).origin,
+      ...(c.env.ALIAS_ORIGINS ?? "")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    ],
     now: now(),
     ...trustSource(c),
   });
