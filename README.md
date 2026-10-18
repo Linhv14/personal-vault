@@ -3,7 +3,7 @@
 [![CI](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**[1pw.online](https://1pw.online)** · An end-to-end encrypted password manager with built-in 2FA codes, as a browser
+**[7key.online](https://7key.online)** · An end-to-end encrypted password manager with built-in 2FA codes, as a browser
 extension backed by a Cloudflare Worker you deploy yourself. The server stores
 ciphertext and holds no key that opens it.
 

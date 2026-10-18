@@ -9,7 +9,7 @@ import {
 
 const context = {
   locale: "en" as const,
-  siteUrl: "https://1pw.online",
+  siteUrl: "https://7key.online",
   recipient: "me@example.com",
 };
 
@@ -24,8 +24,8 @@ describe("verificationCodeEmail", () => {
   });
 
   it("links the privacy policy on the site that sent it, and loads nothing remote", () => {
-    expect(email.html).toContain('href="https://1pw.online/privacy"');
-    expect(email.text).toContain("https://1pw.online/privacy");
+    expect(email.html).toContain('href="https://7key.online/privacy"');
+    expect(email.text).toContain("https://7key.online/privacy");
     expect(email.html).not.toMatch(/url\(/);
     const sources = [...email.html.matchAll(/src="([^"]*)"/g)].map((match) => match[1]);
     expect(sources).toEqual(["cid:7key-logo"]);
@@ -65,7 +65,7 @@ describe("orgInviteEmail", () => {
     email: "me@example.com",
     role: "admin" as const,
     expiresAt: Date.UTC(2026, 9, 30, 12) / 1000,
-    link: "https://1pw.online/app/#/invite/0b9c6f1e-1111-4222-8333-444455556666",
+    link: "https://7key.online/app/#/invite/0b9c6f1e-1111-4222-8333-444455556666",
   };
   const email = orgInviteEmail(context, invite);
 
@@ -97,8 +97,8 @@ describe("orgInviteEmail", () => {
 describe("email footer", () => {
   it("is one line: the product, the site and the privacy policy", () => {
     const email = verificationCodeEmail(context, "042917");
-    expect(email.html).toContain('href="https://1pw.online"');
-    expect(email.text).toContain("7key · 1pw.online");
+    expect(email.html).toContain('href="https://7key.online"');
+    expect(email.text).toContain("7key · 7key.online");
   });
 });
 
@@ -106,12 +106,12 @@ describe("ownershipEmail", () => {
   const email = ownershipEmail(context, {
     org: "Acme",
     previous: "old@acme.test",
-    link: "https://1pw.online/app/#/org-1/settings",
+    link: "https://7key.online/app/#/org-1/settings",
   });
 
   it("says who handed over which organization and links its settings", () => {
     expect(email.subject).toBe("You're now the owner of Acme on 7key");
     expect(email.text).toContain("old@acme.test transferred ownership of Acme to you.");
-    expect(email.html).toContain('href="https://1pw.online/app/#/org-1/settings"');
+    expect(email.html).toContain('href="https://7key.online/app/#/org-1/settings"');
   });
 });

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { toBase64Url, utf8Encode } from "../src/core/bytes.js";
 import { GITHUB_ISSUER, verifyGithubToken, type Jwk } from "../src/worker/github-oidc.js";
 
-const AUDIENCE = "https://1pw.online";
+const AUDIENCE = "https://7key.online";
 const NOW = 1_800_000_000;
 let pair: CryptoKeyPair;
 let jwk: Jwk;

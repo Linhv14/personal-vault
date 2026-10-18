@@ -10,14 +10,14 @@ describe("createMailer", () => {
   it("is disabled without a sender address or a transport", () => {
     expect(createMailer({})).toBeNull();
     expect(createMailer({ RESEND_API_KEY: "key" })).toBeNull();
-    expect(createMailer({ EMAIL_FROM: "no-reply@1pw.online" })).toBeNull();
+    expect(createMailer({ EMAIL_FROM: "no-reply@7key.online" })).toBeNull();
   });
 
   it("sends through Resend with the API key and a named sender", async () => {
     const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await createMailer({ EMAIL_FROM: "no-reply@1pw.online", RESEND_API_KEY: "re_test" })!.send(
+    await createMailer({ EMAIL_FROM: "no-reply@7key.online", RESEND_API_KEY: "re_test" })!.send(
       message,
     );
 
@@ -25,7 +25,7 @@ describe("createMailer", () => {
     expect(url).toBe("https://api.resend.com/emails");
     expect(new Headers(init.headers).get("Authorization")).toBe("Bearer re_test");
     expect(JSON.parse(String(init.body))).toEqual({
-      from: `${APP_NAME} <no-reply@1pw.online>`,
+      from: `${APP_NAME} <no-reply@7key.online>`,
       to: ["user@example.com"],
       subject: "Code",
       text: "123456",
@@ -38,7 +38,7 @@ describe("createMailer", () => {
       "fetch",
       vi.fn(async () => new Response("domain not verified", { status: 403 })),
     );
-    const mailer = createMailer({ EMAIL_FROM: "no-reply@1pw.online", RESEND_API_KEY: "re_test" })!;
+    const mailer = createMailer({ EMAIL_FROM: "no-reply@7key.online", RESEND_API_KEY: "re_test" })!;
     await expect(mailer.send(message)).rejects.toThrow(/403.*domain not verified/);
   });
 
@@ -56,10 +56,10 @@ describe("createMailer", () => {
 
   it("uses the Cloudflare binding when it is the only transport", async () => {
     const binding = { send: vi.fn(async () => ({})) };
-    await createMailer({ EMAIL_FROM: "no-reply@1pw.online", EMAIL: binding })!.send(message);
+    await createMailer({ EMAIL_FROM: "no-reply@7key.online", EMAIL: binding })!.send(message);
     expect(binding.send).toHaveBeenCalledWith({
       ...message,
-      from: { email: "no-reply@1pw.online", name: APP_NAME },
+      from: { email: "no-reply@7key.online", name: APP_NAME },
     });
   });
 

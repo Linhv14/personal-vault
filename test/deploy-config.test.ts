@@ -27,16 +27,16 @@ describe("parseDeployFlags", () => {
       parseDeployFlags([
         "--open-registration",
         "--domain",
-        "1PW.online",
+        "7KEY.online",
         "--email-from",
-        "no-reply@1pw.online",
+        "no-reply@7key.online",
         "--email-provider",
         "cloudflare",
       ]),
     ).toEqual({
       registrationMode: "open",
-      customDomain: "1pw.online",
-      emailFrom: "no-reply@1pw.online",
+      customDomain: "7key.online",
+      emailFrom: "no-reply@7key.online",
       emailProvider: "cloudflare",
     });
   });
@@ -52,7 +52,7 @@ describe("parseDeployFlags", () => {
     expect(() => parseDeployFlags(["--open-registraton"])).toThrow(/Unknown option/);
     expect(() => parseDeployFlags(["--domain"])).toThrow(/needs a value/);
     expect(() => parseDeployFlags(["--domain", "--open-registration"])).toThrow(/needs a value/);
-    expect(() => parseDeployFlags(["--domain", "https://1pw.online"])).toThrow(/hostname/);
+    expect(() => parseDeployFlags(["--domain", "https://7key.online"])).toThrow(/hostname/);
     expect(() => parseDeployFlags(["--email-from", "no-reply"])).toThrow(/email/);
     expect(() => parseDeployFlags(["--email-provider", "smtp"])).toThrow(/resend, cloudflare/);
   });
@@ -62,7 +62,7 @@ describe("resolveDeployOptions", () => {
   it("lets flags override what the last deploy saved, and ignores unrelated state", () => {
     expect(
       resolveDeployOptions(
-        { registrationMode: "open", customDomain: "1pw.online", workerUrl: "https://x" },
+        { registrationMode: "open", customDomain: "7key.online", workerUrl: "https://x" },
         { customDomain: null },
       ),
     ).toEqual({ ...DEFAULT_DEPLOY_OPTIONS, registrationMode: "open", customDomain: null });
@@ -95,8 +95,8 @@ describe("renderConfig", () => {
   });
 
   it("keeps workers.dev reachable when a custom domain is added", () => {
-    const config = render({ customDomain: "1pw.online" });
-    expect(config.routes).toEqual([{ pattern: "1pw.online", custom_domain: true }]);
+    const config = render({ customDomain: "7key.online" });
+    expect(config.routes).toEqual([{ pattern: "7key.online", custom_domain: true }]);
     expect(config.workers_dev).toBe(true);
   });
 
@@ -123,11 +123,11 @@ describe("renderConfig", () => {
   });
 
   it("adds the sender address, and the Email Sending binding only for Cloudflare", () => {
-    const resend = render({ emailFrom: "no-reply@1pw.online" });
-    expect(resend.vars.EMAIL_FROM).toBe("no-reply@1pw.online");
+    const resend = render({ emailFrom: "no-reply@7key.online" });
+    expect(resend.vars.EMAIL_FROM).toBe("no-reply@7key.online");
     expect(resend.send_email).toBeUndefined();
 
-    const cloudflare = render({ emailFrom: "no-reply@1pw.online", emailProvider: "cloudflare" });
+    const cloudflare = render({ emailFrom: "no-reply@7key.online", emailProvider: "cloudflare" });
     expect(cloudflare.send_email).toEqual([{ name: "EMAIL" }]);
   });
 
@@ -146,12 +146,12 @@ describe("requiredSecrets", () => {
   it("asks for a Resend key only when Resend will send mail", () => {
     expect(requiredSecrets(DEFAULT_DEPLOY_OPTIONS)).not.toContain("RESEND_API_KEY");
     expect(
-      requiredSecrets({ ...DEFAULT_DEPLOY_OPTIONS, emailFrom: "no-reply@1pw.online" }),
+      requiredSecrets({ ...DEFAULT_DEPLOY_OPTIONS, emailFrom: "no-reply@7key.online" }),
     ).toContain("RESEND_API_KEY");
     expect(
       requiredSecrets({
         ...DEFAULT_DEPLOY_OPTIONS,
-        emailFrom: "no-reply@1pw.online",
+        emailFrom: "no-reply@7key.online",
         emailProvider: "cloudflare",
       }),
     ).not.toContain("RESEND_API_KEY");
