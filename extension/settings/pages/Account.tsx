@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
+import { isDefaultServer } from "../../lib/server.js";
 import { clearAccountData, getLocal, lock } from "../../lib/storage.js";
 import { Button } from "../../ui/components/Button.js";
 import { Card } from "../../ui/components/Card.js";
@@ -54,10 +55,12 @@ export function Account() {
           <span>{t("settings.account_email")}</span>
           <span className="value">{local.email ?? ""}</span>
         </div>
-        <div className="row">
-          <span>{t("settings.server")}</span>
-          <span className="value">{local.apiUrl ? new URL(local.apiUrl).host : ""}</span>
-        </div>
+        {local.apiUrl && !isDefaultServer(local.apiUrl) && (
+          <div className="row">
+            <span>{t("settings.server")}</span>
+            <span className="value">{new URL(local.apiUrl).host}</span>
+          </div>
+        )}
         <div className="row">
           <span>{t("settings.item_count")}</span>
           <span className="value">

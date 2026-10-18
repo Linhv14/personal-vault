@@ -10,6 +10,7 @@ import {
   setLocal,
   type PendingSignup,
 } from "../../lib/storage.js";
+import { isDefaultServer } from "../../lib/server.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { finishUnlock, signIn } from "../auth.js";
@@ -41,7 +42,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const [choosing, setChoosing] = useState(signup === null);
   const [mode, setMode] = useState<Mode>("register");
   const [customServer, setCustomServer] = useState(
-    (signup?.apiUrl ?? apiUrl) !== defaultServer || !defaultServer,
+    !defaultServer || (signup !== null && !isDefaultServer(signup.apiUrl, defaultServer)),
   );
   const [registrationOpen, setRegistrationOpen] = useState(false);
   const [verificationRequired, setVerificationRequired] = useState(false);
@@ -216,7 +217,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
               name="apiUrl"
               type="url"
               placeholder="https://personal-vault.you.workers.dev"
-              defaultValue={signup?.apiUrl ?? apiUrl}
+              defaultValue={signup?.apiUrl ?? (customServer ? apiUrl : defaultServer)}
               required={askServer}
               onChange={() => void applyServerConfig()}
             />
@@ -299,6 +300,11 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             className="link quiet"
             hidden={askServer || codeStep || !defaultServer}
             onClick={() => {
+              const input = field("apiUrl");
+              if (input && apiUrl && !isDefaultServer(apiUrl, defaultServer)) {
+                input.value = apiUrl;
+                void applyServerConfig();
+              }
               setCustomServer(true);
               setFocusTarget("apiUrl");
             }}

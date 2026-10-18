@@ -28,6 +28,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The hosted service is the default everywhere: sign-in no longer shows the
+  server field, even when the browser remembers another server, and Settings
+  hides the server row for the default. **Use your own server** still opens
+  the field, prefilled with the remembered server. Builds without a local
+  deployment take the server from `deploy/production.json`.
 - The product is now **7key**, independent of Trust1: name, wordmark ("7key"
   with the 7 in the accent colour), emails, site and docs. The CLI is `7key`
   (`7key.mjs`), its variables are `SEVENKEY_KEY`, `SEVENKEY_LINK` and

@@ -27,16 +27,21 @@ const dev = watch || process.argv.includes("--dev");
 /**
  * The Worker URL of the last deployment, baked into the extension so a fresh
  * install does not ask the user to retype the address of their own server.
- * Empty when the project has never been deployed from this checkout.
+ * Falls back to the hosted service in deploy/production.json, and is empty
+ * only when neither exists.
  */
 function deployedServerUrl() {
-  const state = path.join(root, ".cf-state.json");
-  if (!existsSync(state)) return "";
-  try {
-    return JSON.parse(readFileSync(state, "utf8")).workerUrl ?? "";
-  } catch {
-    return "";
+  for (const file of [".cf-state.json", "deploy/production.json"]) {
+    const config = path.join(root, file);
+    if (!existsSync(config)) continue;
+    try {
+      const workerUrl = JSON.parse(readFileSync(config, "utf8")).workerUrl;
+      if (typeof workerUrl === "string" && workerUrl) return workerUrl;
+    } catch {
+      continue;
+    }
   }
+  return "";
 }
 
 const common: BuildOptions = {

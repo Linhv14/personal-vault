@@ -20,7 +20,9 @@ downloads the encrypted items and decrypts them locally.
 
 A build made by another operator, such as a published 7key extension, signs in to
 their server by default. To use yours, press **Use your own server** under the
-button and enter your Worker URL. `npm run status` prints it.
+button and enter your Worker URL. `npm run status` prints it. A server you
+used before on this browser is filled in for you. Settings shows the server
+only when it is not the build's default.
 
 ## What to expect
 

@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { useEffect } from "preact/hooks";
 import { resumeUnlock } from "../lib/resume.js";
+import { defaultServer } from "../lib/server.js";
 import { getLocal, getUnlocked, loadPendingSignup } from "../lib/storage.js";
 import { Toast } from "../ui/components/Toast.js";
 import { localeSignal, setUiLocale } from "../ui/i18n.js";
@@ -22,12 +23,6 @@ import {
   tabUrl,
   toastMessage,
 } from "./state.js";
-
-declare const __VAULT_DEFAULT_SERVER__: string | undefined;
-
-function deployedServerUrl(): string {
-  return typeof __VAULT_DEFAULT_SERVER__ === "string" ? __VAULT_DEFAULT_SERVER__ : "";
-}
 
 let setupProps: SetupProps = { apiUrl: "", defaultServer: "", signup: null };
 let unlockEmail = "";
@@ -80,10 +75,10 @@ async function boot(): Promise<void> {
   clockSkew.value = local.clockSkew ?? 0;
 
   if (!local.apiUrl || !local.email) {
-    const defaultServer = deployedServerUrl();
+    const fallback = defaultServer();
     setupProps = {
-      apiUrl: local.apiUrl ?? defaultServer,
-      defaultServer,
+      apiUrl: local.apiUrl ?? fallback,
+      defaultServer: fallback,
       signup: await loadPendingSignup(),
     };
     screen.value = "setup";
