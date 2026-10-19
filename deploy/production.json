@@ -4,7 +4,7 @@
   "workerUrl": "https://7key.online",
   "registrationMode": "token",
   "customDomain": "7key.online",
-  "emailFrom": "",
+  "emailFrom": "no-reply@7key.online",
   "emailProvider": "resend",
   "aliasDomains": []
 }
