@@ -10,8 +10,10 @@ vaults.get("/", async (c) => {
   const orgs = await directory(c).orgsOf(accountId);
   const shared = await Promise.all(
     orgs.map(async (org) => {
-      const result = await orgStore(c.env, org.id).sharedVaults({ accountId, role: org.role });
-      return result.ok
+      const result = await orgStore(c.env, org.id)
+        .sharedVaults({ accountId, role: org.role })
+        .catch(() => null);
+      return result?.ok
         ? result.value.map((vault) => ({ orgId: org.id, orgName: org.name, ...vault }))
         : [];
     }),

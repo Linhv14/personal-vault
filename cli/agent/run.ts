@@ -14,7 +14,7 @@ import {
   signOut,
   type Session,
 } from "./session.js";
-import { newPlaceholder, type Injectable } from "./substitute.js";
+import { MIN_SECRET_LENGTH, newPlaceholder, type Injectable } from "./substitute.js";
 
 export interface AgentOptions {
   server: string;
@@ -37,24 +37,28 @@ export interface Plan {
   injectables: Injectable[];
   variables: SecretContent[];
   skipped: string[];
+  tooShort: string[];
 }
 
 export function plan(secrets: readonly SecretContent[]): Plan {
   const injectables: Injectable[] = [];
   const variables: SecretContent[] = [];
   const skipped: string[] = [];
+  const tooShort: string[] = [];
   for (const secret of secrets) {
     if (isVariable(secret)) variables.push(secret);
-    else if (secret.hosts && secret.hosts.length > 0) {
+    else if (!secret.hosts || secret.hosts.length === 0) skipped.push(secret.name);
+    else if (secret.value.length < MIN_SECRET_LENGTH) tooShort.push(secret.name);
+    else {
       injectables.push({
         name: secret.name,
         value: secret.value,
         hosts: secret.hosts,
         placeholder: newPlaceholder(),
       });
-    } else skipped.push(secret.name);
+    }
   }
-  return { injectables, variables, skipped };
+  return { injectables, variables, skipped, tooShort };
 }
 
 const CA_VARIABLES = [
@@ -99,6 +103,11 @@ function describe(selected: Plan): string[] {
   }
   if (selected.skipped.length > 0) {
     lines.push(`  not available (no allowed hosts): ${selected.skipped.join(", ")}`);
+  }
+  if (selected.tooShort.length > 0) {
+    lines.push(
+      `  not available (shorter than ${MIN_SECRET_LENGTH} characters): ${selected.tooShort.join(", ")}`,
+    );
   }
   return lines;
 }
@@ -152,15 +161,33 @@ export async function runAgent(options: AgentOptions): Promise<number> {
         if (reported.size === 1) void noteAccess(session, selected, "injected");
       },
     });
-    const env = childEnvironment(options.env, prepared, `http://127.0.0.1:${proxy.port}`, files);
-    return await new Promise<number>((resolve) => {
+    const env = childEnvironment(options.env, prepared, proxy.url, files);
+    options.log(
+      "7key: starting. 7key will not ask for your password again until this command exits.",
+    );
+    const code = await new Promise<number>((resolve) => {
       const child = spawn(program, args, { stdio: "inherit", env });
-      child.on("close", (code) => resolve(code ?? 1));
+      const ignore = () => {};
+      const forward = (signal: NodeJS.Signals) => () => child.kill(signal);
+      const handlers: [NodeJS.Signals, () => void][] = [
+        ["SIGINT", ignore],
+        ["SIGQUIT", ignore],
+        ["SIGTERM", forward("SIGTERM")],
+        ["SIGHUP", forward("SIGHUP")],
+      ];
+      for (const [signal, handler] of handlers) process.on(signal, handler);
+      const done = (result: number) => {
+        for (const [signal, handler] of handlers) process.off(signal, handler);
+        resolve(result);
+      };
+      child.on("close", (exit, signal) => done(exit ?? (signal ? 128 : 1)));
       child.on("error", (error) => {
         options.log(`7key: ${error.message}`);
-        resolve(127);
+        done(127);
       });
     });
+    options.log("7key: session ended; the secrets are no longer reachable.");
+    return code;
   } finally {
     await proxy?.close();
     if (directory) rmSync(directory, { recursive: true, force: true });

@@ -11,7 +11,15 @@
     "128": "icons/icon-128.png"
   },
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "alarms", "activeTab", "offscreen", "clipboardWrite", "scripting"],
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "alarms",
+    "activeTab",
+    "offscreen",
+    "clipboardWrite",
+    "scripting"
+  ],
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_popup": "popup/popup.html",

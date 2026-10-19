@@ -523,6 +523,8 @@ export const en = {
   "error.orgs.link_limit": "A project links at most {limit} repositories.",
   "error.orgs.invalid_item": "That item could not be saved to the team vault.",
   "error.orgs.item_limit": "A team vault holds at most {limit} items.",
+  "error.orgs.vault_full":
+    "This team vault is full ({megabytes} MB). Delete large items or notes first.",
   "error.ci.unauthorized": "A valid GitHub Actions OIDC token is required.",
   "error.ci.forbidden": "This repository or branch is not linked.",
   "error.orgs.not_found": "Not found, or you are not a member.",

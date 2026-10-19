@@ -49,6 +49,16 @@ export class ItemTables {
     return row?.team_id ?? null;
   }
 
+  bytes(teamId: string, exceptId: string): number {
+    return this.sql
+      .exec<{ n: number }>(
+        "SELECT coalesce(sum(length(sealed)), 0) AS n FROM team_items WHERE team_id = ? AND id != ?",
+        teamId,
+        exceptId,
+      )
+      .one().n;
+  }
+
   count(teamId: string): number {
     return this.sql
       .exec<{ n: number }>("SELECT count(*) AS n FROM team_items WHERE team_id = ?", teamId)

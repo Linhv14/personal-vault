@@ -90,18 +90,37 @@ organization with one team.
 
 An item in a team vault is the same record as a personal item, sealed under the
 team key with `personal-vault/team-item/<team>/<generation>/<item>` as
-associated data, so the server cannot move it to another team or replay it
-under an older key. Moving an item between a personal vault and a team vault
+associated data, so the server cannot move it to another team, swap two items,
+or pass an item from an older generation off as current. Moving an item between a personal vault and a team vault
 writes it to the target first and then deletes it from the source; **Share
 with a team** in a personal vault's menu moves every item at once. The server
 stores ids, timestamps and who saved what; the activity log shows
 `team.item_saved` and `team.item_deleted` against the team, without titles.
 
+Items written by other members are treated with care:
+
+- a password captured on a site, or a new passkey, is only ever saved into a
+  personal item, never into a team item that happens to match the site and
+  username, so a teammate cannot plant a login to catch it;
+- suggestions and passkeys from a team vault name the vault and organization
+  in the autofill menu;
+- an item id is looked up in the personal vault first, and an id that appears
+  twice is shown once, so a teammate cannot shadow or delete a personal item
+  by reusing its id.
+
 Removing someone from the team re-keys the vault with the projects: the admin's
 device re-encrypts every item under the new key in the same transaction, and
-until then writes are refused. The popup keeps the sealed items and the
+until then writes are refused. Items that no longer open (written with a bad
+key by a member on their way out) are deleted during the re-key rather than
+blocking it. The popup keeps the sealed items and the
 account's sealed private key on disk, so team vaults open offline after the
-first sync. A team vault holds up to 1,000 items of up to 64 KB each.
+first sync; team and organization names are in that cache in clear, as they
+are on the server. The popup remembers the highest key generation it has seen
+for each team and ignores an older one, so a server cannot roll a team back to
+a key a removed member still holds. Within one generation the server can still
+serve an older copy of an item or withhold a deletion; it cannot alter or
+invent an item. A team vault holds up to 1,000 items of up to 64 KB each, and
+5 MB in all.
 
 ## Roles
 

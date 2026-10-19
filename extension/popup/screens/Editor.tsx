@@ -217,18 +217,22 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
     const key = vaultKey.value;
     if (!key) return;
     try {
-      await saveItem(key, {
-        ...item,
-        id: item?.id ?? newItemId(),
-        type,
-        title: String(data.get("title")).trim(),
-        vault: storedVault(String(data.get("vault") ?? initialVault)),
-        ...fields,
-        usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
-        passwordHistory: HAS_PASSWORD_HISTORY.has(type)
-          ? withPasswordHistory(item, fields.password, Math.floor(nowMs() / 1000))
-          : item?.passwordHistory,
-      });
+      await saveItem(
+        key,
+        {
+          ...item,
+          id: item?.id ?? newItemId(),
+          type,
+          title: String(data.get("title")).trim(),
+          vault: storedVault(String(data.get("vault") ?? initialVault)),
+          ...fields,
+          usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
+          passwordHistory: HAS_PASSWORD_HISTORY.has(type)
+            ? withPasswordHistory(item, fields.password, Math.floor(nowMs() / 1000))
+            : item?.passwordHistory,
+        },
+        item ?? undefined,
+      );
       await reloadItems();
       showList();
       toast(translator()(item ? "edit.saved" : "edit.added"));

@@ -46,6 +46,7 @@ export interface LocalState {
   biometricPromoDismissed?: boolean;
   identity?: { publicKey: string; wrappedPrivateKey: SealedData };
   sharedVaults?: CachedSharedVault[];
+  sharedGenerations?: Record<string, number>;
 }
 
 export interface CachedSharedVault {

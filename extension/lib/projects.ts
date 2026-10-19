@@ -432,11 +432,17 @@ export async function rekeyTeam(
 
   const items: Record<string, SealedData> = {};
   for (const record of vault.items ?? []) {
-    const content = await openTeamItem(
-      oldKey,
-      { teamId: team.id, generation: current, itemId: record.id },
-      record.sealed,
-    );
+    let content: unknown;
+    try {
+      content = await openTeamItem(
+        oldKey,
+        { teamId: team.id, generation: current, itemId: record.id },
+        record.sealed,
+      );
+    } catch {
+      await request(`${teamPath(orgId, team.id)}/items/${record.id}`, { method: "DELETE" });
+      continue;
+    }
     items[record.id] = await sealTeamItem(
       newKey,
       { teamId: team.id, generation, itemId: record.id },

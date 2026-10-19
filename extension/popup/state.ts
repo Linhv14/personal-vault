@@ -158,7 +158,13 @@ async function rewriteItems(
   vaultBusy.value = true;
   try {
     for (const item of affected) {
-      await saveItemPatiently(key, change(item), () => toast(translator()("import.waiting")));
+      await saveItemPatiently(
+        key,
+        change(item),
+        () => toast(translator()("import.waiting")),
+        undefined,
+        item,
+      );
     }
   } finally {
     vaultBusy.value = false;
@@ -300,7 +306,7 @@ function withoutTimestamps(item: VaultItem): Omit<VaultItem, "createdAt" | "upda
 
 async function replaceItem(draft: Omit<VaultItem, "createdAt" | "updatedAt">): Promise<void> {
   if (!vaultKey.value) return;
-  const saved = await saveItem(vaultKey.value, draft);
+  const saved = await saveItem(vaultKey.value, draft, draft);
   items.value = items.value.map((candidate) => (candidate.id === saved.id ? saved : candidate));
 }
 
@@ -332,7 +338,7 @@ export async function deleteForever(item: VaultItem): Promise<void> {
   const t = translator();
   if (!confirm(t("edit.delete_confirm", { title: item.title }))) return;
   try {
-    await removeItem(item.id);
+    await removeItem(item.id, item);
     items.value = items.value.filter((candidate) => candidate.id !== item.id);
     toast(t("edit.deleted"));
   } catch (error) {

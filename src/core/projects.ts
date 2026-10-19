@@ -40,13 +40,48 @@ export function isVariable(secret: SecretContent): boolean {
 export const MAX_SECRET_HOSTS = 10;
 const HOST_LABEL = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
 
+const SHARED_SUFFIXES = [
+  "amazonaws.com",
+  "appspot.com",
+  "azurewebsites.net",
+  "azurestaticapps.net",
+  "blogspot.com",
+  "cloudfront.net",
+  "firebaseapp.com",
+  "fly.dev",
+  "github.io",
+  "githubusercontent.com",
+  "gitlab.io",
+  "glitch.me",
+  "herokuapp.com",
+  "netlify.app",
+  "ngrok-free.app",
+  "ngrok.io",
+  "onrender.com",
+  "pages.dev",
+  "repl.co",
+  "surge.sh",
+  "vercel.app",
+  "web.app",
+  "workers.dev",
+];
+const SECOND_LEVEL = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
+
+function sharedBase(base: string): boolean {
+  const labels = base.split(".");
+  if (labels.length === 2 && labels[1]!.length === 2 && SECOND_LEVEL.has(labels[0]!)) return true;
+  return SHARED_SUFFIXES.some((suffix) => base === suffix || base.endsWith(`.${suffix}`));
+}
+
 export function normalizeHost(value: string): string | null {
   const host = value.trim().toLowerCase().replace(/\.$/, "");
   const wildcard = host.startsWith("*.");
-  const labels = (wildcard ? host.slice(2) : host).split(".");
+  const base = wildcard ? host.slice(2) : host;
+  const labels = base.split(".");
   if (labels.length < 2 || host.length > 253) return null;
   if (!labels.every((label) => HOST_LABEL.test(label))) return null;
   if (/^\d+$/.test(labels.at(-1) ?? "")) return null;
+  if (wildcard && sharedBase(base)) return null;
   return host;
 }
 

@@ -3,6 +3,7 @@ import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
 import {
   byLastUsed,
+  isPersonal,
   markUsed,
   newItemId,
   openVault,
@@ -38,6 +39,7 @@ function itemFor(items: VaultItem[], origin: string, userName: string): VaultIte
   const site = registrableDomain(origin);
   return items.find(
     (item) =>
+      isPersonal(item) &&
       !item.passkey &&
       itemType(item) === "login" &&
       item.url !== undefined &&
@@ -63,14 +65,17 @@ async function query(
   }
   const passkeys = passkeysFor(vault.items, rpId, allowCredentialIds)
     .sort((a, b) => byLastUsed(a.item, b.item))
-    .map(({ item, passkey }) => ({
-      credentialId: passkey.credentialId,
-      title: item.title,
-      userName: passkey.userName,
-    }));
+    .map(({ item, passkey }) => {
+      const shared = vault.sharedName(item);
+      return {
+        credentialId: passkey.credentialId,
+        title: shared ? `${item.title} · ${shared}` : item.title,
+        userName: passkey.userName,
+      };
+    });
   const excluded =
     excludeCredentialIds.length > 0 &&
-    passkeysFor(vault.items, rpId, excludeCredentialIds).length > 0;
+    passkeysFor(vault.items.filter(isPersonal), rpId, excludeCredentialIds).length > 0;
   return { ok: true, state: "ready", rpId, passkeys, excluded };
 }
 
@@ -83,7 +88,10 @@ async function create(
   const vault = await openVault();
   if (!vault) return { ok: false, error: "locked" };
   const excluded = options.excludeCredentialIds;
-  if (excluded.length > 0 && passkeysFor(vault.items, rpId, excluded).length > 0) {
+  if (
+    excluded.length > 0 &&
+    passkeysFor(vault.items.filter(isPersonal), rpId, excluded).length > 0
+  ) {
     return { ok: false, error: "excluded" };
   }
 

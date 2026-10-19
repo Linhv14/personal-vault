@@ -8,7 +8,7 @@ export interface Injectable {
   placeholder: string;
 }
 
-const MIN_SCRUB_LENGTH = 6;
+export const MIN_SECRET_LENGTH = 8;
 
 export function newPlaceholder(): string {
   return `7key-ph-${randomBytes(12).toString("hex")}`;
@@ -59,7 +59,7 @@ export function substituteHeader(
 const jsonEscaped = (value: string) => JSON.stringify(value).slice(1, -1);
 const asciiEscaped = (value: string) =>
   jsonEscaped(value).replace(
-    /[\u007f-\uffff]/g,
+    /[\u007f-￿]/g,
     (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
   );
 
@@ -73,24 +73,41 @@ export function encodings(value: string): string[] {
     asciiEscaped(value).replaceAll("/", "\\/"),
     encodeURIComponent(value),
     Buffer.from(value, "utf8").toString("base64"),
+    Buffer.from(value, "utf8").toString("base64url"),
   ];
-  return [...new Set(forms)].sort((a, b) => b.length - a.length);
+  return [...new Set(forms)];
+}
+
+export class Scrubber {
+  private readonly forms: { form: string; placeholder: string }[];
+
+  constructor(injectables: readonly Injectable[]) {
+    this.forms = injectables
+      .flatMap((entry) =>
+        encodings(entry.value).map((form) => ({ form, placeholder: entry.placeholder })),
+      )
+      .sort((a, b) => b.form.length - a.form.length);
+  }
+
+  scrub(text: string): string {
+    let result = text;
+    for (const { form, placeholder } of this.forms) result = replaceAll(result, form, placeholder);
+    return result;
+  }
+
+  split(text: string): { ready: string; pending: string } {
+    const scrubbed = this.scrub(text);
+    const longest = this.forms[0]?.form.length ?? 0;
+    for (let index = Math.max(0, scrubbed.length - longest + 1); index < scrubbed.length; index++) {
+      const tail = scrubbed.slice(index);
+      if (this.forms.some(({ form }) => form.startsWith(tail))) {
+        return { ready: scrubbed.slice(0, index), pending: scrubbed.slice(index) };
+      }
+    }
+    return { ready: scrubbed, pending: "" };
+  }
 }
 
 export function scrub(text: string, injectables: readonly Injectable[]): string {
-  let result = text;
-  for (const entry of injectables) {
-    if (entry.value.length < MIN_SCRUB_LENGTH) continue;
-    for (const form of encodings(entry.value)) {
-      result = replaceAll(result, form, entry.placeholder);
-    }
-  }
-  return result;
-}
-
-export function longestValue(injectables: readonly Injectable[]): number {
-  return Math.max(
-    0,
-    ...injectables.flatMap((entry) => encodings(entry.value).map((form) => form.length)),
-  );
+  return new Scrubber(injectables).scrub(text);
 }

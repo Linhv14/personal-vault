@@ -263,8 +263,11 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
     }
     for (const suggestion of response.suggestions) {
       menu.append(
-        menuRow(suggestion.title, suggestion.username, avatar(suggestion.title), () =>
-          fillSuggestion(suggestion, password),
+        menuRow(
+          suggestion.title,
+          [suggestion.username, suggestion.vault].filter(Boolean).join(" · ") || undefined,
+          avatar(suggestion.title),
+          () => fillSuggestion(suggestion, password),
         ),
       );
     }

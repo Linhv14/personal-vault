@@ -3,6 +3,7 @@ import { importVaultKey, openJson, sealJson, type SealedData } from "./crypto.js
 
 export const MAX_TEAM_ITEMS = 1000;
 export const MAX_TEAM_ITEM_BYTES = 64 * 1024;
+export const MAX_TEAM_VAULT_BYTES = 5 * 1024 * 1024;
 
 export interface TeamItemAddress {
   teamId: string;

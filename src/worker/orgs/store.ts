@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
 import type { SealedData } from "../../core/crypto.js";
 import { MAX_SECRETS_PER_PROJECT, type SecretAccess } from "../../core/projects.js";
-import { MAX_TEAM_ITEMS } from "../../core/team-items.js";
+import { MAX_TEAM_ITEMS, MAX_TEAM_VAULT_BYTES } from "../../core/team-items.js";
 import {
   isOrgAdmin,
   type AuditEvent,
@@ -776,6 +776,10 @@ export class OrgStore extends DurableObject<Env> {
     if (owner !== null && owner !== teamId) return fail(409, "orgs.invalid_item");
     if (owner === null && this.items.count(teamId) >= MAX_TEAM_ITEMS) {
       return fail(409, "orgs.item_limit", { limit: MAX_TEAM_ITEMS });
+    }
+    const size = JSON.stringify(item.sealed).length;
+    if (this.items.bytes(teamId, item.id) + size > MAX_TEAM_VAULT_BYTES) {
+      return fail(409, "orgs.vault_full", { megabytes: MAX_TEAM_VAULT_BYTES / 1024 / 1024 });
     }
     const updatedAt = now();
     this.items.put(teamId, item.id, item.sealed, principal.accountId, updatedAt);

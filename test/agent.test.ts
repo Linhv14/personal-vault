@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import https from "node:https";
+import zlib from "node:zlib";
 import tls from "node:tls";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -36,6 +37,18 @@ describe("allowed hosts", () => {
     expect(normalizeHost("localhost")).toBeNull();
     expect(normalizeHost("10.0.0.1")).toBeNull();
     expect(normalizeHost("*.com")).toBeNull();
+    for (const shared of [
+      "*.co.uk",
+      "*.com.vn",
+      "*.github.io",
+      "*.amazonaws.com",
+      "*.s3.amazonaws.com",
+      "*.vercel.app",
+    ]) {
+      expect(normalizeHost(shared)).toBeNull();
+    }
+    expect(normalizeHost("my-app.vercel.app")).toBe("my-app.vercel.app");
+    expect(normalizeHost("*.example.co.uk")).toBe("*.example.co.uk");
     expect(normalizeHost("https://api.stripe.com")).toBeNull();
     expect(parseHosts("api.stripe.com, *.myshopify.com\napi.stripe.com")).toEqual([
       "api.stripe.com",
@@ -101,13 +114,15 @@ describe("placeholders", () => {
 
   it("gives only secrets with allowed hosts a placeholder and passes variables through", () => {
     const prepared = plan([
-      { name: "STRIPE_KEY", value: "sk", hosts: ["api.stripe.com"] },
+      { name: "STRIPE_KEY", value: "sk_live_abcdef", hosts: ["api.stripe.com"] },
+      { name: "PIN", value: "1234", hosts: ["api.stripe.com"] },
       { name: "DATABASE_URL", value: "postgres://x" },
       { name: "LOG_LEVEL", value: "debug", kind: "variable" },
     ]);
     expect(prepared.injectables.map((entry) => entry.name)).toEqual(["STRIPE_KEY"]);
     expect(prepared.injectables[0]!.placeholder).toMatch(/^7key-ph-[0-9a-f]{24}$/);
     expect(prepared.skipped).toEqual(["DATABASE_URL"]);
+    expect(prepared.tooShort).toEqual(["PIN"]);
     const env = childEnvironment(
       { PATH: "/bin", SEVENKEY_EMAIL: "me@example.com" },
       prepared,
@@ -125,7 +140,8 @@ describe("placeholders", () => {
     });
     expect(env.DATABASE_URL).toBeUndefined();
     expect(env.SEVENKEY_EMAIL).toBeUndefined();
-    expect(JSON.stringify(env)).not.toContain('"sk"');
+    expect(JSON.stringify(env)).not.toContain("sk_live_abcdef");
+    expect(JSON.stringify(env)).not.toContain('"1234"');
   });
 
   it("reads the agent options", () => {
@@ -143,7 +159,7 @@ describe("placeholders", () => {
 
 describe("agent proxy", () => {
   const upstreamAuthority = createAuthority("test upstream");
-  const seen: { host: string; authorization?: string; body: string }[] = [];
+  const seen: { host: string; authorization?: string; echo?: string; body: string }[] = [];
   let upstream: https.Server;
   let proxy: RunningProxy;
   let port: number;
@@ -162,13 +178,36 @@ describe("agent proxy", () => {
         let body = "";
         request.on("data", (chunk) => (body += chunk));
         request.on("end", () => {
+          const echo = String(request.headers["x-echo"] ?? "");
           seen.push({
             host: request.headers.host ?? "",
             authorization: request.headers.authorization,
+            echo,
             body,
           });
+          const route = (request.url ?? "").split("?")[0];
+          if (route === "/gzip") {
+            response.writeHead(200, { "content-encoding": "gzip" });
+            response.end(zlib.gzipSync(echo));
+            return;
+          }
+          if (route === "/slow") {
+            response.write(echo.slice(0, 10));
+            setTimeout(() => response.end(echo.slice(10)), 120);
+            return;
+          }
+          if (route === "/reverse-body") {
+            response.end([...body].reverse().join(""));
+            return;
+          }
+          if (route === "/compress-other") {
+            response.writeHead(200, { "content-encoding": "compress" });
+            response.end(echo);
+            return;
+          }
           response.setHeader("content-type", "application/json");
-          response.end(JSON.stringify({ echoed: request.headers.authorization, body }));
+          response.setHeader("set-cookie", [`a=${echo}`, "b=2"]);
+          response.end(JSON.stringify({ echoed: request.headers.authorization, echo, body }));
         });
       },
     );
@@ -194,31 +233,65 @@ describe("agent proxy", () => {
     rmSync(directory, { recursive: true, force: true });
   });
 
-  const curl = (host: string, ...args: string[]) =>
+  const raw = (host: string, route: string, ...args: string[]) =>
     run("curl", [
       "-sS",
+      "-i",
+      "--suppress-connect-headers",
       "--proxy",
-      `http://127.0.0.1:${proxy.port}`,
+      proxy.url,
       "--cacert",
       bundle,
       ...args,
-      `https://${host}:${port}/v1/charges`,
-    ]).then(({ stdout }) => JSON.parse(stdout) as { echoed?: string; body: string });
+      `https://${host}:${port}${route}`,
+    ]).then(({ stdout }) => stdout);
+  const curl = (host: string, ...args: string[]) =>
+    raw(host, "/v1/charges", ...args).then(
+      (text) =>
+        JSON.parse(text.slice(text.indexOf("\r\n\r\n") + 4)) as {
+          echoed?: string;
+          echo?: string;
+          body: string;
+        },
+    );
 
-  it("sends the real secret to an allowed host and never shows it to the caller", async () => {
+  it("sends the real secret in headers to an allowed host and never shows it to the caller", async () => {
     const reply = await curl(
       "api.stripe.test",
       "-H",
       `Authorization: Bearer ${STRIPE.placeholder}`,
-      "-d",
-      `key=${STRIPE.placeholder}&shop=${SHOP.placeholder}`,
+      "-H",
+      `X-Echo: ${STRIPE.placeholder}`,
     );
     const request = seen.at(-1)!;
     expect(request.authorization).toBe(`Bearer ${STRIPE.value}`);
-    expect(request.body).toBe(`key=${STRIPE.value}&shop=${SHOP.placeholder}`);
+    expect(request.echo).toBe(STRIPE.value);
     expect(reply.echoed).toBe(`Bearer ${STRIPE.placeholder}`);
-    expect(reply.body).toBe(`key=${STRIPE.placeholder}&shop=${SHOP.placeholder}`);
+    expect(reply.echo).toBe(STRIPE.placeholder);
     expect(used).toContain(`STRIPE_KEY@api.stripe.test`);
+  });
+
+  it("leaves the URL and body alone, so an echoing API cannot be asked to transform a value", async () => {
+    const text = await raw(
+      "api.stripe.test",
+      `/reverse-body?key=${STRIPE.placeholder}`,
+      "-d",
+      `key=${STRIPE.placeholder}`,
+    );
+    expect(seen.at(-1)!.body).toBe(`key=${STRIPE.placeholder}`);
+    expect(text).not.toContain([...STRIPE.value].reverse().join(""));
+  });
+
+  it("hides values in compressed, slow and cookie responses", async () => {
+    const header = ["-H", `X-Echo: ${STRIPE.placeholder}`];
+    for (const route of ["/gzip", "/slow", "/v1/charges"]) {
+      const text = await raw("api.stripe.test", route, "--compressed", ...header);
+      expect(text).not.toContain(STRIPE.value);
+      expect(text).toContain(STRIPE.placeholder);
+    }
+    const refused = await raw("api.stripe.test", "/compress-other", ...header);
+    expect(refused).toMatch(/^HTTP\/1\.1 502/);
+    expect(refused).not.toContain(STRIPE.value);
   });
 
   it("tunnels other hosts untouched, so a placeholder sent elsewhere stays a placeholder", async () => {
@@ -232,5 +305,22 @@ describe("agent proxy", () => {
   it("matches wildcard hosts", async () => {
     await curl("store.myshop.test", "-H", `X-Shopify-Access-Token: ${SHOP.placeholder}`);
     expect(used).toContain(`SHOP_TOKEN@store.myshop.test`);
+  });
+
+  it("refuses clients without the session's proxy credentials", async () => {
+    const anonymous = proxy.url.replace(/\/\/[^@]+@/, "//");
+    const result = await run("curl", [
+      "-sS",
+      "-o",
+      "/dev/null",
+      "-w",
+      "%{http_code}",
+      "--proxy",
+      anonymous,
+      "--cacert",
+      bundle,
+      `https://api.stripe.test:${port}/`,
+    ]).catch((error: { stdout: string }) => error);
+    expect(result.stdout).toMatch(/407|000/);
   });
 });

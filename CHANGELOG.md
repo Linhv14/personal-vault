@@ -8,6 +8,21 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Security
+
+- Team vaults: captured passwords and new passkeys go only into personal items,
+  so a teammate cannot plant a matching login to catch them; team suggestions
+  name their vault; duplicated item ids can no longer shadow or delete a
+  personal item; the popup refuses a team key older than one it has seen;
+  re-keying deletes items that no longer open instead of getting stuck; a team
+  vault is capped at 5 MB, and the extension asks for `unlimitedStorage`.
+- `7key agent`: secrets are swapped into request headers only, never the URL
+  or body; compressed responses are decompressed before values are hidden and
+  unknown encodings are refused; values split across slow responses stay
+  hidden; the proxy needs a per-session password; wildcards on shared suffixes
+  and secrets under 8 characters are refused; Ctrl-C no longer kills 7key
+  before it cleans up and signs out.
+
 ### Added
 
 - `7key agent --project <name> --env <name> -- <command>` runs a command, such

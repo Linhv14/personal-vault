@@ -518,6 +518,8 @@ export const vi: Catalogue = {
   "error.orgs.link_limit": "Mỗi dự án liên kết tối đa {limit} repo.",
   "error.orgs.invalid_item": "Không lưu được mục này vào vault của team.",
   "error.orgs.item_limit": "Mỗi vault của team chứa tối đa {limit} mục.",
+  "error.orgs.vault_full":
+    "Vault của team đã đầy ({megabytes} MB). Hãy xoá bớt mục hoặc ghi chú lớn.",
   "error.ci.unauthorized": "Cần OIDC token hợp lệ của GitHub Actions.",
   "error.ci.forbidden": "Repo hoặc nhánh này chưa được liên kết.",
   "error.orgs.not_found": "Không tìm thấy, hoặc bạn không phải thành viên.",

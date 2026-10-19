@@ -11,6 +11,7 @@ import {
   registrableDomain,
   saveItem,
   type VaultItem,
+  isPersonal,
 } from "./vault.js";
 
 const PENDING_TTL_MS = 5 * 60_000;
@@ -71,7 +72,8 @@ async function readPending(sender: TrustedSender): Promise<PendingCapture | null
 
 function existingLogin(items: VaultItem[], pageUrl: string, username?: string) {
   return items.find(
-    (item) => matchesSite(item, pageUrl) && (item.username ?? "") === (username ?? ""),
+    (item) =>
+      isPersonal(item) && matchesSite(item, pageUrl) && (item.username ?? "") === (username ?? ""),
   );
 }
 
@@ -114,7 +116,15 @@ export async function handleAutofill(
       const suggestions = vault.items
         .filter((item) => matchesSite(item, sender.url))
         .sort(byLastUsed)
-        .map(({ id, title, username }) => ({ id, title, username }));
+        .map((item) => {
+          const shared = vault.sharedName(item);
+          return {
+            id: item.id,
+            title: item.title,
+            username: item.username,
+            ...(shared ? { vault: shared } : {}),
+          };
+        });
       return { ok: true, locked: false, suggestions, domain: sender.domain };
     }
 

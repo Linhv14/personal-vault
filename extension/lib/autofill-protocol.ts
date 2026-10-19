@@ -7,6 +7,7 @@ export interface Suggestion {
   id: string;
   title: string;
   username?: string;
+  vault?: string;
 }
 
 export interface PendingPrompt {

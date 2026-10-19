@@ -56,9 +56,22 @@ export async function syncSharedVaults(): Promise<number | null> {
     if (error instanceof ApiError && error.status === 0) return null;
     throw error;
   }
-  const before = await cachedVaults();
-  if (fingerprint(before) === fingerprint(vaults)) return 0;
-  await setLocal({ sharedVaults: vaults });
+  const { sharedVaults: before = [], sharedGenerations: floor = {} } = await getLocal();
+  const accepted = vaults.flatMap((vault) => {
+    if (vault.generation >= (floor[vault.teamId] ?? 0)) return [vault];
+    console.warn("Ignoring a team vault served with an older key:", vault.teamId);
+    const previous = before.find((entry) => entry.teamId === vault.teamId);
+    return previous ? [previous] : [];
+  });
+  const generations = { ...floor };
+  for (const vault of accepted) {
+    generations[vault.teamId] = Math.max(generations[vault.teamId] ?? 0, vault.generation);
+  }
+  if (fingerprint(before) === fingerprint(accepted)) {
+    await setLocal({ sharedGenerations: generations });
+    return 0;
+  }
+  await setLocal({ sharedVaults: accepted, sharedGenerations: generations });
   return 1;
 }
 
@@ -78,7 +91,9 @@ async function keyOf(vault: CachedSharedVault, me: Identity): Promise<Bytes> {
 export async function decryptSharedVaults(
   vaultKey: CryptoKey,
   includeTrashed: boolean,
+  taken: ReadonlySet<string> = new Set(),
 ): Promise<{ items: VaultItem[]; vaults: VaultDef[] }> {
+  const seen = new Set(taken);
   const vaults = await cachedVaults();
   if (vaults.length === 0) return { items: [], vaults: [] };
   const me = await knownIdentity(vaultKey).catch(() => null);
@@ -95,6 +110,8 @@ export async function decryptSharedVaults(
     }
     readable.push(vault);
     for (const record of vault.items) {
+      if (seen.has(record.id)) continue;
+      seen.add(record.id);
       try {
         const item = await openTeamItem<VaultItem>(
           key,
