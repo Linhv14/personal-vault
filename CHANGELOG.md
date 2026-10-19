@@ -8,6 +8,8 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-19
+
 ### Security
 
 - Team vaults: captured passwords and new passkeys go only into personal items,
@@ -24,6 +26,20 @@ version may change the API or storage format; such releases list the steps in
   before it cleans up and signs out.
 
 ### Added
+
+- Recovery code: create one under Settings → Security, then use **Forgot
+  master password?** in the popup to set a new password with it and a code
+  emailed to you. The code used is replaced and every device is signed out.
+  Migrations `0011` and `0012`.
+- CLI `7key login`, `7key link`, and `7key run`, `7key dotenv` and
+  `7key secrets` on your own computer. The session stays in the system
+  keychain; `.7key.json` names the project for a folder. `--project`, `--org`
+  and `--env` take an id, a handle (`trust1-portal`) or a name, and the
+  console's project menu copies the CLI command or the project id.
+- `7key agent` uses the login and the folder's link, and takes the login out
+  of the keychain while the agent runs.
+- Account emails (sign-up codes, recovery) are sent through Resend on
+  7key.online.
 
 - Turning on autofill also turns off the browser's own offer to save and fill
   passwords, in the same permission prompt (the optional `privacy`
@@ -566,7 +582,8 @@ Requires the upgrade steps in
 - English and Vietnamese interface.
 - One-command deployment to your own Cloudflare account.
 
-[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Linhv14/personal-vault/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Linhv14/personal-vault/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Linhv14/personal-vault/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Linhv14/personal-vault/releases/tag/v0.1.0
