@@ -64,20 +64,32 @@ function updateTap(stage: string, release: string, sha256: string): void {
   console.log(`Updated ${TAP}: brew install linhv14/7key/sevenkey`);
 }
 
-if (tapOnly) {
-  const response = await fetch(tarballUrl(version));
-  if (!response.ok) {
-    console.error(`${PACKAGE}@${version} is not on npm yet (${response.status})`);
-    process.exit(1);
-  }
-  const sha256 = createHash("sha256")
+async function publishedSha(release: string): Promise<string | null> {
+  const response = await fetch(tarballUrl(release));
+  if (!response.ok) return null;
+  return createHash("sha256")
     .update(new Uint8Array(await response.arrayBuffer()))
     .digest("hex");
+}
+
+async function updateTapFromNpm(release: string): Promise<boolean> {
+  const sha256 = await publishedSha(release);
+  if (!sha256) return false;
   const stage = mkdtempSync(path.join(tmpdir(), "7key-tap-"));
   try {
-    updateTap(stage, version, sha256);
+    updateTap(stage, release, sha256);
   } finally {
     rmSync(stage, { recursive: true, force: true });
+  }
+  return true;
+}
+
+const LATER = `Approve it on npmjs.com if npm staged it, then run: npm run publish:cli -- ${version} --tap-only`;
+
+if (tapOnly) {
+  if (!(await updateTapFromNpm(version))) {
+    console.error(`${PACKAGE}@${version} is not on npm yet. ${LATER}`);
+    process.exit(1);
   }
   process.exit(0);
 }
@@ -113,7 +125,7 @@ try {
   if (published.status !== 0) process.exit(published.status ?? 1);
   console.log(`Published ${PACKAGE}@${version} to npm`);
 
-  updateTap(stage, version, sha256);
+  if (!(await updateTapFromNpm(version))) console.log(LATER);
 } finally {
   rmSync(stage, { recursive: true, force: true });
 }
