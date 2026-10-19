@@ -16,6 +16,8 @@ import {
   newItemId,
   openVault,
   registrableDomain,
+  sameSite,
+  siteOf,
   saveItem,
   type OpenVault,
   type VaultItem,
@@ -27,6 +29,7 @@ const UNCONFIRMED_TTL_MS = 60_000;
 
 interface PendingCapture {
   domain: string;
+  site?: string;
   username?: string;
   password: string;
   at: number;
@@ -37,6 +40,7 @@ export interface TrustedSender {
   tabId: number;
   url: string;
   domain: string;
+  site?: string;
 }
 
 function isFillableUrl(url: URL): boolean {
@@ -59,7 +63,7 @@ export function trustedSender(
   }
   const domain = registrableDomain(url.href);
   if (!isFillableUrl(url) || !domain) return null;
-  return { tabId: sender.tab.id, url: url.href, domain };
+  return { tabId: sender.tab.id, url: url.href, domain, site: siteOf(url.href) ?? domain };
 }
 
 function pendingKey(tabId: number): string {
@@ -72,6 +76,7 @@ function totpKey(tabId: number): string {
 
 interface PendingTotp {
   domain: string;
+  site?: string;
   config: TotpConfig;
   targetId?: string;
   at: number;
@@ -88,7 +93,9 @@ function suggestionOf(item: VaultItem, vault: OpenVault): Suggestion {
 }
 
 function totpTarget(items: VaultItem[], pageUrl: string): VaultItem | undefined {
-  return items.filter((item) => isPersonal(item) && matchesSite(item, pageUrl)).sort(byLastUsed)[0];
+  return items
+    .filter((item) => isPersonal(item) && matchesSite(item, pageUrl) && sameSite(item, pageUrl))
+    .sort(bySite(pageUrl))[0];
 }
 
 async function currentCode(config: TotpConfig): Promise<string> {
@@ -144,10 +151,22 @@ async function readPending(sender: TrustedSender): Promise<PendingCapture | null
 }
 
 function existingLogin(items: VaultItem[], pageUrl: string, username?: string) {
-  return items.find(
+  const candidates = items.filter(
     (item) =>
-      isPersonal(item) && matchesSite(item, pageUrl) && (item.username ?? "") === (username ?? ""),
+      isPersonal(item) &&
+      matchesSite(item, pageUrl) &&
+      (item.username ?? "") === (username ?? "") &&
+      (item.urlMatch === "host" || sameSite(item, pageUrl) !== null),
   );
+  return (
+    candidates.find((item) => sameSite(item, pageUrl) === "exact") ??
+    candidates.find((item) => item.urlMatch === "host" || sameSite(item, pageUrl) === "related")
+  );
+}
+
+function bySite(pageUrl: string) {
+  const rank = (item: VaultItem) => (sameSite(item, pageUrl) === "exact" ? 0 : 1);
+  return (a: VaultItem, b: VaultItem) => rank(a) - rank(b) || byLastUsed(a, b);
 }
 
 function promptFor(
@@ -158,7 +177,7 @@ function promptFor(
   const existing = items && existingLogin(items, pageUrl, pending.username);
   if (existing?.password === pending.password) return null;
   return {
-    domain: pending.domain,
+    domain: pending.site ?? pending.domain,
     username: pending.username,
     update: Boolean(existing),
     confirmed: Boolean(pending.confirmed),
@@ -188,7 +207,7 @@ export async function handleAutofill(
       if (!vault) return { ok: true, locked: true };
       const suggestions = vault.items
         .filter((item) => matchesSite(item, sender.url))
-        .sort(byLastUsed)
+        .sort(bySite(sender.url))
         .map((item) => suggestionOf(item, vault));
       return { ok: true, locked: false, suggestions, domain: sender.domain };
     }
@@ -211,6 +230,7 @@ export async function handleAutofill(
       if (!request.password || (await isVaultServer(sender.url))) return { ok: true, prompt: null };
       const pending: PendingCapture = {
         domain: sender.domain,
+        site: sender.site,
         username: request.username || undefined,
         password: request.password,
         at: Date.now(),
@@ -260,8 +280,8 @@ export async function handleAutofill(
             }
           : {
               id: newItemId(),
-              title: pending.domain,
-              url: pending.domain,
+              title: pending.site ?? pending.domain,
+              url: pending.site ?? pending.domain,
               username: pending.username,
               password: pending.password,
             },
@@ -306,13 +326,14 @@ export async function handleAutofill(
       if (target?.totp?.secret === config.secret) return { ok: true, totp: null };
       const pending: PendingTotp = {
         domain: sender.domain,
+        site: sender.site,
         config,
         ...(target ? { targetId: target.id } : {}),
         at: Date.now(),
       };
       await chrome.storage.session.set({ [totpKey(sender.tabId)]: pending });
       const prompt: TotpPrompt = {
-        domain: sender.domain,
+        domain: sender.site ?? sender.domain,
         ...(target
           ? { target: target.username ? `${target.title} (${target.username})` : target.title }
           : {}),
@@ -338,8 +359,8 @@ export async function handleAutofill(
           ? { ...target, totp: pending.config }
           : {
               id: newItemId(),
-              title: pending.domain,
-              url: pending.domain,
+              title: pending.site ?? pending.domain,
+              url: pending.site ?? pending.domain,
               totp: pending.config,
             },
         target,

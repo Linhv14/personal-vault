@@ -500,6 +500,43 @@ export function registrableDomain(rawUrl: string): string | null {
   return labels.slice(-2).join(".");
 }
 
+const SIGN_IN_PREFIXES = new Set([
+  "accounts",
+  "account",
+  "login",
+  "signin",
+  "auth",
+  "sso",
+  "id",
+  "secure",
+]);
+
+export function siteOf(rawUrl: string): string | null {
+  const host = hostname(rawUrl);
+  const domain = registrableDomain(rawUrl);
+  if (!host || !domain || host === domain || !host.endsWith(`.${domain}`)) return host ?? domain;
+  const [first, ...rest] = host.split(".");
+  return first && SIGN_IN_PREFIXES.has(first) && rest.join(".") === domain ? domain : host;
+}
+
+export function sameSite(
+  item: Pick<VaultItem, "url" | "urls">,
+  pageUrl: string,
+): "exact" | "related" | null {
+  const page = siteOf(pageUrl);
+  const domain = registrableDomain(pageUrl);
+  if (!page || !domain) return null;
+  let best: "exact" | "related" | null = null;
+  for (const site of itemSites(item)) {
+    const stored = siteOf(site);
+    if (stored === page) return "exact";
+    if (registrableDomain(site) === domain && stored === domain) {
+      best = "related";
+    }
+  }
+  return best;
+}
+
 function hostname(rawUrl: string): string | null {
   try {
     return new URL(rawUrl.includes("://") ? rawUrl : `https://${rawUrl}`).hostname.replace(

@@ -122,6 +122,7 @@ describe("trustedSender", () => {
       tabId: 7,
       url: "https://github.com/login",
       domain: "github.com",
+      site: "github.com",
     });
   });
 
@@ -312,13 +313,13 @@ describe("capture and save", () => {
     );
     expect(captured).toEqual({
       ok: true,
-      prompt: { domain: "example.com", username: "reader", update: false, confirmed: false },
+      prompt: { domain: "news.example.com", username: "reader", update: false, confirmed: false },
     });
 
     expect(await handleAutofill({ type: "autofill:pending" }, page)).toEqual(captured);
     expect(await handleAutofill({ type: "autofill:confirm" }, page)).toEqual({
       ok: true,
-      prompt: { domain: "example.com", username: "reader", update: false, confirmed: true },
+      prompt: { domain: "news.example.com", username: "reader", update: false, confirmed: true },
     });
     expect(await handleAutofill({ type: "autofill:save" }, page)).toEqual({
       ok: true,
@@ -328,8 +329,8 @@ describe("capture and save", () => {
 
     const [saved] = await decryptAll(key);
     expect(saved).toMatchObject({
-      title: "example.com",
-      url: "example.com",
+      title: "news.example.com",
+      url: "news.example.com",
       username: "reader",
       password: "fresh-password",
     });
@@ -337,6 +338,57 @@ describe("capture and save", () => {
       ok: true,
       prompt: null,
     });
+  });
+
+  it("keeps products under one domain apart, and signs in on accounts. as the domain", async () => {
+    await unlockWith([]);
+    const capture = async (url: string, password: string) => {
+      const page = sender(url)!;
+      const result = await handleAutofill(
+        { type: "autofill:capture", username: "me@gmail.com", password },
+        page,
+      );
+      await handleAutofill({ type: "autofill:save" }, page);
+      return result;
+    };
+    expect(await capture("https://gemini.google.com/app", "gemini-pass")).toMatchObject({
+      prompt: { domain: "gemini.google.com", update: false },
+    });
+    expect(await capture("https://mail.google.com/", "mail-pass")).toMatchObject({
+      prompt: { domain: "mail.google.com", update: false },
+    });
+    expect(await capture("https://accounts.google.com/signin", "account-pass")).toMatchObject({
+      prompt: { domain: "google.com", update: false },
+    });
+    const items = await decryptAll(key);
+    expect(items.map((item) => [item.url, item.password]).sort()).toEqual([
+      ["gemini.google.com", "gemini-pass"],
+      ["google.com", "account-pass"],
+      ["mail.google.com", "mail-pass"],
+    ]);
+
+    const suggested = await handleAutofill(
+      { type: "autofill:suggest" },
+      sender("https://mail.google.com/")!,
+    );
+    expect((suggested as { suggestions: { title: string }[] }).suggestions[0]?.title).toBe(
+      "mail.google.com",
+    );
+  });
+
+  it("still updates a login saved for the whole domain from one of its subdomains", async () => {
+    await unlockWith([]);
+    const root = sender("https://example.org/login")!;
+    await handleAutofill({ type: "autofill:capture", username: "me", password: "one" }, root);
+    await handleAutofill({ type: "autofill:save" }, root);
+    const sub = sender("https://app.example.org/settings")!;
+    expect(
+      await handleAutofill({ type: "autofill:capture", username: "me", password: "two" }, sub),
+    ).toMatchObject({ prompt: { update: true } });
+    await handleAutofill({ type: "autofill:save" }, sub);
+    const items = await decryptAll(key);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ url: "example.org", password: "two" });
   });
 
   it("never offers to save or fill the master password on the vault's own server", async () => {
