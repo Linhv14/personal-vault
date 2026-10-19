@@ -45,15 +45,28 @@ taps that are not its own. `npx @7key/cli agent …` also works without
 installing. Then:
 
 ```bash
+7key login     # once
+7key link      # once per folder: organization, project, environment
+7key agent -- claude
+```
+
+7key shows which secrets go to which hosts and waits for your yes (`--yes`
+skips it). It never asks for your password while the command runs; anything
+that does is the agent, not 7key.
+
+While the agent runs, your login is taken out of the keychain and kept only in
+7key's memory, so the agent cannot run `7key run` or `7key dotenv`, or read the
+keychain, to get real values. It goes back when the agent exits; if 7key is
+killed outright, run `7key login` again.
+
+Without logging in, pass the project and environment and type your master
+password; 7key signs out when the command ends:
+
+```bash
 7key agent --email you@example.com --project "Payments API" --env Development -- claude
 ```
 
-7key asks for your master password, shows which secrets go to which hosts, and
-waits for your yes (`--yes` skips it). After that 7key never asks for the
-password again while the command runs; anything that does is the agent, not
-7key. Pass `--org` when two organizations have
-a project with the same name. The email and server are remembered in
-`~/.config/7key/config.json`; the password never is.
+Pass `--org` when two organizations have a project with the same name.
 
 Inside the session:
 

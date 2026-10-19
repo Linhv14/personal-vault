@@ -38,3 +38,29 @@ export async function confirm(question: string): Promise<boolean> {
     reader.close();
   }
 }
+
+export async function ask(question: string): Promise<string> {
+  if (!process.stdin.isTTY) throw new AgentError("A terminal is needed to answer: " + question);
+  const reader = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    return (await reader.question(question)).trim();
+  } finally {
+    reader.close();
+  }
+}
+
+export async function choose(title: string, options: string[]): Promise<number> {
+  if (options.length === 1) {
+    process.stderr.write(`${title}: ${options[0]}\n`);
+    return 0;
+  }
+  if (!process.stdin.isTTY) {
+    throw new AgentError(`Several choices for ${title.toLowerCase()}; pass it as a flag`);
+  }
+  process.stderr.write(`${title}\n`);
+  options.forEach((option, index) => process.stderr.write(`  ${index + 1}) ${option}\n`));
+  for (;;) {
+    const answer = Number(await ask(`Choose 1-${options.length}: `));
+    if (Number.isInteger(answer) && answer >= 1 && answer <= options.length) return answer - 1;
+  }
+}

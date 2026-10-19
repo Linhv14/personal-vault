@@ -1,22 +1,54 @@
 import { spawn } from "node:child_process";
 import { formatDotenv } from "../src/core/projects.js";
+import {
+  defaultContext,
+  dotenvLocal,
+  link,
+  listSecrets,
+  login,
+  logout,
+  parseFlags,
+  runLocal,
+  whoami,
+  type Context,
+  type Flags,
+} from "./account/commands.js";
 import { agentMain } from "./agent/main.js";
 import { CiError, DEFAULT_SERVER, exportToGithubEnv, fetchSecrets } from "./ci-client.js";
 
 const USAGE = `Usage: 7key <command> [options]
 
+On your computer
+  login               Sign in once; the session stays in the system keychain
+  link                Pick the organization, project and environment for this folder
   run -- <command…>   Run a command with the linked secrets in its environment
-  env                 Export the linked secrets to later GitHub Actions steps
   dotenv              Print the linked secrets as a .env file
-  agent               Let a command, such as an AI agent, use secrets it cannot see
-                      (7key agent --help)
+  secrets             List the linked secrets by name, without values
+  agent -- <command…> Let an AI agent use secrets it cannot see (7key agent --help)
+  whoami | logout
+
+  --project <name> --env <name> [--org <name>] pick another project or environment
+  --env <name> alone switches the environment of the linked project
+
+In GitHub Actions (SEVENKEY_LINK and SEVENKEY_KEY set)
+  run -- <command…>   Run a command with the repository's secrets
+  env                 Export the secrets to later steps
+  dotenv              Print the secrets as a .env file
 
 Options
   --link <ref>        Repository link, as shown in the 7key console (or SEVENKEY_LINK)
   --server <url>      7key server (or SEVENKEY_SERVER, default ${DEFAULT_SERVER})
-
-The repository key is read from SEVENKEY_KEY, which should be a GitHub secret.
 `;
+
+const LOCAL: Record<string, (flags: Flags, context: Context) => Promise<number>> = {
+  login,
+  logout,
+  whoami,
+  link,
+  run: runLocal,
+  dotenv: dotenvLocal,
+  secrets: listSecrets,
+};
 
 interface Parsed {
   command: string | undefined;
@@ -46,8 +78,17 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv): Parsed {
   return parsed;
 }
 
+function ciMode(argv: string[], env: NodeJS.ProcessEnv): boolean {
+  return argv.includes("--link") || Boolean(env.SEVENKEY_LINK) || Boolean(env.SEVENKEY_KEY);
+}
+
 export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
   if (argv[0] === "agent") return agentMain(argv.slice(1), env);
+  const local = argv[0] ? LOCAL[argv[0]] : undefined;
+  const ciCommand = argv[0] === "run" || argv[0] === "dotenv";
+  if (local && !(ciCommand && ciMode(argv, env))) {
+    return local(parseFlags(argv.slice(1)), defaultContext(env));
+  }
   const { command, link, server, rest } = parseArgs(argv, env);
   if (!command || command === "help" || command === "--help") {
     console.log(USAGE);

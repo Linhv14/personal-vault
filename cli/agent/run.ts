@@ -12,6 +12,7 @@ import {
   selectEnvironment,
   signIn,
   signOut,
+  type Selected,
   type Session,
 } from "./session.js";
 import { MIN_SECRET_LENGTH, newPlaceholder, type Injectable } from "./substitute.js";
@@ -19,9 +20,11 @@ import { MIN_SECRET_LENGTH, newPlaceholder, type Injectable } from "./substitute
 export interface AgentOptions {
   server: string;
   email: string;
+  session?: Session;
+  select?: (session: Session) => Promise<Selected>;
   org?: string;
-  project: string;
-  environment: string;
+  project?: string;
+  environment?: string;
   yes: boolean;
   command: string[];
   env: NodeJS.ProcessEnv;
@@ -115,17 +118,25 @@ function describe(selected: Plan): string[] {
 export async function runAgent(options: AgentOptions): Promise<number> {
   const [program, ...args] = options.command;
   if (!program) throw new AgentError("Nothing to run: add -- <command>");
-  const password = await options.askPassword(`Master password for ${options.email}: `);
-  const session: Session = await signIn(options.server, options.email, password, options.request);
+  const session: Session =
+    options.session ??
+    (await signIn(
+      options.server,
+      options.email,
+      await options.askPassword(`Master password for ${options.email}: `),
+      options.request,
+    ));
   let directory: string | undefined;
   let proxy: Awaited<ReturnType<typeof startProxy>> | undefined;
   try {
-    const selected = await selectEnvironment(
-      session,
-      options.project,
-      options.environment,
-      options.org,
-    );
+    const selected = options.select
+      ? await options.select(session)
+      : await selectEnvironment(
+          session,
+          options.project ?? "",
+          options.environment ?? "",
+          options.org,
+        );
     const prepared = plan(selected.secrets);
     options.log(
       `7key: ${selected.projectName} / ${selected.environment.name} for ${[program, ...args].join(" ")}`,
@@ -163,7 +174,9 @@ export async function runAgent(options: AgentOptions): Promise<number> {
     });
     const env = childEnvironment(options.env, prepared, proxy.url, files);
     options.log(
-      "7key: starting. 7key will not ask for your password again until this command exits.",
+      options.session
+        ? "7key: starting. 7key never asks for your password while this command runs."
+        : "7key: starting. 7key will not ask for your password again until this command exits.",
     );
     const code = await new Promise<number>((resolve) => {
       const child = spawn(program, args, { stdio: "inherit", env });
@@ -191,6 +204,6 @@ export async function runAgent(options: AgentOptions): Promise<number> {
   } finally {
     await proxy?.close();
     if (directory) rmSync(directory, { recursive: true, force: true });
-    await signOut(session);
+    if (!options.session) await signOut(session);
   }
 }

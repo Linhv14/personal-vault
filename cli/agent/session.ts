@@ -24,6 +24,7 @@ export class AgentError extends Error {}
 export interface Session {
   server: string;
   token: string;
+  expiresAt?: number;
   identity: Identity;
   request: typeof fetch;
 }
@@ -53,6 +54,9 @@ async function call<T>(
     throw new AgentError(`Cannot reach ${server}`);
   }
   const body = (await response.json().catch(() => ({}))) as T & { error?: string };
+  if (response.status === 401 && init.token) {
+    throw new AgentError("Your 7key session has expired. Run: 7key login");
+  }
   if (!response.ok) {
     throw new AgentError(`${server} refused ${path} (${response.status}): ${body.error ?? ""}`);
   }
@@ -72,7 +76,7 @@ export async function signIn(
   });
   const masterKey = await deriveMasterKey(email, password, kdf);
   const authKey = toBase64(await deriveAuthKey(masterKey));
-  const login = await call<{ token: string; wrappedVaultKey: SealedData }>(
+  const login = await call<{ token: string; expiresAt: number; wrappedVaultKey: SealedData }>(
     request,
     origin,
     "/api/auth/login",
@@ -92,6 +96,7 @@ export async function signIn(
   return {
     server: origin,
     token: login.token,
+    expiresAt: login.expiresAt,
     request,
     identity: {
       publicKey: identity.publicKey,
@@ -113,76 +118,103 @@ export async function signOut(session: Session): Promise<void> {
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-export async function selectEnvironment(
-  session: Session,
-  projectName: string,
-  environmentName: string,
-  orgName?: string,
-): Promise<Selected> {
-  const get = <T>(path: string) =>
+export interface ProjectChoice {
+  orgId: string;
+  orgName: string;
+  teamId: string;
+  teamName: string;
+  projectId: string;
+  content: ProjectContent;
+  generation: number;
+}
+
+export interface EnvironmentRef {
+  orgId: string;
+  teamId: string;
+  projectId: string;
+  environmentId: string;
+}
+
+export function findEnvironment(
+  content: ProjectContent,
+  wanted: { id?: string; name?: string },
+): Environment {
+  const environment = content.environments.find((entry) =>
+    wanted.name ? same(entry.name, wanted.name) : entry.id === wanted.id,
+  );
+  if (environment) return environment;
+  const names = content.environments.map((entry) => entry.name).join(", ");
+  throw new AgentError(
+    wanted.name
+      ? `No environment "${wanted.name}" in ${content.name} (${names})`
+      : "The linked environment is gone; run 7key link",
+  );
+}
+
+function getter(session: Session) {
+  return <T>(path: string) =>
     call<T>(session.request, session.server, path, { token: session.token });
-  const { orgs } = await get<{ orgs: { id: string; name: string }[] }>("/api/orgs");
-  const matches: (Omit<Selected, "environment" | "secrets"> & { where: string })[] = [];
-  const contents = new Map<string, { content: ProjectContent; generation: number }>();
-  for (const org of orgs.filter((entry) => !orgName || same(entry.name, orgName))) {
-    const detail = await get<{
-      teams: TeamView[];
-      projects: Record<
-        string,
-        { generation: number; projects: { id: string; sealed: SealedData }[] }
-      >;
-    }>(`/api/orgs/${org.id}`);
-    for (const team of detail.teams) {
-      const listed = detail.projects[team.id];
-      if (!team.wrappedKey || !listed) continue;
-      const teamKey = new Uint8Array(
-        await unwrapForRecipient(
-          session.identity,
-          team.wrappedKey,
-          teamKeyContext(team.id, listed.generation),
-        ),
-      );
-      for (const record of listed.projects) {
-        const content = await openProject(teamKey, record.id, listed.generation, record.sealed);
-        if (!same(content.name, projectName)) continue;
-        contents.set(record.id, { content, generation: listed.generation });
-        matches.push({
-          orgId: org.id,
-          teamId: team.id,
-          projectId: record.id,
-          projectName: content.name,
-          where: `${org.name} / ${team.name}`,
-        });
-      }
+}
+
+export async function listOrgs(session: Session): Promise<{ id: string; name: string }[]> {
+  const { orgs } = await getter(session)<{ orgs: { id: string; name: string }[] }>("/api/orgs");
+  return orgs;
+}
+
+export async function listProjects(
+  session: Session,
+  org: { id: string; name: string },
+): Promise<ProjectChoice[]> {
+  const detail = await getter(session)<{
+    teams: TeamView[];
+    projects: Record<
+      string,
+      { generation: number; projects: { id: string; sealed: SealedData }[] }
+    >;
+  }>(`/api/orgs/${org.id}`);
+  const choices: ProjectChoice[] = [];
+  for (const team of detail.teams) {
+    const listed = detail.projects[team.id];
+    if (!team.wrappedKey || !listed) continue;
+    const teamKey = new Uint8Array(
+      await unwrapForRecipient(
+        session.identity,
+        team.wrappedKey,
+        teamKeyContext(team.id, listed.generation),
+      ),
+    );
+    for (const record of listed.projects) {
+      choices.push({
+        orgId: org.id,
+        orgName: org.name,
+        teamId: team.id,
+        teamName: team.name,
+        projectId: record.id,
+        content: await openProject(teamKey, record.id, listed.generation, record.sealed),
+        generation: listed.generation,
+      });
     }
   }
-  if (matches.length === 0) {
-    const scope = orgName ? ` of ${orgName}` : "";
-    throw new AgentError(`No project named "${projectName}" in your teams${scope}`);
-  }
-  if (matches.length > 1) {
-    const places = matches.map((entry) => entry.where).join(", ");
-    throw new AgentError(`"${projectName}" is in ${places}; pass --org to pick one`);
-  }
-  const { where: _where, ...match } = matches[0]!;
-  const { content, generation } = contents.get(match.projectId)!;
-  const environment = content.environments.find((entry) => same(entry.name, environmentName));
-  if (!environment) {
-    const names = content.environments.map((entry) => entry.name).join(", ");
-    throw new AgentError(`No environment "${environmentName}" in ${content.name} (${names})`);
-  }
-  const { secrets } = await get<{ secrets: { id: string; sealed: SealedData }[] }>(
-    `/api/orgs/${match.orgId}/teams/${match.teamId}/projects/${match.projectId}/environments/${environment.id}/secrets`,
+  return choices;
+}
+
+async function openEnvironment(
+  session: Session,
+  choice: ProjectChoice,
+  environment: Environment,
+): Promise<Selected> {
+  const { secrets } = await getter(session)<{ secrets: { id: string; sealed: SealedData }[] }>(
+    `/api/orgs/${choice.orgId}/teams/${choice.teamId}/projects/${choice.projectId}/environments/${environment.id}/secrets`,
   );
   const opened = await Promise.all(
     secrets.map(
       async (record) =>
         (
           await openSecretWithOrigin(
-            content,
+            choice.content,
             {
-              projectId: match.projectId,
-              generation,
+              projectId: choice.projectId,
+              generation: choice.generation,
               environmentId: environment.id,
               secretId: record.id,
             },
@@ -191,7 +223,59 @@ export async function selectEnvironment(
         ).content,
     ),
   );
-  return { ...match, environment, secrets: opened.sort((a, b) => a.name.localeCompare(b.name)) };
+  return {
+    orgId: choice.orgId,
+    teamId: choice.teamId,
+    projectId: choice.projectId,
+    projectName: choice.content.name,
+    environment,
+    secrets: opened.sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+export async function loadEnvironment(
+  session: Session,
+  ref: EnvironmentRef,
+  environmentName?: string,
+): Promise<Selected> {
+  const org = (await listOrgs(session)).find((entry) => entry.id === ref.orgId);
+  if (!org) throw new AgentError("The linked organization is gone or you left it; run 7key link");
+  const choice = (await listProjects(session, org)).find(
+    (entry) => entry.projectId === ref.projectId && entry.teamId === ref.teamId,
+  );
+  if (!choice) throw new AgentError("The linked project is gone or out of reach; run 7key link");
+  const environment = findEnvironment(choice.content, {
+    id: ref.environmentId,
+    name: environmentName,
+  });
+  return openEnvironment(session, choice, environment);
+}
+
+export async function selectEnvironment(
+  session: Session,
+  projectName: string,
+  environmentName: string,
+  orgName?: string,
+): Promise<Selected> {
+  const matches: ProjectChoice[] = [];
+  for (const org of (await listOrgs(session)).filter(
+    (entry) => !orgName || same(entry.name, orgName),
+  )) {
+    for (const choice of await listProjects(session, org)) {
+      if (same(choice.content.name, projectName)) matches.push(choice);
+    }
+  }
+  if (matches.length === 0) {
+    const scope = orgName ? ` of ${orgName}` : "";
+    throw new AgentError(`No project named "${projectName}" in your teams${scope}`);
+  }
+  if (matches.length > 1) {
+    const places = matches.map((entry) => `${entry.orgName} / ${entry.teamName}`).join(", ");
+    throw new AgentError(`"${projectName}" is in ${places}; pass --org to pick one`);
+  }
+  const choice = matches[0]!;
+  const environment = findEnvironment(choice.content, { name: environmentName });
+  return openEnvironment(session, choice, environment);
 }
 
 export async function noteAccess(

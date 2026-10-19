@@ -1,22 +1,30 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import path from "node:path";
 import { DEFAULT_SERVER } from "../../src/core/brand.js";
+import {
+  currentSession,
+  defaultContext,
+  resolveSelection,
+  type Flags,
+} from "../account/commands.js";
+import { pauseLogin } from "../account/credentials.js";
+import { remember, remembered } from "./config.js";
 import { runAgent } from "./run.js";
 import { AgentError } from "./session.js";
 import { askHidden, confirm } from "./terminal.js";
 
-export const AGENT_USAGE = `Usage: 7key agent --project <name> --env <name> [options] -- <command…>
+export const AGENT_USAGE = `Usage: 7key agent [options] -- <command…>
 
 Runs a command, such as an AI coding agent, that can call APIs with a project's
 secrets without ever seeing them. The command gets a placeholder in place of
 each secret; a local proxy swaps in the real value only on requests to the
 hosts allowed for that secret in the 7key console.
 
+In a folder linked with \`7key link\`, and after \`7key login\`, no option is
+needed. Otherwise pass --project and --env, and type your master password.
+
 Options
   --project <name>    Project, as named in the console
   --org <name>        Organization, when several have a project of that name
-  --env <name>        Environment, such as Development
+  --env <name>        Environment, such as Development (overrides the link)
   --email <address>   Your 7key account (or SEVENKEY_EMAIL; remembered)
   --server <url>      7key server (or SEVENKEY_SERVER, default ${DEFAULT_SERVER})
   --yes               Skip the confirmation
@@ -58,45 +66,52 @@ export function parseAgentArgs(argv: string[]): AgentArgs {
   return parsed;
 }
 
-interface Remembered {
-  email?: string;
-  server?: string;
-}
-
-function configFile(env: NodeJS.ProcessEnv): string {
-  const base = env.XDG_CONFIG_HOME ?? path.join(homedir(), ".config");
-  return path.join(base, "7key", "config.json");
-}
-
-function remembered(env: NodeJS.ProcessEnv): Remembered {
-  const file = configFile(env);
-  if (!existsSync(file)) return {};
-  try {
-    return JSON.parse(readFileSync(file, "utf8")) as Remembered;
-  } catch {
-    return {};
-  }
-}
-
-function remember(env: NodeJS.ProcessEnv, value: Remembered): void {
-  const file = configFile(env);
-  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
-}
-
 export async function agentMain(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
   const args = parseAgentArgs(argv);
   if (args.help) {
     console.log(AGENT_USAGE);
     return 0;
   }
+  if (args.command.length === 0) {
+    throw new AgentError(`Missing the command\n\n${AGENT_USAGE}`);
+  }
+  const context = defaultContext(env);
+  const session = currentSession(context);
+  const flags: Flags = {
+    org: args.org,
+    project: args.project,
+    environment: args.environment,
+    command: args.command,
+  };
+  if (session) {
+    const restore = pauseLogin(env, context.keyring);
+    const restoreOnExit = () => restore();
+    process.once("exit", restoreOnExit);
+    try {
+      return await runAgent({
+        server: session.server,
+        email: "",
+        session,
+        select: (current) => resolveSelection(flags, context, current),
+        yes: args.yes,
+        command: args.command,
+        env,
+        askPassword: askHidden,
+        confirm,
+        log: (line) => console.error(line),
+      });
+    } finally {
+      process.off("exit", restoreOnExit);
+      restore();
+    }
+  }
   const saved = remembered(env);
   const email = args.email ?? env.SEVENKEY_EMAIL ?? saved.email;
   const server = args.server ?? env.SEVENKEY_SERVER ?? saved.server ?? DEFAULT_SERVER;
-  if (!args.project || !args.environment || args.command.length === 0) {
-    throw new AgentError(`Missing --project, --env or the command\n\n${AGENT_USAGE}`);
+  if (!args.project || !args.environment) {
+    throw new AgentError("Run 7key login and 7key link first, or pass --project and --env");
   }
-  if (!email) throw new AgentError("Pass --email the first time");
+  if (!email) throw new AgentError("Pass --email the first time, or run 7key login");
   remember(env, { email, server });
   return runAgent({
     server,
