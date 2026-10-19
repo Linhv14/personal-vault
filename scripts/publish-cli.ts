@@ -11,12 +11,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { FORMULA, PACKAGE, TAP, formula, packageJson } from "./cli-package.ts";
+import { BIN, FORMULA, PACKAGE, TAP, formula, packageJson, tarballUrl } from "./cli-package.ts";
 
 const root = path.resolve(import.meta.dirname, "..");
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
+const tapOnly = args.includes("--tap-only");
 const version = args.find((arg) => !arg.startsWith("--"));
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
   console.error("Usage: npm run publish:cli -- <version> [--dry-run], for example 1.3.1");
@@ -30,6 +31,55 @@ function run(command: string, list: string[], cwd = root, allowFailure = false):
     process.exit(result.status ?? 1);
   }
   return result.status === 0 ? result.stdout.trim() : "";
+}
+
+function updateTap(stage: string, release: string, sha256: string): void {
+  const tap = path.join(stage, "tap");
+  if (!run("gh", ["repo", "view", TAP, "--json", "name"], root, true)) {
+    run("gh", [
+      "repo",
+      "create",
+      TAP,
+      "--public",
+      "--description",
+      "Homebrew tap for the 7key CLI",
+    ]);
+  }
+  run("gh", ["repo", "clone", TAP, tap]);
+  run("git", ["checkout", "-B", "main"], tap);
+  mkdirSync(path.join(tap, "Formula"), { recursive: true });
+  mkdirSync(path.join(tap, "Aliases"), { recursive: true });
+  writeFileSync(path.join(tap, "Formula", `${FORMULA}.rb`), formula(release, sha256));
+  rmSync(path.join(tap, "Aliases", BIN), { force: true });
+  symlinkSync(`../Formula/${FORMULA}.rb`, path.join(tap, "Aliases", BIN));
+  writeFileSync(
+    path.join(tap, "README.md"),
+    `# 7key Homebrew tap\n\n\`\`\`bash\nbrew tap linhv14/7key\nbrew trust linhv14/7key\nbrew install linhv14/7key/7key\n\`\`\`\n\nSee https://7key.online.\n`,
+  );
+  run("git", ["add", "-A"], tap);
+  if (run("git", ["status", "--porcelain"], tap)) {
+    run("git", ["commit", "-m", `7key ${release}`], tap);
+    run("git", ["push", "origin", "HEAD:main"], tap);
+  }
+  console.log(`Updated ${TAP}: brew install linhv14/7key/7key`);
+}
+
+if (tapOnly) {
+  const response = await fetch(tarballUrl(version));
+  if (!response.ok) {
+    console.error(`${PACKAGE}@${version} is not on npm yet (${response.status})`);
+    process.exit(1);
+  }
+  const sha256 = createHash("sha256")
+    .update(new Uint8Array(await response.arrayBuffer()))
+    .digest("hex");
+  const stage = mkdtempSync(path.join(tmpdir(), "7key-tap-"));
+  try {
+    updateTap(stage, version, sha256);
+  } finally {
+    rmSync(stage, { recursive: true, force: true });
+  }
+  process.exit(0);
 }
 
 run(process.execPath, [path.join(root, "scripts", "build.ts")]);
@@ -63,34 +113,7 @@ try {
   if (published.status !== 0) process.exit(published.status ?? 1);
   console.log(`Published ${PACKAGE}@${version} to npm`);
 
-  const tap = path.join(stage, "tap");
-  if (!run("gh", ["repo", "view", TAP, "--json", "name"], root, true)) {
-    run("gh", [
-      "repo",
-      "create",
-      TAP,
-      "--public",
-      "--description",
-      "Homebrew tap for the 7key CLI",
-    ]);
-  }
-  run("gh", ["repo", "clone", TAP, tap]);
-  run("git", ["checkout", "-B", "main"], tap);
-  mkdirSync(path.join(tap, "Formula"), { recursive: true });
-  mkdirSync(path.join(tap, "Aliases"), { recursive: true });
-  writeFileSync(path.join(tap, "Formula", `${FORMULA}.rb`), formula(version, sha256));
-  rmSync(path.join(tap, "Aliases", PACKAGE), { force: true });
-  symlinkSync(`../Formula/${FORMULA}.rb`, path.join(tap, "Aliases", PACKAGE));
-  writeFileSync(
-    path.join(tap, "README.md"),
-    `# 7key Homebrew tap\n\n\`\`\`bash\nbrew tap linhv14/7key\nbrew trust linhv14/7key\nbrew install linhv14/7key/7key\n\`\`\`\n\nSee https://7key.online.\n`,
-  );
-  run("git", ["add", "-A"], tap);
-  if (run("git", ["status", "--porcelain"], tap)) {
-    run("git", ["commit", "-m", `7key ${version}`], tap);
-    run("git", ["push", "origin", "HEAD:main"], tap);
-  }
-  console.log(`Updated ${TAP}: brew install linhv14/7key/7key`);
+  updateTap(stage, version, sha256);
 } finally {
   rmSync(stage, { recursive: true, force: true });
 }
