@@ -1856,3 +1856,25 @@ details.history .field-row {
   color: var(--muted);
   font-weight: 600;
 }
+
+.recovery-code {
+  display: block;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  text-align: center;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.recovery-reveal .actions {
+  display: flex;
+  gap: 8px;
+}
+.recovery-reveal .actions button {
+  flex: 1;
+}

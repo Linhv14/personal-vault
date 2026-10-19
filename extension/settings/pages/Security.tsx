@@ -3,6 +3,11 @@ import { rewrapVaultKey } from "../../../src/core/crypto.js";
 import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
 import {
+  createRecoveryCode,
+  recoveryCreatedAt,
+  removeRecoveryCode,
+} from "../../lib/account-recovery.js";
+import {
   biometricLabel,
   biometricSetupHint,
   biometricSupported,
@@ -21,7 +26,9 @@ import {
 import { getLocal, lock, setLocal } from "../../lib/storage.js";
 import { Button } from "../../ui/components/Button.js";
 import { Card } from "../../ui/components/Card.js";
-import { useT } from "../../ui/i18n.js";
+import { RecoveryCodeView } from "../../ui/components/RecoveryCodeView.js";
+import { formatDateTime } from "../../ui/format.js";
+import { localeSignal, useT } from "../../ui/i18n.js";
 import { vaultKeyRawSignal, vaultKeySignal } from "../../ui/store/session.js";
 import { currentAuthKey, reloadLocal, showToast } from "../state.js";
 
@@ -69,6 +76,7 @@ export function Security() {
       <h1>{t("settings.section_security")}</h1>
       <BiometricCard unlocked={Boolean(vaultKey)} />
       <PinCard unlocked={Boolean(vaultKey)} />
+      <RecoveryCard unlocked={Boolean(vaultKey)} />
       <Card>
         <h2>{t("settings.change_password")}</h2>
         <p className="row-hint">{t("settings.change_hint")}</p>
@@ -287,6 +295,141 @@ function BiometricCard({ unlocked }: { unlocked: boolean }) {
         <p className="error" role="alert">
           {error}
         </p>
+      )}
+    </Card>
+  );
+}
+
+function RecoveryCard({ unlocked }: { unlocked: boolean }) {
+  const t = useT();
+  const [createdAt, setCreatedAt] = useState<number | null | undefined>(undefined);
+  const [asking, setAsking] = useState<"create" | "remove" | null>(null);
+  const [revealed, setRevealed] = useState<{
+    code: string;
+    email: string;
+    server: string;
+    createdAt: number;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    recoveryCreatedAt().then(setCreatedAt, () => setCreatedAt(undefined));
+  }, [unlocked]);
+
+  const submit = async (event: Event) => {
+    event.preventDefault();
+    setError(null);
+    const form = event.currentTarget as HTMLFormElement;
+    const vaultKeyRaw = vaultKeyRawSignal.value;
+    if (!vaultKeyRaw) {
+      setError(t("settings.locked_hint"));
+      return;
+    }
+    if (asking === "remove" && !confirm(t("recovery.remove_confirm"))) return;
+    setWorking(true);
+    try {
+      const authKey = await currentAuthKey(String(new FormData(form).get("current")));
+      if (!authKey) {
+        setError(t("settings.wrong_current"));
+        return;
+      }
+      if (asking === "remove") {
+        await removeRecoveryCode(authKey);
+        setCreatedAt(null);
+        showToast(t("recovery.removed"));
+      } else {
+        const created = await createRecoveryCode(authKey, vaultKeyRaw);
+        const { email, apiUrl } = await getLocal();
+        setRevealed({ ...created, email: email ?? "", server: apiUrl ?? "" });
+        setCreatedAt(created.createdAt);
+      }
+      form.reset();
+      setAsking(null);
+    } catch (failure) {
+      setError(describeError(failure, t));
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  return (
+    <Card>
+      <h2>{t("recovery.title")}</h2>
+      <p className="row-hint">{t("recovery.hint")}</p>
+      {revealed ? (
+        <RecoveryCodeView
+          {...revealed}
+          doneLabel={t("recovery.saved")}
+          onCopied={() => showToast(t("recovery.copied"))}
+          onDone={() => setRevealed(null)}
+        />
+      ) : !unlocked ? (
+        <p className="notice">{t("settings.locked_hint")}</p>
+      ) : createdAt === undefined ? null : asking ? (
+        <form className="stack" id="form-recovery" onSubmit={(event) => void submit(event)}>
+          {asking === "create" && createdAt !== null && (
+            <p className="row-hint">{t("recovery.replace_hint")}</p>
+          )}
+          <input
+            name="current"
+            type="password"
+            autoComplete="current-password"
+            placeholder={t("settings.current_password")}
+            aria-label={t("settings.current_password")}
+            required
+            autoFocus
+          />
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="actions">
+            <Button
+              variant={asking === "remove" ? "danger" : "primary"}
+              type="submit"
+              disabled={working}
+            >
+              {t(
+                asking === "remove"
+                  ? "recovery.remove"
+                  : createdAt === null
+                    ? "recovery.create"
+                    : "recovery.replace",
+              )}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setAsking(null);
+                setError(null);
+              }}
+            >
+              {t("pin.cancel")}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="actions">
+          {createdAt !== null && (
+            <span className="pin-state">
+              {t("recovery.created", { date: formatDateTime(createdAt, localeSignal.value) })}
+            </span>
+          )}
+          {createdAt === null && <span className="pin-state">{t("recovery.none")}</span>}
+          <Button
+            variant={createdAt === null ? "primary" : "default"}
+            id="recovery-create"
+            onClick={() => setAsking("create")}
+          >
+            {t(createdAt === null ? "recovery.create" : "recovery.replace")}
+          </Button>
+          {createdAt !== null && (
+            <Button onClick={() => setAsking("remove")}>{t("recovery.remove")}</Button>
+          )}
+        </div>
       )}
     </Card>
   );

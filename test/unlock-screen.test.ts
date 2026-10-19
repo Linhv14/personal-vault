@@ -22,11 +22,19 @@ vi.mock("../extension/lib/biometric.js", () => ({
 vi.mock("../extension/lib/storage.js", () => ({
   clearAccountData: vi.fn(),
   getUnlocked: vi.fn(),
+  getLocal: async () => ({ apiUrl: "https://7key.online", email: "me@example.com" }),
+  setLocal: vi.fn(),
   lock: vi.fn(),
 }));
+const recoverAccount = vi.fn(async () => "NEWC-ODE2-3456-7ABC-DEFG-HIJK-LMNO-PQRS");
+vi.mock("../extension/lib/account-recovery.js", async (original) => ({
+  ...(await original<object>()),
+  recoverAccount,
+}));
 vi.mock("../extension/lib/resume.js", () => ({ rememberUnlock: vi.fn() }));
-vi.mock("../extension/popup/auth.js", () => ({ signIn: vi.fn() }));
-vi.mock("../extension/popup/state.js", () => ({ enterVault: vi.fn() }));
+const signIn = vi.fn();
+vi.mock("../extension/popup/auth.js", () => ({ signIn }));
+vi.mock("../extension/popup/state.js", () => ({ enterVault: vi.fn(), toast: vi.fn() }));
 
 const { Unlock } = await import("../extension/popup/screens/Unlock.js");
 
@@ -59,5 +67,40 @@ describe("unlock screen", () => {
     expect(document.querySelector("#bio-unlock")).toBeNull();
     expect(screen.queryByText("or")).toBeNull();
     expect(unlockWithBiometric).not.toHaveBeenCalled();
+  });
+
+  it("resets a forgotten master password with the recovery code and shows the new one", async () => {
+    device.biometric = false;
+    device.pin = false;
+    render(h(Unlock, { email: "me@example.com" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Forgot master password?" }));
+    const code = await screen.findByLabelText("Recovery code");
+    const form = document.querySelector("#form-recover") as HTMLFormElement;
+    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("me@example.com");
+    fireEvent.input(code, { target: { value: "C933-BC97-F584" } });
+    fireEvent.input(screen.getByLabelText("New master password"), {
+      target: { value: "a brand new password" },
+    });
+    fireEvent.input(screen.getByLabelText("Confirm master password"), {
+      target: { value: "a brand new password" },
+    });
+    fireEvent.submit(form);
+    await screen.findByText(/not a recovery code/);
+    expect(recoverAccount).not.toHaveBeenCalled();
+
+    const valid = "abcd efgh ijkl mnop qrst uvwx yz23 4567";
+    fireEvent.input(code, { target: { value: valid } });
+    fireEvent.submit(form);
+    await screen.findByText("NEWC-ODE2-3456-7ABC-DEFG-HIJK-LMNO-PQRS");
+    expect(recoverAccount).toHaveBeenCalledWith(
+      "me@example.com",
+      valid,
+      "a brand new password",
+      expect.any(String),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Saved, open my vault" }));
+    await waitFor(() =>
+      expect(signIn).toHaveBeenCalledWith("me@example.com", "a brand new password"),
+    );
   });
 });

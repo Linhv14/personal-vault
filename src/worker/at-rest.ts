@@ -80,6 +80,10 @@ export async function verifyAuthKey(
   };
 }
 
+export function recoveryScope(accountId: string): string {
+  return `${accountId}/recovery`;
+}
+
 function wrapAad(accountId: string): Uint8Array<ArrayBuffer> {
   return utf8Encode(`personal-vault/wrapped-vault-key/${accountId}`);
 }

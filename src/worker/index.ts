@@ -72,6 +72,7 @@ app.use("/api/auth/verify-email", limitByClientIp);
 app.use("/api/auth/register", limitByClientIp);
 app.use("/api/auth/prelogin", limitByClientIp);
 app.use("/api/auth/login", limitByClientIp);
+app.use("/api/auth/recover/*", limitByClientIp);
 app.on("GET", "/api/shares/*", limitByClientIp);
 app.on("POST", ["/api/shares/:id/code", "/api/shares/:id/open"], limitByClientIp);
 

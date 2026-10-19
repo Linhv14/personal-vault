@@ -63,6 +63,15 @@ const STRINGS = {
       ignore: (previous: string) =>
         `If you didn't expect this, contact ${previous} or your organization's admins.`,
     },
+    recovered: {
+      subject: `Your ${APP_NAME} master password was reset with your recovery code`,
+      preheader: "Your recovery code was used and replaced. Every device was signed out.",
+      heading: "Your master password was reset",
+      intro: `Someone used your recovery code to set a new master password for your ${APP_NAME} vault. Every device was signed out and the old recovery code no longer works.`,
+      next: "If this was you, keep the new recovery code you were shown somewhere safe.",
+      ignore:
+        "If it wasn't you, someone has your recovery code. Sign in with your new master password if you can, and contact support right away.",
+    },
   },
   vi: {
     code: {
@@ -115,6 +124,14 @@ const STRINGS = {
       open: "Mở cài đặt tổ chức",
       ignore: (previous: string) =>
         `Nếu bạn không biết về việc này, hãy liên hệ ${previous} hoặc quản trị viên của tổ chức.`,
+    },
+    recovered: {
+      subject: `Master password ${APP_NAME} của bạn vừa được đặt lại bằng recovery code`,
+      preheader: "Recovery code đã được dùng và thay mới. Mọi thiết bị đã bị đăng xuất.",
+      heading: "Master password của bạn đã được đặt lại",
+      intro: `Có người vừa dùng recovery code để đặt master password mới cho vault ${APP_NAME} của bạn. Mọi thiết bị đã bị đăng xuất và recovery code cũ không còn dùng được.`,
+      next: "Nếu là bạn, hãy cất recovery code mới vừa hiện ra ở nơi an toàn.",
+      ignore: "Nếu không phải bạn, ai đó đang giữ recovery code của bạn. Hãy liên hệ hỗ trợ ngay.",
     },
   },
 } as const;
@@ -204,6 +221,20 @@ export function ownershipEmail(
       { kind: "text", text: strings.rights },
       { kind: "button", label: strings.open, href: details.link },
       { kind: "text", text: strings.ignore(details.previous), tone: "small" },
+    ],
+  });
+}
+
+export function accountRecoveredEmail(context: EmailContext): RenderedEmail {
+  const strings = STRINGS[context.locale].recovered;
+  return renderEmail(context, {
+    subject: strings.subject,
+    preheader: strings.preheader,
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      { kind: "text", text: strings.next },
+      { kind: "text", text: strings.ignore, tone: "small" },
     ],
   });
 }

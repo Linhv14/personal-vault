@@ -8,12 +8,13 @@ import {
   hasBiometric,
   unlockWithBiometric,
 } from "../../lib/biometric.js";
-import { clearAccountData, getUnlocked, lock } from "../../lib/storage.js";
+import { clearAccountData, getLocal, getUnlocked, lock } from "../../lib/storage.js";
 import { useT } from "../../ui/i18n.js";
 import { signIn } from "../auth.js";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { enterVault } from "../state.js";
+import { Recover } from "./Recover.js";
 
 export function Unlock({ email }: { email: string }) {
   const t = useT();
@@ -23,6 +24,7 @@ export function Unlock({ email }: { email: string }) {
   const [mode, setMode] = useState<"pin" | "password" | null>(null);
 
   const [biometric, setBiometric] = useState(false);
+  const [recovering, setRecovering] = useState<string | null>(null);
   const method = t(biometricLabel());
 
   useEffect(() => {
@@ -106,6 +108,10 @@ export function Unlock({ email }: { email: string }) {
     location.reload();
   };
 
+  if (recovering !== null) {
+    return <Recover email={email} server={recovering} onCancel={() => setRecovering(null)} />;
+  }
+
   return (
     <AuthLayout id="screen-unlock">
       <div className={biometric ? "auth-heading centered" : "auth-heading"}>
@@ -177,6 +183,14 @@ export function Unlock({ email }: { email: string }) {
         />
         <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
           {t(working ? "unlock.working" : "unlock.submit")}
+        </button>
+        <button
+          type="button"
+          className="link quiet"
+          id="forgot-password"
+          onClick={() => void getLocal().then((local) => setRecovering(local.apiUrl ?? ""))}
+        >
+          {t("recovery.forgot")}
         </button>
       </form>
       {error && <p className="error">{error}</p>}

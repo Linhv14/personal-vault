@@ -16,6 +16,7 @@ import { localeSignal, useT } from "../../ui/i18n.js";
 import { finishUnlock, signIn } from "../auth.js";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { toast } from "../state.js";
+import { Recover } from "./Recover.js";
 
 type Mode = "register" | "login";
 
@@ -50,6 +51,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState<{ email: string; server: string } | null>(null);
 
   const registering = mode === "register";
   const codeStep = registering && verificationRequired && codeSentTo !== null;
@@ -169,6 +171,16 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
       setError(describeError(failure, t));
     }
   };
+
+  if (recovering) {
+    return (
+      <Recover
+        email={recovering.email}
+        server={recovering.server}
+        onCancel={() => setRecovering(null)}
+      />
+    );
+  }
 
   return (
     <AuthLayout id="screen-setup">
@@ -294,6 +306,20 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
           </p>
           <button className="primary" type="submit" disabled={working}>
             {buttonLabel}
+          </button>
+          <button
+            type="button"
+            className="link quiet"
+            id="forgot-password"
+            hidden={registering}
+            onClick={() =>
+              setRecovering({
+                email: field("email")?.value.trim() ?? "",
+                server: (field("apiUrl")?.value.trim() ?? "").replace(/\/$/, ""),
+              })
+            }
+          >
+            {t("recovery.forgot")}
           </button>
           <button
             type="button"

@@ -24,6 +24,7 @@ export type ApiErrorCode =
   | "auth.code_cooldown"
   | "auth.email_failed"
   | "auth.invalid_credentials"
+  | "auth.invalid_recovery_code"
   | "auth.rate_limited"
   | "auth.unauthorized"
   | "auth.pin_wrong"
@@ -96,6 +97,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.code_cooldown": "Wait a minute before requesting another code",
   "auth.email_failed": "The verification email could not be sent",
   "auth.invalid_credentials": "Incorrect email or master password",
+  "auth.invalid_recovery_code": "Incorrect email or recovery code",
   "auth.rate_limited": "Too many attempts, try again later",
   "auth.unauthorized": "Not signed in, or the session has expired",
   "auth.pin_wrong": "Wrong PIN",

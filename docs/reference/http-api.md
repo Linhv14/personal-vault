@@ -228,6 +228,61 @@ items and its sessions. Returns `{ "ok": true }`, or
 Shares are not linked to accounts, so links already sent keep working until
 they expire or run out of views.
 
+## Recovery code
+
+A recovery code is 20 random bytes, shown as 32 base32 characters in groups of
+four. The client derives two keys from it with HKDF-SHA256 (salt
+`personal-vault/recovery/v1`): `wrap` seals the vault key, and `auth` is sent
+to the server, which keeps only an HMAC of it, as for the auth key. The server
+cannot open the vault key with what it stores.
+
+### `GET /api/account/recovery`
+
+Authenticated. Returns `{ "createdAt": number | null }`.
+
+### `PUT /api/account/recovery`
+
+Authenticated. Creates or replaces the recovery code; the previous one stops
+working.
+
+| Field             | Type   | Notes                                   |
+| ----------------- | ------ | --------------------------------------- |
+| `currentAuthKey`  | string | Proves knowledge of the master password |
+| `authKey`         | string | The recovery auth key                   |
+| `wrappedVaultKey` | sealed | The vault key, sealed under the code    |
+
+Returns `{ "createdAt": number }`, or `403 auth.invalid_credentials`.
+
+### `DELETE /api/account/recovery`
+
+Authenticated. Request `{ "currentAuthKey": string }`. Removes the recovery
+code. Returns `{ "ok": true }`, or `403 auth.invalid_credentials`.
+
+### `POST /api/auth/recover/start`
+
+Unauthenticated, rate-limited per IP and counted with failed sign-ins for the
+address. Request `{ "email", "recoveryAuthKey" }`. Returns
+`{ "wrappedVaultKey": sealed }`, the vault key sealed under the code, or
+`401 auth.invalid_recovery_code` for a wrong code or an unknown address alike.
+
+### `POST /api/auth/recover/finish`
+
+Unauthenticated. Sets a new master password and a new recovery code in one
+step, then revokes every session and emails the owner when the server can
+send email. The code used stops working.
+
+| Field             | Type   | Notes                                           |
+| ----------------- | ------ | ----------------------------------------------- |
+| `email`           | string |                                                 |
+| `recoveryAuthKey` | string | From the code being used                        |
+| `kdf`             | object | As in `register`                                |
+| `authKey`         | string | The new auth key                                |
+| `wrappedVaultKey` | sealed | The vault key, wrapped under the new password   |
+| `recovery`        | object | `{ authKey, wrappedVaultKey }` for the new code |
+| `locale`          | string | Optional, `en` or `vi`, for the notification    |
+
+Returns `{ "ok": true }`, or `401 auth.invalid_recovery_code`.
+
 ## Account key pair
 
 Every account has an ECDH P-256 key pair so that team keys can be wrapped for it

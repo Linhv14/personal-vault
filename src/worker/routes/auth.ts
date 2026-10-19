@@ -1,7 +1,13 @@
 import { Hono } from "hono";
 import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
-import { protectAuthKey, protectWrappedKey, revealWrappedKey, verifyAuthKey } from "../at-rest.js";
+import {
+  protectAuthKey,
+  protectWrappedKey,
+  recoveryScope,
+  revealWrappedKey,
+  verifyAuthKey,
+} from "../at-rest.js";
 import { apiError } from "../errors.js";
 import { now } from "../http.js";
 import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
@@ -9,6 +15,8 @@ import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
 import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
 import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
+import { accountRecoveredEmail } from "../emails.js";
+import { logError } from "../log.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, revokeAllSessions, revokeSession, sessionResumeKey } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
@@ -360,6 +368,117 @@ auth.post("/change-password", async (c) => {
   // Revoke every session: other devices still hold the old vault key and must
   // unlock again.
   await revokeAllSessions(c.env, accountId);
+  return c.json({ ok: true });
+});
+
+interface RecoveryRow {
+  id: string;
+  recovery_auth_hash: string | null;
+  recovery_wrapped_key: string | null;
+  recovery_nonce: string | null;
+}
+
+async function checkRecovery(
+  env: Env,
+  email: string,
+  recoveryAuthKey: string,
+  timestamp: number,
+): Promise<RecoveryRow | "locked" | null> {
+  if (await checkLock(env, email, timestamp)) return "locked";
+  const row = await env.DB.prepare(
+    `SELECT id, recovery_auth_hash, recovery_wrapped_key, recovery_nonce
+       FROM accounts WHERE email = ?`,
+  )
+    .bind(email)
+    .first<RecoveryRow>();
+  const stored = row?.recovery_auth_hash ?? "v2:" + toBase64(new Uint8Array(32));
+  const { matches } = await verifyAuthKey(env, recoveryAuthKey, stored);
+  if (!row?.recovery_auth_hash || !matches) {
+    await recordFailure(env, email, timestamp);
+    return null;
+  }
+  return row;
+}
+
+auth.post("/recover/start", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const email = normalizeEmail(body?.email);
+  if (!email || !isBase64(body?.recoveryAuthKey, 32)) {
+    return c.json(apiError("auth.invalid_recovery_code"), 400);
+  }
+  const timestamp = now();
+  const row = await checkRecovery(c.env, email, body.recoveryAuthKey, timestamp);
+  if (row === "locked") {
+    return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
+  }
+  if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  const wrapped = await revealWrappedKey(c.env, recoveryScope(row.id), row.recovery_wrapped_key!);
+  c.header("Cache-Control", "no-store");
+  return c.json({ wrappedVaultKey: { ciphertext: wrapped.ciphertext, nonce: row.recovery_nonce } });
+});
+
+auth.post("/recover/finish", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const email = normalizeEmail(body?.email);
+  const { recoveryAuthKey, kdf, authKey, wrappedVaultKey, recovery } = body ?? {};
+  const next = (recovery ?? {}) as Record<string, unknown>;
+  if (!email || !isBase64(recoveryAuthKey, 32)) {
+    return c.json(apiError("auth.invalid_recovery_code"), 400);
+  }
+  if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
+  if (!isBase64(authKey, 32) || !isBase64(next.authKey, 32)) {
+    return c.json(apiError("auth.invalid_auth_key"), 400);
+  }
+  if (!isSealed(wrappedVaultKey, 64) || !isSealed(next.wrappedVaultKey, 64)) {
+    return c.json(apiError("auth.invalid_wrapped_key"), 400);
+  }
+
+  const timestamp = now();
+  const row = await checkRecovery(c.env, email, recoveryAuthKey, timestamp);
+  if (row === "locked") {
+    return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
+  }
+  if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+
+  const result = await c.env.DB.prepare(
+    `UPDATE accounts
+        SET kdf_type = ?, kdf_iterations = ?, kdf_salt = ?,
+            auth_key_hash = ?, wrapped_vault_key = ?, wrap_nonce = ?,
+            recovery_auth_hash = ?, recovery_wrapped_key = ?, recovery_nonce = ?,
+            recovery_created_at = ?
+      WHERE id = ? AND recovery_auth_hash = ?`,
+  )
+    .bind(
+      kdf.type,
+      kdf.iterations,
+      kdf.salt,
+      await protectAuthKey(c.env, authKey),
+      await protectWrappedKey(c.env, row.id, wrappedVaultKey.ciphertext),
+      wrappedVaultKey.nonce,
+      await protectAuthKey(c.env, next.authKey),
+      await protectWrappedKey(c.env, recoveryScope(row.id), next.wrappedVaultKey.ciphertext),
+      next.wrappedVaultKey.nonce,
+      timestamp,
+      row.id,
+      row.recovery_auth_hash,
+    )
+    .run();
+  if (!result.meta.changes) return c.json(apiError("auth.invalid_recovery_code"), 401);
+
+  await revokeAllSessions(c.env, row.id);
+  await clearFailures(c.env, email);
+  const mailer = createMailer(c.env);
+  if (mailer) {
+    const message = accountRecoveredEmail({
+      locale: body?.locale === "vi" ? "vi" : "en",
+      siteUrl: new URL(c.req.url).origin,
+    });
+    c.executionCtx.waitUntil(
+      mailer
+        .send({ to: email, ...message })
+        .catch((error) => logError("recovery_email_failed", error)),
+    );
+  }
   return c.json({ ok: true });
 });
 

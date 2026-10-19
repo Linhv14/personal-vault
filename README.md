@@ -66,16 +66,17 @@ Details: [Cryptography](docs/explanation/cryptography.md) ·
 
 ## Documentation
 
-| I want to…                                    | Read                                                               |
-| --------------------------------------------- | ------------------------------------------------------------------ |
-| Set it up for the first time                  | [Deploy your own vault](docs/tutorials/deploy-your-own-vault.md)   |
-| Use it on another computer                    | [Add another device](docs/how-to/add-another-device.md)            |
-| Host it for family or a team                  | [Run a shared server](docs/how-to/run-a-shared-server.md)          |
-| Protect against data loss                     | [Back up and restore](docs/how-to/back-up-and-restore.md)          |
-| Replace a leaked key                          | [Rotate secrets](docs/how-to/rotate-secrets.md)                    |
-| Install a new release                         | [Upgrade a deployment](docs/how-to/upgrade.md)                     |
-| Look up a command, setting, endpoint or limit | [Reference](docs/README.md#reference-facts-to-look-up)             |
-| Understand the design                         | [Explanation](docs/README.md#explanation-why-it-is-built-this-way) |
+| I want to…                                    | Read                                                                                      |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Set it up for the first time                  | [Deploy your own vault](docs/tutorials/deploy-your-own-vault.md)                          |
+| Use it on another computer                    | [Add another device](docs/how-to/add-another-device.md)                                   |
+| Get back in after forgetting the password     | [Recover a forgotten master password](docs/how-to/recover-a-forgotten-master-password.md) |
+| Host it for family or a team                  | [Run a shared server](docs/how-to/run-a-shared-server.md)                                 |
+| Protect against data loss                     | [Back up and restore](docs/how-to/back-up-and-restore.md)                                 |
+| Replace a leaked key                          | [Rotate secrets](docs/how-to/rotate-secrets.md)                                           |
+| Install a new release                         | [Upgrade a deployment](docs/how-to/upgrade.md)                                            |
+| Look up a command, setting, endpoint or limit | [Reference](docs/README.md#reference-facts-to-look-up)                                    |
+| Understand the design                         | [Explanation](docs/README.md#explanation-why-it-is-built-this-way)                        |
 
 Everything is indexed in [`docs/README.md`](docs/README.md).
 
