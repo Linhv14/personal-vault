@@ -1,16 +1,20 @@
-import { useState } from "preact/hooks";
 import { APP_NAME, WORDMARK } from "../../../src/core/brand.js";
 import { logoSvg } from "../../../src/ui/logo.js";
 
-let logoCount = 0;
-
-export function Logo({ size }: { size: number }) {
-  const [id] = useState(() => `onepw-logo-${++logoCount}`);
+export function Logo({
+  size,
+  animated = false,
+  bare = false,
+}: {
+  size: number;
+  animated?: boolean;
+  bare?: boolean;
+}) {
   return (
     <span
       className="logo"
       style={{ width: `${size}px`, height: `${size}px` }}
-      dangerouslySetInnerHTML={{ __html: logoSvg(id) }}
+      dangerouslySetInnerHTML={{ __html: logoSvg("", animated, bare) }}
     />
   );
 }

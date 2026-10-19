@@ -1,19 +1,23 @@
 // @vitest-environment happy-dom
 
 import { describe, expect, it } from "vitest";
-import { LOGO_SVG, logo, wordmark } from "../src/ui/logo.js";
+import { BRAND_INK, BRAND_ORANGE, LOGO_SVG, logo, wordmark } from "../src/ui/logo.js";
 import { APP_NAME } from "../src/core/brand.js";
 
 describe("logo", () => {
-  it("gives every instance its own gradient, so a hidden copy cannot blank the others", () => {
-    const ids = [logo(16), logo(56)].map((mark) => mark.querySelector("linearGradient")!.id);
-    expect(new Set(ids).size).toBe(2);
-    for (const [index, mark] of [logo(24), logo(24)].entries()) {
-      const id = mark.querySelector("linearGradient")!.id;
-      expect(mark.querySelector("rect")!.getAttribute("fill"), `instance ${index}`).toBe(
-        `url(#${id})`,
-      );
-    }
+  it("draws the seven-segment dial in the brand colours, without ids that copies could clash on", () => {
+    const mark = logo(24);
+    const dial = mark.querySelector("g path")!;
+    expect(dial.getAttribute("fill")).toBe(BRAND_ORANGE);
+    expect(dial.getAttribute("d")!.match(/Z/g)).toHaveLength(7);
+    expect(mark.querySelector("rect")!.getAttribute("fill")).toBe(BRAND_INK);
+    expect(mark.querySelector("[id]")).toBeNull();
+  });
+
+  it("turns the dial only when asked", () => {
+    expect(logo(24).querySelector(".logo-dial")).toBeNull();
+    expect(logo(44, true).querySelector(".logo-dial")).not.toBeNull();
+    expect(LOGO_SVG).not.toContain("logo-dial");
   });
 
   it("ships a standalone SVG for the favicon", () => {

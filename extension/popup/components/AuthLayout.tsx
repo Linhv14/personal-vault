@@ -7,7 +7,7 @@ export function AuthLayout({ id, children }: { id: string; children: ComponentCh
   return (
     <section id={id} className="screen auth">
       <aside className="auth-brand">
-        <Logo size={44} />
+        <Logo size={44} animated />
         <Wordmark />
         <p className="tagline">{t("setup.tagline")}</p>
       </aside>

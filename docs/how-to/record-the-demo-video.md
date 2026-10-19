@@ -64,6 +64,17 @@ Copy the ones you want into `share/assets/`.
 | Symptom                                  | Fix                                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
 | `Chrome did not expose a page on port …` | Another Chrome holds that debugging port. Quit it, or change the port in the script |
-| The popup shows a locked vault           | Session tokens expired. Run `npx tsx accounts.mts` and `seed.mts` again             |
+| The popup shows a locked vault           | Session tokens expired. Run `npx tsx refresh-tokens.mts` and `node make-site.mjs`   |
 | Sign-in fails with too many sessions     | Each account keeps 20 sessions. Create fresh accounts with `accounts.mts`           |
 | The popup looks out of date              | Run `npm run build` and `node make-site.mjs` again                                  |
+
+## Brand icons
+
+`tools/brand/render-icons.mts` draws the logo from `src/ui/logo.ts` into the
+extension icons (16, 32, 48 and 128 px) and the inline logo of the emails:
+
+```bash
+npx tsx tools/brand/render-icons.mts
+```
+
+Run it after changing the logo; it needs Google Chrome.

@@ -13,7 +13,8 @@ const PROJECT = DEMO.project;
 const vi = locale === "vi";
 const T = vi
   ? {
-      intro: "<h1><b>7</b>key</h1><p>Mật khẩu · 2FA · Secret của team</p>",
+      intro:
+        "<h1><img class=lg src=logo.svg alt><b>7</b>key</h1><p>Mật khẩu · 2FA · Secret của team</p>",
       c1: ["Vault", "Mọi tài khoản.<br><b>Một nơi.</b>"],
       c2: ["2FA", "Mã 2FA <b>có sẵn.</b>"],
       c3: ["Chia sẻ", "Gửi tài khoản.<br><b>Tự hết hạn.</b>"],
@@ -22,15 +23,16 @@ const T = vi
       c6: ["Thành viên", "Mời team.<br><b>Khoá theo domain.</b>"],
       c7: ["Nhật ký", "Mọi lần đọc<br><b>đều được ghi.</b>"],
       ci: '<p class="big">CI <b>không copy-paste.</b></p><pre>- uses: <i>Linhv14/7key-action@v1</i>\n  with:\n    key: ${{ secrets.SEVENKEY_KEY }}</pre>',
-      ai: '<p class="big">Sắp có: <b>AI agent</b><br>dùng key mà không thấy.</p><div class="row"><div class="tile"><strong>Claude Code</strong><span>Proxy chèn key khi gọi API</span></div><div class="tile"><strong>Codex</strong><span>Chỉ thấy placeholder</span></div><div class="tile"><strong>Nhật ký</strong><span>Mọi lần dùng được ghi lại</span></div></div>',
+      ai: '<p class="big">Mới: <b>AI agent</b><br>dùng key mà không thấy.</p><div class="row"><div class="tile"><strong>Claude Code</strong><span>Proxy chèn key khi gọi API</span></div><div class="tile"><strong>Codex</strong><span>Chỉ thấy placeholder</span></div><div class="tile"><strong>Nhật ký</strong><span>Mọi lần dùng được ghi lại</span></div></div>',
       e2e: '<p class="big">Mã hoá <b>ngay trên máy bạn.</b></p><p>Server chỉ giữ bản mã. Không ai đọc được, kể cả chúng tôi.</p>',
       outro:
-        '<h1><b>7</b>key</h1><p>Miễn phí cho cá nhân · 7key.online</p><span class="cta">Cài cho Chrome</span>',
+        '<h1><img class=lg src=logo.svg alt><b>7</b>key</h1><p>Bảy loại chìa khoá. Bạn chỉ cần nhớ một.</p><span class="cta">Cài cho Chrome</span>',
       secret: "ANTHROPIC_API_KEY",
       invite: "emma@northwind.dev",
     }
   : {
-      intro: "<h1><b>7</b>key</h1><p>Passwords · 2FA · Team secrets</p>",
+      intro:
+        "<h1><img class=lg src=logo.svg alt><b>7</b>key</h1><p>Passwords · 2FA · Team secrets</p>",
       c1: ["Vault", "Every login.<br><b>One place.</b>"],
       c2: ["2FA", "2FA codes, <b>built in.</b>"],
       c3: ["Share", "Share a login.<br><b>It expires.</b>"],
@@ -39,10 +41,10 @@ const T = vi
       c6: ["Members", "Invite your team.<br><b>Lock it to your domain.</b>"],
       c7: ["Audit", "Every read,<br><b>logged.</b>"],
       ci: '<p class="big">CI, <b>without copy-paste.</b></p><pre>- uses: <i>Linhv14/7key-action@v1</i>\n  with:\n    key: ${{ secrets.SEVENKEY_KEY }}</pre>',
-      ai: '<p class="big">Coming: <b>AI agents</b><br>use keys they never see.</p><div class="row"><div class="tile"><strong>Claude Code</strong><span>A proxy adds the key on the way out</span></div><div class="tile"><strong>Codex</strong><span>Only ever sees a placeholder</span></div><div class="tile"><strong>Audit</strong><span>Every use is logged</span></div></div>',
+      ai: '<p class="big">New: <b>AI agents</b><br>use keys they never see.</p><div class="row"><div class="tile"><strong>Claude Code</strong><span>A proxy adds the key on the way out</span></div><div class="tile"><strong>Codex</strong><span>Only ever sees a placeholder</span></div><div class="tile"><strong>Audit</strong><span>Every use is logged</span></div></div>',
       e2e: '<p class="big">Encrypted <b>on your device.</b></p><p>The server stores ciphertext. Nobody can read it, including us.</p>',
       outro:
-        '<h1><b>7</b>key</h1><p>Free for personal use · 7key.online</p><span class="cta">Add to Chrome</span>',
+        '<h1><img class=lg src=logo.svg alt><b>7</b>key</h1><p>Seven kinds of keys. One you remember.</p><span class="cta">Add to Chrome</span>',
       secret: "OPENAI_API_KEY",
       invite: "emma@northwind.dev",
     };

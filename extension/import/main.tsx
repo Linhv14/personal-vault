@@ -39,7 +39,7 @@ function TransferApp() {
   return (
     <main>
       <header className="brand">
-        <Logo size={28} />
+        <Logo size={22} bare />
         <Wordmark />
       </header>
       <h1>{t("transfer.title")}</h1>

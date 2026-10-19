@@ -59,7 +59,7 @@ const common: BuildOptions = {
   loader: { ".css": "text" },
 };
 
-async function logoSvg() {
+async function logoSvgs(): Promise<{ still: string; animated: string; mark: string }> {
   const { outputFiles } = await build({
     entryPoints: [path.join(root, "src", "ui", "logo.ts")],
     bundle: true,
@@ -68,10 +68,10 @@ async function logoSvg() {
     logLevel: "silent",
   });
   const source = Buffer.from(outputFiles[0]?.text ?? "").toString("base64");
-  const { LOGO_SVG } = (await import(`data:text/javascript;base64,${source}`)) as {
-    LOGO_SVG: string;
+  const { logoSvg } = (await import(`data:text/javascript;base64,${source}`)) as {
+    logoSvg: (id?: string, animated?: boolean, bare?: boolean) => string;
   };
-  return LOGO_SVG;
+  return { still: logoSvg(), animated: logoSvg("", true, true), mark: logoSvg("", false, true) };
 }
 
 async function replaceAsync(
@@ -112,10 +112,9 @@ async function buildSharePage() {
     await injectTokens(filled, "share/security.html"),
   );
   const site = (deployedServerUrl() || "https://7key.online").replace(/\/$/, "");
-  const landing = (await readFile(path.join(root, "share", "landing.html"), "utf8")).replaceAll(
-    "{{site}}",
-    site,
-  );
+  const landing = (await readFile(path.join(root, "share", "landing.html"), "utf8"))
+    .replaceAll("{{site}}", site)
+    .replaceAll("{{logo}}", (await logoSvgs()).animated);
   for (const [lang, file] of [
     ["en", "index.html"],
     ["vi", "vi.html"],
@@ -137,7 +136,8 @@ async function buildSharePage() {
       .join("\n")}\n</urlset>\n`,
   );
   await cp(path.join(root, "share", "assets"), path.join(outPublic, "assets"), { recursive: true });
-  await writeFile(path.join(outPublic, "favicon.svg"), await logoSvg());
+  await writeFile(path.join(outPublic, "favicon.svg"), (await logoSvgs()).still);
+  await writeFile(path.join(outPublic, "mark.svg"), (await logoSvgs()).mark);
 }
 
 async function fingerprinted(out: string, name: string, text: string): Promise<string> {

@@ -4,7 +4,7 @@ export const COLORS = {
   border: "#e4e2dd",
   text: "#1b1b19",
   muted: "#6b6a65",
-  accent: "#0b6e6b",
+  accent: "#c2410c",
   accentText: "#ffffff",
   panel: "#f6f5f2",
 } as const;

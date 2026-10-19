@@ -99,7 +99,7 @@ export function Drawer() {
     >
       <nav className="drawer" ref={ref} aria-label={t("list.menu")}>
         <div className="drawer-brand">
-          <Logo size={24} />
+          <Logo size={20} bare />
           <Wordmark />
         </div>
         <ScopeLinks onPick={close} />

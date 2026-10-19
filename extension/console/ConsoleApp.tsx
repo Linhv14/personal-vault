@@ -176,7 +176,7 @@ export function ConsoleApp({
       <span
         className="brand-logo"
         aria-hidden="true"
-        dangerouslySetInnerHTML={{ __html: logoSvg("console-logo") }}
+        dangerouslySetInnerHTML={{ __html: logoSvg("", false, true) }}
       />
       <Wordmark />
     </div>

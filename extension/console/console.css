@@ -87,8 +87,8 @@ code,
 }
 .brand-logo {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 .brand-logo svg {
   width: 100%;

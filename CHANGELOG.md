@@ -71,6 +71,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Passkey registrations that ask for a security key (`cross-platform`), as
+  npm's do, now show the 7key dialog too; **Use another device** still hands
+  them to a physical key.
+- New brand: the logo is a seven-segment dial that turns one notch at a time
+  on the unlock screen and the landing page (still elsewhere, and still for
+  anyone who asks for reduced motion), and the accent colour is orange
+  (`#FF6A3D` on dark, `#C2410C` on light) with warm neutral greys. Icons,
+  favicon, emails, Open Graph images and the demo video follow.
 - The site and the console no longer mention pricing or plans: the pricing
   section, "free" wording and the price in the structured data are gone, and
   organization settings show usage and limits only. Docs no longer compare

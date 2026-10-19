@@ -103,7 +103,7 @@ export function SignIn() {
             <span
               className="brand-logo"
               aria-hidden="true"
-              dangerouslySetInnerHTML={{ __html: logoSvg("web-logo") }}
+              dangerouslySetInnerHTML={{ __html: logoSvg("", false, true) }}
             />
             <Wordmark />
           </header>
@@ -131,7 +131,7 @@ export function SignIn() {
           <span
             className="brand-logo"
             aria-hidden="true"
-            dangerouslySetInnerHTML={{ __html: logoSvg("web-logo") }}
+            dangerouslySetInnerHTML={{ __html: logoSvg("", false, true) }}
           />
           <Wordmark />
         </header>

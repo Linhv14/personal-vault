@@ -49,23 +49,23 @@ export function scenes(vi) {
             0.55,
           )}
         </div></div>`,
-    agent: `<div class="ttl"><span class="soonb">${t("Coming soon", "Sắp có")}</span><span>${t("AI agents call APIs.", "AI agent gọi API.")} <b>${t("They never see the key.", "Không bao giờ thấy key.")}</b></span></div>
-      <div class="mcp">$ claude mcp add <b>7key</b> -- npx 7key mcp &nbsp;<span class="ok" style="color:#4fe0c3">✓ ${t("connected", "đã kết nối")}</span></div>
+    agent: `<div class="ttl"><span class="soonb">${t("New", "Mới")}</span><span>${t("AI agents call APIs.", "AI agent gọi API.")} <b>${t("They never see the key.", "Không bao giờ thấy key.")}</b></span></div>
+      <div class="mcp">$ <b>7key agent</b> --project Storefront --env production -- claude &nbsp;<span class="ok" style="color:#ff6a3d">✓ SHOPIFY_ADMIN_TOKEN → *.myshopify.com</span></div>
       <div class="term"><div class="bar" style="display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);color:#8a8a8a;font-size:14px"><span>●</span><span>●</span><span>●</span>&nbsp; claude — storefront</div>
         <div class="body lines">
           ${lines(
             [
-              `<span class="p">&gt;</span> <span class="u">${t("Use 7key to pull today's orders from our Shopify store", "Dùng 7key lấy đơn hàng hôm nay từ Shopify store")}</span>`,
-              `<span class="tool">⏺ 7key · list_secrets</span> <span class="dim">(project: "Storefront", env: "production")</span>`,
-              `<span class="dim">  ⎿ SHOPIFY_ADMIN_TOKEN · SHOPIFY_STORE_DOMAIN</span>`,
-              `<span class="tool">⏺ 7key · http_request</span> <span class="dim">(GET https://northwind.myshopify.com/admin/api/orders.json, auth: </span><span class="ph">{{SHOPIFY_ADMIN_TOKEN}}</span><span class="dim">)</span>`,
-              `<span class="dim">  ⎿ 200 OK · ${t("token added by 7key — Claude only saw the placeholder", "token do 7key chèn — Claude chỉ thấy placeholder")}</span>`,
+              `<span class="p">&gt;</span> <span class="u">${t("Pull today's orders from our Shopify store", "Lấy đơn hàng hôm nay từ Shopify store")}</span>`,
+              `<span class="tool">⏺ Bash</span> <span class="dim">(echo $SHOPIFY_ADMIN_TOKEN)</span>`,
+              `<span class="dim">  ⎿ </span><span class="ph">7key-ph-3f9c41a0d2e8</span><span class="dim"> · ${t("a placeholder, not the token", "chỉ là placeholder, không phải token")}</span>`,
+              `<span class="tool">⏺ Bash</span> <span class="dim">(curl -H "X-Shopify-Access-Token: $SHOPIFY_ADMIN_TOKEN" https://northwind.myshopify.com/admin/api/orders.json)</span>`,
+              `<span class="dim">  ⎿ 200 OK · ${t("7key swapped in the real token on the way out", "7key thay token thật trên đường gửi đi")}</span>`,
               `<span class="ok">✓</span> ${t('Today: <span class="num">42 orders</span>, <span class="num">$3,180.50</span>. Top seller: Linen Shirt (9).', 'Hôm nay: <span class="num">42 đơn</span>, <span class="num">$3,180.50</span>. Bán chạy nhất: Linen Shirt (9).')}`,
             ],
             0.5,
             0.7,
           )}
         </div></div>
-      <div class="agents stg"><span>Claude Code</span><span>Codex</span><span>Cursor</span><span>MCP</span></div>`,
+      <div class="agents stg"><span>Claude Code</span><span>Codex</span><span>Cursor</span><span>${t("Any CLI", "Mọi CLI")}</span></div>`,
   };
 }
