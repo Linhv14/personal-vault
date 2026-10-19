@@ -94,4 +94,37 @@ vault is locked when **Save** is pressed, the banner asks you to unlock first.
 
 In a new-password field the menu offers **Use a strong password**: 20 random
 characters from the same generator as the popup, filled into the password and
-confirmation fields.
+confirmation fields. The menu opens by itself when such a field gets focus,
+whether by click or Tab. A field counts as new when it says so
+(`autocomplete="new-password"`), when the form has two password fields, when
+its name, the form action or the address mentions signing up, or when the form
+has a button such as "Create account" or "Sign up"; `current-password` always
+means sign-in.
+
+## 2FA codes
+
+A code field (`autocomplete="one-time-code"`, or a short or numeric field named
+like `otp`, `2fa` or "authentication code") gets the same 7key button, and its
+menu lists the logins for the site that have a 2FA code. Picking one fills the
+current code; six one-digit boxes are filled one digit each. The code is
+computed in the extension with the clock offset measured at unlock.
+
+## Saving 2FA while you set it up
+
+On a page that talks about authenticators, two-factor or a QR code, 7key looks
+for the setup secret: an `otpauth://` link or text, a setup key next to that
+wording, or a QR code it can read with the browser's `BarcodeDetector` (in
+images, canvases and inline SVG). A QR image served from another origin cannot
+be read by the page script, so the extension fetches that image itself over
+HTTPS, without cookies, only when it is an image under 512 KB.
+
+It then offers **Save 2FA for {site}?**, naming the personal login it will add
+the code to (the most recently used one for the site), or saying it will
+replace a different code already there, or create a login when there is none.
+It never writes into a team vault item. After saving it fills the current code
+into the page's code field, so the site's "enter the code to confirm" step is
+already done. A secret that is already saved is not offered again.
+
+Reading QR codes needs `BarcodeDetector`, which Chrome ships on macOS, ChromeOS
+and Android; elsewhere the link and setup-key paths still work, and the popup's
+scan button remains.

@@ -1,6 +1,13 @@
 import { generatePassword } from "../../src/core/generator.js";
+import { generateTotp, parseTotpInput, type TotpConfig } from "../../src/core/totp.js";
 import { withPasswordHistory } from "./item-types.js";
-import type { AutofillRequest, AutofillResponse, PendingPrompt } from "./autofill-protocol.js";
+import type {
+  AutofillRequest,
+  AutofillResponse,
+  PendingPrompt,
+  Suggestion,
+  TotpPrompt,
+} from "./autofill-protocol.js";
 import { getLocal } from "./storage.js";
 import {
   byLastUsed,
@@ -10,6 +17,7 @@ import {
   openVault,
   registrableDomain,
   saveItem,
+  type OpenVault,
   type VaultItem,
   isPersonal,
 } from "./vault.js";
@@ -56,6 +64,71 @@ export function trustedSender(
 
 function pendingKey(tabId: number): string {
   return `autofill:pending:${tabId}`;
+}
+
+function totpKey(tabId: number): string {
+  return `autofill:totp:${tabId}`;
+}
+
+interface PendingTotp {
+  domain: string;
+  config: TotpConfig;
+  targetId?: string;
+  at: number;
+}
+
+function suggestionOf(item: VaultItem, vault: OpenVault): Suggestion {
+  const shared = vault.sharedName(item);
+  return {
+    id: item.id,
+    title: item.title,
+    username: item.username,
+    ...(shared ? { vault: shared } : {}),
+  };
+}
+
+function totpTarget(items: VaultItem[], pageUrl: string): VaultItem | undefined {
+  return items.filter((item) => isPersonal(item) && matchesSite(item, pageUrl)).sort(byLastUsed)[0];
+}
+
+async function currentCode(config: TotpConfig): Promise<string> {
+  const { clockSkew = 0 } = await getLocal();
+  return generateTotp(config, Date.now() + clockSkew * 1000);
+}
+
+const MAX_QR_IMAGE_BYTES = 512 * 1024;
+
+async function fetchQrImage(url: string): Promise<string | null> {
+  let target: URL;
+  try {
+    target = new URL(url);
+  } catch {
+    return null;
+  }
+  if (target.protocol !== "https:") return null;
+  try {
+    const response = await fetch(target, { credentials: "omit", redirect: "error" });
+    const type = response.headers.get("content-type") ?? "";
+    if (!response.ok || !/^image\/(png|gif|jpeg|webp|svg\+xml)\b/.test(type)) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length > MAX_QR_IMAGE_BYTES) return null;
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return `data:${type.split(";")[0]};base64,${btoa(binary)}`;
+  } catch {
+    return null;
+  }
+}
+
+async function readPendingTotp(sender: TrustedSender): Promise<PendingTotp | null> {
+  const key = totpKey(sender.tabId);
+  const pending = (await chrome.storage.session.get(key))[key] as PendingTotp | undefined;
+  if (!pending) return null;
+  if (Date.now() - pending.at > PENDING_TTL_MS || pending.domain !== sender.domain) {
+    await chrome.storage.session.remove(key);
+    return null;
+  }
+  return pending;
 }
 
 async function readPending(sender: TrustedSender): Promise<PendingCapture | null> {
@@ -116,15 +189,7 @@ export async function handleAutofill(
       const suggestions = vault.items
         .filter((item) => matchesSite(item, sender.url))
         .sort(byLastUsed)
-        .map((item) => {
-          const shared = vault.sharedName(item);
-          return {
-            id: item.id,
-            title: item.title,
-            username: item.username,
-            ...(shared ? { vault: shared } : {}),
-          };
-        });
+        .map((item) => suggestionOf(item, vault));
       return { ok: true, locked: false, suggestions, domain: sender.domain };
     }
 
@@ -208,6 +273,87 @@ export async function handleAutofill(
     case "autofill:dismiss":
       await chrome.storage.session.remove(pendingKey(sender.tabId));
       return { ok: true, saved: false };
+
+    case "autofill:codes": {
+      const vault = await openVault();
+      if (!vault) return { ok: true, locked: true };
+      const suggestions = vault.items
+        .filter((item) => item.totp && matchesSite(item, sender.url))
+        .sort(byLastUsed)
+        .map((item) => suggestionOf(item, vault));
+      return { ok: true, locked: false, suggestions, domain: sender.domain };
+    }
+
+    case "autofill:code": {
+      const vault = await openVault();
+      if (!vault) return { ok: true, locked: true };
+      const item = vault.items.find((candidate) => candidate.id === request.id);
+      if (!item?.totp || !matchesSite(item, sender.url)) return { ok: false, error: "no_match" };
+      void markUsed(vault.key, item).catch(() => {});
+      return { ok: true, code: await currentCode(item.totp) };
+    }
+
+    case "autofill:totp-found": {
+      if (await isVaultServer(sender.url)) return { ok: true, totp: null };
+      let config: TotpConfig;
+      try {
+        config = parseTotpInput(request.text);
+      } catch {
+        return { ok: true, totp: null };
+      }
+      const vault = await openVault();
+      const target = vault ? totpTarget(vault.items, sender.url) : undefined;
+      if (target?.totp?.secret === config.secret) return { ok: true, totp: null };
+      const pending: PendingTotp = {
+        domain: sender.domain,
+        config,
+        ...(target ? { targetId: target.id } : {}),
+        at: Date.now(),
+      };
+      await chrome.storage.session.set({ [totpKey(sender.tabId)]: pending });
+      const prompt: TotpPrompt = {
+        domain: sender.domain,
+        ...(target
+          ? { target: target.username ? `${target.title} (${target.username})` : target.title }
+          : {}),
+        replace: Boolean(target?.totp),
+      };
+      return { ok: true, totp: prompt };
+    }
+
+    case "autofill:totp-save": {
+      const pending = await readPendingTotp(sender);
+      if (!pending) return { ok: true, saved: false };
+      const vault = await openVault();
+      if (!vault) {
+        await chrome.action.openPopup?.().catch(() => {});
+        return { ok: true, saved: false, locked: true };
+      }
+      const target = vault.items.find(
+        (item) => item.id === pending.targetId && isPersonal(item) && matchesSite(item, sender.url),
+      );
+      await saveItem(
+        vault.key,
+        target
+          ? { ...target, totp: pending.config }
+          : {
+              id: newItemId(),
+              title: pending.domain,
+              url: pending.domain,
+              totp: pending.config,
+            },
+        target,
+      );
+      await chrome.storage.session.remove(totpKey(sender.tabId));
+      return { ok: true, saved: true, code: await currentCode(pending.config) };
+    }
+
+    case "autofill:totp-dismiss":
+      await chrome.storage.session.remove(totpKey(sender.tabId));
+      return { ok: true, saved: false };
+
+    case "autofill:qr-image":
+      return { ok: true, image: await fetchQrImage(request.url) };
 
     case "autofill:open-popup":
       await chrome.action.openPopup?.().catch(() => {});

@@ -17,6 +17,12 @@ export interface PendingPrompt {
   confirmed: boolean;
 }
 
+export interface TotpPrompt {
+  domain: string;
+  target?: string;
+  replace: boolean;
+}
+
 export type AutofillRequest =
   | { type: "autofill:suggest" }
   | { type: "autofill:fill"; id: string }
@@ -26,7 +32,13 @@ export type AutofillRequest =
   | { type: "autofill:confirm" }
   | { type: "autofill:save" }
   | { type: "autofill:dismiss" }
-  | { type: "autofill:open-popup" };
+  | { type: "autofill:open-popup" }
+  | { type: "autofill:codes" }
+  | { type: "autofill:code"; id: string }
+  | { type: "autofill:totp-found"; text: string }
+  | { type: "autofill:totp-save" }
+  | { type: "autofill:totp-dismiss" }
+  | { type: "autofill:qr-image"; url: string };
 
 export type AutofillResponse =
   | { ok: true; locked: true }
@@ -34,7 +46,10 @@ export type AutofillResponse =
   | { ok: true; credentials: { username?: string; password: string } }
   | { ok: true; password: string }
   | { ok: true; prompt: PendingPrompt | null }
-  | { ok: true; saved: boolean; locked?: boolean }
+  | { ok: true; saved: boolean; locked?: boolean; code?: string }
+  | { ok: true; code: string }
+  | { ok: true; totp: TotpPrompt | null }
+  | { ok: true; image: string | null }
   | { ok: false; error: string };
 
 export function isAutofillRequest(message: unknown): message is AutofillRequest {

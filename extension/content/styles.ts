@@ -46,7 +46,7 @@ export const CONTENT_STYLES = `${TOKENS}
 }
 
 .banner .text { flex: 1; min-width: 0; }
-.banner .text strong { white-space: normal; }
+.banner .text strong, .banner .text small { white-space: normal; }
 .actions { display: flex; gap: 6px; }
 .actions button {
   padding: 6px 10px; border-radius: 8px; border: none; cursor: pointer; font: inherit; font-size: 12.5px;

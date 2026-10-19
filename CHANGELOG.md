@@ -25,6 +25,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Autofill fills 2FA codes: code fields get the 7key menu with the site's
+  logins that have a code, and one-digit boxes are filled digit by digit.
+- Autofill offers to save 2FA while you set it up: it finds the `otpauth://`
+  link, setup key or QR code on the page, adds the secret to the matching
+  personal login (or creates one), and fills the confirmation code.
+- On sign-up forms the **Use a strong password** menu opens as soon as the
+  password field gets focus, and sign-up forms are recognised by their button
+  text too.
 - The CLI installs from npm (`npm install -g 7key`, `npx 7key`) and Homebrew
   (`brew tap linhv14/7key`, `brew trust linhv14/7key`,
   `brew install linhv14/7key/7key`). `npm run publish:cli -- <version>`

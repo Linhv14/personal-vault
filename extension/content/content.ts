@@ -5,15 +5,26 @@ import type {
   AutofillResponse,
   PendingPrompt,
   Suggestion,
+  TotpPrompt,
 } from "../lib/autofill-protocol.js";
 import { icon } from "../../src/ui/icons.js";
 import { logo, wordmark } from "../../src/ui/logo.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
+import {
+  fillCode,
+  findOneTimeCodeField,
+  findSetupQr,
+  findSetupText,
+  isOneTimeCodeField,
+  mentionsSetup,
+} from "./two-factor.js";
 
 const USERNAME_HINT = /user|email|login|account|phone|mobile|identifier/i;
 const NEW_PASSWORD_HINT = /new|confirm|repeat|register|signup|sign-up|sign_up|create|join/i;
+const SIGN_UP_BUTTON =
+  /sign\s?up|create( an)? account|register|join|get started|đăng ký|tạo tài khoản/i;
 
 let t: Translate = createTranslator("en");
 let activeInput: HTMLInputElement | null = null;
@@ -101,8 +112,19 @@ function findPasswordFor(input: HTMLInputElement): HTMLInputElement | null {
 function wantsNewPassword(password: HTMLInputElement): boolean {
   if (password.autocomplete === "new-password") return true;
   if (passwordFields(scopeOf(password)).length >= 2) return true;
+  if (password.autocomplete === "current-password") return false;
   const formAction = password.form?.getAttribute("action") ?? "";
-  return NEW_PASSWORD_HINT.test(`${describe(password)} ${formAction} ${location.pathname}`);
+  if (NEW_PASSWORD_HINT.test(`${describe(password)} ${formAction} ${location.pathname}`)) {
+    return true;
+  }
+  const buttons = [
+    ...scopeOf(password).querySelectorAll<HTMLElement>(
+      'button, input[type="submit"], [role="button"]',
+    ),
+  ];
+  return buttons.some((button) =>
+    SIGN_UP_BUTTON.test(button.textContent || (button as HTMLInputElement).value || ""),
+  );
 }
 
 function wantsPasskey(input: HTMLInputElement): boolean {
@@ -114,7 +136,7 @@ function wantsPasskey(input: HTMLInputElement): boolean {
 }
 
 function isDecoratable(input: HTMLInputElement): boolean {
-  if (input.type === "password" || wantsPasskey(input)) return true;
+  if (input.type === "password" || wantsPasskey(input) || isOneTimeCodeField(input)) return true;
   return findPasswordFor(input) !== null && findUsernameField(findPasswordFor(input)!) === input;
 }
 
@@ -182,7 +204,7 @@ function avatar(title: string): HTMLElement {
   return node;
 }
 
-function badge(name: "lock" | "wand" | "key"): HTMLElement {
+function badge(name: "lock" | "wand" | "key" | "clock"): HTMLElement {
   const node = document.createElement("span");
   node.className = "badge";
   node.append(icon(name));
@@ -218,9 +240,61 @@ async function usePasskey(passkey: PasskeyOption): Promise<void> {
   await conditionalPasskeys()?.use(passkey.credentialId);
 }
 
+async function fillOneTimeCode(suggestion: Suggestion, input: HTMLInputElement): Promise<void> {
+  const response = await send({ type: "autofill:code", id: suggestion.id });
+  closeMenu();
+  if (response.ok && "code" in response && typeof response.code === "string") {
+    fillCode(input, response.code, setValue);
+  }
+}
+
+function menuHeading(): HTMLElement {
+  const heading = document.createElement("div");
+  heading.className = "heading";
+  heading.append(logo(16), wordmark());
+  return heading;
+}
+
+function lockedRow(): HTMLButtonElement {
+  return menuRow(t("autofill.locked"), t("autofill.locked_hint"), badge("lock"), () => {
+    void send({ type: "autofill:open-popup" });
+    closeMenu();
+  });
+}
+
+async function openCodeMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
+  const response = await send({ type: "autofill:codes" });
+  if (activeInput !== input) return;
+  const empty = response.ok && "suggestions" in response && response.suggestions.length === 0;
+  if (onlyIfUseful && (!response.ok || empty)) return;
+  menu.replaceChildren(menuHeading());
+  if (!response.ok) {
+    menu.append(note(t("autofill.unavailable")));
+  } else if ("locked" in response && response.locked) {
+    menu.append(lockedRow());
+  } else if ("suggestions" in response) {
+    for (const suggestion of response.suggestions) {
+      menu.append(
+        menuRow(
+          suggestion.title,
+          [suggestion.username, suggestion.vault].filter(Boolean).join(" · ") || undefined,
+          badge("clock"),
+          () => void fillOneTimeCode(suggestion, input),
+        ),
+      );
+    }
+    if (response.suggestions.length === 0) {
+      menu.append(note(t("autofill.no_codes", { domain: response.domain })));
+    }
+  }
+  menu.hidden = false;
+  placeTrigger();
+}
+
 async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<void> {
   if (!activeInput) return;
   const input = activeInput;
+  if (isOneTimeCodeField(input)) return openCodeMenu(input, onlyIfUseful);
   const password = findPasswordFor(input) ?? input;
   const [response, passkeys] = await Promise.all([
     send({ type: "autofill:suggest" }),
@@ -234,22 +308,12 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
     passkeys.length === 0 &&
     !wantsNewPassword(password);
   if (onlyIfUseful && (!response.ok || nothingToOffer)) return;
-  menu.replaceChildren();
-
-  const heading = document.createElement("div");
-  heading.className = "heading";
-  heading.append(logo(16), wordmark());
-  menu.append(heading);
+  menu.replaceChildren(menuHeading());
 
   if (!response.ok) {
     menu.append(note(t("autofill.unavailable")));
   } else if ("locked" in response && response.locked) {
-    menu.append(
-      menuRow(t("autofill.locked"), t("autofill.locked_hint"), badge("lock"), () => {
-        void send({ type: "autofill:open-popup" });
-        closeMenu();
-      }),
-    );
+    menu.append(lockedRow());
   } else if ("suggestions" in response) {
     for (const passkey of passkeys) {
       menu.append(
@@ -338,6 +402,85 @@ function showBanner(prompt: PendingPrompt): void {
   banner.hidden = false;
 }
 
+let totpSeen = "";
+let setupScans = 0;
+let setupTimer: ReturnType<typeof setTimeout> | undefined;
+const MAX_SETUP_SCANS = 20;
+
+function showTotpBanner(prompt: TotpPrompt): void {
+  banner.replaceChildren();
+  const title = document.createElement("strong");
+  title.textContent = t("autofill.totp_title", { domain: prompt.domain });
+  const detail = document.createElement("small");
+  detail.textContent = prompt.target
+    ? t(prompt.replace ? "autofill.totp_replace" : "autofill.totp_add", { title: prompt.target })
+    : t("autofill.totp_new");
+
+  const save = document.createElement("button");
+  save.type = "button";
+  save.className = "primary";
+  save.textContent = t("autofill.save");
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.textContent = t("autofill.not_now");
+
+  save.addEventListener("click", async (event) => {
+    if (!event.isTrusted) return;
+    const response = await send({ type: "autofill:totp-save" });
+    if (response.ok && "saved" in response && response.saved) {
+      const field = findOneTimeCodeField();
+      if (field && response.code) fillCode(field, response.code, setValue);
+      banner.replaceChildren(
+        logo(24),
+        t(field && response.code ? "autofill.totp_saved_filled" : "autofill.saved"),
+      );
+      setTimeout(() => (banner.hidden = true), 2500);
+    } else if (response.ok && "locked" in response && response.locked) {
+      detail.textContent = t("autofill.unlock_to_save");
+    } else {
+      detail.textContent = t("autofill.save_failed");
+    }
+  });
+  dismiss.addEventListener("click", (event) => {
+    if (!event.isTrusted) return;
+    void send({ type: "autofill:totp-dismiss" });
+    banner.hidden = true;
+  });
+
+  const text = document.createElement("div");
+  text.className = "text";
+  text.append(title, detail);
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  actions.append(dismiss, save);
+  banner.append(logo(28), text, actions);
+  banner.hidden = false;
+}
+
+async function scanForSetup(): Promise<void> {
+  if (setupScans >= MAX_SETUP_SCANS || !banner.hidden) return;
+  if (!mentionsSetup(document.body?.textContent ?? "")) return;
+  setupScans++;
+  const found =
+    findSetupText() ??
+    (await findSetupQr(document, async (url) => {
+      const response = await send({ type: "autofill:qr-image", url });
+      if (!response.ok || !("image" in response) || !response.image) return null;
+      const [header = "", data = ""] = response.image.split(",");
+      const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0));
+      return new Blob([bytes], { type: header.slice(5).split(";")[0] });
+    }));
+  if (!found || found === totpSeen) return;
+  totpSeen = found;
+  const response = await send({ type: "autofill:totp-found", text: found });
+  if (response.ok && "totp" in response && response.totp) showTotpBanner(response.totp);
+}
+
+function scheduleSetupScan(): void {
+  clearTimeout(setupTimer);
+  setupTimer = setTimeout(() => void scanForSetup(), 800);
+}
+
 function capturedPassword(scope: ParentNode): string {
   const values = passwordFields(scope)
     .map((field) => field.value)
@@ -408,6 +551,10 @@ function onFocusIn(event: FocusEvent): void {
   if (activeInput !== target) closeMenu();
   activeInput = target;
   placeTrigger();
+  const offersPassword = target.type === "password" && !target.value && wantsNewPassword(target);
+  if (menu.hidden && (offersPassword || (isOneTimeCodeField(target) && !target.value))) {
+    void openMenu({ onlyIfUseful: true });
+  }
 }
 
 trigger.addEventListener("mousedown", (event) => event.preventDefault());
@@ -515,6 +662,12 @@ async function start(): Promise<void> {
   if (document.activeElement instanceof HTMLInputElement) {
     onFocusIn({ target: document.activeElement } as unknown as FocusEvent);
   }
+
+  scheduleSetupScan();
+  new MutationObserver(scheduleSetupScan).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
 }
 
 void start();
