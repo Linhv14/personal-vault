@@ -75,6 +75,7 @@ codes, end-to-end encrypted.
 | `clipboardWrite`                                 | Writes the empty value that clears a copied password from the clipboard.                                                                                                                   |
 | `scripting`                                      | Registers the autofill and passkey scripts only after the user turns on "Autofill and passkeys on websites".                                                                               |
 | Optional host access `https://*/*`, `http://*/*` | Requested only when the user turns on autofill and passkeys, to show the fill icon in login forms, offer to save new logins, and create or use passkeys the user approves. Off by default. |
+| Optional `privacy`                               | Requested only when the user chooses to make 7key the password manager, to turn off the browser's own offer to save passwords; returned when they turn it off.                             |
 
 **Remote code:** No. All code ships in the package.
 

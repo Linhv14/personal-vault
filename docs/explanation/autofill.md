@@ -128,3 +128,17 @@ already done. A secret that is already saved is not offered again.
 Reading QR codes needs `BarcodeDetector`, which Chrome ships on macOS, ChromeOS
 and Android; elsewhere the link and setup-key paths still work, and the popup's
 scan button remains.
+
+## Replacing the browser's password manager
+
+**Make 7key the password manager** in Settings asks for the optional `privacy`
+permission and turns off the browser's own offer to save and fill passwords
+(`privacy.services.passwordSavingEnabled`), so only 7key asks. Turning it off
+restores the browser's setting and gives the permission back. Chrome, Edge,
+Brave, Opera, Vivaldi and other Chromium browsers share this setting.
+
+When a company policy or another extension controls it, 7key says so instead of
+changing it, and offers to open the browser's own password settings
+(`chrome://password-manager/settings`, `edge://settings/passwords`,
+`brave://password-manager/settings` and so on). Passwords already saved in the
+browser stay there; export them as CSV and import them into 7key.

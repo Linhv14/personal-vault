@@ -25,6 +25,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- **Make 7key the password manager** in Settings turns off the browser's own
+  offer to save and fill passwords, through the optional `privacy`
+  permission, in Chrome, Edge, Brave, Opera, Vivaldi and other Chromium
+  browsers. When a policy or another extension controls the setting, 7key
+  says so and opens the browser's password settings instead.
 - Autofill fills 2FA codes: code fields get the 7key menu with the site's
   logins that have a code, and one-digit boxes are filled digit by digit.
 - Autofill offers to save 2FA while you set it up: it finds the `otpauth://`

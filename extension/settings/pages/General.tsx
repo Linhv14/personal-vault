@@ -12,6 +12,15 @@ import {
   isAutofillEnabled,
 } from "../../lib/autofill-permission.js";
 import {
+  browserPasswordsState,
+  browserPasswordsSupported,
+  giveBackBrowserPasswords,
+  openPasswordSettings,
+  passwordSettingsPage,
+  takeOverBrowserPasswords,
+  type BrowserPasswordsState,
+} from "../../lib/browser-passwords.js";
+import {
   AUTO_LOCK_CHOICES,
   DEFAULT_AUTO_LOCK_MINUTES,
   getUnlocked,
@@ -43,10 +52,23 @@ export function General() {
   const t = useT();
   const local = localState.value;
   const [autofill, setAutofill] = useState(false);
+  const [browser, setBrowser] = useState<BrowserPasswordsState>("browser");
 
   useEffect(() => {
     void isAutofillEnabled().then(setAutofill);
+    if (browserPasswordsSupported()) void browserPasswordsState().then(setBrowser);
   }, []);
+
+  const handleBrowserPasswords = async (enabled: boolean) => {
+    if (!enabled) {
+      await giveBackBrowserPasswords();
+      setBrowser("browser");
+      return;
+    }
+    const next = await takeOverBrowserPasswords();
+    setBrowser(next);
+    if (next === "ours") showToast(t("settings.default_manager_on"));
+  };
 
   const handleLocale = async (value: string) => {
     await setLocal({ locale: value as LocalePreference });
@@ -147,6 +169,44 @@ export function General() {
               checked={autofill}
               onChange={(event) =>
                 void handleAutofill((event.currentTarget as HTMLInputElement).checked)
+              }
+            />
+          </label>
+        )}
+        {browserPasswordsSupported() && (
+          <label className="row">
+            <span className="row-text">
+              <span>{t("settings.default_manager")}</span>
+              <span className="row-hint">
+                {browser === "managed"
+                  ? t("settings.default_manager_managed")
+                  : browser === "other_extension"
+                    ? t("settings.default_manager_other")
+                    : t("settings.default_manager_hint")}
+                {browser !== "ours" && passwordSettingsPage() && (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="link"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        void openPasswordSettings();
+                      }}
+                    >
+                      {t("settings.default_manager_open")}
+                    </button>
+                  </>
+                )}
+              </span>
+            </span>
+            <input
+              className="switch"
+              type="checkbox"
+              checked={browser === "ours"}
+              disabled={browser === "managed"}
+              onChange={(event) =>
+                void handleBrowserPasswords((event.currentTarget as HTMLInputElement).checked)
               }
             />
           </label>

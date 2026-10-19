@@ -942,6 +942,15 @@ export const vi: Catalogue = {
   "settings.logos": "Logo website",
   "settings.logos_hint":
     "Hiện logo trang web trong danh sách. Server của bạn tải logo nên sẽ biết bạn có tài khoản ở trang nào.",
+  "settings.default_manager": "Dùng 7key làm trình quản lý mật khẩu",
+  "settings.default_manager_open": "Mở cài đặt mật khẩu của trình duyệt",
+  "settings.default_manager_hint":
+    "Tắt việc trình duyệt tự hỏi lưu và điền mật khẩu, chỉ để 7key hỏi. Mật khẩu đã lưu trong trình duyệt vẫn còn; hãy xuất CSV rồi nhập vào 7key.",
+  "settings.default_manager_on": "Đã tắt trình quản lý mật khẩu của trình duyệt",
+  "settings.default_manager_managed":
+    "Tổ chức của bạn quản lý thiết lập này nên 7key không đổi được.",
+  "settings.default_manager_other":
+    "Một extension khác đang giữ thiết lập này. Hãy tắt ở extension đó trước.",
   "settings.autofill": "Tự điền và passkey trên trang web",
   "settings.autofill_enabled": "Đã bật. Tải lại các trang đang mở để bắt đầu.",
   "passkey.save_title": "Lưu passkey cho {site}?",

@@ -1573,3 +1573,14 @@ tr.pending-row {
   padding-left: 18px;
   font-size: 13.5px;
 }
+.row-hint .link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.row-hint .link:hover {
+  text-decoration: underline;
+}

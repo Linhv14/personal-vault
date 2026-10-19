@@ -955,6 +955,15 @@ export const en = {
   "settings.logos": "Website icons",
   "settings.logos_hint":
     "Shows site logos in the list. Your server fetches them, so it sees which sites you have.",
+  "settings.default_manager": "Make 7key the password manager",
+  "settings.default_manager_open": "Open the browser's password settings",
+  "settings.default_manager_hint":
+    "Turns off the browser's own offer to save and fill passwords, so only 7key asks. Passwords already saved in the browser stay there; export them as CSV and import them.",
+  "settings.default_manager_on": "The browser's password manager is off",
+  "settings.default_manager_managed":
+    "Your organization manages this browser setting, so 7key cannot change it.",
+  "settings.default_manager_other":
+    "Another extension controls this setting. Turn it off there first.",
   "settings.autofill": "Autofill and passkeys on websites",
   "settings.autofill_enabled": "On. Reload open pages to start.",
   "passkey.save_title": "Save a passkey for {site}?",

@@ -20,6 +20,7 @@
     "clipboardWrite",
     "scripting"
   ],
+  "optional_permissions": ["privacy"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "action": {
     "default_popup": "popup/popup.html",
