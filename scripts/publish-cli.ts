@@ -56,7 +56,11 @@ try {
     console.error("Sign in to npm first: npm login");
     process.exit(1);
   }
-  run("npm", ["publish", tarball, "--access", "public"], stage);
+  const published = spawnSync("npm", ["publish", tarball, "--access", "public"], {
+    cwd: stage,
+    stdio: "inherit",
+  });
+  if (published.status !== 0) process.exit(published.status ?? 1);
   console.log(`Published ${PACKAGE}@${version} to npm`);
 
   const tap = path.join(stage, "tap");
