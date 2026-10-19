@@ -1519,9 +1519,14 @@ tr.pending-row {
   justify-content: flex-end;
   gap: 4px;
 }
-.table .icon-button {
+.table .icon-button,
+.table .icon-slot {
   width: 28px;
   height: 28px;
+}
+.icon-slot {
+  display: inline-block;
+  flex: none;
 }
 .icon-button.danger:hover {
   background: var(--danger-soft);

@@ -10,6 +10,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- `7key agent --project <name> --env <name> -- <command>` runs a command, such
+  as Claude Code, with placeholders in place of secrets. A proxy on
+  `127.0.0.1`, trusted through a per-session certificate authority, swaps in
+  the real value only on requests to the hosts allowed for that secret, hides
+  values echoed back in responses, and tunnels every other host untouched.
+  Secrets get **AI agent hosts** in the console, with an **Agent** badge, and
+  use is logged as `secret.injected`. See
+  [Use secrets with AI agents](docs/how-to/use-secrets-with-ai-agents.md).
 - Team vaults: every team in an organization has a shared vault for logins,
   2FA codes, passkeys and other items, listed in the popup under the
   organization's name. Members read, edit, autofill and move items in and out

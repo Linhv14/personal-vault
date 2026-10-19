@@ -207,16 +207,19 @@ export async function saveSecrets(
   writes: SecretWrite[],
 ): Promise<void> {
   const sealed = await Promise.all(
-    writes.map(async ({ id = crypto.randomUUID(), environmentId, name, value, note, kind }) => {
-      const content: SecretContent = { name, value };
-      if (note) content.note = note;
-      if (kind === "variable") content.kind = kind;
-      return {
-        id,
-        environmentId,
-        sealed: await sealSecret(project.content, address(project, environmentId, id), content),
-      };
-    }),
+    writes.map(
+      async ({ id = crypto.randomUUID(), environmentId, name, value, note, kind, hosts }) => {
+        const content: SecretContent = { name, value };
+        if (note) content.note = note;
+        if (kind === "variable") content.kind = kind;
+        else if (hosts && hosts.length > 0) content.hosts = hosts;
+        return {
+          id,
+          environmentId,
+          sealed: await sealSecret(project.content, address(project, environmentId, id), content),
+        };
+      },
+    ),
   );
   for (const batch of chunks(sealed, BATCH)) {
     await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/secrets`, {
@@ -245,11 +248,10 @@ export async function importSecrets(
   await saveSecrets(
     orgId,
     project,
-    entries.map((entry) => ({
-      ...entry,
-      environmentId,
-      id: existing.find((secret) => secret.name === entry.name)?.id,
-    })),
+    entries.map((entry) => {
+      const same = existing.find((secret) => secret.name === entry.name);
+      return { hosts: same?.hosts, ...entry, environmentId, id: same?.id };
+    }),
   );
   return entries.length;
 }

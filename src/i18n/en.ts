@@ -477,8 +477,17 @@ export const en = {
   "console.duplicates_removed": "Duplicates removed",
   "console.kind": "Type",
   "console.kind_secret": "Secret",
+  "console.agent_hosts": "AI agent hosts",
+  "console.agent_hosts_optional": "AI agent hosts (optional)",
+  "console.agent_hosts_title": "AI agent hosts for {name}",
+  "console.agent_hosts_hint":
+    "7key agent sends this secret only to these hosts; the agent itself sees a placeholder. One per line, *.example.com for subdomains.",
+  "console.agent_hosts_invalid":
+    "Use host names such as api.stripe.com or *.myshopify.com, at most 10.",
+  "console.agent_badge": "Agent",
   "console.kind_variable": "Variable",
   "orgs.audit_secret_revealed": "revealed a secret in",
+  "orgs.audit_secret_injected": "let an AI agent use secrets of",
   "orgs.audit_secret_copied": "copied a secret from",
   "orgs.audit_secrets_exported": "copied every value of",
   "console.personal": "Personal",

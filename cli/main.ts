@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { formatDotenv } from "../src/core/projects.js";
+import { agentMain } from "./agent/main.js";
 import { CiError, DEFAULT_SERVER, exportToGithubEnv, fetchSecrets } from "./ci-client.js";
 
 const USAGE = `Usage: 7key <command> [options]
@@ -7,6 +8,8 @@ const USAGE = `Usage: 7key <command> [options]
   run -- <command…>   Run a command with the linked secrets in its environment
   env                 Export the linked secrets to later GitHub Actions steps
   dotenv              Print the linked secrets as a .env file
+  agent               Let a command, such as an AI agent, use secrets it cannot see
+                      (7key agent --help)
 
 Options
   --link <ref>        Repository link, as shown in the 7key console (or SEVENKEY_LINK)
@@ -44,6 +47,7 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv): Parsed {
 }
 
 export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
+  if (argv[0] === "agent") return agentMain(argv.slice(1), env);
   const { command, link, server, rest } = parseArgs(argv, env);
   if (!command || command === "help" || command === "--help") {
     console.log(USAGE);

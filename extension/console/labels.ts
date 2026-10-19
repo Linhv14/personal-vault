@@ -30,6 +30,7 @@ export const ACTION_LABEL: Record<string, MessageKey> = {
   "team.item_saved": "orgs.audit_team_item_saved",
   "team.item_deleted": "orgs.audit_team_item_deleted",
   "secret.revealed": "orgs.audit_secret_revealed",
+  "secret.injected": "orgs.audit_secret_injected",
   "secret.copied": "orgs.audit_secret_copied",
   "secrets.exported": "orgs.audit_secrets_exported",
   "ci.read": "orgs.audit_ci_read",

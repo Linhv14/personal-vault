@@ -18,6 +18,7 @@ it teaches, instructs, describes or explains.
 | [Import passwords](how-to/import-passwords.md)                           | Bring items from Proton Pass, Bitwarden, 1Password, a browser or a recovery codes file |
 | [Export your vault](how-to/export-your-vault.md)                         | Save an encrypted 7key file or a CSV for another app                                   |
 | [Use secrets in GitHub Actions](how-to/use-in-github-actions.md)         | Link a repository to an environment and read it from a workflow                        |
+| [Use secrets with AI agents](how-to/use-secrets-with-ai-agents.md)       | Let Claude Code and other agents call APIs with keys they never see                    |
 | [Run a shared server](how-to/run-a-shared-server.md)                     | Let other people sign up, with email verification and a domain                         |
 | [Back up and restore](how-to/back-up-and-restore.md)                     | Survive a lost database, a bad deploy or a lost secret                                 |
 | [Rotate secrets](how-to/rotate-secrets.md)                               | Replace a leaked token or API key without locking anyone out                           |

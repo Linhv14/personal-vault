@@ -51,7 +51,8 @@ secret's environment outright. It sees ids, counts and timestamps, never names.
 Each entry is either a variable or a secret, and the type is sealed with the
 value. Variables (a public URL, a log level) show their value in the console.
 Secrets stay masked; revealing one, copying one, or copying an environment that
-contains one as `.env` is written to the activity log (`secret.revealed`,
+contains one as `.env` is written to the activity log (`secret.injected` when
+`7key agent` hands secrets to an AI agent, `secret.revealed`,
 `secret.copied`, `secrets.exported`). The log entry comes from the client, so it
 records what people do in the console, not a guarantee: anyone in the team holds
 the project key and can decrypt every value. A secret that people cannot read at

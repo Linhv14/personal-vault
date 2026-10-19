@@ -27,13 +27,43 @@ export interface SecretContent {
   value: string;
   note?: string;
   kind?: SecretKind;
+  hosts?: string[];
 }
 
-export const SECRET_ACCESS = ["revealed", "copied", "exported"] as const;
+export const SECRET_ACCESS = ["revealed", "copied", "exported", "injected"] as const;
 export type SecretAccess = (typeof SECRET_ACCESS)[number];
 
 export function isVariable(secret: SecretContent): boolean {
   return secret.kind === "variable";
+}
+
+export const MAX_SECRET_HOSTS = 10;
+const HOST_LABEL = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
+
+export function normalizeHost(value: string): string | null {
+  const host = value.trim().toLowerCase().replace(/\.$/, "");
+  const wildcard = host.startsWith("*.");
+  const labels = (wildcard ? host.slice(2) : host).split(".");
+  if (labels.length < 2 || host.length > 253) return null;
+  if (!labels.every((label) => HOST_LABEL.test(label))) return null;
+  if (/^\d+$/.test(labels.at(-1) ?? "")) return null;
+  return host;
+}
+
+export function parseHosts(text: string): string[] | null {
+  const entries = [...new Set(text.split(/[\s,]+/).filter(Boolean))];
+  const hosts = entries.map(normalizeHost);
+  if (hosts.length > MAX_SECRET_HOSTS || hosts.some((host) => host === null)) return null;
+  return hosts as string[];
+}
+
+export function hostAllowed(hosts: readonly string[] | undefined, hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  return (hosts ?? []).some((entry) =>
+    entry.startsWith("*.")
+      ? host.endsWith(entry.slice(1)) && host !== entry.slice(2)
+      : host === entry,
+  );
 }
 
 export interface SecretAddress {

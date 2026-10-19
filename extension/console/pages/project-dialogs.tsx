@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import {
   isSecretName,
   parseDotenv,
+  parseHosts,
   type Environment,
   type SecretKind,
 } from "../../../src/core/projects.js";
@@ -13,6 +14,7 @@ export interface SecretDraft {
   name: string;
   kind: SecretKind;
   values: Record<string, string>;
+  hosts: string[];
 }
 
 export function AddSecretDialog({
@@ -50,7 +52,9 @@ export function AddSecretDialog({
         const values = Object.fromEntries(
           included.map((id) => [id, String(data.get(`value-${id}`) ?? "")]),
         );
-        onSave({ name, kind, values });
+        const hosts = kind === "secret" ? parseHosts(String(data.get("hosts") ?? "")) : [];
+        if (!hosts) return setError(t("console.agent_hosts_invalid"));
+        onSave({ name, kind, values, hosts });
       }}
     >
       <KindPicker value={kind} onChange={setKind} />
@@ -94,6 +98,58 @@ export function AddSecretDialog({
           );
         })}
       </div>
+      {kind === "secret" && (
+        <Field label={t("console.agent_hosts_optional")} hint={t("console.agent_hosts_hint")}>
+          <input
+            name="hosts"
+            className="mono"
+            autoComplete="off"
+            spellcheck={false}
+            placeholder="api.stripe.com"
+            onInput={() => setError(null)}
+          />
+        </Field>
+      )}
+      {error && <p className="form-error">{error}</p>}
+    </Dialog>
+  );
+}
+
+export function HostsDialog({
+  secret,
+  onClose,
+  onSave,
+}: {
+  secret: Secret;
+  onClose: () => void;
+  onSave: (hosts: string[]) => void;
+}) {
+  const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Dialog
+      title={t("console.agent_hosts_title", { name: secret.name })}
+      description={t("console.agent_hosts_hint")}
+      submitLabel={t("projects.save")}
+      onClose={onClose}
+      onSubmit={(form) => {
+        const hosts = parseHosts(String(new FormData(form).get("hosts") ?? ""));
+        if (!hosts) return setError(t("console.agent_hosts_invalid"));
+        onSave(hosts);
+      }}
+    >
+      <Field label={t("console.agent_hosts")}>
+        <textarea
+          name="hosts"
+          className="mono"
+          rows={3}
+          autoFocus
+          spellcheck={false}
+          placeholder={"api.stripe.com\n*.myshopify.com"}
+          defaultValue={(secret.hosts ?? []).join("\n")}
+          onInput={() => setError(null)}
+        />
+      </Field>
       {error && <p className="form-error">{error}</p>}
     </Dialog>
   );

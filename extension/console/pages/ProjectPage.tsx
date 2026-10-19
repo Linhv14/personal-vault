@@ -42,6 +42,7 @@ import { attempt, pending$, toast, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
 import {
   AddSecretDialog,
+  HostsDialog,
   ImportDialog,
   TypeToConfirmDialog,
   type SecretDraft,
@@ -60,6 +61,7 @@ type Modal =
   | { kind: "delete-env" }
   | { kind: "delete-project" }
   | { kind: "delete-secret"; secret: Secret }
+  | { kind: "hosts"; secret: Secret }
   | { kind: "remove-duplicates" }
   | null;
 
@@ -174,6 +176,7 @@ export function ProjectPage({
             name: draft.name,
             value,
             kind: draft.kind,
+            hosts: draft.hosts,
           };
         }),
       );
@@ -413,12 +416,14 @@ export function ProjectPage({
                         name: secret.name,
                         value,
                         kind,
+                        hosts: secret.hosts,
                       }),
                     "projects.saved",
                     [secret.id],
                   );
                 }}
                 onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
+                onHosts={(secret) => setModal({ kind: "hosts", secret })}
                 onAccess={(access, secretId) =>
                   noteAccess(orgId, project, environment.id, access, secretId)
                 }
@@ -579,6 +584,29 @@ export function ProjectPage({
           onSubmit={() => {
             setModal(null);
             removeDuplicates();
+          }}
+        />
+      )}
+      {modal?.kind === "hosts" && environment && (
+        <HostsDialog
+          secret={modal.secret}
+          onClose={() => setModal(null)}
+          onSave={(hosts) => {
+            const { secret } = modal;
+            setModal(null);
+            void mutate(
+              () =>
+                saveSecret(orgId, project, environment.id, {
+                  id: secret.id,
+                  name: secret.name,
+                  value: secret.value,
+                  kind: secret.kind,
+                  note: secret.note,
+                  hosts,
+                }),
+              "projects.saved",
+              [secret.id],
+            );
           }}
         />
       )}

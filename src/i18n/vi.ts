@@ -471,8 +471,17 @@ export const vi: Catalogue = {
   "console.duplicates_removed": "Đã xoá bản trùng",
   "console.kind": "Loại",
   "console.kind_secret": "Secret",
+  "console.agent_hosts": "Host cho AI agent",
+  "console.agent_hosts_optional": "Host cho AI agent (không bắt buộc)",
+  "console.agent_hosts_title": "Host cho AI agent của {name}",
+  "console.agent_hosts_hint":
+    "7key agent chỉ gửi secret này tới các host dưới đây; agent chỉ thấy placeholder. Mỗi dòng một host, *.example.com cho subdomain.",
+  "console.agent_hosts_invalid":
+    "Dùng tên host như api.stripe.com hoặc *.myshopify.com, tối đa 10.",
+  "console.agent_badge": "Agent",
   "console.kind_variable": "Variable",
   "orgs.audit_secret_revealed": "đã xem một secret trong",
+  "orgs.audit_secret_injected": "đã cho AI agent dùng secret của",
   "orgs.audit_secret_copied": "đã sao chép một secret từ",
   "orgs.audit_secrets_exported": "đã sao chép toàn bộ giá trị của",
   "console.personal": "Cá nhân",

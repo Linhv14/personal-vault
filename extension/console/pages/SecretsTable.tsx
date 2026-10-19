@@ -19,6 +19,7 @@ function SecretRow({
   onSave,
   onDelete,
   onAccess,
+  onHosts,
 }: {
   secret: Secret;
   editable: boolean;
@@ -26,6 +27,7 @@ function SecretRow({
   onSave: (value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: () => void;
   onAccess: (access: SecretAccess) => void;
+  onHosts: () => void;
 }) {
   const t = useT();
   const { emailOf } = useConsole();
@@ -42,6 +44,11 @@ function SecretRow({
       <td className="secret-name">
         <code>{secret.name}</code>
         {variable && <Badge>{t("console.kind_variable")}</Badge>}
+        {!variable && (secret.hosts?.length ?? 0) > 0 && (
+          <span title={secret.hosts!.join("\n")}>
+            <Badge>{t("console.agent_badge")}</Badge>
+          </span>
+        )}
       </td>
       <td className="secret-value">
         {draft !== null ? (
@@ -116,6 +123,11 @@ function SecretRow({
           />
           {editable && (
             <>
+              {variable ? (
+                <span className="icon-slot" aria-hidden="true" />
+              ) : (
+                <IconButton icon="terminal" label={t("console.agent_hosts")} onClick={onHosts} />
+              )}
               <IconButton
                 icon="pencil"
                 label={t("projects.edit")}
@@ -147,6 +159,7 @@ export function SecretsTable({
   onSave,
   onDelete,
   onAccess,
+  onHosts,
 }: {
   secrets: Secret[];
   query: string;
@@ -155,6 +168,7 @@ export function SecretsTable({
   onSave: (secret: Secret, value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: (secret: Secret) => void;
   onAccess: (access: SecretAccess, secretId: string) => void;
+  onHosts: (secret: Secret) => void;
 }) {
   const t = useT();
   const needle = query.trim().toLowerCase();
@@ -181,6 +195,7 @@ export function SecretsTable({
               onSave={(value, kind) => onSave(secret, value, kind)}
               onDelete={() => onDelete(secret)}
               onAccess={(access) => onAccess(access, secret.id)}
+              onHosts={() => onHosts(secret)}
             />
           ))}
         </tbody>
