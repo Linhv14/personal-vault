@@ -38,6 +38,7 @@ vi.stubGlobal(
         JSON.stringify({ serverTime: Math.floor(Date.now() / 1000), items: remote.changes }),
       );
     }
+    if (url.pathname === "/api/vaults") return new Response(JSON.stringify({ vaults: [] }));
     const id = url.pathname.split("/").pop()!;
     conditions.push(url.searchParams.get("ifUpdatedAt"));
     if (remote.conflict && url.searchParams.has("ifUpdatedAt")) {

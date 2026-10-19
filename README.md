@@ -17,6 +17,8 @@ ciphertext and holds no key that opens it.
 - **Share links** that expire after a time or a number of views, can be limited
   to specific email addresses, and carry a live 2FA code. The recipient
   installs nothing.
+- **Team vaults** for passwords a family or a team shares: every member reads
+  and edits them, and they are re-encrypted when someone leaves.
 - **Your infrastructure.** Runs on your own Cloudflare account, inside the free
   tier for personal use. Optional open registration for a small shared server.
 - **Works offline** from the encrypted copy on each device; syncs across them.

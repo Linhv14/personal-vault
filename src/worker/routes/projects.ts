@@ -7,7 +7,13 @@ import { orgStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
 import { isBranch, isGithubEnvironment, isRepository } from "../../core/ci.js";
 import { isPublicKey } from "../../core/identity.js";
-import { isSealedProject, isSealedSecret, isUuid, isWrappedKey } from "../validate.js";
+import {
+  isSealedProject,
+  isSealedSecret,
+  isSealedTeamItem,
+  isUuid,
+  isWrappedKey,
+} from "../validate.js";
 import type { SealedData } from "../../core/crypto.js";
 import type { Principal } from "../../core/org-model.js";
 import { asMember, isGeneration, limitsOf, param, type Ctx } from "./org-access.js";
@@ -274,6 +280,36 @@ projects.get(
   "/vault",
   asMember(async (c, member, orgId) =>
     respond(c, await orgStore(c.env, orgId).teamVault(member, team(c), clientIp(c))),
+  ),
+);
+
+projects.put(
+  "/items/:itemId",
+  asMember(async (c, member, orgId) => {
+    const itemId = param(c, "itemId");
+    const { sealed, generation } = await readJson(c);
+    if (!isUuid(itemId) || !isSealedTeamItem(sealed) || !isGeneration(generation)) {
+      return c.json(apiError("orgs.invalid_item"), 400);
+    }
+    return respond(
+      c,
+      await orgStore(c.env, orgId).putTeamItem(
+        member,
+        team(c),
+        { id: itemId, sealed, generation },
+        clientIp(c),
+      ),
+    );
+  }),
+);
+
+projects.delete(
+  "/items/:itemId",
+  asMember(async (c, member, orgId) =>
+    respond(
+      c,
+      await orgStore(c.env, orgId).deleteTeamItem(member, team(c), param(c, "itemId"), clientIp(c)),
+    ),
   ),
 );
 

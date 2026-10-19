@@ -1598,6 +1598,18 @@ details.history .field-row {
   border-bottom: 1px solid var(--border);
   font-weight: 600;
 }
+.menu-section {
+  padding: 6px 10px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.menu-note {
+  margin: 0 0 6px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
 .menu-divider {
   height: 1px;
   margin: 4px 2px;

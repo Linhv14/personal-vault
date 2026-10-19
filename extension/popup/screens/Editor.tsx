@@ -261,11 +261,30 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
           <label>
             <span>{t("vault.field")}</span>
             <select name="vault">
-              {vaults.value.map((vault) => (
-                <option value={vault.id} key={vault.id} selected={vault.id === initialVault}>
-                  {vault.name}
-                </option>
-              ))}
+              {vaults.value
+                .filter((vault) => !vault.shared)
+                .map((vault) => (
+                  <option value={vault.id} key={vault.id} selected={vault.id === initialVault}>
+                    {vault.name}
+                  </option>
+                ))}
+              {[...new Set(vaults.value.flatMap((vault) => vault.shared?.orgName ?? []))].map(
+                (org) => (
+                  <optgroup label={org} key={org}>
+                    {vaults.value
+                      .filter((vault) => vault.shared?.orgName === org)
+                      .map((vault) => (
+                        <option
+                          value={vault.id}
+                          key={vault.id}
+                          selected={vault.id === initialVault}
+                        >
+                          {vault.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ),
+              )}
             </select>
           </label>
         )}

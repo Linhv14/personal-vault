@@ -79,6 +79,29 @@ project or secret is missing or extra. Until that happens, the team is flagged
 and every write to its projects is refused, so nothing new is written under keys
 the departed member holds.
 
+## Team vaults
+
+Each team also has a vault for logins, 2FA codes, passkeys, cards and notes,
+shown in the popup next to the personal vaults, grouped by organization. Every
+member of the team reads and edits it; autofill and passkeys use its items like
+personal ones. A family or a small group shares passwords by creating an
+organization with one team.
+
+An item in a team vault is the same record as a personal item, sealed under the
+team key with `personal-vault/team-item/<team>/<generation>/<item>` as
+associated data, so the server cannot move it to another team or replay it
+under an older key. Moving an item between a personal vault and a team vault
+writes it to the target first and then deletes it from the source; **Share
+with a team** in a personal vault's menu moves every item at once. The server
+stores ids, timestamps and who saved what; the activity log shows
+`team.item_saved` and `team.item_deleted` against the team, without titles.
+
+Removing someone from the team re-keys the vault with the projects: the admin's
+device re-encrypts every item under the new key in the same transaction, and
+until then writes are refused. The popup keeps the sealed items and the
+account's sealed private key on disk, so team vaults open offline after the
+first sync. A team vault holds up to 1,000 items of up to 64 KB each.
+
 ## Roles
 
 The Worker and the organization's Durable Object enforce every row; the console
@@ -89,6 +112,7 @@ only hides what a role cannot use.
 | See the organization and its member list                               | yes                  | yes                                                    | yes                |
 | See team names                                                         | all                  | all                                                    | own teams          |
 | Read and write secrets                                                 | teams they are in    | teams they are in                                      | teams they are in  |
+| Read and write team vault items                                        | teams they are in    | teams they are in                                      | teams they are in  |
 | Create, rename and delete projects and environments, link repositories | teams they are in    | teams they are in                                      | no                 |
 | Create and delete teams, add and remove team members                   | yes                  | yes (adding needs a seat in the team, to wrap its key) | no                 |
 | Invite                                                                 | admins and members   | members                                                | no                 |

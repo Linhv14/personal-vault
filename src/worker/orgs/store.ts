@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
 import type { SealedData } from "../../core/crypto.js";
 import { MAX_SECRETS_PER_PROJECT, type SecretAccess } from "../../core/projects.js";
+import { MAX_TEAM_ITEMS } from "../../core/team-items.js";
 import {
   isOrgAdmin,
   type AuditEvent,
@@ -15,6 +16,7 @@ import { dumpStore, restoreStore, type StoreDump } from "../migration.js";
 import type { Env } from "../types.js";
 import { ruleAllows, type GithubClaims } from "../../core/ci.js";
 import { LinkTables, type LinkRecord } from "./link-tables.js";
+import { ItemTables, type TeamItemRecord } from "./item-tables.js";
 import { ProjectTables, type ProjectRecord, type SecretRecord } from "./project-tables.js";
 
 const AUDIT_PAGE = 100;
@@ -40,6 +42,7 @@ export class OrgStore extends DurableObject<Env> {
   private readonly sql: SqlStorage;
   private readonly projects: ProjectTables;
   private readonly links: LinkTables;
+  private readonly items: ItemTables;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -73,6 +76,7 @@ export class OrgStore extends DurableObject<Env> {
     this.addColumn("teams", "key_generation INTEGER NOT NULL DEFAULT 0");
     this.projects = new ProjectTables(this.sql);
     this.links = new LinkTables(this.sql);
+    this.items = new ItemTables(this.sql);
   }
 
   private addColumn(table: string, definition: string) {
@@ -328,6 +332,7 @@ export class OrgStore extends DurableObject<Env> {
       projects: Record<string, SealedData>;
       secrets: Record<string, SealedData>;
       links: Record<string, WrappedKey>;
+      items: Record<string, SealedData>;
     },
     ip: string | null,
   ): Promise<Result<{ generation: number }>> {
@@ -349,16 +354,19 @@ export class OrgStore extends DurableObject<Env> {
     const projectIds = this.projects.ofTeam(teamId).map((project) => project.id);
     const secretIds = this.projects.secretsOfTeam(teamId).map((secret) => secret.id);
     const linkIds = this.links.ofTeam(teamId).map((link) => link.id);
+    const itemIds = this.items.ofTeam(teamId).map((item) => item.id);
     if (
       !sameKeys(projectIds, next.projects) ||
       !sameKeys(secretIds, next.secrets) ||
-      !sameKeys(linkIds, next.links)
+      !sameKeys(linkIds, next.links) ||
+      !sameKeys(itemIds, next.items)
     ) {
       return fail(409, "orgs.team_changed");
     }
     this.ctx.storage.transactionSync(() => {
       this.projects.reseal(next.projects, next.secrets);
       this.links.rewrap(next.links);
+      this.items.reseal(next.items);
       for (const accountId of members) {
         this.sql.exec(
           "UPDATE team_members SET wrapped_key = ? WHERE team_id = ? AND account_id = ?",
@@ -694,6 +702,7 @@ export class OrgStore extends DurableObject<Env> {
       projects: ProjectRecord[];
       secrets: SecretRecord[];
       links: { id: string; projectId: string; environmentId: string; publicKey: string }[];
+      items: TeamItemRecord[];
     }>
   > {
     const access = this.teamAccess(principal, teamId, true);
@@ -708,9 +717,84 @@ export class OrgStore extends DurableObject<Env> {
         environmentId,
         publicKey,
       })),
+      items: this.items.ofTeam(teamId),
     };
     await this.record(principal.accountId, "team.vault_read", teamId, ip);
     return ok(vault);
+  }
+
+  async sharedVaults(principal: Principal): Promise<
+    Result<
+      {
+        teamId: string;
+        name: string;
+        generation: number;
+        rekeyNeeded: boolean;
+        wrappedKey: WrappedKey;
+        items: TeamItemRecord[];
+      }[]
+    >
+  > {
+    if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
+    const rows = this.sql
+      .exec<{
+        id: string;
+        name: string;
+        key_generation: number;
+        rekey_needed: number;
+        wrapped_key: string;
+      }>(
+        `SELECT t.id, t.name, t.key_generation, t.rekey_needed, m.wrapped_key
+           FROM teams t JOIN team_members m ON m.team_id = t.id
+          WHERE m.account_id = ? ORDER BY t.created_at`,
+        principal.accountId,
+      )
+      .toArray();
+    return ok(
+      rows.map((row) => ({
+        teamId: row.id,
+        name: row.name,
+        generation: row.key_generation,
+        rekeyNeeded: row.rekey_needed === 1,
+        wrappedKey: JSON.parse(row.wrapped_key) as WrappedKey,
+        items: this.items.ofTeam(row.id),
+      })),
+    );
+  }
+
+  async putTeamItem(
+    principal: Principal,
+    teamId: string,
+    item: { id: string; sealed: SealedData; generation: number },
+    ip: string | null,
+  ): Promise<Result<{ updatedAt: number }>> {
+    const access = this.teamAccess(principal, teamId, false);
+    if (!access.ok) return access;
+    const refused = this.writable(access.value, item.generation);
+    if (refused) return refused;
+    const owner = this.items.teamOf(item.id);
+    if (owner !== null && owner !== teamId) return fail(409, "orgs.invalid_item");
+    if (owner === null && this.items.count(teamId) >= MAX_TEAM_ITEMS) {
+      return fail(409, "orgs.item_limit", { limit: MAX_TEAM_ITEMS });
+    }
+    const updatedAt = now();
+    this.items.put(teamId, item.id, item.sealed, principal.accountId, updatedAt);
+    await this.record(principal.accountId, "team.item_saved", teamId, ip);
+    return ok({ updatedAt });
+  }
+
+  async deleteTeamItem(
+    principal: Principal,
+    teamId: string,
+    itemId: string,
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    const access = this.teamAccess(principal, teamId, false);
+    if (!access.ok) return access;
+    if (this.items.teamOf(itemId) !== teamId) return fail(404, "orgs.not_found");
+    this.items.remove(itemId);
+    await this.record(principal.accountId, "team.item_deleted", teamId, ip);
+    return ok({ ok: true as const });
   }
 
   async deleteTeam(
@@ -725,6 +809,7 @@ export class OrgStore extends DurableObject<Env> {
     this.ctx.storage.transactionSync(() => {
       this.projects.removeTeam(teamId);
       this.links.removeTeam(teamId);
+      this.items.removeTeam(teamId);
       this.sql.exec("DELETE FROM team_members WHERE team_id = ?", teamId);
       this.sql.exec("DELETE FROM teams WHERE id = ?", teamId);
     });

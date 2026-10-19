@@ -56,6 +56,8 @@ export type ApiErrorCode =
   | "orgs.rekey_required"
   | "orgs.invalid_link"
   | "orgs.link_limit"
+  | "orgs.invalid_item"
+  | "orgs.item_limit"
   | "ci.unauthorized"
   | "ci.forbidden"
   | "items.invalid_id"
@@ -121,6 +123,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.invalid_project": "Invalid project id or content",
   "orgs.invalid_secret": "Invalid secret id, environment or content",
   "orgs.project_limit": "This plan allows no more projects",
+  "orgs.invalid_item": "Invalid shared item id or content",
+  "orgs.item_limit": "This shared vault is full",
   "orgs.secret_limit": "This project has reached its secret limit",
   "orgs.invalid_link": "Invalid repository, branch, environment or key",
   "orgs.link_limit": "This project has reached its repository limit",

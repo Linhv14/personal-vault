@@ -1,7 +1,9 @@
 import type { ComponentChildren } from "preact";
+import { Fragment } from "preact";
 import { useState } from "preact/hooks";
 import type { IconName } from "../../../src/ui/icons.js";
 import type { VaultDef } from "../../lib/vault.js";
+import { consolePathOf } from "../../lib/shared-vaults.js";
 import { DEFAULT_VAULT_ID, vaultOf } from "../../lib/vaults.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
@@ -11,6 +13,7 @@ import {
   deleteVault,
   items,
   moveVaultItems,
+  openConsole,
   openVaultEditor,
   switchVault,
   vaultBusy,
@@ -20,7 +23,10 @@ import { VaultBadge } from "./ItemIcons.js";
 import { useDismiss } from "./Menu.js";
 
 type View =
-  { kind: "list" } | { kind: "actions"; vault: VaultDef } | { kind: "move"; vault: VaultDef };
+  | { kind: "list" }
+  | { kind: "actions"; vault: VaultDef }
+  | { kind: "move"; vault: VaultDef }
+  | { kind: "share"; vault: VaultDef };
 
 function MenuButton({
   icon,
@@ -66,9 +72,36 @@ function VaultPanel({ onClose }: { onClose: () => void }) {
   const ref = useDismiss(onClose);
   const [view, setView] = useState<View>({ kind: "list" });
   const list = vaults.value;
+  const own = list.filter((vault) => !vault.shared);
+  const shared = list.filter((vault) => vault.shared);
+  const byOrg = [...new Set(shared.map((vault) => vault.shared?.orgName ?? ""))].map((org) => ({
+    org,
+    vaults: shared.filter((vault) => vault.shared?.orgName === org),
+  }));
   const live = items.value.filter((item) => !item.trashedAt);
   const count = (id: string) => live.filter((item) => vaultOf(item) === id).length;
   const busy = vaultBusy.value;
+
+  const row = (vault: VaultDef) => (
+    <div className="vault-row" key={vault.id}>
+      <MenuButton
+        leading={<VaultBadge vault={vault} />}
+        label={vault.name}
+        trailing={count(vault.id)}
+        checked={currentVault.value === vault.id}
+        onSelect={() => {
+          switchVault(vault.id);
+          onClose();
+        }}
+      />
+      <IconButton
+        icon="more"
+        className="vault-more"
+        label={t("item.more")}
+        onClick={() => setView({ kind: "actions", vault })}
+      />
+    </div>
+  );
 
   const header = (vault: VaultDef, title: string) => (
     <div className="menu-header">
@@ -92,25 +125,13 @@ function VaultPanel({ onClose }: { onClose: () => void }) {
               onClose();
             }}
           />
-          {list.map((vault) => (
-            <div className="vault-row" key={vault.id}>
-              <MenuButton
-                leading={<VaultBadge vault={vault} />}
-                label={vault.name}
-                trailing={count(vault.id)}
-                checked={currentVault.value === vault.id}
-                onSelect={() => {
-                  switchVault(vault.id);
-                  onClose();
-                }}
-              />
-              <IconButton
-                icon="more"
-                className="vault-more"
-                label={t("item.more")}
-                onClick={() => setView({ kind: "actions", vault })}
-              />
-            </div>
+          {own.map(row)}
+          {byOrg.map((group) => (
+            <Fragment key={group.org}>
+              <div className="menu-divider" />
+              <div className="menu-section">{group.org}</div>
+              {group.vaults.map(row)}
+            </Fragment>
           ))}
           <div className="menu-divider" />
           <MenuButton
@@ -123,7 +144,34 @@ function VaultPanel({ onClose }: { onClose: () => void }) {
           />
         </>
       )}
-      {view.kind === "actions" && (
+      {view.kind === "actions" && view.vault.shared && (
+        <>
+          {header(view.vault, view.vault.name)}
+          <p className="menu-note">
+            {t("vault.team_vault_hint", {
+              team: view.vault.name,
+              org: view.vault.shared.orgName,
+            })}
+          </p>
+          {count(view.vault.id) > 0 && (
+            <MenuButton
+              icon="move"
+              label={t("vault.move_all")}
+              disabled={busy}
+              onSelect={() => setView({ kind: "move", vault: view.vault })}
+            />
+          )}
+          <MenuButton
+            icon="users"
+            label={t("vault.manage_team")}
+            onSelect={() => {
+              onClose();
+              openConsole(consolePathOf(view.vault.id));
+            }}
+          />
+        </>
+      )}
+      {view.kind === "actions" && !view.vault.shared && (
         <>
           {header(view.vault, view.vault.name)}
           <MenuButton
@@ -134,6 +182,21 @@ function VaultPanel({ onClose }: { onClose: () => void }) {
               openVaultEditor(view.vault);
             }}
           />
+          {count(view.vault.id) > 0 && (
+            <MenuButton
+              icon="users"
+              label={t("vault.share_team")}
+              disabled={busy}
+              onSelect={() => {
+                if (shared.length > 0) {
+                  setView({ kind: "share", vault: view.vault });
+                  return;
+                }
+                onClose();
+                openConsole();
+              }}
+            />
+          )}
           {count(view.vault.id) > 0 && (
             <MenuButton
               icon="move"
@@ -182,6 +245,29 @@ function VaultPanel({ onClose }: { onClose: () => void }) {
               openVaultEditor(null, view.vault);
             }}
           />
+        </>
+      )}
+      {view.kind === "share" && (
+        <>
+          {header(view.vault, t("vault.share_team"))}
+          <p className="menu-note">{t("vault.share_team_hint")}</p>
+          {byOrg.map((group) => (
+            <Fragment key={group.org}>
+              <div className="menu-section">{group.org}</div>
+              {group.vaults.map((vault) => (
+                <MenuButton
+                  key={vault.id}
+                  leading={<VaultBadge vault={vault} />}
+                  label={vault.name}
+                  trailing={count(vault.id)}
+                  onSelect={() => {
+                    onClose();
+                    void moveVaultItems(view.vault, vault);
+                  }}
+                />
+              ))}
+            </Fragment>
+          ))}
         </>
       )}
     </div>

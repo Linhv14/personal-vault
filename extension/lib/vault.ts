@@ -21,12 +21,21 @@ import {
 } from "./item-types.js";
 import * as api from "./api.js";
 import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
+import {
+  decryptSharedVaults,
+  isSharedVaultId,
+  removeSharedItem,
+  saveSharedItem,
+  sharedVaultOf,
+  syncSharedVaults,
+} from "./shared-vaults.js";
 
 export interface VaultDef {
   id: string;
   name: string;
   color: string;
   icon: string;
+  shared?: { orgName: string; rekeyNeeded: boolean };
 }
 
 export interface VaultItem {
@@ -120,14 +129,15 @@ export async function openVault(): Promise<{ key: CryptoKey; items: VaultItem[] 
   const session = await getUnlocked();
   if (!session) return null;
   const key = await importKey(session.vaultKeyRaw);
-  return { key, items: await decryptAll(key) };
+  return { key, items: (await decryptEverything(key, "en", false, true)).items };
 }
 
 export async function decryptEverything(
   key: CryptoKey,
   locale = "en",
   includeTrashed = false,
-): Promise<{ items: VaultItem[]; system: VaultItem[] }> {
+  includeShared = false,
+): Promise<{ items: VaultItem[]; system: VaultItem[]; shared: VaultDef[] }> {
   const { items = [], unboundItemsMigrated = false } = await getLocal();
   const output: VaultItem[] = [];
   const system: VaultItem[] = [];
@@ -145,7 +155,15 @@ export async function decryptEverything(
     }
   }
 
-  return { items: output.sort((a, b) => a.title.localeCompare(b.title, locale)), system };
+  const shared = includeShared
+    ? await decryptSharedVaults(key, includeTrashed)
+    : { items: [], vaults: [] };
+  output.push(...shared.items);
+  return {
+    items: output.sort((a, b) => a.title.localeCompare(b.title, locale)),
+    system,
+    shared: shared.vaults,
+  };
 }
 
 export async function decryptAll(
@@ -191,7 +209,8 @@ export async function sync(): Promise<number | null> {
 
   // The cursor is the server's clock, never the local one.
   await setLocal({ lastSync: response.serverTime });
-  return changed;
+  const sharedChanged = await syncSharedVaults().catch(() => 0);
+  return changed + (sharedChanged ?? 0);
 }
 
 export async function saveItem(
@@ -199,7 +218,31 @@ export async function saveItem(
   item: Omit<VaultItem, "createdAt" | "updatedAt"> & { createdAt?: number },
 ): Promise<VaultItem> {
   const now = Math.floor(Date.now() / 1000);
-  return storeItem(key, { ...item, createdAt: item.createdAt ?? now, updatedAt: now });
+  const payload = { ...item, createdAt: item.createdAt ?? now, updatedAt: now };
+  const from = await locate(item.id);
+  const saved = isSharedVaultId(payload.vault)
+    ? await saveSharedItem(key, payload.vault, payload)
+    : await storeItem(key, payload);
+  if (from && from !== (isSharedVaultId(payload.vault) ? payload.vault : "personal")) {
+    await removeFrom(from, item.id);
+  }
+  return saved;
+}
+
+async function locate(id: string): Promise<string | null> {
+  const shared = await sharedVaultOf(id);
+  if (shared) return shared;
+  const row = ((await getLocal()).items ?? []).find((cached) => cached.id === id);
+  return row && isLive(row) ? "personal" : null;
+}
+
+async function removeFrom(location: string, id: string): Promise<void> {
+  if (isSharedVaultId(location)) {
+    await removeSharedItem(location, id);
+    return;
+  }
+  const { deletedAt } = await api.deleteItem(id);
+  await upsertCache({ id, ciphertext: null, nonce: null, updatedAt: deletedAt, deletedAt });
 }
 
 const USE_RECORD_INTERVAL = 60;
@@ -213,7 +256,7 @@ export async function markUsed(
   item: VaultItem,
   now = Math.floor(Date.now() / 1000),
 ): Promise<void> {
-  if (usedRecently(item, now)) return;
+  if (usedRecently(item, now) || isSharedVaultId(item.vault)) return;
   if ((await sync()) === null) return;
   const row = ((await getLocal()).items ?? []).find((cached) => cached.id === item.id);
   if (!row || !isLive(row)) return;
@@ -342,8 +385,7 @@ export async function importItems(
 }
 
 export async function removeItem(id: string): Promise<void> {
-  const { deletedAt } = await api.deleteItem(id);
-  await upsertCache({ id, ciphertext: null, nonce: null, updatedAt: deletedAt, deletedAt });
+  await removeFrom((await locate(id)) ?? "personal", id);
 }
 
 export async function migrateUnboundItems(key: CryptoKey): Promise<number> {

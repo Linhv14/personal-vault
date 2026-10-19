@@ -2,6 +2,7 @@ import { fromBase64 } from "../core/bytes.js";
 import type { SealedData } from "../core/crypto.js";
 import type { WrappedKey } from "../core/org-model.js";
 import { MAX_PROJECT_BYTES, MAX_SECRET_BYTES } from "../core/projects.js";
+import { MAX_TEAM_ITEM_BYTES } from "../core/team-items.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -55,4 +56,8 @@ export function isSealedProject(value: unknown): value is SealedData {
 
 export function isSealedSecret(value: unknown): value is SealedData {
   return isSealed(value, MAX_SECRET_BYTES);
+}
+
+export function isSealedTeamItem(value: unknown): value is SealedData {
+  return isSealed(value, MAX_TEAM_ITEM_BYTES);
 }

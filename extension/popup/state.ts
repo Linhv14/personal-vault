@@ -90,9 +90,13 @@ let vaultRecords: VaultItem[] = [];
 
 export async function reloadItems(): Promise<void> {
   if (!vaultKey.value) return;
-  const { items: next, system } = await decryptEverything(vaultKey.value, localeSignal.value, true);
+  const {
+    items: next,
+    system,
+    shared,
+  } = await decryptEverything(vaultKey.value, localeSignal.value, true, true);
   vaultRecords = system;
-  vaults.value = vaultList(system, translator()("vault.personal"));
+  vaults.value = [...vaultList(system, translator()("vault.personal")), ...shared];
   if (currentVault.value !== "all" && !vaults.value.some((v) => v.id === currentVault.value)) {
     currentVault.value = "all";
   }
@@ -117,7 +121,7 @@ async function storeVaults(next: VaultDef[]): Promise<void> {
     id: newest?.id ?? newItemId(),
     title: "",
     system: "vaults",
-    vaults: next,
+    vaults: next.filter((vault) => !vault.shared),
     createdAt: newest?.createdAt,
   });
   for (const record of older) await removeItem(record.id);
@@ -181,7 +185,7 @@ export async function moveVaultItems(from: VaultDef, to: VaultDef): Promise<void
 export async function deleteVault(vault: VaultDef): Promise<void> {
   const t = translator();
   const key = vaultKey.value;
-  if (!key || vault.id === DEFAULT_VAULT_ID) return;
+  if (!key || vault.id === DEFAULT_VAULT_ID || vault.shared) return;
   if (!confirm(t("vault.delete_confirm", { name: vault.name }))) return;
   const now = Math.floor(nowMs() / 1000);
   await rewriteItems(vault.id, (item) => ({
@@ -275,9 +279,9 @@ export function openSettings(section = "general"): void {
   void chrome.tabs.create({ url: chrome.runtime.getURL(`console/console.html#/me/${section}`) });
 }
 
-export function openConsole(): void {
+export function openConsole(path = ""): void {
   drawerOpen.value = false;
-  void chrome.tabs.create({ url: chrome.runtime.getURL("console/console.html") });
+  void chrome.tabs.create({ url: chrome.runtime.getURL(`console/console.html${path}`) });
 }
 
 export function openImport(): void {

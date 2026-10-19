@@ -1,4 +1,5 @@
 import type { SealedData } from "../../src/core/crypto.js";
+import { openTeamItem, sealTeamItem } from "../../src/core/team-items.js";
 import {
   createIdentity,
   wrapForRecipient,
@@ -383,6 +384,7 @@ export async function rekeyTeam(
     projects: ProjectRecord[];
     secrets: SecretRecord[];
     links: { id: string; projectId: string; environmentId: string; publicKey: string }[];
+    items?: { id: string; sealed: SealedData }[];
   }>(`${teamPath(orgId, team.id)}/vault`);
   const current = vault.generation;
   const generation = current + 1;
@@ -426,8 +428,22 @@ export async function rekeyTeam(
     }
   }
 
+  const items: Record<string, SealedData> = {};
+  for (const record of vault.items ?? []) {
+    const content = await openTeamItem(
+      oldKey,
+      { teamId: team.id, generation: current, itemId: record.id },
+      record.sealed,
+    );
+    items[record.id] = await sealTeamItem(
+      newKey,
+      { teamId: team.id, generation, itemId: record.id },
+      content,
+    );
+  }
+
   await request(`${teamPath(orgId, team.id)}/key`, {
     method: "PUT",
-    body: json({ generation, wrappedKeys, projects, secrets, links }),
+    body: json({ generation, wrappedKeys, projects, secrets, links, items }),
   });
 }

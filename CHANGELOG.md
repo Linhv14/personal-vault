@@ -10,6 +10,14 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Team vaults: every team in an organization has a shared vault for logins,
+  2FA codes, passkeys and other items, listed in the popup under the
+  organization's name. Members read, edit, autofill and move items in and out
+  of it; **Share with a team** moves a whole personal vault. Items are sealed
+  under the team key, re-encrypted when someone leaves, and cached for offline
+  use. New endpoints `GET /api/vaults` and
+  `PUT|DELETE /api/orgs/:id/teams/:teamId/items/:itemId`; the re-key request
+  carries `items`.
 - New landing page: product video (English and Vietnamese, about 50 seconds,
   recorded from the real UI on a demo workspace, with zoomed close-ups, a
   zero-knowledge and team key diagram, a GitHub Actions run and an AI agents

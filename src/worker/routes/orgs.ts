@@ -29,6 +29,7 @@ import {
   isUuid,
   isSealedProject,
   isSealedSecret,
+  isSealedTeamItem,
   isWrappedKey,
 } from "../validate.js";
 import {
@@ -286,13 +287,15 @@ orgs.put(
     const sealedProjects = entriesOf(body.projects ?? {}, MAX_RESEALED, isSealedProject);
     const sealedSecrets = entriesOf(body.secrets ?? {}, MAX_RESEALED, isSealedSecret);
     const linkKeys = entriesOf(body.links ?? {}, MAX_RESEALED, isWrappedKey);
+    const sealedItems = entriesOf(body.items ?? {}, MAX_RESEALED, isSealedTeamItem);
     if (
       !isGeneration(body.generation) ||
       !wrappedKeys ||
       Object.keys(wrappedKeys).length === 0 ||
       !sealedProjects ||
       !sealedSecrets ||
-      !linkKeys
+      !linkKeys ||
+      !sealedItems
     ) {
       return c.json(apiError("orgs.invalid_team"), 400);
     }
@@ -302,6 +305,7 @@ orgs.put(
       projects: sealedProjects,
       secrets: sealedSecrets,
       links: linkKeys,
+      items: sealedItems,
     };
     return respond(
       c,

@@ -44,6 +44,19 @@ export interface LocalState {
   pin?: { token: string; salt: string; iterations: number; sealed: SealedData };
   biometric?: { token: string; credentialId: string; secret: string; sealed: SealedData };
   biometricPromoDismissed?: boolean;
+  identity?: { publicKey: string; wrappedPrivateKey: SealedData };
+  sharedVaults?: CachedSharedVault[];
+}
+
+export interface CachedSharedVault {
+  orgId: string;
+  orgName: string;
+  teamId: string;
+  name: string;
+  generation: number;
+  rekeyNeeded: boolean;
+  wrappedKey: { ephemeralPublicKey: string; sealed: SealedData };
+  items: { id: string; sealed: SealedData; updatedAt: number; updatedBy: string }[];
 }
 
 interface SessionState {
