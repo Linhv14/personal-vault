@@ -39,7 +39,7 @@ version may change the API or storage format; such releases list the steps in
 - On sign-up forms the **Use a strong password** menu opens as soon as the
   password field gets focus, and sign-up forms are recognised by their button
   text too.
-- The CLI installs from npm (`npm install -g 7key`, `npx 7key`) and Homebrew
+- The CLI installs from npm (`npm install -g @7key/cli`, `npx @7key/cli`) and Homebrew
   (`brew tap linhv14/7key`, `brew trust linhv14/7key`,
   `brew install linhv14/7key/7key`). `npm run publish:cli -- <version>`
   publishes both.

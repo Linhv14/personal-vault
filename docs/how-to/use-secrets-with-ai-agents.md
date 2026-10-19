@@ -31,7 +31,7 @@ not recognise.
 Install the CLI once, with npm (Node 20 or later) or Homebrew:
 
 ```bash
-npm install -g 7key
+npm install -g @7key/cli
 ```
 
 ```bash
@@ -41,7 +41,7 @@ brew install linhv14/7key/7key
 ```
 
 Homebrew asks you to trust a tap that is not its own before it loads a formula
-from it. `npx 7key agent …` also works without installing. Then:
+from it. `npx @7key/cli agent …` also works without installing. Then:
 
 ```bash
 7key agent --email you@example.com --project "Payments API" --env Development -- claude

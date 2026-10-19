@@ -1,4 +1,5 @@
-export const PACKAGE = "7key";
+export const PACKAGE = "@7key/cli";
+export const BIN = "7key";
 export const TAP = "Linhv14/homebrew-7key";
 export const FORMULA = "sevenkey";
 
@@ -13,7 +14,7 @@ export function packageJson(release: string): string {
       bugs: { url: "https://github.com/Linhv14/7key-action/issues" },
       license: "MIT",
       keywords: ["secrets", "password-manager", "ai-agents", "claude", "github-actions", "cli"],
-      bin: { "7key": "7key.mjs" },
+      bin: { [BIN]: "7key.mjs" },
       files: ["7key.mjs", "README.md", "LICENSE"],
       engines: { node: ">=20" },
     },
@@ -22,11 +23,16 @@ export function packageJson(release: string): string {
   )}\n`;
 }
 
+export function tarballUrl(release: string): string {
+  const base = PACKAGE.split("/").at(-1);
+  return `https://registry.npmjs.org/${PACKAGE}/-/${base}-${release}.tgz`;
+}
+
 export function formula(release: string, sha256: string): string {
   return `class Sevenkey < Formula
   desc "Give AI agents and CI your secrets without letting them see them"
   homepage "https://7key.online"
-  url "https://registry.npmjs.org/${PACKAGE}/-/${PACKAGE}-${release}.tgz"
+  url "${tarballUrl(release)}"
   sha256 "${sha256}"
   license "MIT"
 

@@ -3,7 +3,7 @@
 Give AI agents and CI your secrets without letting them see them.
 
 ```bash
-npm install -g 7key
+npm install -g @7key/cli
 ```
 
 or with Homebrew:

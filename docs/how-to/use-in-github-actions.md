@@ -47,12 +47,12 @@ The `7key` CLI does the same from a shell (Node 20 or later), with
 `SEVENKEY_KEY` and `SEVENKEY_LINK` in the environment:
 
 ```bash
-npx 7key run -- npm run deploy    # values only for this command
-npx 7key env                      # values for the later steps
-npx 7key dotenv > .env            # a .env file
+npx @7key/cli run -- npm run deploy    # values only for this command
+npx @7key/cli env                      # values for the later steps
+npx @7key/cli dotenv > .env            # a .env file
 ```
 
-Pin a version in CI, for example `npx 7key@1.3.1`.
+Pin a version in CI, for example `npx @7key/cli@1.3.1`.
 
 ## What is checked
 
@@ -80,6 +80,6 @@ Then publish the same CLI to npm and Homebrew, after `npm login`:
 npm run publish:cli -- 1.0.1              # --dry-run to only pack and print
 ```
 
-It publishes the `7key` package, then writes the `sevenkey` formula (with a
+It publishes the `@7key/cli` package, then writes the `sevenkey` formula (with a
 `7key` alias) built from that npm tarball to the `Linhv14/homebrew-7key` tap,
 creating the tap the first time.
