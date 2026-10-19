@@ -27,15 +27,27 @@ cd ~/code/payments
 
 `7key link` writes `.7key.json`, which names the project and environment but
 holds no secret, so you can commit it and teammates only need `7key login`.
+7key looks for it in the current folder and its parents, so one link can cover
+several repositories under a shared folder.
 
-| Command                         | What it does                                   |
-| ------------------------------- | ---------------------------------------------- |
-| `7key run -- <command>`         | Run a command with the linked secrets          |
-| `7key dotenv > .env`            | Write them to a `.env` file                    |
-| `7key secrets`                  | List the names, without values                 |
-| `--env Production`              | Use another environment of the linked project  |
-| `--project <name> --env <name>` | Use a project without linking the folder       |
-| `7key whoami`, `7key logout`    | Show the account and link; sign out and revoke |
+`--org`, `--project` and `--env` take an id, a handle or the name. The handle
+is the name in lowercase with dashes, so "Trust1 Portal" is `trust1-portal`.
+`7key link` and `7key secrets` print both, and the console's project menu has
+**Copy CLI command** and **Copy project ID**. Prefer the id in scripts: it
+stays the same when the project is renamed.
+
+```bash
+7key run --project trust1-portal --env production -- npm run migrate
+```
+
+| Command                       | What it does                                   |
+| ----------------------------- | ---------------------------------------------- |
+| `7key run -- <command>`       | Run a command with the linked secrets          |
+| `7key dotenv > .env`          | Write them to a `.env` file                    |
+| `7key secrets`                | List the names, without values                 |
+| `--env production`            | Use another environment of the linked project  |
+| `--project <ref> --env <ref>` | Use a project without linking the folder       |
+| `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke |
 
 The session lasts 30 days. On macOS it lives in the Keychain, on Linux in the
 Secret Service keyring (`secret-tool`), elsewhere in a file only you can read.
@@ -74,14 +86,14 @@ While the agent runs, 7key takes your login out of the keychain and keeps it
 in its own memory, so the agent cannot use `7key run` or read the keychain to
 get real values. The login goes back when the agent exits.
 
-| Option             | Meaning                                                |
-| ------------------ | ------------------------------------------------------ |
-| `--project <name>` | Project, as named in the console (instead of the link) |
-| `--env <name>`     | Environment, such as `Development`                     |
-| `--org <name>`     | Organization, when several have a project of that name |
-| `--email <addr>`   | Your 7key account; remembered after the first time     |
-| `--server <url>`   | Your own 7key server instead of `https://7key.online`  |
-| `--yes`            | Skip the confirmation                                  |
+| Option            | Meaning                                                |
+| ----------------- | ------------------------------------------------------ |
+| `--project <ref>` | Project id, handle or name (instead of the link)       |
+| `--env <ref>`     | Environment, such as `development`                     |
+| `--org <ref>`     | Organization, when several have a project of that name |
+| `--email <addr>`  | Your 7key account; remembered after the first time     |
+| `--server <url>`  | Your own 7key server instead of `https://7key.online`  |
+| `--yes`           | Skip the confirmation                                  |
 
 ## Use secrets in CI
 

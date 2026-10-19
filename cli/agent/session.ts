@@ -12,6 +12,7 @@ import { unwrapForRecipient, type Identity } from "../../src/core/identity.js";
 import { teamKeyContext, type TeamView } from "../../src/core/org-model.js";
 import {
   openProject,
+  refersTo,
   openSecretWithOrigin,
   type Environment,
   type ProjectContent,
@@ -116,8 +117,6 @@ export async function signOut(session: Session): Promise<void> {
   }).catch(() => {});
 }
 
-const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
 export interface ProjectChoice {
   orgId: string;
   orgName: string;
@@ -140,7 +139,7 @@ export function findEnvironment(
   wanted: { id?: string; name?: string },
 ): Environment {
   const environment = content.environments.find((entry) =>
-    wanted.name ? same(entry.name, wanted.name) : entry.id === wanted.id,
+    wanted.name ? refersTo(wanted.name, entry) : entry.id === wanted.id,
   );
   if (environment) return environment;
   const names = content.environments.map((entry) => entry.name).join(", ");
@@ -259,19 +258,21 @@ export async function selectEnvironment(
 ): Promise<Selected> {
   const matches: ProjectChoice[] = [];
   for (const org of (await listOrgs(session)).filter(
-    (entry) => !orgName || same(entry.name, orgName),
+    (entry) => !orgName || refersTo(orgName, entry),
   )) {
     for (const choice of await listProjects(session, org)) {
-      if (same(choice.content.name, projectName)) matches.push(choice);
+      if (refersTo(projectName, { id: choice.projectId, name: choice.content.name })) {
+        matches.push(choice);
+      }
     }
   }
   if (matches.length === 0) {
     const scope = orgName ? ` of ${orgName}` : "";
-    throw new AgentError(`No project named "${projectName}" in your teams${scope}`);
+    throw new AgentError(`No project "${projectName}" in your teams${scope}`);
   }
   if (matches.length > 1) {
     const places = matches.map((entry) => `${entry.orgName} / ${entry.teamName}`).join(", ");
-    throw new AgentError(`"${projectName}" is in ${places}; pass --org to pick one`);
+    throw new AgentError(`"${projectName}" is in ${places}; pass --org, or the project id`);
   }
   const choice = matches[0]!;
   const environment = findEnvironment(choice.content, { name: environmentName });

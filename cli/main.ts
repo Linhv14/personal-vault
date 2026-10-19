@@ -27,8 +27,9 @@ On your computer
   agent -- <command…> Let an AI agent use secrets it cannot see (7key agent --help)
   whoami | logout
 
-  --project <name> --env <name> [--org <name>] pick another project or environment
-  --env <name> alone switches the environment of the linked project
+  --project <ref> --env <ref> [--org <ref>]   use another project; a ref is the
+                      id, the handle (trust1-portal) or the name
+  --env <ref> alone   switch the environment of the linked project
 
 In GitHub Actions (SEVENKEY_LINK and SEVENKEY_KEY set)
   run -- <command…>   Run a command with the repository's secrets

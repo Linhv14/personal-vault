@@ -391,6 +391,10 @@ export const vi: Catalogue = {
   "console.transfer_undo": "Chỉ owner mới có thể chuyển lại cho bạn.",
   "console.confirm_password": "Master password của bạn",
   "console.dismiss": "Đóng",
+  "projects.copy_cli": "Copy lệnh CLI",
+  "projects.cli_copied": "Đã copy lệnh CLI",
+  "projects.copy_id": "Copy project ID",
+  "projects.id_copied": "Đã copy project ID",
   "console.more": "Thêm",
   "console.name_taken_in": "{name} đã có trong {env}.",
   "console.new_project_hint":

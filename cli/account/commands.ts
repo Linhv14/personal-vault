@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { formatDotenv } from "../../src/core/projects.js";
+import { formatDotenv, handleOf, refersTo } from "../../src/core/projects.js";
 import { DEFAULT_SERVER } from "../../src/core/brand.js";
 import { remember, remembered } from "../agent/config.js";
 import {
@@ -157,22 +157,22 @@ export async function whoami(_flags: Flags, context: Context): Promise<number> {
   return 0;
 }
 
-const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
 async function pick<T>(
   title: string,
   items: T[],
   label: (item: T) => string,
   wanted: string | undefined,
-  name: (item: T) => string,
+  name: (item: T) => { id: string; name: string },
   context: Context,
 ): Promise<T> {
   if (items.length === 0) throw new AgentError(`No ${title.toLowerCase()} to choose from`);
   if (wanted) {
-    const found = items.filter((item) => same(name(item), wanted));
+    const found = items.filter((item) => refersTo(wanted, name(item)));
     if (found.length === 1) return found[0]!;
     if (found.length === 0) {
-      throw new AgentError(`No ${title.toLowerCase()} "${wanted}" (${items.map(name).join(", ")})`);
+      throw new AgentError(
+        `No ${title.toLowerCase()} "${wanted}" (${items.map((item) => handleOf(name(item).name)).join(", ")})`,
+      );
     }
     items = found;
   }
@@ -188,17 +188,17 @@ export async function link(flags: Flags, context: Context): Promise<number> {
   const org = await pick(
     "Organization",
     await listOrgs(session),
-    (entry) => entry.name,
+    (entry) => `${entry.name}  [${handleOf(entry.name)}]`,
     flags.org,
-    (entry) => entry.name,
+    (entry) => entry,
     context,
   );
   const project = await pick(
     "Project",
     await listProjects(session, org),
-    (entry) => `${entry.content.name} (${entry.teamName})`,
+    (entry) => `${entry.content.name} (${entry.teamName})  [${handleOf(entry.content.name)}]`,
     flags.project,
-    (entry) => entry.content.name,
+    (entry) => ({ id: entry.projectId, name: entry.content.name }),
     context,
   );
   const environment = await pick(
@@ -206,7 +206,7 @@ export async function link(flags: Flags, context: Context): Promise<number> {
     project.content.environments,
     (entry) => entry.name,
     flags.environment,
-    (entry) => entry.name,
+    (entry) => entry,
     context,
   );
   const file = writeLink(context.cwd, {
@@ -220,6 +220,9 @@ export async function link(flags: Flags, context: Context): Promise<number> {
     environmentId: environment.id,
   });
   context.log(`Linked to ${org.name} / ${project.content.name} / ${environment.name} (${file}).`);
+  context.log(
+    `Elsewhere: --project ${handleOf(project.content.name)} --env ${handleOf(environment.name)} (project id ${project.projectId})`,
+  );
   context.log(`${LINK_FILE} holds no secrets and can be committed.`);
   context.log("Next: 7key run -- <command>, or 7key agent -- <command>");
   return 0;
@@ -281,7 +284,9 @@ export async function dotenvLocal(flags: Flags, context: Context): Promise<numbe
 export async function listSecrets(flags: Flags, context: Context): Promise<number> {
   const session = requireSession(context);
   const selected = await resolveSelection(flags, context, session);
-  context.out(`${selected.projectName} / ${selected.environment.name}\n`);
+  context.out(
+    `${selected.projectName} / ${selected.environment.name}  (--project ${handleOf(selected.projectName)} or ${selected.projectId})\n`,
+  );
   for (const secret of selected.secrets) {
     const kind = secret.kind === "variable" ? "variable" : "secret";
     const hosts = secret.hosts?.length ? `  agent: ${secret.hosts.join(", ")}` : "";

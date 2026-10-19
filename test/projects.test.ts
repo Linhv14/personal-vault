@@ -138,3 +138,22 @@ describe("dotenv", () => {
     expect(isSecretName("HAS SPACE")).toBe(false);
   });
 });
+
+describe("project handles", () => {
+  it("turn names into lowercase dashed handles, Vietnamese included", async () => {
+    const { handleOf } = await import("../src/core/projects.js");
+    expect(handleOf("Trust1 Portal")).toBe("trust1-portal");
+    expect(handleOf("  Payments API (v2) ")).toBe("payments-api-v2");
+    expect(handleOf("Đội Phát triển")).toBe("doi-phat-trien");
+  });
+
+  it("match an id, a handle or a name, nothing else", async () => {
+    const { refersTo } = await import("../src/core/projects.js");
+    const entry = { id: "8f0c2b1e-0000-4000-8000-000000000001", name: "Trust1 Portal" };
+    expect(refersTo(entry.id, entry)).toBe(true);
+    expect(refersTo("trust1-portal", entry)).toBe(true);
+    expect(refersTo("Trust1 Portal", entry)).toBe(true);
+    expect(refersTo("trust1", entry)).toBe(false);
+    expect(refersTo("---", entry)).toBe(false);
+  });
+});

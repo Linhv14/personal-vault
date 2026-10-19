@@ -133,7 +133,7 @@ describe.skipIf(!enabled)("7key login, link and run against Worker + D1", () => 
 
   it("links the folder by name and writes no secret into the link file", async () => {
     await expect(
-      link(parseFlags(["--project", "payments api", "--env", "development"]), context()),
+      link(parseFlags(["--project", "payments-api", "--env", "development"]), context()),
     ).resolves.toBe(0);
     const written = readFileSync(path.join(folder, LINK_FILE), "utf8");
     expect(JSON.parse(written)).toMatchObject({

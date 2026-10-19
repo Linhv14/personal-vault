@@ -70,6 +70,7 @@ Details: [Cryptography](docs/explanation/cryptography.md) ·
 | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Set it up for the first time                  | [Deploy your own vault](docs/tutorials/deploy-your-own-vault.md)                          |
 | Use it on another computer                    | [Add another device](docs/how-to/add-another-device.md)                                   |
+| Use secrets from the terminal                 | [Use the CLI](docs/how-to/use-the-cli.md)                                                 |
 | Get back in after forgetting the password     | [Recover a forgotten master password](docs/how-to/recover-a-forgotten-master-password.md) |
 | Host it for family or a team                  | [Run a shared server](docs/how-to/run-a-shared-server.md)                                 |
 | Protect against data loss                     | [Back up and restore](docs/how-to/back-up-and-restore.md)                                 |

@@ -397,6 +397,10 @@ export const en = {
   "console.transfer_undo": "Only the new owner can transfer it back.",
   "console.confirm_password": "Your master password",
   "console.dismiss": "Dismiss",
+  "projects.copy_cli": "Copy CLI command",
+  "projects.cli_copied": "CLI command copied",
+  "projects.copy_id": "Copy project ID",
+  "projects.id_copied": "Project ID copied",
   "console.more": "More",
   "console.name_taken_in": "{name} already exists in {env}.",
   "console.new_project_hint":

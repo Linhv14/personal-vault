@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   formatDotenv,
+  handleOf,
   isVariable,
   MAX_ENVIRONMENTS,
   newEnvironment,
@@ -227,48 +228,74 @@ export function ProjectPage({
           </button>
         </>
       )}
-      {canManage && (
-        <Menu label={t("console.more")}>
+      <Menu label={t("console.more")}>
+        <MenuItem
+          icon="terminal"
+          label={t("projects.copy_cli")}
+          onSelect={() =>
+            void navigator.clipboard
+              .writeText(
+                `7key run --project ${handleOf(project.content.name)} --env ${handleOf(
+                  (environment ?? environments[0])?.name ?? "development",
+                )} -- `,
+              )
+              .then(() => toast(t("projects.cli_copied")))
+          }
+        />
+        <MenuItem
+          icon="copy"
+          label={t("projects.copy_id")}
+          onSelect={() =>
+            void navigator.clipboard
+              .writeText(project.id)
+              .then(() => toast(t("projects.id_copied")))
+          }
+        />
+        {canManage && (
           <MenuItem
             icon="pencil"
             label={t("console.rename")}
             onSelect={() => setModal({ kind: "rename" })}
           />
-          {duplicates.length > 0 && (
+        )}
+        {canManage && (
+          <>
+            {duplicates.length > 0 && (
+              <MenuItem
+                icon="trash"
+                label={t("console.remove_duplicates", { count: duplicates.length })}
+                onSelect={() => setModal({ kind: "remove-duplicates" })}
+              />
+            )}
+            <MenuItem
+              icon="plus"
+              label={t("console.add_environment")}
+              onSelect={() => setModal({ kind: "add-env" })}
+            />
+            {environment && (
+              <MenuItem
+                icon="pencil"
+                label={t("console.rename_environment", { env: environment.name })}
+                onSelect={() => setModal({ kind: "rename-env" })}
+              />
+            )}
+            {environment && environments.length > 1 && (
+              <MenuItem
+                icon="trash"
+                label={t("console.delete_environment", { env: environment.name })}
+                danger
+                onSelect={() => setModal({ kind: "delete-env" })}
+              />
+            )}
             <MenuItem
               icon="trash"
-              label={t("console.remove_duplicates", { count: duplicates.length })}
-              onSelect={() => setModal({ kind: "remove-duplicates" })}
-            />
-          )}
-          <MenuItem
-            icon="plus"
-            label={t("console.add_environment")}
-            onSelect={() => setModal({ kind: "add-env" })}
-          />
-          {environment && (
-            <MenuItem
-              icon="pencil"
-              label={t("console.rename_environment", { env: environment.name })}
-              onSelect={() => setModal({ kind: "rename-env" })}
-            />
-          )}
-          {environment && environments.length > 1 && (
-            <MenuItem
-              icon="trash"
-              label={t("console.delete_environment", { env: environment.name })}
+              label={t("projects.delete")}
               danger
-              onSelect={() => setModal({ kind: "delete-env" })}
+              onSelect={() => setModal({ kind: "delete-project" })}
             />
-          )}
-          <MenuItem
-            icon="trash"
-            label={t("projects.delete")}
-            danger
-            onSelect={() => setModal({ kind: "delete-project" })}
-          />
-        </Menu>
-      )}
+          </>
+        )}
+      </Menu>
     </>
   );
 

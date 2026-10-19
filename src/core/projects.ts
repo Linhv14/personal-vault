@@ -256,3 +256,20 @@ export function formatDotenv(secrets: SecretContent[]): string {
     .join("\n")
     .concat(secrets.length > 0 ? "\n" : "");
 }
+
+export function handleOf(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function refersTo(wanted: string, entry: { id: string; name: string }): boolean {
+  const value = wanted.trim();
+  if (value === entry.id) return true;
+  const handle = handleOf(value);
+  return handle !== "" && handle === handleOf(entry.name);
+}

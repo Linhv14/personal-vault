@@ -22,9 +22,9 @@ In a folder linked with \`7key link\`, and after \`7key login\`, no option is
 needed. Otherwise pass --project and --env, and type your master password.
 
 Options
-  --project <name>    Project, as named in the console
-  --org <name>        Organization, when several have a project of that name
-  --env <name>        Environment, such as Development (overrides the link)
+  --project <ref>     Project id, handle (trust1-portal) or name
+  --org <ref>         Organization, when several have a project of that name
+  --env <ref>         Environment, such as development (overrides the link)
   --email <address>   Your 7key account (or SEVENKEY_EMAIL; remembered)
   --server <url>      7key server (or SEVENKEY_SERVER, default ${DEFAULT_SERVER})
   --yes               Skip the confirmation

@@ -63,7 +63,7 @@ Without logging in, pass the project and environment and type your master
 password; 7key signs out when the command ends:
 
 ```bash
-7key agent --email you@example.com --project "Payments API" --env Development -- claude
+7key agent --email you@example.com --project payments-api --env development -- claude
 ```
 
 Pass `--org` when two organizations have a project with the same name.
