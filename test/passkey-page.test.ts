@@ -46,23 +46,23 @@ const publicKey = {
 };
 
 describe("passkey page hook", () => {
-  it("leaves security-key registrations to the browser", async () => {
-    await expect(
-      navigator.credentials.create({
-        publicKey: {
-          ...publicKey,
-          authenticatorSelection: { authenticatorAttachment: "cross-platform" },
-        },
-      }),
-    ).resolves.toBe("native");
-    expect(requests).toHaveLength(0);
+  it("offers security-key registrations to 7key too, which can still hand them back", async () => {
+    void navigator.credentials.create({
+      publicKey: {
+        ...publicKey,
+        authenticatorSelection: { authenticatorAttachment: "cross-platform" },
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(requests).toMatchObject([{ kind: "create" }]);
+    requests.length = 0;
   });
 
   it("offers platform registrations to 7key", async () => {
     void navigator.credentials.create({ publicKey });
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(requests).toMatchObject([{ kind: "create", options: { userName: "me" } }]);
-    expect(nativeCreate).toHaveBeenCalledTimes(1);
+    expect(nativeCreate).not.toHaveBeenCalled();
   });
 
   it("tells sites a platform authenticator is available", async () => {

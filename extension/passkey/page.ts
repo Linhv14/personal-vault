@@ -130,11 +130,7 @@ function failure(reply: Extract<PageReply, { kind: "error" }>): DOMException {
 
 credentials.create = async function create(options?: CredentialCreationOptions) {
   const publicKey = options?.publicKey;
-  if (
-    !publicKey ||
-    !publicKey.pubKeyCredParams.some((param) => param.alg === ES256) ||
-    publicKey.authenticatorSelection?.authenticatorAttachment === "cross-platform"
-  ) {
+  if (!publicKey || !publicKey.pubKeyCredParams.some((param) => param.alg === ES256)) {
     return nativeCreate(options);
   }
   const reply = await ask(

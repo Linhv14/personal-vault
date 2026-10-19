@@ -80,9 +80,10 @@ carry all zeros and stay unnamed.
 
 - **Use another device** in the dialog hands the request back to the browser,
   for a security key, a phone, or the platform's own passkeys.
-- Requests in iframes, requests without ES256, and registrations that ask for
-  a `cross-platform` authenticator (a security key) go straight to the
-  browser.
+- Requests in iframes and requests without ES256 go straight to the browser.
+  Registrations that ask for a `cross-platform` authenticator still show the
+  7key dialog, because sites such as npm label their only passkey option
+  "security key"; **Use another device** reaches a physical key.
 - A sign-in on a site where 7key has no passkey goes straight to the browser
   without a dialog.
 - If 7key is locked and the vault holds no passkeys, the browser handles the
