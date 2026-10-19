@@ -33,16 +33,34 @@ export async function removeRecoveryCode(currentAuthKey: string): Promise<void> 
   });
 }
 
+export async function requestRecoveryEmail(
+  email: string,
+  code: string,
+  locale: string,
+): Promise<boolean> {
+  const { required } = await request<{ required: boolean }>("/api/auth/recover/email", {
+    method: "POST",
+    auth: false,
+    body: JSON.stringify({ email, recoveryAuthKey: await recoveryAuthKey(code), locale }),
+  });
+  return required;
+}
+
 export async function recoverAccount(
   email: string,
   code: string,
   newPassword: string,
   locale: string,
+  emailCode?: string,
 ): Promise<string> {
   const authKey = await recoveryAuthKey(code);
   const { wrappedVaultKey } = await request<{ wrappedVaultKey: SealedData }>(
     "/api/auth/recover/start",
-    { method: "POST", auth: false, body: JSON.stringify({ email, recoveryAuthKey: authKey }) },
+    {
+      method: "POST",
+      auth: false,
+      body: JSON.stringify({ email, recoveryAuthKey: authKey, emailCode }),
+    },
   );
   let vaultKeyRaw;
   try {
@@ -58,7 +76,14 @@ export async function recoverAccount(
   await request("/api/auth/recover/finish", {
     method: "POST",
     auth: false,
-    body: JSON.stringify({ email, recoveryAuthKey: authKey, ...record, recovery, locale }),
+    body: JSON.stringify({
+      email,
+      recoveryAuthKey: authKey,
+      emailCode,
+      ...record,
+      recovery,
+      locale,
+    }),
   });
   return nextCode;
 }

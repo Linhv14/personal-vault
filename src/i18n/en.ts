@@ -885,6 +885,8 @@ export const en = {
   "recovery.reset_hint": "Enter the recovery code you saved. Every device will be signed out.",
   "recovery.code": "Recovery code",
   "recovery.invalid": "That is not a recovery code. It has 32 letters and digits.",
+  "recovery.next": "Continue",
+  "recovery.email_code": "Code from the email",
   "recovery.reset_submit": "Set new master password",
   "recovery.new_title": "Your new recovery code",
   "recovery.new_hint": "The code you just used no longer works. Save this one before you continue.",

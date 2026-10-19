@@ -1,7 +1,7 @@
 import { useState } from "preact/hooks";
 import { normalizeRecoveryCode } from "../../../src/core/recovery.js";
 import { describeError } from "../../../src/i18n/index.js";
-import { recoverAccount } from "../../lib/account-recovery.js";
+import { recoverAccount, requestRecoveryEmail } from "../../lib/account-recovery.js";
 import { getLocal, setLocal } from "../../lib/storage.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { RecoveryCodeView } from "../../ui/components/RecoveryCodeView.js";
@@ -16,52 +16,91 @@ export interface RecoverProps {
   onCancel: () => void;
 }
 
+interface Proven {
+  email: string;
+  code: string;
+  emailRequired: boolean;
+}
+
 export function Recover({ email: initialEmail, server, onCancel }: RecoverProps) {
   const t = useT();
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [proven, setProven] = useState<Proven | null>(null);
   const [done, setDone] = useState<{ email: string; password: string; code: string } | null>(null);
 
-  const submit = async (event: Event) => {
-    event.preventDefault();
-    setError(null);
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    const email = String(data.get("email")).trim().toLowerCase();
-    const code = String(data.get("code"));
-    const password = String(data.get("password"));
-    if (!normalizeRecoveryCode(code)) {
-      setError(t("recovery.invalid"));
-      return;
-    }
-    if (password !== String(data.get("confirm"))) {
-      setError(t("setup.password_mismatch"));
-      return;
-    }
-    setWorking(true);
+  const withServer = async <T,>(email: string, action: () => Promise<T>): Promise<T> => {
     const previous = await getLocal();
     try {
       await setLocal({ apiUrl: server, email });
-      const next = await recoverAccount(email, code, password, localeSignal.value);
-      setDone({ email, password, code: next });
+      return await action();
     } catch (failure) {
       if (!previous.wrappedVaultKey) await chrome.storage.local.remove("email");
       else await setLocal({ apiUrl: previous.apiUrl, email: previous.email });
+      throw failure;
+    }
+  };
+
+  const run = async (action: () => Promise<void>) => {
+    setError(null);
+    setWorking(true);
+    try {
+      await action();
+    } catch (failure) {
       setError(describeError(failure, t));
     } finally {
       setWorking(false);
     }
   };
 
-  const openVault = async () => {
-    if (!done) return;
-    setWorking(true);
-    try {
-      await signIn(done.email, done.password);
-    } catch (failure) {
-      setError(describeError(failure, t));
-      setWorking(false);
+  const submitCode = (event: Event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const email = String(data.get("email")).trim().toLowerCase();
+    const code = String(data.get("code"));
+    if (!normalizeRecoveryCode(code)) {
+      setError(t("recovery.invalid"));
+      return;
     }
+    void run(async () => {
+      const emailRequired = await withServer(email, () =>
+        requestRecoveryEmail(email, code, localeSignal.value),
+      );
+      setProven({ email, code, emailRequired });
+    });
   };
+
+  const resend = () =>
+    void run(async () => {
+      if (!proven) return;
+      await withServer(proven.email, () =>
+        requestRecoveryEmail(proven.email, proven.code, localeSignal.value),
+      );
+      toast(t("setup.code_resent"));
+    });
+
+  const submitPassword = (event: Event) => {
+    event.preventDefault();
+    if (!proven) return;
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    const password = String(data.get("password"));
+    if (password !== String(data.get("confirm"))) {
+      setError(t("setup.password_mismatch"));
+      return;
+    }
+    const emailCode = proven.emailRequired ? String(data.get("emailCode")).trim() : undefined;
+    void run(async () => {
+      const next = await withServer(proven.email, () =>
+        recoverAccount(proven.email, proven.code, password, localeSignal.value, emailCode),
+      );
+      setDone({ email: proven.email, password, code: next });
+    });
+  };
+
+  const openVault = () =>
+    void run(async () => {
+      if (done) await signIn(done.email, done.password);
+    });
 
   return (
     <AuthLayout id="screen-recover">
@@ -72,7 +111,11 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
           title={t("common.back")}
           aria-label={t("common.back")}
           hidden={done !== null}
-          onClick={onCancel}
+          onClick={() => {
+            setError(null);
+            if (proven) setProven(null);
+            else onCancel();
+          }}
         >
           <Icon name="back" />
         </button>
@@ -88,11 +131,55 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
             createdAt={Math.floor(Date.now() / 1000)}
             doneLabel={t(working ? "unlock.working" : "recovery.continue")}
             onCopied={() => toast(t("recovery.copied"))}
-            onDone={() => void openVault()}
+            onDone={openVault}
           />
         </>
+      ) : proven ? (
+        <form id="form-recover-password" className="stack" onSubmit={submitPassword}>
+          {proven.emailRequired && (
+            <>
+              <p className="hint">{t("setup.code_sent", { email: proven.email })}</p>
+              <label>
+                <span>{t("recovery.email_code")}</span>
+                <input
+                  name="emailCode"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  pattern="\d{6}"
+                  placeholder="000000"
+                  required
+                  autoFocus
+                />
+              </label>
+              <div className="code-links">
+                <button type="button" className="link" onClick={resend}>
+                  {t("setup.code_resend")}
+                </button>
+              </div>
+            </>
+          )}
+          <label>
+            <span>{t("settings.new_password")}</span>
+            <input
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              required
+              autoFocus={!proven.emailRequired}
+            />
+          </label>
+          <label>
+            <span>{t("setup.confirm")}</span>
+            <input name="confirm" type="password" autoComplete="new-password" required />
+          </label>
+          <button className="primary" type="submit" disabled={working}>
+            {t(working ? "setup.working" : "recovery.reset_submit")}
+          </button>
+        </form>
       ) : (
-        <form id="form-recover" className="stack" onSubmit={(event) => void submit(event)}>
+        <form id="form-recover" className="stack" onSubmit={submitCode}>
           <p className="hint">{t("recovery.reset_hint")}</p>
           <label>
             <span>{t("setup.email")}</span>
@@ -115,22 +202,8 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
               autoFocus
             />
           </label>
-          <label>
-            <span>{t("settings.new_password")}</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              minLength={12}
-              required
-            />
-          </label>
-          <label>
-            <span>{t("setup.confirm")}</span>
-            <input name="confirm" type="password" autoComplete="new-password" required />
-          </label>
           <button className="primary" type="submit" disabled={working}>
-            {t(working ? "setup.working" : "recovery.reset_submit")}
+            {t(working ? "unlock.working" : "recovery.next")}
           </button>
         </form>
       )}

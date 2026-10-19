@@ -27,9 +27,11 @@ vi.mock("../extension/lib/storage.js", () => ({
   lock: vi.fn(),
 }));
 const recoverAccount = vi.fn(async () => "NEWC-ODE2-3456-7ABC-DEFG-HIJK-LMNO-PQRS");
+const requestRecoveryEmail = vi.fn(async () => true);
 vi.mock("../extension/lib/account-recovery.js", async (original) => ({
   ...(await original<object>()),
   recoverAccount,
+  requestRecoveryEmail,
 }));
 vi.mock("../extension/lib/resume.js", () => ({ rememberUnlock: vi.fn() }));
 const signIn = vi.fn();
@@ -69,34 +71,38 @@ describe("unlock screen", () => {
     expect(unlockWithBiometric).not.toHaveBeenCalled();
   });
 
-  it("resets a forgotten master password with the recovery code and shows the new one", async () => {
+  it("resets a forgotten master password with the recovery code and an emailed code", async () => {
     device.biometric = false;
     device.pin = false;
     render(h(Unlock, { email: "me@example.com" }));
     fireEvent.click(await screen.findByRole("button", { name: "Forgot master password?" }));
     const code = await screen.findByLabelText("Recovery code");
-    const form = document.querySelector("#form-recover") as HTMLFormElement;
     expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("me@example.com");
     fireEvent.input(code, { target: { value: "C933-BC97-F584" } });
+    fireEvent.submit(document.querySelector("#form-recover")!);
+    await screen.findByText(/not a recovery code/);
+    expect(requestRecoveryEmail).not.toHaveBeenCalled();
+
+    const valid = "abcd efgh ijkl mnop qrst uvwx yz23 4567";
+    fireEvent.input(code, { target: { value: valid } });
+    fireEvent.submit(document.querySelector("#form-recover")!);
+    const emailCode = await screen.findByLabelText("Code from the email");
+    expect(requestRecoveryEmail).toHaveBeenCalledWith("me@example.com", valid, expect.any(String));
+    fireEvent.input(emailCode, { target: { value: "123456" } });
     fireEvent.input(screen.getByLabelText("New master password"), {
       target: { value: "a brand new password" },
     });
     fireEvent.input(screen.getByLabelText("Confirm master password"), {
       target: { value: "a brand new password" },
     });
-    fireEvent.submit(form);
-    await screen.findByText(/not a recovery code/);
-    expect(recoverAccount).not.toHaveBeenCalled();
-
-    const valid = "abcd efgh ijkl mnop qrst uvwx yz23 4567";
-    fireEvent.input(code, { target: { value: valid } });
-    fireEvent.submit(form);
+    fireEvent.submit(document.querySelector("#form-recover-password")!);
     await screen.findByText("NEWC-ODE2-3456-7ABC-DEFG-HIJK-LMNO-PQRS");
     expect(recoverAccount).toHaveBeenCalledWith(
       "me@example.com",
       valid,
       "a brand new password",
       expect.any(String),
+      "123456",
     );
     fireEvent.click(screen.getByRole("button", { name: "Saved, open my vault" }));
     await waitFor(() =>

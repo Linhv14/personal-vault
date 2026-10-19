@@ -17,6 +17,11 @@ import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
 import { accountRecoveredEmail } from "../emails.js";
 import { logError } from "../log.js";
+import {
+  checkRecoveryEmailCode,
+  clearRecoveryEmailCode,
+  issueRecoveryEmailCode,
+} from "../recovery-email.js";
 import { clientIp, isOpenRegistration } from "../request.js";
 import { createSession, revokeAllSessions, revokeSession, sessionResumeKey } from "../session.js";
 import type { AppBindings, Env } from "../types.js";
@@ -400,6 +405,52 @@ async function checkRecovery(
   return row;
 }
 
+async function emailCodeError(
+  env: Env,
+  accountId: string,
+  code: unknown,
+  timestamp: number,
+): Promise<"auth.invalid_code" | "auth.code_expired" | null> {
+  if (!createMailer(env)) return null;
+  if (!isCode(code)) return "auth.invalid_code";
+  const result = await checkRecoveryEmailCode(env, accountId, code, timestamp);
+  if (result === "invalid") return "auth.invalid_code";
+  if (result === "expired") return "auth.code_expired";
+  return null;
+}
+
+auth.post("/recover/email", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const email = normalizeEmail(body?.email);
+  if (!email || !isBase64(body?.recoveryAuthKey, 32)) {
+    return c.json(apiError("auth.invalid_recovery_code"), 400);
+  }
+  const timestamp = now();
+  const row = await checkRecovery(c.env, email, body.recoveryAuthKey, timestamp);
+  if (row === "locked") {
+    return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
+  }
+  if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  const mailer = createMailer(c.env);
+  if (!mailer) return c.json({ required: false });
+  const sent = await issueRecoveryEmailCode(
+    c.env,
+    mailer,
+    {
+      accountId: row.id,
+      email,
+      locale: body?.locale === "vi" ? "vi" : "en",
+      siteUrl: new URL(c.req.url).origin,
+    },
+    timestamp,
+  );
+  if (sent === "cooldown") {
+    return c.json(apiError("auth.code_cooldown", { seconds: CODE_RESEND_COOLDOWN_SECONDS }), 429);
+  }
+  if (sent === "failed") return c.json(apiError("auth.email_failed"), 502);
+  return c.json({ required: true });
+});
+
 auth.post("/recover/start", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const email = normalizeEmail(body?.email);
@@ -412,6 +463,8 @@ auth.post("/recover/start", async (c) => {
     return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
   }
   if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  const codeError = await emailCodeError(c.env, row.id, body.emailCode, timestamp);
+  if (codeError) return c.json(apiError(codeError), 400);
   const wrapped = await revealWrappedKey(c.env, recoveryScope(row.id), row.recovery_wrapped_key!);
   c.header("Cache-Control", "no-store");
   return c.json({ wrappedVaultKey: { ciphertext: wrapped.ciphertext, nonce: row.recovery_nonce } });
@@ -439,6 +492,8 @@ auth.post("/recover/finish", async (c) => {
     return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
   }
   if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  const codeError = await emailCodeError(c.env, row.id, body?.emailCode, timestamp);
+  if (codeError) return c.json(apiError(codeError), 400);
 
   const result = await c.env.DB.prepare(
     `UPDATE accounts
@@ -467,6 +522,7 @@ auth.post("/recover/finish", async (c) => {
 
   await revokeAllSessions(c.env, row.id);
   await clearFailures(c.env, email);
+  await clearRecoveryEmailCode(c.env, row.id);
   const mailer = createMailer(c.env);
   if (mailer) {
     const message = accountRecoveredEmail({

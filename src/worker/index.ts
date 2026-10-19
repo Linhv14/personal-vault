@@ -192,6 +192,7 @@ export default {
         Math.floor(now / 86_400),
       ),
       env.DB.prepare("DELETE FROM email_verifications WHERE expires_at <= ?").bind(now),
+      env.DB.prepare("DELETE FROM recovery_email_codes WHERE expires_at <= ?").bind(now),
       env.DB.prepare("DELETE FROM share_codes WHERE expires_at <= ?").bind(now),
     ]);
     const [shares, sessions, loginAttempts, registrationCounts, verifications, shareCodes] =

@@ -874,6 +874,8 @@ export const vi: Catalogue = {
   "recovery.reset_hint": "Nhập recovery code bạn đã lưu. Mọi thiết bị sẽ bị đăng xuất.",
   "recovery.code": "Recovery code",
   "recovery.invalid": "Đây không phải recovery code. Mã gồm 32 chữ và số.",
+  "recovery.next": "Tiếp tục",
+  "recovery.email_code": "Mã trong email",
   "recovery.reset_submit": "Đặt master password mới",
   "recovery.new_title": "Recovery code mới của bạn",
   "recovery.new_hint": "Mã bạn vừa dùng không còn hiệu lực. Hãy lưu mã mới này trước khi tiếp tục.",

@@ -72,6 +72,15 @@ const STRINGS = {
       ignore:
         "If it wasn't you, someone has your recovery code. Sign in with your new master password if you can, and contact support right away.",
     },
+    recoveryCode: {
+      subject: (code: string) => `${code} is your code to reset your ${APP_NAME} master password`,
+      preheader: (code: string) => `Your code is ${code}. It expires in 15 minutes.`,
+      heading: "Reset your master password",
+      intro: `Someone entered your recovery code to set a new master password for your ${APP_NAME} vault. Enter this code to continue.`,
+      expiry: "It expires in 15 minutes.",
+      ignore:
+        "If this wasn't you, don't share this code. Someone has your recovery code: sign in and replace it under Settings → Security.",
+    },
   },
   vi: {
     code: {
@@ -132,6 +141,15 @@ const STRINGS = {
       intro: `Có người vừa dùng recovery code để đặt master password mới cho vault ${APP_NAME} của bạn. Mọi thiết bị đã bị đăng xuất và recovery code cũ không còn dùng được.`,
       next: "Nếu là bạn, hãy cất recovery code mới vừa hiện ra ở nơi an toàn.",
       ignore: "Nếu không phải bạn, ai đó đang giữ recovery code của bạn. Hãy liên hệ hỗ trợ ngay.",
+    },
+    recoveryCode: {
+      subject: (code: string) => `${code} là mã để đặt lại master password ${APP_NAME}`,
+      preheader: (code: string) => `Mã của bạn là ${code}, hết hạn sau 15 phút.`,
+      heading: "Đặt lại master password",
+      intro: `Có người vừa nhập recovery code để đặt master password mới cho vault ${APP_NAME} của bạn. Nhập mã này để tiếp tục.`,
+      expiry: "Mã hết hạn sau 15 phút.",
+      ignore:
+        "Nếu không phải bạn, đừng đưa mã này cho ai. Ai đó đang giữ recovery code của bạn: hãy đăng nhập và tạo mã mới trong Settings → Security.",
     },
   },
 } as const;
@@ -234,6 +252,21 @@ export function accountRecoveredEmail(context: EmailContext): RenderedEmail {
     blocks: [
       { kind: "text", text: strings.intro },
       { kind: "text", text: strings.next },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
+}
+
+export function recoveryCodeEmail(context: EmailContext, code: string): RenderedEmail {
+  const strings = STRINGS[context.locale].recoveryCode;
+  return renderEmail(context, {
+    subject: strings.subject(code),
+    preheader: strings.preheader(code),
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      { kind: "code", code },
+      { kind: "text", text: strings.expiry, tone: "muted" },
       { kind: "text", text: strings.ignore, tone: "small" },
     ],
   });

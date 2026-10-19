@@ -258,12 +258,23 @@ Returns `{ "createdAt": number }`, or `403 auth.invalid_credentials`.
 Authenticated. Request `{ "currentAuthKey": string }`. Removes the recovery
 code. Returns `{ "ok": true }`, or `403 auth.invalid_credentials`.
 
-### `POST /api/auth/recover/start`
+### `POST /api/auth/recover/email`
 
 Unauthenticated, rate-limited per IP and counted with failed sign-ins for the
-address. Request `{ "email", "recoveryAuthKey" }`. Returns
-`{ "wrappedVaultKey": sealed }`, the vault key sealed under the code, or
-`401 auth.invalid_recovery_code` for a wrong code or an unknown address alike.
+address. Request `{ "email", "recoveryAuthKey", "locale"? }`. Checks the
+recovery code and, when the server can send email, emails a 6-digit code to
+the account's address. Returns `{ "required": boolean }`; `required` is false
+on a server without email, where the next two calls take no `emailCode`.
+Errors: `401 auth.invalid_recovery_code` for a wrong code or an unknown
+address alike, `429 auth.code_cooldown` within a minute of the last code.
+
+### `POST /api/auth/recover/start`
+
+Unauthenticated, rate-limited like `recover/email`. Request
+`{ "email", "recoveryAuthKey", "emailCode"? }`. Returns
+`{ "wrappedVaultKey": sealed }`, the vault key sealed under the code. Errors:
+`401 auth.invalid_recovery_code`, `400 auth.invalid_code` for a wrong emailed
+code (five tries), `400 auth.code_expired` after 15 minutes.
 
 ### `POST /api/auth/recover/finish`
 
@@ -281,7 +292,7 @@ send email. The code used stops working.
 | `recovery`        | object | `{ authKey, wrappedVaultKey }` for the new code |
 | `locale`          | string | Optional, `en` or `vi`, for the notification    |
 
-Returns `{ "ok": true }`, or `401 auth.invalid_recovery_code`.
+Returns `{ "ok": true }`, or the errors of `recover/start`.
 
 ## Account key pair
 

@@ -75,6 +75,13 @@ describe.skipIf(!enabled)("account recovery against Worker + D1", () => {
     });
     expect(unknown.status).toBe(401);
 
+    const config = await api("/api/config");
+    const emailStep = await api("/api/auth/recover/email", {
+      method: "POST",
+      body: JSON.stringify({ email: owner, recoveryAuthKey: material.authKey }),
+    });
+    expect(emailStep.body).toEqual({ required: config.body.emailVerification });
+
     const started = await start(material.authKey);
     expect(started.status).toBe(200);
     const vaultKeyRaw = await openWithRecovery(code, started.body.wrappedVaultKey);
