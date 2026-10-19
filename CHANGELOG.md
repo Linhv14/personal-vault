@@ -8,6 +8,22 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-19
+
+### Changed
+
+- The console shows a secret's AI agent hosts under its name and suggests
+  them from the key's name or prefix (Stripe, OpenAI, Anthropic, GitHub,
+  Shopify and about 35 more); **Apply suggested hosts** sets them for every
+  environment at once.
+
+### Fixed
+
+- A login saved from a site is filed under that site's host, such as
+  `gemini.google.com` or `mail.google.com`, instead of the root domain, so
+  products of one company no longer share or overwrite one entry. Sign-in
+  hosts such as `accounts.google.com` still file under `google.com`.
+
 ## [0.4.0] - 2026-10-19
 
 ### Security
@@ -582,7 +598,8 @@ Requires the upgrade steps in
 - English and Vietnamese interface.
 - One-command deployment to your own Cloudflare account.
 
-[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/Linhv14/personal-vault/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Linhv14/personal-vault/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Linhv14/personal-vault/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Linhv14/personal-vault/compare/v0.1.0...v0.2.0
