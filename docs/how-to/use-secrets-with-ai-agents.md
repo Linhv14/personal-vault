@@ -35,13 +35,14 @@ npm install -g @7key/cli
 ```
 
 ```bash
-brew tap linhv14/7key
-brew trust linhv14/7key
-brew install linhv14/7key/7key
+brew install linhv14/7key/sevenkey
 ```
 
-Homebrew asks you to trust a tap that is not its own before it loads a formula
-from it. `npx @7key/cli agent …` also works without installing. Then:
+The Homebrew formula is called `sevenkey` because formula names cannot start
+with a digit; the command it installs is `7key`. Naming the tap and formula in
+full taps it and marks it trusted in one step, which Homebrew 7 requires for
+taps that are not its own. `npx @7key/cli agent …` also works without
+installing. Then:
 
 ```bash
 7key agent --email you@example.com --project "Payments API" --env Development -- claude

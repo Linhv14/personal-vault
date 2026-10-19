@@ -54,14 +54,14 @@ function updateTap(stage: string, release: string, sha256: string): void {
   symlinkSync(`../Formula/${FORMULA}.rb`, path.join(tap, "Aliases", BIN));
   writeFileSync(
     path.join(tap, "README.md"),
-    `# 7key Homebrew tap\n\n\`\`\`bash\nbrew tap linhv14/7key\nbrew trust linhv14/7key\nbrew install linhv14/7key/7key\n\`\`\`\n\nSee https://7key.online.\n`,
+    `# 7key Homebrew tap\n\nThe [7key](https://7key.online) CLI: give AI agents and CI your secrets without showing them the values.\n\n\`\`\`bash\nbrew install linhv14/7key/sevenkey\n\`\`\`\n\nThe formula is \`sevenkey\` because formula names cannot start with a digit; it installs the \`7key\` command. Also on npm: \`npm install -g @7key/cli\`.\n`,
   );
   run("git", ["add", "-A"], tap);
   if (run("git", ["status", "--porcelain"], tap)) {
     run("git", ["commit", "-m", `7key ${release}`], tap);
     run("git", ["push", "origin", "HEAD:main"], tap);
   }
-  console.log(`Updated ${TAP}: brew install linhv14/7key/7key`);
+  console.log(`Updated ${TAP}: brew install linhv14/7key/sevenkey`);
 }
 
 if (tapOnly) {

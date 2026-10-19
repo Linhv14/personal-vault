@@ -39,10 +39,10 @@ version may change the API or storage format; such releases list the steps in
 - On sign-up forms the **Use a strong password** menu opens as soon as the
   password field gets focus, and sign-up forms are recognised by their button
   text too.
-- The CLI installs from npm (`npm install -g @7key/cli`, `npx @7key/cli`) and Homebrew
-  (`brew tap linhv14/7key`, `brew trust linhv14/7key`,
-  `brew install linhv14/7key/7key`). `npm run publish:cli -- <version>`
-  publishes both.
+- The CLI installs from npm (`npm install -g @7key/cli`, `npx @7key/cli`) and
+  Homebrew (`brew install linhv14/7key/sevenkey`).
+  `npm run publish:cli -- <version>` publishes both, and `--tap-only` updates
+  the Homebrew tap for a version already on npm.
 - `7key agent --project <name> --env <name> -- <command>` runs a command, such
   as Claude Code, with placeholders in place of secrets. A proxy on
   `127.0.0.1`, trusted through a per-session certificate authority, swaps in
