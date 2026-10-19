@@ -28,11 +28,18 @@ not recognise.
 
 ## 2. Run the agent through 7key
 
-Download `7key.mjs` from the
-[latest release](https://github.com/Linhv14/7key-action/releases/latest), then:
+Install the CLI once (it needs Node 20 or later):
 
 ```bash
-node 7key.mjs agent --email you@example.com --project "Payments API" --env Development -- claude
+mkdir -p ~/.local/bin
+curl -fsSLo ~/.local/bin/7key https://github.com/Linhv14/7key-action/releases/latest/download/7key.mjs
+chmod +x ~/.local/bin/7key
+```
+
+Each release also has `7key.mjs.sha256` to check the download. Then:
+
+```bash
+7key agent --email you@example.com --project "Payments API" --env Development -- claude
 ```
 
 7key asks for your master password, shows which secrets go to which hosts, and
