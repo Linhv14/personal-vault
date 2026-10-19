@@ -43,16 +43,16 @@ not `https://7key.online`.
 
 ## Without the Action
 
-Download `7key.mjs` from the
-[latest release](https://github.com/Linhv14/7key-action/releases/latest)
-(Node 20 or later; the release lists its SHA-256). It does the same from a
-shell, with `SEVENKEY_KEY` and `SEVENKEY_LINK` in the environment:
+The `7key` CLI does the same from a shell (Node 20 or later), with
+`SEVENKEY_KEY` and `SEVENKEY_LINK` in the environment:
 
 ```bash
-node 7key.mjs run -- npm run deploy    # values only for this command
-node 7key.mjs env                      # values for the later steps
-node 7key.mjs dotenv > .env            # a .env file
+npx 7key run -- npm run deploy    # values only for this command
+npx 7key env                      # values for the later steps
+npx 7key dotenv > .env            # a .env file
 ```
+
+Pin a version in CI, for example `npx 7key@1.3.1`.
 
 ## What is checked
 
@@ -73,3 +73,13 @@ npm run publish:action -- 1.0.1
 It builds, copies `action.yml`, the bundle and the README into the public
 repository, tags `v1.0.1`, moves `v1`, and attaches `7key.mjs` with its
 checksum to a release.
+
+Then publish the same CLI to npm and Homebrew, after `npm login`:
+
+```bash
+npm run publish:cli -- 1.0.1              # --dry-run to only pack and print
+```
+
+It publishes the `7key` package, then writes the `sevenkey` formula (with a
+`7key` alias) built from that npm tarball to the `Linhv14/homebrew-7key` tap,
+creating the tap the first time.

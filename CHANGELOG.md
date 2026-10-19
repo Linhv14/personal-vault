@@ -25,6 +25,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- The CLI installs from npm (`npm install -g 7key`, `npx 7key`) and Homebrew
+  (`brew tap linhv14/7key`, `brew trust linhv14/7key`,
+  `brew install linhv14/7key/7key`). `npm run publish:cli -- <version>`
+  publishes both.
 - `7key agent --project <name> --env <name> -- <command>` runs a command, such
   as Claude Code, with placeholders in place of secrets. A proxy on
   `127.0.0.1`, trusted through a per-session certificate authority, swaps in

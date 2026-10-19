@@ -28,15 +28,20 @@ not recognise.
 
 ## 2. Run the agent through 7key
 
-Install the CLI once (it needs Node 20 or later):
+Install the CLI once, with npm (Node 20 or later) or Homebrew:
 
 ```bash
-mkdir -p ~/.local/bin
-curl -fsSLo ~/.local/bin/7key https://github.com/Linhv14/7key-action/releases/latest/download/7key.mjs
-chmod +x ~/.local/bin/7key
+npm install -g 7key
 ```
 
-Each release also has `7key.mjs.sha256` to check the download. Then:
+```bash
+brew tap linhv14/7key
+brew trust linhv14/7key
+brew install linhv14/7key/7key
+```
+
+Homebrew asks you to trust a tap that is not its own before it loads a formula
+from it. `npx 7key agent …` also works without installing. Then:
 
 ```bash
 7key agent --email you@example.com --project "Payments API" --env Development -- claude
