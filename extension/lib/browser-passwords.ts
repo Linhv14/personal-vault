@@ -31,7 +31,8 @@ export async function browserPasswordsState(): Promise<BrowserPasswordsState> {
 }
 
 export async function takeOverBrowserPasswords(): Promise<BrowserPasswordsState> {
-  if (!(await chrome.permissions.request(PERMISSION))) return "browser";
+  const held = await chrome.permissions.contains(PERMISSION);
+  if (!held && !(await chrome.permissions.request(PERMISSION))) return "browser";
   const current = setting();
   if (!current) return "browser";
   const { levelOfControl } = await read(current);

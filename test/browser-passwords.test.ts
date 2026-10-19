@@ -103,3 +103,45 @@ describe("browsers", () => {
     expect(passwordSettingsPage("other")).toBeNull();
   });
 });
+
+describe("turning on autofill", () => {
+  it("asks once for site access and the privacy permission, then takes over saving", async () => {
+    const requested: unknown[] = [];
+    const registered: string[] = [];
+    const removed: unknown[] = [];
+    const base = (globalThis as unknown as { chrome: Record<string, unknown> }).chrome;
+    vi.stubGlobal("chrome", {
+      ...base,
+      permissions: {
+        contains: async () => granted,
+        request: async (asked: unknown) => {
+          requested.push(asked);
+          return (granted = true);
+        },
+        remove: async (gone: unknown) => {
+          removed.push(gone);
+          granted = false;
+          return true;
+        },
+      },
+      scripting: {
+        registerContentScripts: async (scripts: { id: string }[]) =>
+          registered.push(...scripts.map(({ id }) => id)),
+        getRegisteredContentScripts: async () => registered.map((id) => ({ id })),
+        unregisterContentScripts: async () => void registered.splice(0),
+      },
+    });
+    const { enableAutofill, disableAutofill } =
+      await import("../extension/lib/autofill-permission.js");
+    expect(await enableAutofill()).toBe(true);
+    expect(requested).toEqual([
+      { origins: ["https://*/*", "http://*/*"], permissions: ["privacy"] },
+    ]);
+    expect(registered).toHaveLength(3);
+    expect(browser.value).toBe(false);
+    await disableAutofill();
+    expect(browser.value).toBe(true);
+    expect(registered).toHaveLength(0);
+    expect(removed).toContainEqual({ permissions: ["privacy"] });
+  });
+});

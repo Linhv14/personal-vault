@@ -131,14 +131,18 @@ scan button remains.
 
 ## Replacing the browser's password manager
 
-**Make 7key the password manager** in Settings asks for the optional `privacy`
-permission and turns off the browser's own offer to save and fill passwords
+Turning on **Autofill and passkeys on websites** asks, in one browser prompt,
+for access to sites and for the optional `privacy` permission, then turns off
+the browser's own offer to save and fill passwords
 (`privacy.services.passwordSavingEnabled`), so only 7key asks. Turning it off
-restores the browser's setting and gives the permission back. Chrome, Edge,
-Brave, Opera, Vivaldi and other Chromium browsers share this setting.
+restores the browser's setting and gives both permissions back. Chrome, Edge,
+Brave, Opera, Vivaldi and other Chromium browsers share this setting. Someone
+who turned autofill on before this gets a link under the switch to take over
+saving as well.
 
-When a company policy or another extension controls it, 7key says so instead of
-changing it, and offers to open the browser's own password settings
-(`chrome://password-manager/settings`, `edge://settings/passwords`,
-`brave://password-manager/settings` and so on). Passwords already saved in the
-browser stay there; export them as CSV and import them into 7key.
+When a company policy or another extension controls the setting, 7key says so
+under the switch instead of changing it, and offers to open the browser's own
+password settings (`chrome://password-manager/settings`,
+`edge://settings/passwords`, `brave://password-manager/settings` and so on).
+Passwords already saved in the browser stay there; export them as CSV and
+import them into 7key.

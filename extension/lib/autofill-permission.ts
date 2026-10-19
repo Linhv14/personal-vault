@@ -4,6 +4,7 @@ import {
   PASSKEY_BRIDGE_SCRIPT_ID,
   PASSKEY_PAGE_SCRIPT_ID,
 } from "./autofill-protocol.js";
+import { giveBackBrowserPasswords, takeOverBrowserPasswords } from "./browser-passwords.js";
 
 export const SCRIPTS: chrome.scripting.RegisteredContentScript[] = [
   {
@@ -76,12 +77,18 @@ export async function isAutofillEnabled(): Promise<boolean> {
 
 export async function enableAutofill(): Promise<boolean> {
   if (!autofillSupported()) return false;
-  const granted = await chrome.permissions.request({ origins: AUTOFILL_ORIGINS });
-  if (granted) await registerAutofillScript();
-  return granted;
+  const granted = await chrome.permissions.request({
+    origins: AUTOFILL_ORIGINS,
+    permissions: ["privacy"],
+  });
+  if (!granted) return false;
+  await registerAutofillScript();
+  await takeOverBrowserPasswords().catch(() => null);
+  return true;
 }
 
 export async function disableAutofill(): Promise<void> {
   await unregisterAutofillScript();
+  await giveBackBrowserPasswords().catch(() => {});
   await chrome.permissions.remove({ origins: AUTOFILL_ORIGINS });
 }

@@ -93,11 +93,15 @@ export function General() {
     if (!enabled) {
       await disableAutofill();
       setAutofill(false);
+      setBrowser("browser");
       return;
     }
     const next = await enableAutofill();
     setAutofill(next);
-    if (next) showToast(t("settings.autofill_enabled"));
+    if (next) {
+      setBrowser(await browserPasswordsState());
+      showToast(t("settings.autofill_enabled"));
+    }
   };
 
   const minutes = local.autoLockMinutes ?? DEFAULT_AUTO_LOCK_MINUTES;
@@ -161,29 +165,9 @@ export function General() {
           <label className="row">
             <span className="row-text">
               <span>{t("settings.autofill")}</span>
-              <span className="row-hint">{t("settings.autofill_hint")}</span>
-            </span>
-            <input
-              className="switch"
-              type="checkbox"
-              checked={autofill}
-              onChange={(event) =>
-                void handleAutofill((event.currentTarget as HTMLInputElement).checked)
-              }
-            />
-          </label>
-        )}
-        {browserPasswordsSupported() && (
-          <label className="row">
-            <span className="row-text">
-              <span>{t("settings.default_manager")}</span>
               <span className="row-hint">
-                {browser === "managed"
-                  ? t("settings.default_manager_managed")
-                  : browser === "other_extension"
-                    ? t("settings.default_manager_other")
-                    : t("settings.default_manager_hint")}
-                {browser !== "ours" && passwordSettingsPage() && (
+                {t("settings.autofill_hint")}
+                {autofill && browser === "browser" && (
                   <>
                     {" "}
                     <button
@@ -191,11 +175,33 @@ export function General() {
                       className="link"
                       onClick={(event) => {
                         event.preventDefault();
-                        void openPasswordSettings();
+                        void handleBrowserPasswords(true);
                       }}
                     >
-                      {t("settings.default_manager_open")}
+                      {t("settings.default_manager_take")}
                     </button>
+                  </>
+                )}
+                {autofill && (browser === "managed" || browser === "other_extension") && (
+                  <>
+                    {" "}
+                    {t(
+                      browser === "managed"
+                        ? "settings.default_manager_managed"
+                        : "settings.default_manager_other",
+                    )}{" "}
+                    {passwordSettingsPage() && (
+                      <button
+                        type="button"
+                        className="link"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          void openPasswordSettings();
+                        }}
+                      >
+                        {t("settings.default_manager_open")}
+                      </button>
+                    )}
                   </>
                 )}
               </span>
@@ -203,10 +209,9 @@ export function General() {
             <input
               className="switch"
               type="checkbox"
-              checked={browser === "ours"}
-              disabled={browser === "managed"}
+              checked={autofill}
               onChange={(event) =>
-                void handleBrowserPasswords((event.currentTarget as HTMLInputElement).checked)
+                void handleAutofill((event.currentTarget as HTMLInputElement).checked)
               }
             />
           </label>

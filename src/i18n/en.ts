@@ -814,7 +814,8 @@ export const en = {
   "settings.signed_out":
     "You are not signed in. Open 7key from the toolbar to sign in or create an account.",
   "settings.auto_lock_hint": "Lock the vault after this long without use.",
-  "settings.autofill_hint": "Fill logins, save new ones and use passkeys on websites.",
+  "settings.autofill_hint":
+    "Fill logins, save new ones and use passkeys on websites, in place of the browser's own password manager.",
   "settings.locked_hint": "Unlock 7key from the toolbar to use this.",
   "settings.import_hint":
     "From Proton Pass, Bitwarden, 1Password or a browser, or to an encrypted file.",
@@ -950,15 +951,13 @@ export const en = {
 
   // --- Share recipient page ------------------------------------------------
   "common.close": "Close",
-  "list.autofill_promo": "Suggest and save passwords on websites",
+  "list.autofill_promo": "Use 7key to fill and save passwords on websites, instead of the browser",
   "list.autofill_enable": "Turn on",
   "settings.logos": "Website icons",
   "settings.logos_hint":
     "Shows site logos in the list. Your server fetches them, so it sees which sites you have.",
-  "settings.default_manager": "Make 7key the password manager",
   "settings.default_manager_open": "Open the browser's password settings",
-  "settings.default_manager_hint":
-    "Turns off the browser's own offer to save and fill passwords, so only 7key asks. Passwords already saved in the browser stay there; export them as CSV and import them.",
+  "settings.default_manager_take": "The browser still offers to save passwords. Turn that off",
   "settings.default_manager_on": "The browser's password manager is off",
   "settings.default_manager_managed":
     "Your organization manages this browser setting, so 7key cannot change it.",

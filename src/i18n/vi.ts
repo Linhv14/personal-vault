@@ -806,7 +806,8 @@ export const vi: Catalogue = {
   "settings.signed_out":
     "Bạn chưa đăng nhập. Mở 7key trên thanh công cụ để đăng nhập hoặc tạo tài khoản.",
   "settings.auto_lock_hint": "Khoá vault sau khoảng thời gian không dùng này.",
-  "settings.autofill_hint": "Điền đăng nhập, lưu tài khoản mới và dùng passkey trên trang web.",
+  "settings.autofill_hint":
+    "Điền đăng nhập, lưu tài khoản mới và dùng passkey trên trang web, thay cho trình quản lý mật khẩu của trình duyệt.",
   "settings.locked_hint": "Mở khoá 7key trên thanh công cụ để dùng phần này.",
   "settings.import_hint":
     "Từ Proton Pass, Bitwarden, 1Password hay trình duyệt, hoặc ra một tệp mã hoá.",
@@ -937,15 +938,13 @@ export const vi: Catalogue = {
 
   // --- Share recipient page ------------------------------------------------
   "common.close": "Đóng",
-  "list.autofill_promo": "Gợi ý và lưu mật khẩu ngay trên trang web",
+  "list.autofill_promo": "Dùng 7key để điền và lưu mật khẩu trên trang web, thay cho trình duyệt",
   "list.autofill_enable": "Bật",
   "settings.logos": "Logo website",
   "settings.logos_hint":
     "Hiện logo trang web trong danh sách. Server của bạn tải logo nên sẽ biết bạn có tài khoản ở trang nào.",
-  "settings.default_manager": "Dùng 7key làm trình quản lý mật khẩu",
   "settings.default_manager_open": "Mở cài đặt mật khẩu của trình duyệt",
-  "settings.default_manager_hint":
-    "Tắt việc trình duyệt tự hỏi lưu và điền mật khẩu, chỉ để 7key hỏi. Mật khẩu đã lưu trong trình duyệt vẫn còn; hãy xuất CSV rồi nhập vào 7key.",
+  "settings.default_manager_take": "Trình duyệt vẫn đang hỏi lưu mật khẩu. Tắt đi",
   "settings.default_manager_on": "Đã tắt trình quản lý mật khẩu của trình duyệt",
   "settings.default_manager_managed":
     "Tổ chức của bạn quản lý thiết lập này nên 7key không đổi được.",
