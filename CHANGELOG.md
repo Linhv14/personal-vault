@@ -54,6 +54,12 @@ version may change the API or storage format; such releases list the steps in
   a release asset), so any repository can use them. `npm run publish:action`
   releases a new version. The console's workflow snippet points there.
 
+### Fixed
+
+- The popup no longer widens on the share screen: the hidden choices in the
+  expiry and views selectors overflowed to the right, so Chrome grew the popup
+  while its layout stayed 600 pixels wide.
+
 ## [0.3.0] - 2026-10-16
 
 Organizations, projects and CI secrets; the product is now Trust1 Vault. See
