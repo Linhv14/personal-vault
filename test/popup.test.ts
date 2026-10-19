@@ -578,11 +578,32 @@ describe("extension popup", () => {
     await waitFor(() => el("detail").querySelectorAll(".code").length === 2, "the codes");
 
     expect(el("detail").textContent).not.toContain("1111");
+    expect(el("detail").querySelector(".code-value")!.textContent).toBe("••••••••••");
     expect(rows("all-list")[0]!.textContent).toContain("2 codes");
     detailButton("Mark as used").click();
     await waitFor(() => el("detail").textContent!.includes("1 of 2 left"), "the used mark");
     expect(el("detail").querySelector(".code.used")).not.toBeNull();
     expect(rows("all-list")[0]!.textContent).toContain("1 of 2 left");
+  });
+
+  it("lists long recovery codes one per row and copies them whole", async () => {
+    const long = "c6d2529fd75876b4c6bfef42f7714cfb0a4f403872ccbd60c9eef3ba97190234";
+    addItemOfKind("Recovery codes");
+    await waitFor(() => visibleScreen() === "screen-edit", "the editor");
+    const form = el<HTMLFormElement>("form-edit");
+    setField(form, "title", "npm");
+    form.querySelector<HTMLTextAreaElement>('[name="codes"]')!.value = `${long}\nAB12-CD34`;
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
+    pickType("Recovery codes2");
+    await waitFor(() => el("all-list").textContent!.includes("npm"), "the npm item");
+    [...rows("all-list")].find((row) => row.textContent!.includes("npm"))!.click();
+    await waitFor(() => el("detail").querySelectorAll(".code").length === 2, "the codes");
+    expect(el("detail").querySelector(".codes-grid")!.classList.contains("long")).toBe(true);
+    const write = vi.spyOn(navigator.clipboard, "writeText");
+    el("detail").querySelector<HTMLButtonElement>(".code-value")!.click();
+    await waitFor(() => write.mock.calls.length > 0, "the copy");
+    expect(write).toHaveBeenCalledWith(long);
   });
 
   function vaultMenuItem(label: string): HTMLButtonElement {

@@ -1,3 +1,4 @@
+import { Icon } from "../../ui/components/Icon.js";
 import { useEffect } from "preact/hooks";
 import { ITEM_TYPES, NEW_LABEL, TYPE_ICON, TYPE_LABEL } from "../../lib/item-types.js";
 import { registrableDomain } from "../../lib/vault.js";
@@ -57,8 +58,10 @@ export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
         <Dropdown
           id="type-filter"
           label={
-            <span>
-              {type === "all" ? t("type.all") : t(TYPE_LABEL[type])}{" "}
+            <span className="dropdown-label">
+              <span className="dropdown-name">
+                {type === "all" ? t("type.all") : t(TYPE_LABEL[type])}
+              </span>
               <span className="count">
                 ({type === "all" ? view.scoped.length : (counts.get(type) ?? 0)})
               </span>
@@ -86,7 +89,8 @@ export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
         <Dropdown
           id="sort-order"
           align="right"
-          label={t(sortOrder.value === "recent" ? "list.sort_recent" : "list.sort_name")}
+          title={`${t("list.sort")}: ${t(sortOrder.value === "recent" ? "list.sort_recent" : "list.sort_name")}`}
+          label={<Icon name="sort" />}
           entries={[
             {
               key: "recent",

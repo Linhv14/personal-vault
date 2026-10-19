@@ -466,12 +466,15 @@ label.range output {
 
 .dropdown {
   position: relative;
+  min-width: 0;
 }
 .dropdown-button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: 100%;
   padding: 5px 8px;
+  white-space: nowrap;
   border-radius: 8px;
   color: var(--text);
   font-size: 12.5px;
@@ -486,8 +489,21 @@ label.range output {
   color: var(--muted);
 }
 .dropdown-button .count {
+  flex: none;
   color: var(--muted);
   font-weight: 500;
+}
+.dropdown-label {
+  display: inline-flex;
+  gap: 4px;
+  min-width: 0;
+}
+.dropdown-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dropdown-button .icon {
+  flex: none;
 }
 
 .vault {
@@ -654,7 +670,11 @@ label.range output {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 4px;
   padding: 8px 8px 4px;
+}
+.list-tools .dropdown:last-child {
+  flex: none;
 }
 .list-scroll {
   flex: 1;
@@ -993,7 +1013,7 @@ label.range output {
 }
 .codes-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
   padding: 0 10px 10px;
@@ -1018,13 +1038,25 @@ label.range output {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.codes-grid.long {
+  grid-template-columns: minmax(0, 1fr);
+}
+.code {
+  min-width: 0;
+}
 .code-value {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
   padding: 7px 4px;
   font-size: 13px;
   letter-spacing: 0.04em;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.codes-grid.long .code-value {
+  letter-spacing: 0;
 }
 .code:hover {
   background: var(--surface-hover);

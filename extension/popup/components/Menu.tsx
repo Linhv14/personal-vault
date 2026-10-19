@@ -80,11 +80,13 @@ export function Dropdown({
   entries,
   id,
   align = "left",
+  title,
 }: {
   label: ComponentChildren;
   entries: MenuEntry[];
   id?: string;
   align?: "left" | "right";
+  title?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -93,6 +95,8 @@ export function Dropdown({
         type="button"
         className="dropdown-button"
         id={id}
+        title={title}
+        aria-label={title}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(event) => {

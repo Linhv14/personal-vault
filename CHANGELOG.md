@@ -113,6 +113,12 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Long recovery codes, such as npm's 64-character ones, no longer overflow or
+  wrap: each stays on one line with an ellipsis, long sets list one per row,
+  and a click still copies the whole code. Hidden codes show a fixed run of
+  dots, without the dashes or length of the real code.
+- The type filter keeps its count on the same line, and the sort menu is an
+  icon, so labels such as "Recovery codes (4)" fit.
 - The popup no longer widens on the share screen: the hidden choices in the
   expiry and views selectors overflowed to the right, so Chrome grew the popup
   while its layout stayed 600 pixels wide.

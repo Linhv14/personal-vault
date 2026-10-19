@@ -101,9 +101,9 @@ function MainRow({ spec, item }: { spec: FieldSpec; item: VaultItem }) {
   }
 }
 
-function maskCode(code: string): string {
-  return code.replace(/[^\s-]/g, "•");
-}
+const LONG_CODE = 14;
+
+const MASKED_CODE = "•".repeat(10);
 
 function RecoveryCodes({ item }: { item: VaultItem }) {
   const t = useT();
@@ -138,7 +138,9 @@ function RecoveryCodes({ item }: { item: VaultItem }) {
         )}
       </div>
       {unused.length === 0 && <p className="codes-note">{t("item.codes_all_used")}</p>}
-      <ol className="codes-grid">
+      <ol
+        className={codes.some((code) => code.length > LONG_CODE) ? "codes-grid long" : "codes-grid"}
+      >
         {codes.map((code, index) => {
           const name = t("item.code", { number: index + 1 });
           const isUsed = used.has(code);
@@ -148,10 +150,10 @@ function RecoveryCodes({ item }: { item: VaultItem }) {
               <button
                 type="button"
                 className="code-value mono"
-                title={`${name} · ${t("common.copy")}`}
+                title={revealed ? `${code}\n${t("common.copy")}` : `${name} · ${t("common.copy")}`}
                 onClick={() => void copy(code, name.toLowerCase())}
               >
-                {revealed ? code : maskCode(code)}
+                {revealed ? code : MASKED_CODE}
               </button>
               <IconButton
                 icon="check"

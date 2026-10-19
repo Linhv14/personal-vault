@@ -576,6 +576,7 @@ export const en = {
   "list.empty": "Nothing here yet. Press + to add one.",
   "list.menu": "Menu",
   "list.all_items": "All items",
+  "list.sort": "Sort",
   "list.sort_recent": "Recent",
   "list.sort_name": "Name",
   "list.no_results": "No matches.",

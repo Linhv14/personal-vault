@@ -572,6 +572,7 @@ export const vi: Catalogue = {
   "list.empty": "Chưa có gì. Bấm + để thêm.",
   "list.menu": "Menu",
   "list.all_items": "Tất cả mục",
+  "list.sort": "Sắp xếp",
   "list.sort_recent": "Mới nhất",
   "list.sort_name": "Tên",
   "list.no_results": "Không tìm thấy.",
