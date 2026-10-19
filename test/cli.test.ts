@@ -7,7 +7,7 @@ describe("7key CLI", () => {
     expect(parseArgs(["run", "--", "npm", "test"], { SEVENKEY_LINK: "o.l" })).toEqual({
       command: "run",
       link: "o.l",
-      server: "https://1pw.online",
+      server: "https://7key.online",
       rest: ["npm", "test"],
     });
     expect(

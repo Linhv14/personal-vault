@@ -173,7 +173,7 @@ async function openCiResponse(repoKey, linkId, response) {
 }
 
 // src/core/brand.ts
-var DEFAULT_SERVER = "https://1pw.online";
+var DEFAULT_SERVER = "https://7key.online";
 
 // cli/ci-client.ts
 var CiError = class extends Error {

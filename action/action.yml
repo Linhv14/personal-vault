@@ -10,7 +10,7 @@ inputs:
   server:
     description: 7key server.
     required: false
-    default: https://1pw.online
+    default: https://7key.online
 runs:
   using: node20
   main: dist/index.mjs

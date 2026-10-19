@@ -28,6 +28,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The hosted service moved to `https://7key.online`. Accounts, vaults,
+  organizations and CI secrets were copied from `1pw.online` unchanged, so
+  the same master password and repository keys keep working. The CLI and the
+  Action default to the new address; `ALIAS_ORIGINS` keeps CI tokens issued
+  for `1pw.online` valid.
 - The hosted service is the default everywhere: sign-in no longer shows the
   server field, even when the browser remembers another server, and Settings
   hides the server row for the default. **Use your own server** still opens

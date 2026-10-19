@@ -39,7 +39,7 @@ The Action lives in the public repository
 [`Linhv14/7key-action`](https://github.com/Linhv14/7key-action),
 so any repository can use it. `@v1` follows the latest 1.x release; pin
 `@v1.0.0` or a commit SHA to control upgrades. Add `server:` when your vault is
-not `https://1pw.online`.
+not `https://7key.online`.
 
 ## Without the Action
 

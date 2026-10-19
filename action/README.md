@@ -1,6 +1,6 @@
 # 7key for GitHub Actions
 
-Load one environment of a [7key](https://1pw.online) project into a
+Load one environment of a [7key](https://7key.online) project into a
 workflow. The job proves its repository and branch with GitHub's OIDC token;
 the server answers with ciphertext that only the repository key opens. Secret
 values are masked in the logs.
@@ -30,11 +30,11 @@ jobs:
 
 Every value becomes an environment variable for the later steps of the job.
 
-| Input    | Required | Description                                      |
-| -------- | -------- | ------------------------------------------------ |
-| `link`   | yes      | The repository link from the console             |
-| `key`    | yes      | The repository key, stored as a secret           |
-| `server` | no       | Your server, when it is not `https://1pw.online` |
+| Input    | Required | Description                                       |
+| -------- | -------- | ------------------------------------------------- |
+| `link`   | yes      | The repository link from the console              |
+| `key`    | yes      | The repository key, stored as a secret            |
+| `server` | no       | Your server, when it is not `https://7key.online` |
 
 ## Without the Action
 
