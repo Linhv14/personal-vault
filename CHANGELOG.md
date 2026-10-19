@@ -8,6 +8,12 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Added
+
+- Secret history: the console keeps the last five values of each secret, with
+  who changed it and when; **History** on a secret's row shows them and
+  restores one. Re-keying a team re-encrypts the history too.
+
 ## [0.4.1] - 2026-10-19
 
 ### Changed

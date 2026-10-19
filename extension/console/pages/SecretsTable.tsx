@@ -20,6 +20,7 @@ function SecretRow({
   onDelete,
   onAccess,
   onHosts,
+  onHistory,
 }: {
   secret: Secret;
   editable: boolean;
@@ -28,6 +29,7 @@ function SecretRow({
   onDelete: () => void;
   onAccess: (access: SecretAccess) => void;
   onHosts: () => void;
+  onHistory: () => void;
 }) {
   const t = useT();
   const { emailOf } = useConsole();
@@ -134,6 +136,7 @@ function SecretRow({
               copy(secret.value, t("console.copied_name", { name: secret.name }));
             }}
           />
+          <IconButton icon="history" label={t("console.history")} onClick={onHistory} />
           {editable && (
             <>
               <IconButton
@@ -168,6 +171,7 @@ export function SecretsTable({
   onDelete,
   onAccess,
   onHosts,
+  onHistory,
 }: {
   secrets: Secret[];
   query: string;
@@ -177,6 +181,7 @@ export function SecretsTable({
   onDelete: (secret: Secret) => void;
   onAccess: (access: SecretAccess, secretId: string) => void;
   onHosts: (secret: Secret) => void;
+  onHistory: (secret: Secret) => void;
 }) {
   const t = useT();
   const needle = query.trim().toLowerCase();
@@ -204,6 +209,7 @@ export function SecretsTable({
               onDelete={() => onDelete(secret)}
               onAccess={(access) => onAccess(access, secret.id)}
               onHosts={() => onHosts(secret)}
+              onHistory={() => onHistory(secret)}
             />
           ))}
         </tbody>

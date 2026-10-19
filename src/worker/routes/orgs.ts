@@ -14,6 +14,7 @@ import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { MAX_ORGS_PER_ACCOUNT } from "../orgs/directory.js";
+import { MAX_SECRET_VERSIONS } from "../orgs/project-tables.js";
 import {
   invitationLink,
   joinFromInvite,
@@ -288,6 +289,10 @@ orgs.put(
     const sealedSecrets = entriesOf(body.secrets ?? {}, MAX_RESEALED, isSealedSecret);
     const linkKeys = entriesOf(body.links ?? {}, MAX_RESEALED, isWrappedKey);
     const sealedItems = entriesOf(body.items ?? {}, MAX_RESEALED, isSealedTeamItem);
+    const sealedVersions =
+      body.versions === undefined
+        ? undefined
+        : entriesOf(body.versions, MAX_RESEALED * MAX_SECRET_VERSIONS, isSealedSecret);
     if (
       !isGeneration(body.generation) ||
       !wrappedKeys ||
@@ -295,7 +300,8 @@ orgs.put(
       !sealedProjects ||
       !sealedSecrets ||
       !linkKeys ||
-      !sealedItems
+      !sealedItems ||
+      sealedVersions === null
     ) {
       return c.json(apiError("orgs.invalid_team"), 400);
     }
@@ -304,6 +310,7 @@ orgs.put(
       wrappedKeys,
       projects: sealedProjects,
       secrets: sealedSecrets,
+      ...(sealedVersions ? { versions: sealedVersions } : {}),
       links: linkKeys,
       items: sealedItems,
     };

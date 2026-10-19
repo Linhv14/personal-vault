@@ -50,6 +50,7 @@ import {
   type SecretDraft,
 } from "./project-dialogs.js";
 import { RepositoryLinks } from "./RepositoryLinks.js";
+import { SecretHistoryDialog } from "./SecretHistory.js";
 import { SecretsTable } from "./SecretsTable.js";
 
 const CI_TAB = "ci";
@@ -64,6 +65,7 @@ type Modal =
   | { kind: "delete-project" }
   | { kind: "delete-secret"; secret: Secret }
   | { kind: "hosts"; secret: Secret }
+  | { kind: "history"; secret: Secret }
   | { kind: "remove-duplicates" }
   | null;
 
@@ -500,6 +502,7 @@ export function ProjectPage({
                 }}
                 onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
                 onHosts={(secret) => setModal({ kind: "hosts", secret })}
+                onHistory={(secret) => setModal({ kind: "history", secret })}
                 onAccess={(access, secretId) =>
                   noteAccess(orgId, project, environment.id, access, secretId)
                 }
@@ -660,6 +663,35 @@ export function ProjectPage({
           onSubmit={() => {
             setModal(null);
             removeDuplicates();
+          }}
+        />
+      )}
+      {modal?.kind === "history" && (
+        <SecretHistoryDialog
+          orgId={orgId}
+          project={project}
+          secret={modal.secret}
+          editable={editable}
+          onRevealed={() =>
+            noteAccess(orgId, project, modal.secret.environmentId, "revealed", modal.secret.id)
+          }
+          onClose={() => setModal(null)}
+          onRestore={(version) => {
+            const { secret } = modal;
+            setModal(null);
+            void mutate(
+              () =>
+                saveSecret(orgId, project, secret.environmentId, {
+                  id: secret.id,
+                  name: secret.name,
+                  value: version.value,
+                  kind: secret.kind,
+                  note: secret.note,
+                  hosts: secret.hosts,
+                }),
+              "console.history_restored",
+              [secret.id],
+            );
           }}
         />
       )}

@@ -39,6 +39,16 @@ function secretRecord(row: SecretRow): SecretRecord {
   };
 }
 
+export const MAX_SECRET_VERSIONS = 5;
+
+export interface SecretVersionRecord {
+  id: string;
+  secretId: string;
+  sealed: SealedData;
+  updatedAt: number;
+  updatedBy: string;
+}
+
 export class ProjectTables {
   constructor(private readonly sql: SqlStorage) {
     sql.exec(`
@@ -59,6 +69,14 @@ export class ProjectTables {
         updated_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_secrets_project ON secrets (project_id, environment_id);
+      CREATE TABLE IF NOT EXISTS secret_versions (
+        id TEXT PRIMARY KEY,
+        secret_id TEXT NOT NULL,
+        sealed TEXT NOT NULL,
+        updated_by TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_secret_versions ON secret_versions (secret_id, updated_at);
     `);
   }
 
@@ -113,11 +131,16 @@ export class ProjectTables {
   }
 
   remove(id: string): void {
+    this.sql.exec(
+      "DELETE FROM secret_versions WHERE secret_id IN (SELECT id FROM secrets WHERE project_id = ?)",
+      id,
+    );
     this.sql.exec("DELETE FROM secrets WHERE project_id = ?", id);
     this.sql.exec("DELETE FROM projects WHERE id = ?", id);
   }
 
   removeTeam(teamId: string): void {
+    this.dropVersionsOfTeam(teamId);
     this.sql.exec(
       "DELETE FROM secrets WHERE project_id IN (SELECT id FROM projects WHERE team_id = ?)",
       teamId,
@@ -168,6 +191,29 @@ export class ProjectTables {
     by: string,
     at: number,
   ): void {
+    const previous = this.sql
+      .exec<{ sealed: string; updated_by: string; updated_at: number }>(
+        "SELECT sealed, updated_by, updated_at FROM secrets WHERE id = ?",
+        secret.id,
+      )
+      .toArray()[0];
+    if (previous) {
+      this.sql.exec(
+        "INSERT INTO secret_versions (id, secret_id, sealed, updated_by, updated_at) VALUES (?, ?, ?, ?, ?)",
+        crypto.randomUUID(),
+        secret.id,
+        previous.sealed,
+        previous.updated_by,
+        previous.updated_at,
+      );
+      this.sql.exec(
+        `DELETE FROM secret_versions WHERE secret_id = ? AND id NOT IN (
+           SELECT id FROM secret_versions WHERE secret_id = ? ORDER BY updated_at DESC LIMIT ?)`,
+        secret.id,
+        secret.id,
+        MAX_SECRET_VERSIONS,
+      );
+    }
     this.sql.exec(
       `INSERT INTO secrets (id, project_id, environment_id, sealed, updated_by, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)
@@ -183,13 +229,66 @@ export class ProjectTables {
   }
 
   deleteSecret(id: string): void {
+    this.sql.exec("DELETE FROM secret_versions WHERE secret_id = ?", id);
     this.sql.exec("DELETE FROM secrets WHERE id = ?", id);
   }
 
-  reseal(projects: Record<string, SealedData>, secrets: Record<string, SealedData>): void {
+  versions(secretId: string): SecretVersionRecord[] {
+    return this.sql
+      .exec<{ id: string; sealed: string; updated_by: string; updated_at: number }>(
+        "SELECT id, sealed, updated_by, updated_at FROM secret_versions WHERE secret_id = ? ORDER BY updated_at DESC",
+        secretId,
+      )
+      .toArray()
+      .map((row) => ({
+        id: row.id,
+        secretId,
+        sealed: JSON.parse(row.sealed) as SealedData,
+        updatedAt: row.updated_at,
+        updatedBy: row.updated_by,
+      }));
+  }
+
+  versionsOfTeam(teamId: string): { id: string; secretId: string; sealed: SealedData }[] {
+    return this.sql
+      .exec<{ id: string; secret_id: string; sealed: string }>(
+        `SELECT v.id, v.secret_id, v.sealed FROM secret_versions v
+           JOIN secrets s ON s.id = v.secret_id
+           JOIN projects p ON p.id = s.project_id
+          WHERE p.team_id = ?`,
+        teamId,
+      )
+      .toArray()
+      .map((row) => ({
+        id: row.id,
+        secretId: row.secret_id,
+        sealed: JSON.parse(row.sealed) as SealedData,
+      }));
+  }
+
+  dropVersionsOfTeam(teamId: string): void {
+    this.sql.exec(
+      `DELETE FROM secret_versions WHERE secret_id IN (
+         SELECT s.id FROM secrets s JOIN projects p ON p.id = s.project_id WHERE p.team_id = ?)`,
+      teamId,
+    );
+  }
+
+  reseal(
+    projects: Record<string, SealedData>,
+    secrets: Record<string, SealedData>,
+    versions: Record<string, SealedData>,
+  ): void {
     for (const [id, sealed] of Object.entries(projects)) this.replace(id, sealed);
     for (const [id, sealed] of Object.entries(secrets)) {
       this.sql.exec("UPDATE secrets SET sealed = ? WHERE id = ?", JSON.stringify(sealed), id);
+    }
+    for (const [id, sealed] of Object.entries(versions)) {
+      this.sql.exec(
+        "UPDATE secret_versions SET sealed = ? WHERE id = ?",
+        JSON.stringify(sealed),
+        id,
+      );
     }
   }
 }

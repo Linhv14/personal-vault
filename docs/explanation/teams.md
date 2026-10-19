@@ -46,6 +46,15 @@ cannot move a production secret into development, swap two secrets, or replay
 one from an older key: the first open fails. The server also refuses to move a
 secret's environment outright. It sees ids, counts and timestamps, never names.
 
+### Secret history
+
+Changing a secret keeps the previous ciphertext, with who wrote it and when, up
+to the last five. They are sealed exactly like the secret, so only the team can
+open them, and re-keying the team re-encrypts them with everything else. A
+client too old to send them during a re-key makes the server drop the history
+rather than keep values under a key that is being retired. Reading the history
+is written to the activity log; restoring saves the old value as a new change.
+
 ### Variables and secrets
 
 Each entry is either a variable or a secret, and the type is sealed with the

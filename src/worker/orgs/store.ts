@@ -17,7 +17,12 @@ import type { Env } from "../types.js";
 import { ruleAllows, type GithubClaims } from "../../core/ci.js";
 import { LinkTables, type LinkRecord } from "./link-tables.js";
 import { ItemTables, type TeamItemRecord } from "./item-tables.js";
-import { ProjectTables, type ProjectRecord, type SecretRecord } from "./project-tables.js";
+import {
+  ProjectTables,
+  type ProjectRecord,
+  type SecretRecord,
+  type SecretVersionRecord,
+} from "./project-tables.js";
 
 const AUDIT_PAGE = 100;
 const GENESIS = "genesis";
@@ -331,6 +336,7 @@ export class OrgStore extends DurableObject<Env> {
       wrappedKeys: Record<string, WrappedKey>;
       projects: Record<string, SealedData>;
       secrets: Record<string, SealedData>;
+      versions?: Record<string, SealedData>;
       links: Record<string, WrappedKey>;
       items: Record<string, SealedData>;
     },
@@ -355,7 +361,9 @@ export class OrgStore extends DurableObject<Env> {
     const secretIds = this.projects.secretsOfTeam(teamId).map((secret) => secret.id);
     const linkIds = this.links.ofTeam(teamId).map((link) => link.id);
     const itemIds = this.items.ofTeam(teamId).map((item) => item.id);
+    const versionIds = this.projects.versionsOfTeam(teamId).map((version) => version.id);
     if (
+      (next.versions !== undefined && !sameKeys(versionIds, next.versions)) ||
       !sameKeys(projectIds, next.projects) ||
       !sameKeys(secretIds, next.secrets) ||
       !sameKeys(linkIds, next.links) ||
@@ -364,7 +372,8 @@ export class OrgStore extends DurableObject<Env> {
       return fail(409, "orgs.team_changed");
     }
     this.ctx.storage.transactionSync(() => {
-      this.projects.reseal(next.projects, next.secrets);
+      if (next.versions === undefined) this.projects.dropVersionsOfTeam(teamId);
+      this.projects.reseal(next.projects, next.secrets, next.versions ?? {});
       this.links.rewrap(next.links);
       this.items.reseal(next.items);
       for (const accountId of members) {
@@ -525,6 +534,32 @@ export class OrgStore extends DurableObject<Env> {
     const secrets = this.projects.secrets(projectId, environmentId);
     await this.record(principal.accountId, "secrets.read", `${projectId}:${environmentId}`, ip);
     return ok({ generation: access.value.generation, secrets });
+  }
+
+  async secretVersions(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    secretId: string,
+    ip: string | null,
+  ): Promise<
+    Result<{ generation: number; environmentId: string; versions: SecretVersionRecord[] }>
+  > {
+    const access = this.projectAccess(principal, teamId, projectId, false);
+    if (!access.ok) return access;
+    const location = this.projects.secretLocation(secretId);
+    if (location?.projectId !== projectId) return fail(404, "orgs.not_found");
+    await this.record(
+      principal.accountId,
+      "secret.history_read",
+      `${projectId}:${location.environmentId}`,
+      ip,
+    );
+    return ok({
+      generation: access.value.generation,
+      environmentId: location.environmentId,
+      versions: this.projects.versions(secretId),
+    });
   }
 
   async writeSecrets(
@@ -701,6 +736,7 @@ export class OrgStore extends DurableObject<Env> {
       generation: number;
       projects: ProjectRecord[];
       secrets: SecretRecord[];
+      versions: { id: string; secretId: string; sealed: SealedData }[];
       links: { id: string; projectId: string; environmentId: string; publicKey: string }[];
       items: TeamItemRecord[];
     }>
@@ -711,6 +747,7 @@ export class OrgStore extends DurableObject<Env> {
       generation: access.value.generation,
       projects: this.projects.ofTeam(teamId),
       secrets: this.projects.secretsOfTeam(teamId),
+      versions: this.projects.versionsOfTeam(teamId),
       links: this.links.ofTeam(teamId).map(({ id, projectId, environmentId, publicKey }) => ({
         id,
         projectId,

@@ -217,6 +217,24 @@ projects.delete(
 );
 
 projects.get(
+  "/projects/:projectId/secrets/:secretId/versions",
+  asMember(async (c, member, orgId) => {
+    const secretId = param(c, "secretId");
+    if (!isUuid(secretId)) return invalidSecret(c);
+    return respond(
+      c,
+      await orgStore(c.env, orgId).secretVersions(
+        member,
+        team(c),
+        project(c),
+        secretId,
+        clientIp(c),
+      ),
+    );
+  }),
+);
+
+projects.get(
   "/projects/:projectId/links",
   asMember(async (c, member, orgId) =>
     respond(c, await orgStore(c.env, orgId).listLinks(member, team(c), project(c))),

@@ -166,6 +166,42 @@ export async function listSecrets(
   return opened.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export interface SecretVersion extends SecretContent {
+  id: string;
+  updatedAt: number;
+  updatedBy: string;
+}
+
+export async function listSecretVersions(
+  orgId: string,
+  project: Project,
+  secret: Pick<Secret, "id" | "environmentId">,
+): Promise<SecretVersion[]> {
+  const { versions } = await request<{
+    versions: { id: string; sealed: SealedData; updatedAt: number; updatedBy: string }[];
+  }>(`${teamPath(orgId, project.teamId)}/projects/${project.id}/secrets/${secret.id}/versions`);
+  const opened = await Promise.all(
+    versions.map(async (record) => {
+      try {
+        const { content } = await openSecretWithOrigin(
+          project.content,
+          address(project, secret.environmentId, secret.id),
+          record.sealed,
+        );
+        return {
+          ...content,
+          id: record.id,
+          updatedAt: record.updatedAt,
+          updatedBy: record.updatedBy,
+        };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return opened.filter((version): version is SecretVersion => version !== null);
+}
+
 export async function upgradeLegacySecrets(
   orgId: string,
   project: Project,
@@ -385,6 +421,7 @@ export async function rekeyTeam(
     generation: number;
     projects: ProjectRecord[];
     secrets: SecretRecord[];
+    versions?: { id: string; secretId: string; sealed: SealedData }[];
     links: { id: string; projectId: string; environmentId: string; publicKey: string }[];
     items?: { id: string; sealed: SealedData }[];
   }>(`${teamPath(orgId, team.id)}/vault`);
@@ -406,6 +443,7 @@ export async function rekeyTeam(
 
   const projects: Record<string, SealedData> = {};
   const secrets: Record<string, SealedData> = {};
+  let versions: Record<string, SealedData> | undefined = vault.versions ? {} : undefined;
   const links: Record<string, WrappedKey> = {};
   for (const record of vault.projects) {
     const before = await openProject(oldKey, record.id, current, record.sealed);
@@ -427,6 +465,15 @@ export async function rekeyTeam(
       });
       const content = await openSecret(before, at(current), secret.sealed);
       secrets[secret.id] = await sealSecret(after, at(generation), content);
+      for (const version of vault.versions?.filter((entry) => entry.secretId === secret.id) ?? []) {
+        if (!versions) break;
+        try {
+          const old = await openSecret(before, at(current), version.sealed);
+          versions[version.id] = await sealSecret(after, at(generation), old);
+        } catch {
+          versions = undefined;
+        }
+      }
     }
   }
 
@@ -452,6 +499,6 @@ export async function rekeyTeam(
 
   await request(`${teamPath(orgId, team.id)}/key`, {
     method: "PUT",
-    body: json({ generation, wrappedKeys, projects, secrets, links, items }),
+    body: json({ generation, wrappedKeys, projects, secrets, versions, links, items }),
   });
 }
