@@ -483,6 +483,12 @@ export const vi: Catalogue = {
     "7key agent chỉ gửi secret này tới các host dưới đây; agent chỉ thấy placeholder. Mỗi dòng một host, *.example.com cho subdomain.",
   "console.agent_hosts_invalid":
     "Dùng tên host như api.stripe.com hoặc *.myshopify.com, tối đa 10.",
+  "console.agent_hosts_add": "Host cho agent",
+  "console.agent_hosts_suggested": "Gợi ý:",
+  "console.agent_hosts_everywhere": "Dùng các host này cho {name} ở mọi environment",
+  "console.agent_hosts_suggest_title": "Cho AI agent dùng các secret này qua 7key agent?",
+  "console.agent_hosts_apply": "Áp dụng host gợi ý",
+  "console.agent_hosts_applied": "Đã đặt host cho agent",
   "console.agent_badge": "Agent",
   "console.kind_variable": "Variable",
   "orgs.audit_secret_revealed": "đã xem một secret trong",

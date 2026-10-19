@@ -489,6 +489,12 @@ export const en = {
     "7key agent sends this secret only to these hosts; the agent itself sees a placeholder. One per line, *.example.com for subdomains.",
   "console.agent_hosts_invalid":
     "Use host names such as api.stripe.com or *.myshopify.com, at most 10.",
+  "console.agent_hosts_add": "Agent hosts",
+  "console.agent_hosts_suggested": "Suggested:",
+  "console.agent_hosts_everywhere": "Use these hosts for {name} in every environment",
+  "console.agent_hosts_suggest_title": "Let AI agents use these secrets through 7key agent?",
+  "console.agent_hosts_apply": "Apply suggested hosts",
+  "console.agent_hosts_applied": "Agent hosts set",
   "console.agent_badge": "Agent",
   "console.kind_variable": "Variable",
   "orgs.audit_secret_revealed": "revealed a secret in",

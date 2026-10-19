@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { suggestHosts } from "../../../src/core/agent-hosts.js";
 import {
   formatDotenv,
   handleOf,
@@ -65,6 +66,18 @@ type Modal =
   | { kind: "hosts"; secret: Secret }
   | { kind: "remove-duplicates" }
   | null;
+
+function withHosts(secret: Secret, hosts: string[]) {
+  return {
+    id: secret.id,
+    environmentId: secret.environmentId,
+    name: secret.name,
+    value: secret.value,
+    kind: secret.kind,
+    note: secret.note,
+    hosts,
+  };
+}
 
 export function ProjectPage({
   projectId,
@@ -207,6 +220,24 @@ export function ProjectPage({
         duplicates.map((secret) => secret.id),
       );
     }, "console.duplicates_removed");
+  const suggested = all
+    .filter((secret) => !isVariable(secret) && !secret.hosts?.length && secret.value)
+    .map((secret) => ({ secret, hosts: suggestHosts(secret.name, secret.value) }))
+    .filter((entry) => entry.hosts.length > 0);
+  const suggestedNames = [
+    ...new Map(suggested.map((entry) => [entry.secret.name, entry])).values(),
+  ];
+  const applySuggestions = () =>
+    void mutate(
+      () =>
+        saveSecrets(
+          orgId,
+          project,
+          suggested.map((entry) => withHosts(entry.secret, entry.hosts)),
+        ),
+      "console.agent_hosts_applied",
+      suggested.map((entry) => entry.secret.id),
+    );
   const names = [...new Set(all.map((secret) => secret.name))].sort();
   const missing = environments.map((env) => ({
     env,
@@ -315,6 +346,24 @@ export function ProjectPage({
         }
         actions={actions}
       />
+
+      {suggestedNames.length > 0 && editable && (
+        <div className="alert suggest action">
+          <div>
+            <strong>{t("console.agent_hosts_suggest_title")}</strong>
+            <ul>
+              {suggestedNames.map(({ secret, hosts }) => (
+                <li key={secret.name}>
+                  <code>{secret.name}</code> → <code>{hosts.join(", ")}</code>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button type="button" className="btn primary sm" onClick={applySuggestions}>
+            {t("console.agent_hosts_apply")}
+          </button>
+        </div>
+      )}
 
       {duplicates.length > 0 && editable && (
         <div className="alert warn action">
@@ -614,25 +663,26 @@ export function ProjectPage({
           }}
         />
       )}
-      {modal?.kind === "hosts" && environment && (
+      {modal?.kind === "hosts" && (
         <HostsDialog
           secret={modal.secret}
+          environmentCount={environments.length}
           onClose={() => setModal(null)}
-          onSave={(hosts) => {
+          onSave={(hosts, everywhere) => {
             const { secret } = modal;
             setModal(null);
+            const targets = everywhere
+              ? all.filter((entry) => entry.name === secret.name && !isVariable(entry))
+              : [secret];
             void mutate(
               () =>
-                saveSecret(orgId, project, environment.id, {
-                  id: secret.id,
-                  name: secret.name,
-                  value: secret.value,
-                  kind: secret.kind,
-                  note: secret.note,
-                  hosts,
-                }),
+                saveSecrets(
+                  orgId,
+                  project,
+                  targets.map((entry) => withHosts(entry, hosts)),
+                ),
               "projects.saved",
-              [secret.id],
+              targets.map((entry) => entry.id),
             );
           }}
         />

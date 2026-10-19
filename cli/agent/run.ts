@@ -105,7 +105,9 @@ function describe(selected: Plan): string[] {
     lines.push(`  variables: ${selected.variables.map((entry) => entry.name).join(", ")}`);
   }
   if (selected.skipped.length > 0) {
-    lines.push(`  not available (no allowed hosts): ${selected.skipped.join(", ")}`);
+    lines.push(
+      `  not available (no allowed hosts, set them in the console): ${selected.skipped.join(", ")}`,
+    );
   }
   if (selected.tooShort.length > 0) {
     lines.push(
@@ -143,7 +145,9 @@ export async function runAgent(options: AgentOptions): Promise<number> {
     );
     for (const line of describe(prepared)) options.log(line);
     if (prepared.injectables.length === 0) {
-      options.log("7key: no secret has allowed hosts; add them in the console first");
+      options.log(
+        "7key: no secret has allowed hosts yet. In the console, open the project and press Apply suggested hosts, or Agent hosts under a secret's name.",
+      );
     }
     if (!options.yes && !(await options.confirm("Allow? [y/N] "))) return 1;
 

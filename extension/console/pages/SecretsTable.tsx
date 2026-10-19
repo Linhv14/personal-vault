@@ -45,9 +45,22 @@ function SecretRow({
         <code>{secret.name}</code>
         {variable && <Badge>{t("console.kind_variable")}</Badge>}
         {!variable && (secret.hosts?.length ?? 0) > 0 && (
-          <span title={secret.hosts!.join("\n")}>
-            <Badge>{t("console.agent_badge")}</Badge>
-          </span>
+          <button
+            type="button"
+            className="agent-hosts"
+            title={t("console.agent_hosts")}
+            disabled={!editable}
+            onClick={onHosts}
+          >
+            <Icon name="terminal" />
+            {secret.hosts!.join(", ")}
+          </button>
+        )}
+        {!variable && !secret.hosts?.length && editable && (
+          <button type="button" className="agent-hosts empty" onClick={onHosts}>
+            <Icon name="plus" />
+            {t("console.agent_hosts_add")}
+          </button>
         )}
       </td>
       <td className="secret-value">
@@ -123,11 +136,6 @@ function SecretRow({
           />
           {editable && (
             <>
-              {variable ? (
-                <span className="icon-slot" aria-hidden="true" />
-              ) : (
-                <IconButton icon="terminal" label={t("console.agent_hosts")} onClick={onHosts} />
-              )}
               <IconButton
                 icon="pencil"
                 label={t("projects.edit")}
