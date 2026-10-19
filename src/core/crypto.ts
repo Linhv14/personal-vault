@@ -26,8 +26,7 @@ export interface KdfParams {
 }
 
 /**
- * 600,000 iterations is Bitwarden's current default and the OWASP guidance for
- * PBKDF2-SHA256. It costs roughly 0.5–1s on a typical machine, which is an
+ * 600,000 iterations is the OWASP guidance for PBKDF2-SHA256. It costs roughly 0.5–1s on a typical machine, which is an
  * acceptable price at unlock time.
  */
 export const DEFAULT_KDF_ITERATIONS = 600_000;
@@ -56,8 +55,7 @@ export interface AccountCryptoRecord {
  * An email is not an ideal salt (it is not random), but it lets you sign in on a
  * new machine with nothing but email and master password: the client can derive
  * the auth key *before* contacting the server, so the server never has to hand a
- * salt to an unauthenticated caller. Bitwarden and 1Password make the same
- * trade.
+ * salt to an unauthenticated caller.
  *
  * A random salt from `params` is still mixed in, so registering the same email
  * twice does not produce the same key.

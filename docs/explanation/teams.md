@@ -94,7 +94,7 @@ only hides what a role cannot use.
 | Invite                                                                 | admins and members   | members                                                | no                 |
 | Remove members                                                         | anyone but the owner | members                                                | themselves (leave) |
 | Change roles, transfer ownership, set email domains                    | yes                  | no                                                     | no                 |
-| Activity log, plan and seat usage, pending invitations                 | yes                  | yes                                                    | no                 |
+| Activity log, seat usage, pending invitations                          | yes                  | yes                                                    | no                 |
 
 Any account can create an organization and owns up to ten
 (`MAX_ORGS_PER_ACCOUNT`). Creating one is an account action, so it sits next to
@@ -124,16 +124,16 @@ which is why it needs no proof that the organization owns the domain. Members
 already outside the list keep their access and are marked in the member list,
 so removing them stays a deliberate decision.
 
-## Plans
+## Limits
 
-| Plan | Seats (members plus pending invitations) | Teams |
-| ---- | ---------------------------------------- | ----- |
-| Free | 5                                        | 3     |
-| Team | 500                                      | 200   |
+| Tier     | Seats (members plus pending invitations) | Teams |
+| -------- | ---------------------------------------- | ----- |
+| Default  | 5                                        | 3     |
+| Extended | 500                                      | 200   |
 
 The limits live in `PLAN_LIMITS` in `src/core/org-model.ts`, shared by the
-Worker and the extension. An organization's plan is the `plan` column in D1;
-until billing exists it is changed by hand. Lowering a limit never removes
+Worker and the extension. An organization's tier is the `plan` column in D1
+and is changed by hand. Lowering a limit never removes
 anyone: an organization over it simply cannot add more.
 
 ## Ownership
@@ -253,7 +253,7 @@ exposure, because its code is installed, not fetched. See the threat model.
 ## CI trust, without overtrusting OIDC
 
 GitHub's OIDC token is used to bind a request to a repository, ref and
-environment, as Vault, Infisical and 1Password's Workload Identity do. It is not
+environment, the usual pattern for workload identity. It is not
 treated as enough on its own:
 
 - Default deny. A link names one repository and exact refs or GitHub

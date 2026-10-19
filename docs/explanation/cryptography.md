@@ -73,7 +73,7 @@ As a result:
 | D1 and the Worker secrets          | Yes, at 600,000 PBKDF2-SHA256 iterations per guess.            |
 | D1, secrets, and a master password | Yes: that vault is open. Nothing server-side can prevent this. |
 
-The second row is the same position as against a Bitwarden server that loses
+The second row is the position of any password manager whose server loses
 both its database and its keys. A strong master password is what holds there.
 
 Login compares hashes in constant time, and performs the comparison even for
@@ -86,8 +86,7 @@ on GPUs. Using it in a browser means shipping a WebAssembly implementation
 inside the extension, and in software that holds every password its user owns,
 each dependency is a place malicious code could be inserted. PBKDF2-SHA256 at
 600,000 iterations is built into WebCrypto, needs nothing, and matches
-[OWASP's recommendation](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
-and Bitwarden's default. Moving to Argon2id later is possible without breaking
+[OWASP's recommendation](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). Moving to Argon2id later is possible without breaking
 existing vaults, because the KDF type is stored per account.
 
 ## Nonces

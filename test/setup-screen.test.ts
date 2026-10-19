@@ -56,7 +56,7 @@ describe("setup screen", () => {
 describe("isDefaultServer", () => {
   it("compares origins and ignores a trailing slash", () => {
     expect(isDefaultServer("https://7key.online/", HOSTED)).toBe(true);
-    expect(isDefaultServer("https://1pw.online", HOSTED)).toBe(false);
+    expect(isDefaultServer("https://old.example", HOSTED)).toBe(false);
     expect(isDefaultServer("not a url", HOSTED)).toBe(false);
     expect(isDefaultServer(undefined, HOSTED)).toBe(false);
     expect(isDefaultServer(HOSTED, "")).toBe(false);

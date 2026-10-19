@@ -41,7 +41,7 @@ page.
 To a chat app or an email provider, a link is text, fragment included. Such a
 service, or anyone with access to it, can open the link before the recipient
 does. The server stays blind; the messenger does not. Every link-based sharing
-system has this property, 1Password's included.
+system has this property.
 
 What reduces it:
 
@@ -59,7 +59,7 @@ What reduces it:
 ## Controls on a share
 
 **Lifetime and views.** 1 hour, 1 day, 7 or 30 days. A link opens once, or
-any number of times until it expires, the same two choices 1Password offers;
+any number of times until it expires;
 counts like "3 views" ask the sender to predict how often a link will be
 reloaded, which nobody can. The API still accepts a count from 1 to 100. An
 expired or used-up share stops opening at once and is deleted within the hour.

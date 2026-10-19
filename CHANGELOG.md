@@ -28,11 +28,15 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The site and the console no longer mention pricing or plans: the pricing
+  section, "free" wording and the price in the structured data are gone, and
+  organization settings show usage and limits only. Docs no longer compare
+  7key with other password managers outside the import guide.
 - The hosted service moved to `https://7key.online`. Accounts, vaults,
-  organizations and CI secrets were copied from `1pw.online` unchanged, so
+  organizations and CI secrets were copied from the previous address unchanged, so
   the same master password and repository keys keep working. The CLI and the
   Action default to the new address; `ALIAS_ORIGINS` keeps CI tokens issued
-  for `1pw.online` valid.
+  for the previous address valid.
 - The hosted service is the default everywhere: sign-in no longer shows the
   server field, even when the browser remembers another server, and Settings
   hides the server row for the default. **Use your own server** still opens
@@ -48,8 +52,7 @@ version may change the API or storage format; such releases list the steps in
 - The GitHub Action and the CLI are published from the public repository
   `Linhv14/trust1-vault-action` (`uses: Linhv14/trust1-vault-action@v1`, CLI as
   a release asset), so any repository can use them. `npm run publish:action`
-  releases a new version. The console's workflow snippet points there, and the
-  default server is `https://1pw.online` (it was a domain that is not live).
+  releases a new version. The console's workflow snippet points there.
 
 ## [0.3.0] - 2026-10-16
 
@@ -304,7 +307,7 @@ Organizations, projects and CI secrets; the product is now Trust1 Vault. See
   account, copied over on the first request after the upgrade. Each account's
   items now sit in their own database, and D1 keeps only accounts, sessions and
   shares.
-- The threat model is published at 1pw.online/security. The landing and privacy
+- The threat model is published at /security on the hosted site. The landing and privacy
   pages no longer link to the source repository, which is now private.
 - The import and export page is redesigned: one drop zone with the export
   steps for each app listed under it, a review that counts items by type, and

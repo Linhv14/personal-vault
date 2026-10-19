@@ -327,7 +327,7 @@ export const en = {
   "orgs.audit_team_vault_read": "read every secret of",
   "error.orgs.invalid_project": "That project is not valid.",
   "error.orgs.invalid_secret": "That secret is not valid.",
-  "error.orgs.project_limit": "This plan allows {limit} projects.",
+  "error.orgs.project_limit": "This organization allows up to {limit} projects.",
   "error.orgs.secret_limit": "A project holds at most {limit} secrets.",
   "error.orgs.rekey_required":
     "Someone left this team. Create a new team key before changing secrets.",
@@ -409,7 +409,7 @@ export const en = {
   "console.organizations": "Organizations",
   "console.overview": "Overview",
   "console.pick_environment": "Pick at least one environment.",
-  "console.plan": "Plan and usage",
+  "console.usage": "Usage",
   "console.project_missing": "This project does not exist or you are not in its team.",
   "console.project_team_hint": "Only teams you are in and that have a current key.",
   "console.remove_from_team":
@@ -527,8 +527,6 @@ export const en = {
   "orgs.rekey_other": "An admin who is in this team needs to create the new key.",
   "orgs.rekeyed": "Team key replaced",
   "orgs.transferred": "Ownership transferred",
-  "orgs.plan_free": "Free plan",
-  "orgs.plan_team": "Team plan",
   "orgs.seats": "{used}/{limit} seats",
   "orgs.audit_team_rekeyed": "replaced the key of",
   "orgs.audit_owner_transferred": "made the owner",
@@ -539,8 +537,8 @@ export const en = {
   "error.orgs.transfer_needs_key": "They haven't finished setting up their account yet.",
   "error.server.read_only":
     "7key is moving to a new home and accepts no changes for a few minutes. Your data is safe; try again shortly.",
-  "error.orgs.seat_limit": "This plan has {limit} seats, pending invitations included.",
-  "error.orgs.team_limit": "This plan allows {limit} teams.",
+  "error.orgs.seat_limit": "This organization has {limit} seats, pending invitations included.",
+  "error.orgs.team_limit": "This organization allows up to {limit} teams.",
   "error.orgs.stale_team_key": "The team changed meanwhile. Try again.",
   "error.orgs.team_changed": "The team changed meanwhile. Try again.",
   "unlock.title": "Unlock",

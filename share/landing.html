@@ -9,7 +9,7 @@
     <title>7key · Password manager with 2FA codes and team secrets, end-to-end encrypted</title>
     <meta
       name="description"
-      content="Passwords, 2FA codes and team secrets in one end-to-end encrypted vault for Chrome, with GitHub Actions built in. Free for personal use."
+      content="Passwords, 2FA codes and team secrets in one end-to-end encrypted vault for Chrome, with GitHub Actions built in."
     />
     <link rel="canonical" href="{{site}}/" />
     <meta property="og:locale" content="en_US" />
@@ -25,7 +25,7 @@
     <title>7key · Quản lý mật khẩu, mã 2FA và secret của team, mã hoá đầu-cuối</title>
     <meta
       name="description"
-      content="7key giữ mật khẩu, mã 2FA và secret môi trường của team trong một vault mã hoá đầu-cuối cho Chrome, tích hợp GitHub Actions. Miễn phí cho cá nhân."
+      content="7key giữ mật khẩu, mã 2FA và secret môi trường của team trong một vault mã hoá đầu-cuối cho Chrome, tích hợp GitHub Actions."
     />
     <link rel="canonical" href="{{site}}/vi" />
     <meta property="og:locale" content="vi_VN" />
@@ -54,8 +54,7 @@
         "url": "{{site}}/",
         "applicationCategory": "SecurityApplication",
         "operatingSystem": "Chrome, Edge, Brave",
-        "description": "End-to-end encrypted password manager with built-in 2FA codes, team projects and GitHub Actions secrets.",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        "description": "End-to-end encrypted password manager with built-in 2FA codes, team projects and GitHub Actions secrets."
       }
     </script>
     <!-- lang:en -->
@@ -637,54 +636,6 @@
         color: var(--l-muted);
         font-size: 15px;
       }
-      .plans {
-        margin-top: 40px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 14px;
-        max-width: 860px;
-      }
-      .plan {
-        padding: 30px;
-        border: 1px solid var(--l-line);
-        border-radius: 20px;
-        background: var(--l-card);
-      }
-      .plan.hl {
-        border-color: rgb(79 224 195 / 0.4);
-        background: linear-gradient(180deg, rgb(79 224 195 / 0.08), var(--l-card) 60%);
-      }
-      .plan h3 {
-        margin: 0;
-        color: var(--l-muted);
-        font-size: 15px;
-        font-weight: 600;
-      }
-      .price small {
-        color: var(--l-muted);
-        font-size: 15px;
-        font-weight: 500;
-      }
-      .price {
-        margin: 8px 0 18px;
-        font-size: 40px;
-        font-weight: 760;
-        letter-spacing: -0.03em;
-      }
-      .plan ul {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
-        gap: 8px;
-        color: var(--l-muted);
-        font-size: 15px;
-      }
-      .plan li::before {
-        content: "✓";
-        margin-right: 10px;
-        color: var(--l-accent);
-      }
       .install {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -798,8 +749,7 @@
         }
       }
       @media (max-width: 560px) {
-        .bento,
-        .plans {
+        .bento {
           grid-template-columns: 1fr;
         }
         .t-d,
@@ -839,14 +789,12 @@
           <!-- lang:en -->
           <a class="hide-sm" href="#features">Features</a
           ><a class="hide-sm" href="#security">Security</a
-          ><a class="hide-sm" href="#pricing">Pricing</a
           ><a href="/vi" hreflang="vi" lang="vi">Tiếng Việt</a
           ><a class="btn primary" href="#install">Get 7key</a>
           <!-- /lang -->
           <!-- lang:vi -->
           <a class="hide-sm" href="#features">Tính năng</a
           ><a class="hide-sm" href="#security">Bảo mật</a
-          ><a class="hide-sm" href="#pricing">Bảng giá</a
           ><a href="/" hreflang="en" lang="en">English</a
           ><a class="btn primary" href="#install">Cài 7key</a>
           <!-- /lang -->
@@ -859,9 +807,9 @@
         <div class="wrap">
           <a class="pill" href="#features"><span>New</span>Secrets for GitHub Actions</a>
           <h1>Passwords, 2FA and team secrets. <span class="grad">One vault.</span></h1>
-          <p class="sub">End-to-end encrypted. Free for personal use.</p>
+          <p class="sub">End-to-end encrypted, for you and your team.</p>
           <div class="ctas">
-            <a class="btn primary" href="#install">Add to Chrome, free</a
+            <a class="btn primary" href="#install">Add to Chrome</a
             ><a class="btn" href="#features">How it works</a>
           </div>
           <div class="trust">
@@ -1011,33 +959,6 @@
         </div>
       </section>
 
-      <section id="pricing">
-        <div class="wrap">
-          <span class="kicker">Pricing</span>
-          <h2>Free while in beta.</h2>
-          <div class="plans">
-            <div class="plan">
-              <h3>Personal</h3>
-              <p class="price">$0</p>
-              <ul>
-                <li>Unlimited logins and 2FA</li>
-                <li>Passkeys and share links</li>
-                <li>All your devices</li>
-              </ul>
-            </div>
-            <div class="plan hl">
-              <h3>Team</h3>
-              <p class="price">$0 <small>in beta</small></p>
-              <ul>
-                <li>Up to 5 people</li>
-                <li>Projects and environments</li>
-                <li>GitHub Actions and audit log</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="install">
         <div class="wrap">
           <span class="kicker">Install</span>
@@ -1085,7 +1006,7 @@
       <div class="final">
         <div class="wrap">
           <h2>One vault for every key.</h2>
-          <div class="ctas"><a class="btn primary" href="#install">Add to Chrome, free</a></div>
+          <div class="ctas"><a class="btn primary" href="#install">Add to Chrome</a></div>
         </div>
       </div>
     </main>
@@ -1096,9 +1017,9 @@
         <div class="wrap">
           <a class="pill" href="#features"><span>Mới</span>Secret cho GitHub Actions</a>
           <h1>Mật khẩu, 2FA và secret của team. <span class="grad">Một vault.</span></h1>
-          <p class="sub">Mã hoá đầu-cuối. Miễn phí cho cá nhân.</p>
+          <p class="sub">Mã hoá đầu-cuối, cho bạn và team.</p>
           <div class="ctas">
-            <a class="btn primary" href="#install">Cài cho Chrome, miễn phí</a
+            <a class="btn primary" href="#install">Cài cho Chrome</a
             ><a class="btn" href="#features">Xem cách hoạt động</a>
           </div>
           <div class="trust">
@@ -1246,33 +1167,6 @@
         </div>
       </section>
 
-      <section id="pricing">
-        <div class="wrap">
-          <span class="kicker">Bảng giá</span>
-          <h2>Miễn phí trong giai đoạn beta.</h2>
-          <div class="plans">
-            <div class="plan">
-              <h3>Cá nhân</h3>
-              <p class="price">0đ</p>
-              <ul>
-                <li>Không giới hạn tài khoản, 2FA</li>
-                <li>Passkey và link chia sẻ</li>
-                <li>Mọi thiết bị</li>
-              </ul>
-            </div>
-            <div class="plan hl">
-              <h3>Team</h3>
-              <p class="price">0đ <small>khi beta</small></p>
-              <ul>
-                <li>Tới 5 người</li>
-                <li>Dự án và môi trường</li>
-                <li>GitHub Actions, nhật ký hoạt động</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section id="install">
         <div class="wrap">
           <span class="kicker">Cài đặt</span>
@@ -1318,7 +1212,7 @@
         <div class="wrap">
           <h2>Một vault cho mọi chìa khoá.</h2>
           <div class="ctas">
-            <a class="btn primary" href="#install">Cài cho Chrome, miễn phí</a>
+            <a class="btn primary" href="#install">Cài cho Chrome</a>
           </div>
         </div>
       </div>

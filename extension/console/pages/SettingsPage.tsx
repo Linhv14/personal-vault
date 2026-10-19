@@ -24,8 +24,8 @@ export function SettingsPage() {
       {isOrgAdmin(org.role) && (
         <section className="panel">
           <PanelHead
-            title={t("console.plan")}
-            text={`${t(org.plan === "team" ? "orgs.plan_team" : "orgs.plan_free")} · ${t("orgs.your_role", { role: t(ROLE_LABEL[org.role]) })}`}
+            title={t("console.usage")}
+            text={t("orgs.your_role", { role: t(ROLE_LABEL[org.role]) })}
           />
           <div className="usage-grid">
             <Usage

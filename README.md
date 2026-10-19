@@ -84,4 +84,4 @@ Everything is indexed in [`docs/README.md`](docs/README.md).
 ## License
 
 [MIT](LICENSE), without warranty. 7key has not had an independent security
-audit; if you need an audited password manager, use Bitwarden or 1Password.
+audit yet.
