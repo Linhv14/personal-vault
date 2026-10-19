@@ -2,7 +2,7 @@ name: 7key secrets
 description: Load one environment of a 7key project into the job, with secret values masked.
 author: 7key
 branding:
-  icon: key
+  icon: box
   color: orange
 inputs:
   link:
