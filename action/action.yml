@@ -1,5 +1,9 @@
 name: 7key secrets
 description: Load one environment of a 7key project into the job, with secret values masked.
+author: 7key
+branding:
+  icon: key
+  color: orange
 inputs:
   link:
     description: Repository link from the 7key console (organization.link).
@@ -12,5 +16,5 @@ inputs:
     required: false
     default: https://7key.online
 runs:
-  using: node20
+  using: node24
   main: dist/index.mjs
