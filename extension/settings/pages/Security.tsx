@@ -34,6 +34,7 @@ import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { vaultKeyRawSignal, vaultKeySignal } from "../../ui/store/session.js";
 import { currentAuthKey, reloadLocal, showToast } from "../state.js";
+import { TwoFactorCard } from "./TwoFactorCard.js";
 
 export function Security() {
   const t = useT();
@@ -94,6 +95,7 @@ export function Security() {
       <h1>{t("settings.section_security")}</h1>
       <BiometricCard unlocked={Boolean(vaultKey)} />
       <PinCard unlocked={Boolean(vaultKey)} />
+      <TwoFactorCard unlocked={Boolean(vaultKey)} />
       <RecoveryCard unlocked={Boolean(vaultKey)} />
       <Card>
         <h2>{t("settings.change_password")}</h2>
