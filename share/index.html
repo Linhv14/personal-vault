@@ -190,10 +190,8 @@
       .eyebrow {
         margin: 0 0 2px;
         color: var(--muted);
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+        font-size: 12.5px;
+        font-weight: 500;
       }
       .code-input {
         text-align: center;
@@ -250,10 +248,10 @@
         width: 46px;
         height: 46px;
         border-radius: 14px;
-        background: var(--accent);
-        color: var(--accent-text);
+        background: var(--accent-soft);
+        color: var(--accent);
         font-size: 20px;
-        font-weight: 600;
+        font-weight: 700;
         flex-shrink: 0;
       }
       .head-text {
@@ -262,7 +260,7 @@
       .head-text h1 {
         display: -webkit-box;
         overflow: hidden;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
       }
@@ -317,8 +315,8 @@
       }
 
       .fields {
+        border: 1px solid var(--border);
         border-radius: var(--radius);
-        background: var(--surface);
         overflow: hidden;
       }
       .field {
@@ -414,7 +412,8 @@
         padding: 12px 28px;
         border-radius: 20px 20px 0 0;
         border-bottom: 1px solid var(--border);
-        background: var(--accent-soft);
+        background: var(--surface);
+        color: var(--muted);
         font-size: 13px;
       }
       @media (max-width: 520px) {

@@ -287,9 +287,16 @@ function websiteField(raw: string): HTMLElement {
   return wrap;
 }
 
+function breakable(text: string): (string | HTMLElement)[] {
+  return text
+    .replace(/-/g, "\u2011")
+    .split(/(?=[./])/)
+    .flatMap((part, index) => (index === 0 ? [part] : [document.createElement("wbr"), part]));
+}
+
 function render(payload: SharePayload): void {
   const title = payload.title?.trim() || t("view.default_title");
-  el("title").textContent = title;
+  el("title").replaceChildren(...breakable(title));
   el("avatar").textContent = [...title][0]?.toUpperCase() ?? "?";
 
   const fields = el("fields");
