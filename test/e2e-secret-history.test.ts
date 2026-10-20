@@ -48,7 +48,7 @@ describe.skipIf(!enabled)("secret history against Worker + Durable Objects", () 
 
   beforeAll(async () => {
     const email = `history-${Date.now()}@example.com`;
-    const { record } = await createAccount(email, "history test password", 100_000);
+    const { record } = await createAccount(email, "history test password", 600_000);
     const registered = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },

@@ -31,11 +31,15 @@ describe("auth key hash at rest", () => {
     expect((await verifyAuthKey(env, wrong, stored)).matches).toBe(false);
   });
 
-  it("still accepts a legacy SHA-256 hash and flags it for upgrade", async () => {
+  it("accepts a legacy SHA-256 hash only when the caller opts in, and flags it for upgrade", async () => {
     const legacy = await hashAuthKey(authKey);
-    expect(await verifyAuthKey(env, authKey, legacy)).toEqual({
+    expect(await verifyAuthKey(env, authKey, legacy, { acceptLegacy: true })).toEqual({
       matches: true,
       needsUpgrade: true,
+    });
+    expect(await verifyAuthKey(env, authKey, legacy)).toEqual({
+      matches: false,
+      needsUpgrade: false,
     });
   });
 });

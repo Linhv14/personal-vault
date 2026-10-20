@@ -1,5 +1,4 @@
 import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
-import { logError } from "./log.js";
 import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import { createMailer, type Mailer } from "./mailer.js";
@@ -16,21 +15,17 @@ async function codeHash(env: Env, email: string, code: string): Promise<string> 
   return keyedHash(env.EMAIL_PROBE_SECRET, `email-code:${email}:${code}`);
 }
 
-export type IssueResult = "sent" | "cooldown" | "failed";
-
 export interface CodeRequest {
   email: string;
   locale: EmailLocale;
   siteUrl: string;
-  alreadyRegistered: boolean;
 }
 
 export async function issueCode(
   env: Env,
-  mailer: Mailer,
-  { email, locale, siteUrl, alreadyRegistered }: CodeRequest,
+  email: string,
   timestamp: number,
-): Promise<IssueResult> {
+): Promise<{ code: string } | "cooldown"> {
   const previous = await env.DB.prepare("SELECT sent_at FROM email_verifications WHERE email = ?")
     .bind(email)
     .first<{ sent_at: number }>();
@@ -48,17 +43,22 @@ export async function issueCode(
   )
     .bind(email, await codeHash(env, email, code), timestamp + CODE_TTL_SECONDS, timestamp)
     .run();
+  return { code };
+}
 
-  const message = alreadyRegistered
+export async function sendCode(
+  env: Env,
+  mailer: Mailer,
+  { email, locale, siteUrl }: CodeRequest,
+  code: string,
+): Promise<void> {
+  const existing = await env.DB.prepare("SELECT 1 FROM accounts WHERE email = ?")
+    .bind(email)
+    .first();
+  const message = existing
     ? existingAccountEmail({ locale, siteUrl })
     : verificationCodeEmail({ locale, siteUrl }, code);
-  try {
-    await mailer.send({ to: email, ...message });
-    return "sent";
-  } catch (error) {
-    logError("verification_email_failed", error);
-    return "failed";
-  }
+  await mailer.send({ to: email, ...message });
 }
 
 export type CheckResult = "ok" | "invalid" | "expired";

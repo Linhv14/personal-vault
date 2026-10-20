@@ -31,6 +31,7 @@ export type ApiErrorCode =
   | "auth.pin_off"
   | "auth.biometric_off"
   | "auth.biometric_failed"
+  | "auth.session_not_found"
   | "account.identity_exists"
   | "orgs.not_found"
   | "orgs.forbidden"
@@ -106,6 +107,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.pin_off": "PIN unlock is off for this session",
   "auth.biometric_off": "Biometric unlock is off for this session",
   "auth.biometric_failed": "The biometric check did not pass",
+  "auth.session_not_found": "That session does not exist or was already signed out",
   "account.identity_exists": "This account already has a key pair",
   "orgs.not_found": "Organization, team or member not found",
   "orgs.forbidden": "Your role does not allow this",

@@ -21,6 +21,7 @@ export interface Env {
   MIGRATION_TOKEN?: string;
   ALIAS_ORIGINS?: string;
   READ_ONLY?: string;
+  SECURITY_CONTACT?: string;
   CI_TEST_JWKS?: string;
   CI_TEST_ISSUER?: string;
 }

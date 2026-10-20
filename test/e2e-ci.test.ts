@@ -95,7 +95,7 @@ describe.skipIf(!enabled)("GitHub Actions reading linked secrets", () => {
 
   beforeAll(async () => {
     const email = `ci-${Date.now()}@example.com`;
-    const { record } = await createAccount(email, "ci password", 100_000);
+    const { record } = await createAccount(email, "ci password", 600_000);
     const registered = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },

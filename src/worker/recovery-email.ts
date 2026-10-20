@@ -1,7 +1,6 @@
 import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
 import { recoveryCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
-import { logError } from "./log.js";
 import type { Mailer } from "./mailer.js";
 import { CODE_MAX_ATTEMPTS, CODE_RESEND_COOLDOWN_SECONDS, generateCode } from "./one-time-code.js";
 import type { Env } from "./types.js";
@@ -14,14 +13,13 @@ function codeHash(env: Env, accountId: string, code: string): Promise<string> {
 
 export async function issueRecoveryEmailCode(
   env: Env,
-  mailer: Mailer,
-  request: { accountId: string; email: string; locale: EmailLocale; siteUrl: string },
+  accountId: string,
   timestamp: number,
-): Promise<"sent" | "cooldown" | "failed"> {
+): Promise<{ code: string } | "cooldown"> {
   const previous = await env.DB.prepare(
     "SELECT sent_at FROM recovery_email_codes WHERE account_id = ?",
   )
-    .bind(request.accountId)
+    .bind(accountId)
     .first<{ sent_at: number }>();
   if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) return "cooldown";
 
@@ -35,24 +33,20 @@ export async function issueRecoveryEmailCode(
            attempts = 0,
            sent_at = excluded.sent_at`,
   )
-    .bind(
-      request.accountId,
-      await codeHash(env, request.accountId, code),
-      timestamp + CODE_TTL_SECONDS,
-      timestamp,
-    )
+    .bind(accountId, await codeHash(env, accountId, code), timestamp + CODE_TTL_SECONDS, timestamp)
     .run();
+  return { code };
+}
 
-  try {
-    await mailer.send({
-      to: request.email,
-      ...recoveryCodeEmail({ locale: request.locale, siteUrl: request.siteUrl }, code),
-    });
-    return "sent";
-  } catch (error) {
-    logError("recovery_code_email_failed", error);
-    return "failed";
-  }
+export async function sendRecoveryEmailCode(
+  mailer: Mailer,
+  request: { email: string; locale: EmailLocale; siteUrl: string },
+  code: string,
+): Promise<void> {
+  await mailer.send({
+    to: request.email,
+    ...recoveryCodeEmail({ locale: request.locale, siteUrl: request.siteUrl }, code),
+  });
 }
 
 export async function checkRecoveryEmailCode(

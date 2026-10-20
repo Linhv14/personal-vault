@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { apiError, type ApiErrorCode } from "./errors.js";
+import { logError } from "./log.js";
 import type { AppBindings } from "./types.js";
 
 type Params = Record<string, string | number>;
@@ -33,4 +34,16 @@ export async function readJson(c: Context<AppBindings>): Promise<Record<string, 
 
 export function now(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+export function inBackground(
+  c: Context<AppBindings>,
+  event: string,
+  task: () => Promise<unknown>,
+): void {
+  c.executionCtx.waitUntil(
+    Promise.resolve()
+      .then(task)
+      .catch((error: unknown) => logError(event, error)),
+  );
 }

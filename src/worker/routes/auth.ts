@@ -9,21 +9,38 @@ import {
   verifyAuthKey,
 } from "../at-rest.js";
 import { apiError } from "../errors.js";
-import { now } from "../http.js";
-import { consumeCode, emailVerificationEnabled, issueCode } from "../email-verification.js";
+import { inBackground, now } from "../http.js";
+import {
+  consumeCode,
+  emailVerificationEnabled,
+  issueCode,
+  sendCode,
+} from "../email-verification.js";
 import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
 import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
 import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
-import { accountRecoveredEmail } from "../emails.js";
-import { logError } from "../log.js";
+import { accountRecoveredEmail, newSignInEmail } from "../emails.js";
+import { deviceKind, deviceLabel } from "../device-label.js";
 import {
   checkRecoveryEmailCode,
   clearRecoveryEmailCode,
   issueRecoveryEmailCode,
+  sendRecoveryEmailCode,
 } from "../recovery-email.js";
-import { clientIp, isOpenRegistration } from "../request.js";
-import { createSession, revokeAllSessions, revokeSession, sessionResumeKey } from "../session.js";
+import { clientIp, isOpenRegistration, requestLocale } from "../request.js";
+import {
+  createSession,
+  decoySession,
+  listSessions,
+  noteDevice,
+  revokeAllSessions,
+  revokeOtherSessions,
+  revokeSession,
+  revokeSessionById,
+  sessionResumeKey,
+} from "../session.js";
+import { throttle } from "../throttle.js";
 import type { AppBindings, Env } from "../types.js";
 import { isBase64, isUuid } from "../validate.js";
 import { OrgDirectory } from "../orgs/directory.js";
@@ -33,9 +50,7 @@ import { orgStore, userStore } from "../stores.js";
 const auth = new Hono<AppBindings>();
 
 const MAX_ACCOUNTS_PER_IP_PER_DAY = 5;
-const MAX_FAILURES = 10;
-const WINDOW_SECONDS = 15 * 60;
-const LOCK_SECONDS = 15 * 60;
+export const MIN_KDF_ITERATIONS = 600_000;
 
 interface SealedBody {
   ciphertext: string;
@@ -65,7 +80,7 @@ function isKdf(value: unknown): value is KdfBody {
     // Lower bound so a client cannot downgrade itself into brute-force range;
     // upper bound so nobody locks themselves out with a number that hangs the
     // browser.
-    iterations >= 100_000 &&
+    iterations >= MIN_KDF_ITERATIONS &&
     iterations <= 5_000_000 &&
     isBase64(salt, 64)
   );
@@ -152,13 +167,14 @@ auth.post("/register", async (c) => {
       )
       .run();
   } catch (error) {
-    if (String(error).includes("UNIQUE")) {
-      return c.json(apiError("auth.email_taken"), 409);
-    }
-    throw error;
+    if (!String(error).includes("UNIQUE")) throw error;
+    if (emailVerificationEnabled(c.env)) return c.json(apiError("auth.email_taken"), 409);
+    return c.json({ accountId: crypto.randomUUID(), ...decoySession(timestamp) }, 201);
   }
 
-  const session = await createSession(c.env, accountId, timestamp);
+  const label = deviceLabel(c.req.header("User-Agent"));
+  const session = await createSession(c.env, accountId, timestamp, label);
+  await noteDevice(c.env, accountId, label, timestamp);
   const joined = invited
     ? await joinFromInvite(c.env, directory, {
         id: inviteId as string,
@@ -178,21 +194,17 @@ auth.post("/verify-email", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const email = normalizeEmail(body?.email);
   if (!email) return c.json(apiError("auth.invalid_email"), 400);
-  const locale = body?.locale === "vi" ? "vi" : "en";
+  const request = {
+    email,
+    locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+    siteUrl: new URL(c.req.url).origin,
+  };
 
-  const existing = await c.env.DB.prepare("SELECT 1 FROM accounts WHERE email = ?")
-    .bind(email)
-    .first();
-  const result = await issueCode(
-    c.env,
-    mailer,
-    { email, locale, siteUrl: new URL(c.req.url).origin, alreadyRegistered: existing !== null },
-    now(),
-  );
-  if (result === "cooldown") {
+  const issued = await issueCode(c.env, email, now());
+  if (issued === "cooldown") {
     return c.json(apiError("auth.code_cooldown", { seconds: CODE_RESEND_COOLDOWN_SECONDS }), 429);
   }
-  if (result === "failed") return c.json(apiError("auth.email_failed"), 502);
+  inBackground(c, "verification_email_failed", () => sendCode(c.env, mailer, request, issued.code));
   return c.json({ ok: true, required: true });
 });
 
@@ -243,13 +255,14 @@ auth.post("/login", async (c) => {
   }
 
   const timestamp = now();
-  const lock = await checkLock(c.env, email, timestamp);
-  if (lock) {
-    return c.json(apiError("auth.rate_limited", { seconds: lock }), 429);
+  const guard = await throttle(c.env, "login", email, clientIp(c), timestamp);
+  if (guard.retryAfter) {
+    return c.json(apiError("auth.rate_limited", { seconds: guard.retryAfter }), 429);
   }
+  await guard.slowDown();
 
   const row = await c.env.DB.prepare(
-    `SELECT id, auth_key_hash, wrapped_vault_key, wrap_nonce
+    `SELECT id, auth_key_hash, wrapped_vault_key, wrap_nonce, kdf_iterations
        FROM accounts WHERE email = ?`,
   )
     .bind(email)
@@ -258,20 +271,21 @@ auth.post("/login", async (c) => {
       auth_key_hash: string;
       wrapped_vault_key: string;
       wrap_nonce: string;
+      kdf_iterations: number;
     }>();
 
   // Compare in constant time, and run the comparison even when no account
   // exists, so response timing does not reveal which addresses are real.
   const verification = row
-    ? await verifyAuthKey(c.env, authKey, row.auth_key_hash)
+    ? await verifyAuthKey(c.env, authKey, row.auth_key_hash, { acceptLegacy: true })
     : await verifyAuthKey(c.env, authKey, "v2:" + toBase64(new Uint8Array(32)));
 
   if (!row || !verification.matches) {
-    await recordFailure(c.env, email, timestamp);
+    await guard.fail();
     return c.json(apiError("auth.invalid_credentials"), 401);
   }
 
-  await clearFailures(c.env, email);
+  await guard.clear();
   const wrapped = await revealWrappedKey(c.env, row.id, row.wrapped_vault_key);
   if (verification.needsUpgrade || wrapped.needsUpgrade) {
     await c.env.DB.prepare(
@@ -285,11 +299,24 @@ auth.post("/login", async (c) => {
       )
       .run();
   }
-  const session = await createSession(c.env, row.id, timestamp);
+  const label = deviceLabel(c.req.header("User-Agent"));
+  const session = await createSession(c.env, row.id, timestamp, label);
+  const mailer = createMailer(c.env);
+  if ((await noteDevice(c.env, row.id, label, timestamp)) === "new" && mailer) {
+    const message = newSignInEmail(
+      {
+        locale: requestLocale(c, (body as Record<string, unknown>).locale),
+        siteUrl: new URL(c.req.url).origin,
+      },
+      { device: label, at: timestamp },
+    );
+    inBackground(c, "new_sign_in_email_failed", () => mailer.send({ to: email, ...message }));
+  }
 
   return c.json({
     ...session,
     wrappedVaultKey: { ciphertext: wrapped.ciphertext, nonce: row.wrap_nonce },
+    ...(row.kdf_iterations < MIN_KDF_ITERATIONS ? { upgradeKdf: true } : {}),
   });
 });
 
@@ -337,13 +364,16 @@ auth.post("/logout", async (c) => {
  */
 auth.post("/change-password", async (c) => {
   const body = await c.req.json().catch(() => null);
-  const { currentAuthKey, kdf, authKey, wrappedVaultKey } = (body ?? {}) as Record<string, unknown>;
+  const { currentAuthKey, kdf, authKey, wrappedVaultKey, keepSession } = (body ?? {}) as Record<
+    string,
+    unknown
+  >;
   if (!isBase64(currentAuthKey, 32)) return c.json(apiError("auth.invalid_credentials"), 400);
   if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
   if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
   if (!isSealed(wrappedVaultKey, 64)) return c.json(apiError("auth.invalid_wrapped_key"), 400);
 
-  const { accountId } = c.get("session");
+  const { accountId, tokenHash } = c.get("session");
   const row = await c.env.DB.prepare("SELECT auth_key_hash FROM accounts WHERE id = ?")
     .bind(accountId)
     .first<{ auth_key_hash: string }>();
@@ -372,7 +402,8 @@ auth.post("/change-password", async (c) => {
 
   // Revoke every session: other devices still hold the old vault key and must
   // unlock again.
-  await revokeAllSessions(c.env, accountId);
+  if (keepSession === true) await revokeOtherSessions(c.env, accountId, tokenHash);
+  else await revokeAllSessions(c.env, accountId);
   return c.json({ ok: true });
 });
 
@@ -386,10 +417,13 @@ interface RecoveryRow {
 async function checkRecovery(
   env: Env,
   email: string,
+  ip: string,
   recoveryAuthKey: string,
   timestamp: number,
-): Promise<RecoveryRow | "locked" | null> {
-  if (await checkLock(env, email, timestamp)) return "locked";
+): Promise<RecoveryRow | { retryAfter: number } | null> {
+  const guard = await throttle(env, "recovery", email, ip, timestamp);
+  if (guard.retryAfter) return { retryAfter: guard.retryAfter };
+  await guard.slowDown();
   const row = await env.DB.prepare(
     `SELECT id, recovery_auth_hash, recovery_wrapped_key, recovery_nonce
        FROM accounts WHERE email = ?`,
@@ -399,9 +433,10 @@ async function checkRecovery(
   const stored = row?.recovery_auth_hash ?? "v2:" + toBase64(new Uint8Array(32));
   const { matches } = await verifyAuthKey(env, recoveryAuthKey, stored);
   if (!row?.recovery_auth_hash || !matches) {
-    await recordFailure(env, email, timestamp);
+    await guard.fail();
     return null;
   }
+  await guard.clear();
   return row;
 }
 
@@ -426,28 +461,25 @@ auth.post("/recover/email", async (c) => {
     return c.json(apiError("auth.invalid_recovery_code"), 400);
   }
   const timestamp = now();
-  const row = await checkRecovery(c.env, email, body.recoveryAuthKey, timestamp);
-  if (row === "locked") {
-    return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
+  const row = await checkRecovery(c.env, email, clientIp(c), body.recoveryAuthKey, timestamp);
+  if (row && "retryAfter" in row) {
+    return c.json(apiError("auth.rate_limited", { seconds: row.retryAfter }), 429);
   }
   if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
   const mailer = createMailer(c.env);
   if (!mailer) return c.json({ required: false });
-  const sent = await issueRecoveryEmailCode(
-    c.env,
-    mailer,
-    {
-      accountId: row.id,
-      email,
-      locale: body?.locale === "vi" ? "vi" : "en",
-      siteUrl: new URL(c.req.url).origin,
-    },
-    timestamp,
-  );
-  if (sent === "cooldown") {
+  const issued = await issueRecoveryEmailCode(c.env, row.id, timestamp);
+  if (issued === "cooldown") {
     return c.json(apiError("auth.code_cooldown", { seconds: CODE_RESEND_COOLDOWN_SECONDS }), 429);
   }
-  if (sent === "failed") return c.json(apiError("auth.email_failed"), 502);
+  const request = {
+    email,
+    locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+    siteUrl: new URL(c.req.url).origin,
+  };
+  inBackground(c, "recovery_code_email_failed", () =>
+    sendRecoveryEmailCode(mailer, request, issued.code),
+  );
   return c.json({ required: true });
 });
 
@@ -458,9 +490,9 @@ auth.post("/recover/start", async (c) => {
     return c.json(apiError("auth.invalid_recovery_code"), 400);
   }
   const timestamp = now();
-  const row = await checkRecovery(c.env, email, body.recoveryAuthKey, timestamp);
-  if (row === "locked") {
-    return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
+  const row = await checkRecovery(c.env, email, clientIp(c), body.recoveryAuthKey, timestamp);
+  if (row && "retryAfter" in row) {
+    return c.json(apiError("auth.rate_limited", { seconds: row.retryAfter }), 429);
   }
   if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
   const codeError = await emailCodeError(c.env, row.id, body.emailCode, timestamp);
@@ -487,9 +519,9 @@ auth.post("/recover/finish", async (c) => {
   }
 
   const timestamp = now();
-  const row = await checkRecovery(c.env, email, recoveryAuthKey, timestamp);
-  if (row === "locked") {
-    return c.json(apiError("auth.rate_limited", { seconds: LOCK_SECONDS }), 429);
+  const row = await checkRecovery(c.env, email, clientIp(c), recoveryAuthKey, timestamp);
+  if (row && "retryAfter" in row) {
+    return c.json(apiError("auth.rate_limited", { seconds: row.retryAfter }), 429);
   }
   if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
   const codeError = await emailCodeError(c.env, row.id, body?.emailCode, timestamp);
@@ -521,7 +553,7 @@ auth.post("/recover/finish", async (c) => {
   if (!result.meta.changes) return c.json(apiError("auth.invalid_recovery_code"), 401);
 
   await revokeAllSessions(c.env, row.id);
-  await clearFailures(c.env, email);
+  await (await throttle(c.env, "login", email, clientIp(c), timestamp)).clear();
   await clearRecoveryEmailCode(c.env, row.id);
   const mailer = createMailer(c.env);
   if (mailer) {
@@ -529,11 +561,7 @@ auth.post("/recover/finish", async (c) => {
       locale: body?.locale === "vi" ? "vi" : "en",
       siteUrl: new URL(c.req.url).origin,
     });
-    c.executionCtx.waitUntil(
-      mailer
-        .send({ to: email, ...message })
-        .catch((error) => logError("recovery_email_failed", error)),
-    );
+    inBackground(c, "recovery_email_failed", () => mailer.send({ to: email, ...message }));
   }
   return c.json({ ok: true });
 });
@@ -551,43 +579,25 @@ async function claimRegistrationSlot(env: Env, ip: string, timestamp: number): P
   return claimed !== null;
 }
 
-// Online password-guessing defence
+auth.get("/sessions", async (c) => {
+  const { accountId, tokenHash } = c.get("session");
+  const sessions = await listSessions(c.env, accountId, tokenHash, now());
+  return c.json({
+    sessions: sessions.map((session) => ({ ...session, kind: deviceKind(session.label) })),
+  });
+});
 
-async function checkLock(env: Env, email: string, timestamp: number): Promise<number | null> {
-  const row = await env.DB.prepare("SELECT locked_until FROM login_attempts WHERE email = ?")
-    .bind(email)
-    .first<{ locked_until: number | null }>();
-  const until = row?.locked_until ?? 0;
-  return until > timestamp ? until - timestamp : null;
-}
+auth.post("/sessions/revoke-others", async (c) => {
+  const { accountId, tokenHash } = c.get("session");
+  const revoked = await revokeOtherSessions(c.env, accountId, tokenHash);
+  return c.json({ ok: true, revoked });
+});
 
-async function recordFailure(env: Env, email: string, timestamp: number): Promise<void> {
-  const row = await env.DB.prepare(
-    "SELECT failures, window_start FROM login_attempts WHERE email = ?",
-  )
-    .bind(email)
-    .first<{ failures: number; window_start: number }>();
-
-  // A plain sliding window: once the window lapses, counting restarts.
-  const inWindow = row !== null && timestamp - row.window_start < WINDOW_SECONDS;
-  const failures = inWindow ? row.failures + 1 : 1;
-  const windowStart = inWindow ? row.window_start : timestamp;
-  const lockedUntil = failures >= MAX_FAILURES ? timestamp + LOCK_SECONDS : null;
-
-  await env.DB.prepare(
-    `INSERT INTO login_attempts (email, failures, window_start, locked_until)
-     VALUES (?, ?, ?, ?)
-     ON CONFLICT(email) DO UPDATE
-       SET failures = excluded.failures,
-           window_start = excluded.window_start,
-           locked_until = excluded.locked_until`,
-  )
-    .bind(email, failures, windowStart, lockedUntil)
-    .run();
-}
-
-async function clearFailures(env: Env, email: string): Promise<void> {
-  await env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(email).run();
-}
+auth.delete("/sessions/:id", async (c) => {
+  const { accountId } = c.get("session");
+  const revoked = await revokeSessionById(c.env, accountId, c.req.param("id"));
+  if (!revoked) return c.json(apiError("auth.session_not_found"), 404);
+  return c.json({ ok: true });
+});
 
 export default auth;

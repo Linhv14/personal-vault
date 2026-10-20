@@ -31,8 +31,7 @@ import { expectCodeAsync } from "./helpers.js";
 
 const BASE = process.env.VAULT_E2E_URL ?? "http://127.0.0.1:8787";
 const REGISTRATION_TOKEN = process.env.VAULT_REGISTRATION_TOKEN ?? "token-dev-local";
-// The server only enforces a 100,000 minimum; keep tests quick.
-const ITERATIONS = 100_000;
+const ITERATIONS = 600_000;
 
 const email = `e2e-${Date.now()}@example.com`;
 const masterPassword = "end to end test master password";
@@ -109,14 +108,20 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     token = result.body.token;
   });
 
-  it("rejects a duplicate email", async () => {
+  it("answers a duplicate email without revealing it or handing out a session", async () => {
     const result = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },
       body: JSON.stringify({ email, ...record }),
     });
-    expect(result.status).toBe(409);
-    expect(result.body.code).toBe("auth.email_taken");
+    const config = await api("/api/config");
+    if (config.body.emailVerification) {
+      expect(result.status).toBe(400);
+      return;
+    }
+    expect(result.status).toBe(201);
+    expect(Object.keys(result.body).sort()).toEqual(["accountId", "expiresAt", "token"]);
+    expect((await api("/api/items", { token: result.body.token })).status).toBe(401);
   });
 
   it("does not reveal which addresses are registered", async () => {

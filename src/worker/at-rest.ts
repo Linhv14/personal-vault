@@ -69,8 +69,13 @@ export async function verifyAuthKey(
   env: AtRestEnv,
   authKeyBase64: string,
   stored: string,
+  { acceptLegacy = false }: { acceptLegacy?: boolean } = {},
 ): Promise<{ matches: boolean; needsUpgrade: boolean }> {
   const legacy = !stored.startsWith(VERSION_PREFIX);
+  if (legacy && !acceptLegacy) {
+    await protectAuthKey(env, authKeyBase64);
+    return { matches: false, needsUpgrade: false };
+  }
   const computed = legacy
     ? await hashAuthKey(authKeyBase64)
     : await protectAuthKey(env, authKeyBase64);

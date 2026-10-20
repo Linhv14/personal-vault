@@ -15,7 +15,9 @@ import vaults from "./routes/vaults.js";
 import shares from "./routes/shares.js";
 import { emailVerificationEnabled } from "./email-verification.js";
 import { clientIp, isOpenRegistration } from "./request.js";
-import { resolveSession } from "./session.js";
+import { resolveSession, SESSION_IDLE_SECONDS } from "./session.js";
+import { securityTxt, SHARE_PAGE_HEADERS, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
+import { PAIR_MEMORY_SECONDS } from "./throttle-policy.js";
 import type { AppBindings, Env } from "./types.js";
 
 const app = new Hono<AppBindings>();
@@ -40,7 +42,7 @@ app.use("/api/*", async (c, next) => {
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "no-referrer");
   if (new URL(c.req.url).protocol === "https:") {
-    headers.set("Strict-Transport-Security", "max-age=31536000");
+    headers.set("Strict-Transport-Security", STRICT_TRANSPORT_SECURITY);
   }
   if (!headers.has("Cache-Control")) headers.set("Cache-Control", "no-store");
 });
@@ -93,6 +95,8 @@ app.use("/api/auth/pin/*", requireAuth);
 app.use("/api/auth/biometric", requireAuth);
 app.use("/api/auth/biometric/*", requireAuth);
 app.use("/api/auth/change-password", requireAuth);
+app.use("/api/auth/sessions", requireAuth);
+app.use("/api/auth/sessions/*", requireAuth);
 app.use("/api/account/*", requireAuth);
 app.use("/api/orgs", requireAuth);
 app.use("/api/vaults", requireAuth);
@@ -123,6 +127,7 @@ app.use("/api/orgs", limitWritesByAccount);
 app.use("/api/orgs/*", limitWritesByAccount);
 app.use("/api/invites/*", limitWritesByAccount);
 app.use("/api/account/*", limitWritesByAccount);
+app.use("/api/auth/sessions/*", limitWritesByAccount);
 app.use("/api/shares", async (c, next) =>
   c.req.method === "POST" ? limitWritesByAccount(c, next) : next(),
 );
@@ -162,7 +167,23 @@ app.get("/s/:id", async (c) => {
   const response = new Response(html, asset);
   response.headers.set("Content-Type", "text/html; charset=utf-8");
   response.headers.set("Cache-Control", "no-store");
+  for (const [name, value] of Object.entries(SHARE_PAGE_HEADERS)) response.headers.set(name, value);
+  if (new URL(c.req.url).protocol === "https:") {
+    response.headers.set("Strict-Transport-Security", STRICT_TRANSPORT_SECURITY);
+  }
   return response;
+});
+
+app.get("/.well-known/security.txt", (c) => {
+  const url = new URL(c.req.url);
+  const body = securityTxt(url.origin, c.env.SECURITY_CONTACT, Date.now());
+  const headers: Record<string, string> = {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=86400",
+    "X-Content-Type-Options": "nosniff",
+  };
+  if (url.protocol === "https:") headers["Strict-Transport-Security"] = STRICT_TRANSPORT_SECURITY;
+  return new Response(body, { headers });
 });
 
 app.notFound((c) =>
@@ -187,7 +208,10 @@ export default {
     const now = Math.floor(Date.now() / 1000);
     const results = await env.DB.batch([
       env.DB.prepare("DELETE FROM shares WHERE expires_at <= ?").bind(now),
-      env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(now),
+      env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ? OR last_seen_at <= ?").bind(
+        now,
+        now - SESSION_IDLE_SECONDS,
+      ),
       env.DB.prepare("DELETE FROM login_attempts WHERE window_start <= ?").bind(now - 86_400),
       env.DB.prepare("DELETE FROM registration_counts WHERE day < ?").bind(
         Math.floor(now / 86_400),
@@ -195,6 +219,9 @@ export default {
       env.DB.prepare("DELETE FROM email_verifications WHERE expires_at <= ?").bind(now),
       env.DB.prepare("DELETE FROM recovery_email_codes WHERE expires_at <= ?").bind(now),
       env.DB.prepare("DELETE FROM share_codes WHERE expires_at <= ?").bind(now),
+      env.DB.prepare("DELETE FROM auth_throttle WHERE updated_at <= ?").bind(
+        now - PAIR_MEMORY_SECONDS,
+      ),
     ]);
     const [shares, sessions, loginAttempts, registrationCounts, verifications, shareCodes] =
       results.map((result) => result.meta.changes);
