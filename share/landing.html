@@ -603,6 +603,40 @@
           0 50px 120px rgb(0 0 0 / 0.6),
           0 0 0 1px rgb(255 106 61 / 0.06);
       }
+      .video-play {
+        position: absolute;
+        left: 50%;
+        top: calc(50% + 17px);
+        z-index: 2;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 20px 12px 14px;
+        border: 1px solid rgb(255 255 255 / 0.18);
+        border-radius: 999px;
+        background: rgb(18 16 15 / 0.82);
+        color: var(--l-text);
+        font: inherit;
+        font-size: 15px;
+        font-weight: 600;
+        transform: translate(-50%, -50%);
+        backdrop-filter: blur(6px);
+        cursor: pointer;
+      }
+      .video-play svg {
+        width: 26px;
+        height: 26px;
+        padding: 6px;
+        border-radius: 50%;
+        background: var(--l-accent);
+        fill: #1a0d07;
+      }
+      .video-manual .video-play {
+        display: inline-flex;
+      }
+      .video-manual .browser.playing .video-play {
+        display: none;
+      }
       .chrome {
         display: flex;
         gap: 7px;
@@ -2539,6 +2573,10 @@
               <source data-src="/assets/demo-en.webm" type="video/webm" />
               <source data-src="/assets/demo-en.mp4" type="video/mp4" />
             </video>
+            <button type="button" class="video-play" data-video-play aria-label="Play the demo">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg
+              ><span>Watch the demo</span>
+            </button>
           </div>
           <p class="strip">
             <span>Switch in a minute from</span><span class="src">Bitwarden</span
@@ -3439,6 +3477,10 @@
               <source data-src="/assets/demo-vi.webm" type="video/webm" />
               <source data-src="/assets/demo-vi.mp4" type="video/mp4" />
             </video>
+            <button type="button" class="video-play" data-video-play aria-label="Xem video demo">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg
+              ><span>Xem demo</span>
+            </button>
           </div>
           <p class="strip">
             <span>Nhập dữ liệu trong một phút từ</span><span class="src">Bitwarden</span

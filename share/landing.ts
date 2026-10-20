@@ -127,7 +127,7 @@ function tickCodes(): void {
 
 function loadVideos(): void {
   const videos = [...document.querySelectorAll<HTMLVideoElement>("video[data-lazy-video]")];
-  if (videos.length === 0 || reduced) return;
+  if (videos.length === 0) return;
   const start = (video: HTMLVideoElement) => {
     for (const source of video.querySelectorAll<HTMLSourceElement>("source[data-src]")) {
       source.src = source.dataset.src ?? "";
@@ -136,6 +136,17 @@ function loadVideos(): void {
     video.load();
     void video.play().catch(() => {});
   };
+  if (reduced || window.matchMedia("(max-width: 900px)").matches) {
+    document.documentElement.classList.add("video-manual");
+    for (const video of videos) {
+      const frame = video.parentElement;
+      frame?.querySelector("[data-video-play]")?.addEventListener("click", () => {
+        frame.classList.add("playing");
+        start(video);
+      });
+    }
+    return;
+  }
   const watch = () => {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
