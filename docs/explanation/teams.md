@@ -65,6 +65,12 @@ deletes with `403 orgs.read_only`, and the extension shows the team vault as vie
 only. The setting belongs to the team, so a large team is managed in one place
 rather than project by project.
 
+An invitation to the organization can name teams and the access to give in
+each. Once the person accepts, those teams list them as waiting for the key; an
+admin who is in the team compares the key fingerprint and grants access to
+everyone waiting in one step, which wraps the team key for each of them. The
+server never grants it by itself, since only a member holding the team key can.
+
 An admin can also **protect** an environment, usually production, from the
 project's menu. Everyone in the team still reads it; only admins change it, and
 other writes or deletes there fail with `403 orgs.protected_environment`.

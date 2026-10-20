@@ -62,6 +62,7 @@ export async function joinFromInvite(
     "member.joined",
     invite.ip,
   );
+  await orgStore(env, accepted.orgId).claimInvite(invite.email, invite.accountId);
   return accepted.orgId;
 }
 

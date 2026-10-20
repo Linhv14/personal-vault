@@ -9,6 +9,7 @@ import {
   isTeamAccess,
   parseDomains,
   planLimits,
+  type TeamAccess,
 } from "../../core/org-model.js";
 import { verifyAuthKey } from "../at-rest.js";
 import { normalizeEmail } from "../email-address.js";
@@ -98,12 +99,29 @@ orgs.get(
   }),
 );
 
+const MAX_INVITE_TEAMS = 50;
+
+function inviteTeams(value: unknown): { teamId: string; access: TeamAccess }[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > MAX_INVITE_TEAMS) return null;
+  const teams = value.map((entry) => {
+    if (typeof entry !== "object" || entry === null) return null;
+    const { teamId, access } = entry as Record<string, unknown>;
+    return isUuid(teamId) && isTeamAccess(access) ? { teamId, access } : null;
+  });
+  if (teams.some((entry) => entry === null)) return null;
+  const valid = teams as { teamId: string; access: TeamAccess }[];
+  return new Set(valid.map((entry) => entry.teamId)).size === valid.length ? valid : null;
+}
+
 orgs.post(
   "/:orgId/invites",
   asMember(async (c, member, orgId) => {
     const body = await readJson(c);
     const email = normalizeEmail(body.email);
     if (!email || !isInvitableRole(body.role)) return c.json(apiError("orgs.invalid_invite"), 400);
+    const teams = inviteTeams(body.teams);
+    if (!teams) return c.json(apiError("orgs.invalid_invite"), 400);
     if (!canInvite(member.role, body.role)) return forbidden(c);
     const dir = directory(c);
     const org = await dir.org(orgId);
@@ -118,6 +136,8 @@ orgs.post(
     if (await dir.hasMemberWithEmail(orgId, email)) {
       return c.json(apiError("orgs.already_member"), 409);
     }
+    const planned = await orgStore(c.env, orgId).planInvite(member, email, teams);
+    if (!planned.ok) return respond(c, planned);
     const stored = await dir.invite(orgId, email, body.role, member.accountId);
     await orgStore(c.env, orgId).note(member.accountId, "member.invited", email, clientIp(c));
     const siteUrl = new URL(c.req.url).origin;
@@ -137,7 +157,12 @@ orgs.post(
 orgs.delete(
   "/:orgId/invites/:inviteId",
   asMember(async (c, _member, orgId) => {
-    await directory(c).withdrawInvite(orgId, param(c, "inviteId"));
+    const dir = directory(c);
+    const withdrawn = (await dir.invites(orgId)).find(
+      (invite) => invite.id === param(c, "inviteId"),
+    );
+    await dir.withdrawInvite(orgId, param(c, "inviteId"));
+    if (withdrawn) await orgStore(c.env, orgId).forgetInvite(withdrawn.email);
     return c.json({ ok: true });
   }, admins),
 );

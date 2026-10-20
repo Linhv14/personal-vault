@@ -13,6 +13,9 @@ version may change the API or storage format; such releases list the steps in
 - Secret history: the console keeps the last five values of each secret, with
   who changed it and when; **History** on a secret's row shows them and
   restores one. Re-keying a team re-encrypts the history too.
+- Invitations can put people straight into teams with the access chosen in
+  the invite; once they accept, the team shows them waiting and one click
+  grants them the team key.
 - Adding people to a team takes many at once: search, add every match, or paste
   a list of emails; the access chosen applies to everyone added.
 - View-only team members: when adding someone to a team, or later from the

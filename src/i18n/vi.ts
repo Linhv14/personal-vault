@@ -512,6 +512,12 @@ export const vi: Catalogue = {
   "console.chosen_count": "{count, plural, other {# người}}",
   "console.everyone_in_team": "Mọi người đều đã ở trong team",
   "console.not_in_org": "Chưa là thành viên của tổ chức",
+  "console.grant_access": "{count, plural, one {Cấp quyền} other {Cấp quyền cho # người}}",
+  "console.waiting": "Chờ cấp khoá",
+  "console.waiting_tip":
+    "Đã nhận lời mời. Đối chiếu fingerprint của khoá rồi cấp quyền để chia sẻ team key.",
+  "console.invited": "Đã mời",
+  "console.invited_tip": "Sẽ vào team này sau khi nhận lời mời",
   "console.protect_environment": "Bảo vệ {env}",
   "console.unprotect_environment": "Bỏ bảo vệ {env}",
   "console.environment_protected": "Từ giờ chỉ admin sửa được môi trường này",

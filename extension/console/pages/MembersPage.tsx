@@ -35,6 +35,7 @@ import {
   When,
 } from "../components.js";
 import { failure$, pending$, toast, useConsole } from "../data.js";
+import { InviteDialog } from "./InviteDialog.js";
 
 type Modal =
   | { kind: "invite" }
@@ -56,7 +57,6 @@ export function MembersPage() {
   const invites = detail.invites.filter((invite) => !gone.has(invite.id));
   const { teams } = detail;
   const domains = org.allowedDomains;
-  const domainList = domains.map((domain) => `@${domain}`).join(", ");
   const outside = (email: string) =>
     !isDomainAllowed(email, domains) && <Badge tone="warn">{t("console.outside_domain")}</Badge>;
   const orgId = org.id;
@@ -274,59 +274,35 @@ export function MembersPage() {
       )}
 
       {modal?.kind === "invite" && (
-        <Dialog
-          title={t("orgs.invite")}
-          submitLabel={t("orgs.send_invite")}
+        <InviteDialog
+          teams={detail.teams}
+          domains={domains}
+          canInviteAdmin={canInvite(org.role, "admin")}
           onClose={() => setModal(null)}
-          onSubmit={(form) => {
-            const data = new FormData(form);
-            const role = data.get("role") === "admin" ? "admin" : "member";
-            const email = String(data.get("email")).trim();
-            if (!isDomainAllowed(email, domains)) {
-              failure$.value = t("error.orgs.domain_not_allowed", { domains: domainList });
-              return;
-            }
+          onInvite={(draft) =>
             void run(
               async () => {
-                const sent = await inviteMember(orgId, email, role, localeSignal.value);
+                const sent = await inviteMember(
+                  orgId,
+                  draft.email,
+                  draft.role,
+                  localeSignal.value,
+                  draft.role === "member"
+                    ? draft.teams
+                    : draft.teams.map(({ teamId }) => ({ teamId, access: "edit" as const })),
+                );
                 if (sent.emailed) {
                   setModal(null);
-                  toast(t("invite.sent", { email }));
+                  toast(t("invite.sent", { email: draft.email }));
                 } else {
-                  setModal({ kind: "share-link", email, link: sent.link });
+                  setModal({ kind: "share-link", email: draft.email, link: sent.link });
                 }
               },
               undefined,
               "org",
-            );
-          }}
-        >
-          <Field
-            label={t("orgs.invite_email")}
-            hint={
-              domains.length > 0
-                ? t("orgs.invite_domains_hint", { domains: domainList })
-                : undefined
-            }
-          >
-            <input
-              name="email"
-              type="email"
-              required
-              autoFocus
-              placeholder={`name@${domains[0] ?? "company.com"}`}
-              onInput={() => (failure$.value = null)}
-            />
-          </Field>
-          <Field label={t("orgs.role")}>
-            <select name="role">
-              <option value="member">{t("orgs.role_member")}</option>
-              {canInvite(org.role, "admin") && (
-                <option value="admin">{t("orgs.role_admin")}</option>
-              )}
-            </select>
-          </Field>
-        </Dialog>
+            )
+          }
+        />
       )}
       {modal?.kind === "remove" && (
         <Dialog

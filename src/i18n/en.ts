@@ -518,6 +518,12 @@ export const en = {
   "console.chosen_count": "{count, plural, one {# person} other {# people}}",
   "console.everyone_in_team": "Everyone is already in this team",
   "console.not_in_org": "Not a member of this organization yet",
+  "console.grant_access": "{count, plural, one {Grant access} other {Grant access to # people}}",
+  "console.waiting": "Waiting for key",
+  "console.waiting_tip":
+    "Accepted the invitation. Compare the key fingerprint, then grant access to share the team key.",
+  "console.invited": "Invited",
+  "console.invited_tip": "Joins this team after accepting the invitation",
   "console.protect_environment": "Protect {env}",
   "console.unprotect_environment": "Stop protecting {env}",
   "console.environment_protected": "Only admins can change this environment now",

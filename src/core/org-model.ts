@@ -21,6 +21,8 @@ export interface TeamView {
   name: string;
   members: string[];
   viewers: string[];
+  invited?: { email: string; access: TeamAccess }[];
+  pending?: { accountId: string; access: TeamAccess }[];
   generation: number;
   rekeyNeeded: boolean;
   wrappedKey: WrappedKey | null;

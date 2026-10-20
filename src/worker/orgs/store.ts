@@ -69,6 +69,18 @@ export class OrgStore extends DurableObject<Env> {
         added_at INTEGER NOT NULL,
         PRIMARY KEY (team_id, account_id)
       );
+      CREATE TABLE IF NOT EXISTS team_invites (
+        email TEXT NOT NULL,
+        team_id TEXT NOT NULL,
+        access TEXT NOT NULL,
+        PRIMARY KEY (email, team_id)
+      );
+      CREATE TABLE IF NOT EXISTS pending_grants (
+        team_id TEXT NOT NULL,
+        account_id TEXT NOT NULL,
+        access TEXT NOT NULL,
+        PRIMARY KEY (team_id, account_id)
+      );
       CREATE TABLE IF NOT EXISTS audit (
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
         at INTEGER NOT NULL,
@@ -149,12 +161,55 @@ export class OrgStore extends DurableObject<Env> {
       }
       this.sql.exec("DELETE FROM team_members WHERE account_id = ?", accountId);
       this.sql.exec("DELETE FROM members WHERE account_id = ?", accountId);
+      this.sql.exec("DELETE FROM pending_grants WHERE account_id = ?", accountId);
     });
     await this.record(actor, "member.removed", accountId, ip);
   }
 
   async note(actor: string, action: string, target: string | null, ip: string | null) {
     await this.record(actor, action, target, ip);
+  }
+
+  async planInvite(
+    principal: Principal,
+    email: string,
+    teams: { teamId: string; access: TeamAccess }[],
+  ): Promise<Result<{ ok: true }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
+    }
+    if (!teams.every(({ teamId }) => this.teamExists(teamId))) {
+      return fail(400, "orgs.invalid_team");
+    }
+    this.ctx.storage.transactionSync(() => {
+      this.sql.exec("DELETE FROM team_invites WHERE email = ?", email);
+      for (const { teamId, access } of teams) {
+        this.sql.exec(
+          "INSERT INTO team_invites (email, team_id, access) VALUES (?, ?, ?)",
+          email,
+          teamId,
+          access,
+        );
+      }
+    });
+    return ok({ ok: true as const });
+  }
+
+  async forgetInvite(email: string): Promise<void> {
+    this.sql.exec("DELETE FROM team_invites WHERE email = ?", email);
+  }
+
+  async claimInvite(email: string, accountId: string): Promise<void> {
+    this.ctx.storage.transactionSync(() => {
+      this.sql.exec(
+        `INSERT OR REPLACE INTO pending_grants (team_id, account_id, access)
+         SELECT team_id, ?, access FROM team_invites
+          WHERE email = ? AND team_id IN (SELECT id FROM teams)`,
+        accountId,
+        email,
+      );
+      this.sql.exec("DELETE FROM team_invites WHERE email = ?", email);
+    });
   }
 
   async listTeams(principal: Principal): Promise<Result<TeamView[]>> {
@@ -169,6 +224,20 @@ export class OrgStore extends DurableObject<Env> {
         "SELECT team_id, account_id, wrapped_key, access FROM team_members",
       )
       .toArray();
+    const invited = isOrgAdmin(principal.role)
+      ? this.sql
+          .exec<{ email: string; team_id: string; access: TeamAccess }>(
+            "SELECT email, team_id, access FROM team_invites ORDER BY email",
+          )
+          .toArray()
+      : [];
+    const pending = isOrgAdmin(principal.role)
+      ? this.sql
+          .exec<{ team_id: string; account_id: string; access: TeamAccess }>(
+            "SELECT team_id, account_id, access FROM pending_grants",
+          )
+          .toArray()
+      : [];
     const visible = teams.filter(
       (team) =>
         isOrgAdmin(principal.role) ||
@@ -187,6 +256,12 @@ export class OrgStore extends DurableObject<Env> {
           viewers: members
             .filter((entry) => entry.access === "view")
             .map((entry) => entry.account_id),
+          invited: invited
+            .filter((entry) => entry.team_id === team.id)
+            .map(({ email, access }) => ({ email, access })),
+          pending: pending
+            .filter((entry) => entry.team_id === team.id)
+            .map(({ account_id, access }) => ({ accountId: account_id, access })),
           generation: team.key_generation,
           rekeyNeeded: team.rekey_needed === 1,
           wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
@@ -310,6 +385,11 @@ export class OrgStore extends DurableObject<Env> {
       now(),
       member.access ?? "edit",
       member.access ?? null,
+    );
+    this.sql.exec(
+      "DELETE FROM pending_grants WHERE team_id = ? AND account_id = ?",
+      teamId,
+      member.accountId,
     );
     await this.record(
       principal.accountId,
@@ -961,6 +1041,8 @@ export class OrgStore extends DurableObject<Env> {
       this.links.removeTeam(teamId);
       this.items.removeTeam(teamId);
       this.sql.exec("DELETE FROM team_members WHERE team_id = ?", teamId);
+      this.sql.exec("DELETE FROM team_invites WHERE team_id = ?", teamId);
+      this.sql.exec("DELETE FROM pending_grants WHERE team_id = ?", teamId);
       this.sql.exec("DELETE FROM teams WHERE id = ?", teamId);
     });
     await this.record(principal.accountId, "team.deleted", teamId, ip);

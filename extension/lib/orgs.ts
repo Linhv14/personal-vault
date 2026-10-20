@@ -107,10 +107,11 @@ export async function inviteMember(
   email: string,
   role: InvitableRole,
   locale: string,
+  teams: { teamId: string; access: TeamAccess }[] = [],
 ): Promise<SentInvite> {
   return request(`/api/orgs/${orgId}/invites`, {
     method: "POST",
-    body: json({ email, role, locale }),
+    body: json({ email, role, locale, teams }),
   });
 }
 

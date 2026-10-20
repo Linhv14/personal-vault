@@ -90,6 +90,12 @@ export function TeamsPage() {
                           <Avatar text={emailOf(id)} size="sm" key={id} />
                         ))}
                         <span className="muted">{team.members.length}</span>
+                        {(team.pending?.length ?? 0) > 0 && (
+                          <span className="pending-pill" title={t("console.waiting_tip")}>
+                            <Icon name="clock" />
+                            {team.pending?.length}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="num">{team.wrappedKey ? (count ?? "–") : "–"}</td>

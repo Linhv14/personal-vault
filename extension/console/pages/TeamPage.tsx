@@ -8,6 +8,7 @@ import {
   type OrgMember,
 } from "../../lib/orgs.js";
 import { rekeyTeam } from "../../lib/projects.js";
+import { Fingerprint } from "../../ui/components/Fingerprint.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
@@ -62,6 +63,22 @@ export function TeamPage({ teamId }: { teamId: string }) {
     (member) => member.publicKey && !team.members.includes(member.accountId),
   );
   const teamProjects = (projects ?? []).filter((project) => project.teamId === team.id);
+  const waiting = (team.pending ?? []).flatMap((entry) => {
+    const member = detail.members.find((candidate) => candidate.accountId === entry.accountId);
+    return member ? [{ member, access: entry.access }] : [];
+  });
+  const grantable = waiting.filter((entry) => entry.member.publicKey);
+  const invited = team.invited ?? [];
+  const grant = (entries: typeof waiting) =>
+    void run(
+      async () => {
+        for (const { member, access } of entries) {
+          await addTeamMember(orgId, team, member, identity, access);
+        }
+      },
+      "orgs.team_member_added",
+      "org",
+    );
 
   return (
     <>
@@ -72,10 +89,16 @@ export function TeamPage({ teamId }: { teamId: string }) {
         actions={
           admin && (
             <>
+              {inTeam && grantable.length > 0 && (
+                <button type="button" className="btn primary" onClick={() => grant(grantable)}>
+                  <Icon name="key" />
+                  {t("console.grant_access", { count: grantable.length })}
+                </button>
+              )}
               {inTeam && candidates.length > 0 && (
                 <button
                   type="button"
-                  className="btn primary"
+                  className={grantable.length > 0 ? "btn" : "btn primary"}
                   onClick={() => setModal({ kind: "add" })}
                 >
                   <Icon name="plus" />
@@ -183,6 +206,67 @@ export function TeamPage({ teamId }: { teamId: string }) {
                 </td>
               </tr>
             ))}
+            {admin &&
+              waiting.map(({ member, access }) => (
+                <tr key={member.accountId} className="member-pending">
+                  <td>
+                    <span className="cell-title">
+                      <Avatar text={member.email} size="sm" />
+                      {member.email}
+                      <span title={t("console.verify_hint")}>
+                        <Fingerprint publicKey={member.publicKey} />
+                      </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className="pending-pill" title={t("console.waiting_tip")}>
+                      <Icon name="clock" />
+                      {t("console.waiting")}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="access-static">
+                      <Icon name={access === "view" ? "eye" : "pencil"} />
+                      {t(access === "view" ? "console.access_view" : "console.access_edit")}
+                    </span>
+                  </td>
+                  <td className="row-actions">
+                    <div className="row-actions-inner">
+                      {inTeam && member.publicKey && (
+                        <IconButton
+                          icon="key"
+                          label={t("console.grant_access", { count: 1 })}
+                          onClick={() => grant([{ member, access }])}
+                        />
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            {admin &&
+              invited.map(({ email, access }) => (
+                <tr key={email} className="member-pending">
+                  <td>
+                    <span className="cell-title">
+                      <Avatar text={email} size="sm" />
+                      {email}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="access-static" title={t("console.invited_tip")}>
+                      <Icon name="mail" />
+                      {t("console.invited")}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="access-static">
+                      <Icon name={access === "view" ? "eye" : "pencil"} />
+                      {t(access === "view" ? "console.access_view" : "console.access_edit")}
+                    </span>
+                  </td>
+                  <td />
+                </tr>
+              ))}
           </tbody>
         </table>
       </section>
