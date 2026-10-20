@@ -6,7 +6,6 @@ import {
   removeTeamMember,
   setTeamAccess,
   type OrgMember,
-  type TeamAccess,
 } from "../../lib/orgs.js";
 import { rekeyTeam } from "../../lib/projects.js";
 import { Icon } from "../../ui/components/Icon.js";
@@ -18,8 +17,6 @@ import {
   Badge,
   Dialog,
   EmptyState,
-  Field,
-  KeyCheck,
   RoleBadge,
   Menu,
   MenuItem,
@@ -29,55 +26,10 @@ import {
 } from "../components.js";
 import { pending$, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
+import { AccessToggle, AddTeamMembersDialog } from "./AddTeamMembers.js";
 import { TypeToConfirmDialog } from "./project-dialogs.js";
 
 type Modal = { kind: "add" } | { kind: "remove"; member: OrgMember } | { kind: "delete" } | null;
-
-function AddMemberDialog({
-  candidates,
-  onClose,
-  onAdd,
-}: {
-  candidates: OrgMember[];
-  onClose: () => void;
-  onAdd: (member: OrgMember, access: TeamAccess) => void;
-}) {
-  const t = useT();
-  const [selected, setSelected] = useState(candidates[0]?.accountId ?? "");
-  const [access, setAccess] = useState<TeamAccess>("edit");
-  const member = candidates.find((entry) => entry.accountId === selected);
-  return (
-    <Dialog
-      title={t("orgs.add_to_team")}
-      submitLabel={t("console.keys_match_add")}
-      busy={!member}
-      onClose={onClose}
-      onSubmit={() => member && onAdd(member, access)}
-    >
-      <Field label={t("console.member")}>
-        <select value={selected} onChange={(event) => setSelected(event.currentTarget.value)}>
-          {candidates.map((entry) => (
-            <option value={entry.accountId} key={entry.accountId}>
-              {entry.email}
-            </option>
-          ))}
-        </select>
-      </Field>
-      {member && !isOrgAdmin(member.role) && (
-        <Field label={t("console.team_access")} hint={t("console.team_access_hint")}>
-          <select
-            value={access}
-            onChange={(event) => setAccess(event.currentTarget.value as TeamAccess)}
-          >
-            <option value="edit">{t("console.access_edit")}</option>
-            <option value="view">{t("console.access_view")}</option>
-          </select>
-        </Field>
-      )}
-      {member && <KeyCheck email={member.email} publicKey={member.publicKey} />}
-    </Dialog>
-  );
-}
 
 export function TeamPage({ teamId }: { teamId: string }) {
   const t = useT();
@@ -189,34 +141,32 @@ export function TeamPage({ teamId }: { teamId: string }) {
                 </td>
                 <td>
                   {isOrgAdmin(member.role) ? (
-                    <span className="muted">{t("console.access_admin")}</span>
+                    <span className="access-static" title={t("console.access_admin")}>
+                      <Icon name="shield" />
+                      {t("console.access_full")}
+                    </span>
                   ) : admin ? (
-                    <select
-                      className="compact"
-                      aria-label={t("console.team_access")}
+                    <AccessToggle
                       value={team.viewers.includes(member.accountId) ? "view" : "edit"}
                       disabled={pending$.value}
-                      onChange={(event) =>
+                      onChange={(access) =>
                         void run(
-                          () =>
-                            setTeamAccess(
-                              orgId,
-                              team.id,
-                              member.accountId,
-                              event.currentTarget.value as TeamAccess,
-                            ),
+                          () => setTeamAccess(orgId, team.id, member.accountId, access),
                           "console.access_saved",
                           "org",
                         )
                       }
-                    >
-                      <option value="edit">{t("console.access_edit")}</option>
-                      <option value="view">{t("console.access_view")}</option>
-                    </select>
+                    />
                   ) : team.viewers.includes(member.accountId) ? (
-                    t("console.access_view")
+                    <span className="access-static">
+                      <Icon name="eye" />
+                      {t("console.access_view")}
+                    </span>
                   ) : (
-                    t("console.access_edit")
+                    <span className="access-static">
+                      <Icon name="pencil" />
+                      {t("console.access_edit")}
+                    </span>
                   )}
                 </td>
                 <td className="row-actions">
@@ -280,13 +230,15 @@ export function TeamPage({ teamId }: { teamId: string }) {
       )}
 
       {modal?.kind === "add" && (
-        <AddMemberDialog
+        <AddTeamMembersDialog
           candidates={candidates}
           onClose={() => setModal(null)}
-          onAdd={(member, access) =>
+          onAdd={(members, access) =>
             void run(
               async () => {
-                await addTeamMember(orgId, team, member, identity, access);
+                for (const member of members) {
+                  await addTeamMember(orgId, team, member, identity, access);
+                }
                 setModal(null);
               },
               "orgs.team_member_added",

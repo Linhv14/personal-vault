@@ -13,6 +13,8 @@ version may change the API or storage format; such releases list the steps in
 - Secret history: the console keeps the last five values of each secret, with
   who changed it and when; **History** on a secret's row shows them and
   restores one. Re-keying a team re-encrypts the history too.
+- Adding people to a team takes many at once: search, add every match, or paste
+  a list of emails; the access chosen applies to everyone added.
 - View-only team members: when adding someone to a team, or later from the
   team's member list, an admin chooses **Can edit** or **Can view**. People who
   can view read and run with the team's secrets but cannot change them, and the

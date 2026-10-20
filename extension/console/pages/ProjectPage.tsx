@@ -378,7 +378,12 @@ export function ProjectPage({
             <span>
               {t("console.secret_count", { count: secrets ? all.length : project.secretCount })}
             </span>
-            {viewer && <Badge>{t("console.access_view")}</Badge>}
+            {viewer && (
+              <span className="lock-pill" title={t("console.access_view_tip")}>
+                <Icon name="eye" />
+                {t("console.access_view")}
+              </span>
+            )}
           </>
         }
         actions={actions}
@@ -441,7 +446,11 @@ export function ProjectPage({
               aria-selected={environment?.id === env.id}
               key={env.id}
             >
-              {guarded(env.id) && <Icon name="lock" className="tab-lock" />}
+              {guarded(env.id) && (
+                <span className="tab-lock" title={t("console.protected_tip")}>
+                  <Icon name="lock" />
+                </span>
+              )}
               {env.name}
               <span className="tab-count">{secrets?.[env.id]?.length ?? "–"}</span>
               {gap > 0 && (
@@ -474,6 +483,12 @@ export function ProjectPage({
               onInput={setQuery}
               placeholder={t("console.search_secrets")}
             />
+            {environment && guarded(environment.id) && (
+              <span className="lock-pill" title={t("console.protected_tip")}>
+                <Icon name="lock" />
+                {t("console.protected")}
+              </span>
+            )}
             {environment && (
               <button
                 type="button"
@@ -495,11 +510,6 @@ export function ProjectPage({
             )}
           </div>
 
-          {environment && guarded(environment.id) && (
-            <p className="alert info">
-              {t(admin ? "console.protected_admin" : "console.protected_member")}
-            </p>
-          )}
           {!secrets ? (
             <SkeletonTable />
           ) : names.length === 0 ? (
