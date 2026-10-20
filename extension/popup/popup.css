@@ -804,6 +804,8 @@ label.range output {
 }
 .ring.urgent .progress {
   stroke: var(--danger);
+}
+.ring.refill .progress {
   transition: none;
 }
 

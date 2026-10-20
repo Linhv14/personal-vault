@@ -149,7 +149,11 @@ const go = async (hash, ready) => {
   );
   await frame(tidy);
 };
-const untilRollover = () => frame(`return 30 - ((Date.now() / 1000) % 30);`);
+const untilRollover = () => frame(`return 30 - ((w.Date.now() / 1000) % 30);`);
+const rollIn = (seconds) =>
+  frame(
+    `const real = w.__realNow || (w.__realNow = w.Date.now.bind(w.Date)); const left = 30 - ((real() / 1000) % 30); const shift = (left - ${seconds} + 30) % 30; w.Date.now = () => real() + shift * 1000;`,
+  );
 
 try {
   beat("intro");
@@ -178,13 +182,7 @@ try {
   );
   await st((s) => st.move(s), cam("google"));
   await sleep(600);
-  pause();
-  for (;;) {
-    const left = await untilRollover();
-    if (left > 4.55 && left < 4.75) break;
-    await sleep(15);
-  }
-  resume();
+  await rollIn(2.9);
 
   beat("2FA rollover");
   await st(() => st.click());
@@ -199,7 +197,7 @@ try {
   await focus(cam("otp"), { k: 2.1, oy: -20, pad: 6 });
   const left = await untilRollover();
   console.log(`zoomed on the code ${left.toFixed(2)}s before it rolls over`);
-  await sleep(left * 1000 + 1500);
+  await sleep(left * 1000 + 1200);
   await unfocus();
   await sleep(350);
 
@@ -214,15 +212,11 @@ try {
   await st(() => st.zoom('[data-cam="form"]', 1.4, 0, 0));
   await sleep(250);
   await mark(
-    "part",
-    `return [...d.querySelectorAll("#form-share .share-part")].find((x) => /2FA/.test(x.textContent));`,
+    "ttl",
+    `return d.querySelector('#form-share input[name=ttl][value="604800"]')?.closest("label");`,
   );
-  await clickOn(cam("part"), 250);
-  await mark("ttl", `return d.querySelector("#form-share select[name=ttl]")?.closest("label");`);
   await clickOn(cam("ttl"), 0);
-  await frame(
-    `const s = d.querySelector("#form-share select[name=ttl]"); s.value = "604800"; s.dispatchEvent(new w.Event("input", { bubbles: true })); s.dispatchEvent(new w.Event("change", { bubbles: true }));`,
-  );
+  await frame(`d.querySelector('#form-share input[name=ttl][value="604800"]')?.click();`);
   await sleep(300);
   await mark("make", `return d.querySelector("#form-share button[type=submit]");`);
   await clickOn(cam("make"), 500);

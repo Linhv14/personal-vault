@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { generateTotp, secondsRemaining, type TotpConfig } from "../../../src/core/totp.js";
 import { useT } from "../../ui/i18n.js";
 import { copy, nowMs } from "../state.js";
@@ -17,9 +17,12 @@ function Ring({
 }) {
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
+  const last = useRef(ratio);
+  const refill = ratio > last.current;
+  last.current = ratio;
   return (
     <svg
-      className={urgent ? "ring urgent" : "ring"}
+      className={["ring", urgent && "urgent", refill && "refill"].filter(Boolean).join(" ")}
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
