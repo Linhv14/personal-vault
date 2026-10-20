@@ -155,7 +155,7 @@ async function buildSharePage() {
   }
   await writeFile(
     path.join(outPublic, "robots.txt"),
-    `User-agent: *\nAllow: /\nDisallow: /app/\nDisallow: /api/\nDisallow: /s/\n\nSitemap: ${site}/sitemap.xml\n`,
+    `User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=no\nAllow: /\nDisallow: /app/\nDisallow: /api/\nDisallow: /s/\n\nSitemap: ${site}/sitemap.xml\n`,
   );
   const pages = ["/", "/vi", "/privacy", "/security"];
   await writeFile(
