@@ -158,7 +158,8 @@ app.get("/api/time", (c) => c.json({ serverTime: Math.floor(Date.now() / 1000) }
 
 app.get("/s/:id", async (c) => {
   const asset = await c.env.ASSETS.fetch(new URL("/share.html", c.req.url));
-  const response = new Response(asset.body, asset);
+  const html = (await asset.text()).replaceAll("{{origin}}", new URL(c.req.url).origin);
+  const response = new Response(html, asset);
   response.headers.set("Content-Type", "text/html; charset=utf-8");
   response.headers.set("Cache-Control", "no-store");
   return response;
