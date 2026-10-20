@@ -2,14 +2,13 @@ import { useState } from "preact/hooks";
 import {
   isSecretName,
   parseDotenv,
-  parseHosts,
   type Environment,
   type SecretKind,
 } from "../../../src/core/projects.js";
-import { suggestHosts } from "../../../src/core/agent-hosts.js";
 import type { Secret } from "../../lib/projects.js";
 import { useT } from "../../ui/i18n.js";
 import { Dialog, Field } from "../components.js";
+import { HostChips } from "./HostChips.js";
 
 export interface SecretDraft {
   name: string;
@@ -35,13 +34,13 @@ export function AddSecretDialog({
   const [error, setError] = useState<string | null>(null);
   const [included, setIncluded] = useState<string[]>(selected);
   const [kind, setKind] = useState<SecretKind>("secret");
-  const [hosts, setHosts] = useState("");
-  const [hostsEdited, setHostsEdited] = useState(false);
+  const [hosts, setHosts] = useState<string[]>([]);
+  const [typed, setTyped] = useState({ name: "", value: "" });
   const suggest = (form: HTMLFormElement | null) => {
-    if (hostsEdited || !form) return;
+    if (!form) return;
     const data = new FormData(form);
     const value = included.map((id) => String(data.get(`value-${id}`) ?? "")).find(Boolean);
-    setHosts(suggestHosts(String(data.get("name") ?? ""), value).join("\n"));
+    setTyped({ name: String(data.get("name") ?? ""), value: value ?? "" });
   };
   return (
     <Dialog
@@ -61,9 +60,7 @@ export function AddSecretDialog({
         const values = Object.fromEntries(
           included.map((id) => [id, String(data.get(`value-${id}`) ?? "")]),
         );
-        const hosts = kind === "secret" ? parseHosts(String(data.get("hosts") ?? "")) : [];
-        if (!hosts) return setError(t("console.agent_hosts_invalid"));
-        onSave({ name, kind, values, hosts });
+        onSave({ name, kind, values, hosts: kind === "secret" ? hosts : [] });
       }}
     >
       <KindPicker value={kind} onChange={setKind} />
@@ -112,94 +109,18 @@ export function AddSecretDialog({
         })}
       </div>
       {kind === "secret" && (
-        <Field label={t("console.agent_hosts_optional")} hint={t("console.agent_hosts_hint")}>
-          <textarea
-            name="hosts"
-            className="mono"
-            rows={Math.max(1, hosts.split("\n").length)}
-            autoComplete="off"
-            spellcheck={false}
-            placeholder="api.stripe.com"
-            value={hosts}
-            onInput={(event) => {
-              setError(null);
-              setHostsEdited(true);
-              setHosts(event.currentTarget.value);
-            }}
+        <div className="field">
+          <span className="field-label" title={t("console.agent_hosts_hint")}>
+            {t("console.agent_hosts_optional")}
+          </span>
+          <HostChips
+            hosts={hosts}
+            name={typed.name}
+            value={typed.value}
+            editable
+            onChange={setHosts}
           />
-        </Field>
-      )}
-      {error && <p className="form-error">{error}</p>}
-    </Dialog>
-  );
-}
-
-export function HostsDialog({
-  secret,
-  environmentCount,
-  onClose,
-  onSave,
-}: {
-  secret: Secret;
-  environmentCount: number;
-  onClose: () => void;
-  onSave: (hosts: string[], everywhere: boolean) => void;
-}) {
-  const t = useT();
-  const [error, setError] = useState<string | null>(null);
-  const [text, setText] = useState((secret.hosts ?? []).join("\n"));
-  const [everywhere, setEverywhere] = useState(true);
-  const current = text.split(/[\s,]+/).filter(Boolean);
-  const suggestions = suggestHosts(secret.name, secret.value).filter(
-    (host) => !current.includes(host),
-  );
-  return (
-    <Dialog
-      title={t("console.agent_hosts_title", { name: secret.name })}
-      description={t("console.agent_hosts_hint")}
-      submitLabel={t("projects.save")}
-      onClose={onClose}
-      onSubmit={() => {
-        const hosts = parseHosts(text);
-        if (!hosts) return setError(t("console.agent_hosts_invalid"));
-        onSave(hosts, everywhere);
-      }}
-    >
-      <Field label={t("console.agent_hosts")}>
-        <textarea
-          name="hosts"
-          className="mono"
-          rows={3}
-          autoFocus
-          spellcheck={false}
-          placeholder={"api.stripe.com\n*.myshopify.com"}
-          value={text}
-          onInput={(event) => {
-            setError(null);
-            setText(event.currentTarget.value);
-          }}
-        />
-      </Field>
-      {suggestions.length > 0 && (
-        <div className="host-suggestions">
-          <span>{t("console.agent_hosts_suggested")}</span>
-          {suggestions.map((host) => (
-            <button
-              type="button"
-              className="chip"
-              key={host}
-              onClick={() => setText([...current, host].join("\n"))}
-            >
-              + {host}
-            </button>
-          ))}
         </div>
-      )}
-      {environmentCount > 1 && (
-        <label className="check">
-          <input type="checkbox" checked={everywhere} onChange={() => setEverywhere(!everywhere)} />
-          {t("console.agent_hosts_everywhere", { name: secret.name })}
-        </label>
       )}
       {error && <p className="form-error">{error}</p>}
     </Dialog>

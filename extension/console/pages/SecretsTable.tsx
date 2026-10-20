@@ -6,6 +6,7 @@ import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
 import { Badge, When } from "../components.js";
 import { toast, useConsole } from "../data.js";
+import { HostChips } from "./HostChips.js";
 import { KindPicker } from "./project-dialogs.js";
 
 function copy(value: string, done: string) {
@@ -28,7 +29,7 @@ function SecretRow({
   onSave: (value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: () => void;
   onAccess: (access: SecretAccess) => void;
-  onHosts: () => void;
+  onHosts: (hosts: string[]) => void;
   onHistory: () => void;
 }) {
   const t = useT();
@@ -46,24 +47,6 @@ function SecretRow({
       <td className="secret-name">
         <code>{secret.name}</code>
         {variable && <Badge>{t("console.kind_variable")}</Badge>}
-        {!variable && (secret.hosts?.length ?? 0) > 0 && (
-          <button
-            type="button"
-            className="agent-hosts"
-            title={t("console.agent_hosts")}
-            disabled={!editable}
-            onClick={onHosts}
-          >
-            <Icon name="terminal" />
-            {secret.hosts!.join(", ")}
-          </button>
-        )}
-        {!variable && !secret.hosts?.length && editable && (
-          <button type="button" className="agent-hosts empty" onClick={onHosts}>
-            <Icon name="plus" />
-            {t("console.agent_hosts_add")}
-          </button>
-        )}
       </td>
       <td className="secret-value">
         {draft !== null ? (
@@ -123,6 +106,19 @@ function SecretRow({
           </button>
         )}
       </td>
+      <td className="secret-hosts">
+        {variable ? (
+          <span className="muted">—</span>
+        ) : (
+          <HostChips
+            hosts={secret.hosts ?? []}
+            name={secret.name}
+            value={secret.value}
+            editable={editable}
+            onChange={onHosts}
+          />
+        )}
+      </td>
       <td className="muted nowrap" title={emailOf(secret.updatedBy)}>
         <When at={secret.updatedAt} />
       </td>
@@ -180,7 +176,7 @@ export function SecretsTable({
   onSave: (secret: Secret, value: string, kind: SecretKind) => Promise<boolean>;
   onDelete: (secret: Secret) => void;
   onAccess: (access: SecretAccess, secretId: string) => void;
-  onHosts: (secret: Secret) => void;
+  onHosts: (secret: Secret, hosts: string[]) => void;
   onHistory: (secret: Secret) => void;
 }) {
   const t = useT();
@@ -194,6 +190,7 @@ export function SecretsTable({
           <tr>
             <th>{t("console.secret_name")}</th>
             <th>{t("projects.secret_value")}</th>
+            <th title={t("console.agent_hosts_hint")}>{t("console.agent_hosts")}</th>
             <th>{t("console.last_change")}</th>
             <th aria-label={t("console.actions")} />
           </tr>
@@ -208,7 +205,7 @@ export function SecretsTable({
               onSave={(value, kind) => onSave(secret, value, kind)}
               onDelete={() => onDelete(secret)}
               onAccess={(access) => onAccess(access, secret.id)}
-              onHosts={() => onHosts(secret)}
+              onHosts={(hosts) => onHosts(secret, hosts)}
               onHistory={() => onHistory(secret)}
             />
           ))}

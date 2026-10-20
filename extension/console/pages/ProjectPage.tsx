@@ -45,7 +45,6 @@ import { attempt, pending$, toast, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
 import {
   AddSecretDialog,
-  HostsDialog,
   ImportDialog,
   TypeToConfirmDialog,
   type SecretDraft,
@@ -65,7 +64,6 @@ type Modal =
   | { kind: "delete-env" }
   | { kind: "delete-project" }
   | { kind: "delete-secret"; secret: Secret }
-  | { kind: "hosts"; secret: Secret }
   | { kind: "history"; secret: Secret }
   | { kind: "remove-duplicates" }
   | null;
@@ -552,7 +550,24 @@ export function ProjectPage({
                   );
                 }}
                 onDelete={(secret) => setModal({ kind: "delete-secret", secret })}
-                onHosts={(secret) => setModal({ kind: "hosts", secret })}
+                onHosts={(secret, hosts) => {
+                  const targets = all.filter(
+                    (entry) =>
+                      entry.name === secret.name &&
+                      !isVariable(entry) &&
+                      writable(entry.environmentId),
+                  );
+                  void mutate(
+                    () =>
+                      saveSecrets(
+                        orgId,
+                        project,
+                        targets.map((entry) => withHosts(entry, hosts)),
+                      ),
+                    "console.agent_hosts_saved",
+                    targets.map((entry) => entry.id),
+                  );
+                }}
                 onHistory={(secret) => setModal({ kind: "history", secret })}
                 onAccess={(access, secretId) =>
                   noteAccess(orgId, project, environment.id, access, secretId)
@@ -750,35 +765,6 @@ export function ProjectPage({
                 }),
               "console.history_restored",
               [secret.id],
-            );
-          }}
-        />
-      )}
-      {modal?.kind === "hosts" && (
-        <HostsDialog
-          secret={modal.secret}
-          environmentCount={writableEnvironments.length}
-          onClose={() => setModal(null)}
-          onSave={(hosts, everywhere) => {
-            const { secret } = modal;
-            setModal(null);
-            const targets = everywhere
-              ? all.filter(
-                  (entry) =>
-                    entry.name === secret.name &&
-                    !isVariable(entry) &&
-                    writable(entry.environmentId),
-                )
-              : [secret];
-            void mutate(
-              () =>
-                saveSecrets(
-                  orgId,
-                  project,
-                  targets.map((entry) => withHosts(entry, hosts)),
-                ),
-              "projects.saved",
-              targets.map((entry) => entry.id),
             );
           }}
         />

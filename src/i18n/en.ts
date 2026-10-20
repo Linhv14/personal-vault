@@ -485,17 +485,15 @@ export const en = {
   "console.kind_secret": "Secret",
   "console.agent_hosts": "AI agent hosts",
   "console.agent_hosts_optional": "AI agent hosts (optional)",
-  "console.agent_hosts_title": "AI agent hosts for {name}",
   "console.agent_hosts_hint":
     "7key agent sends this secret only to these hosts; the agent itself sees a placeholder. One per line, *.example.com for subdomains.",
-  "console.agent_hosts_invalid":
-    "Use host names such as api.stripe.com or *.myshopify.com, at most 10.",
-  "console.agent_hosts_add": "Agent hosts",
-  "console.agent_hosts_suggested": "Suggested:",
-  "console.agent_hosts_everywhere": "Use these hosts for {name} in every environment",
+  "console.agent_hosts_add": "Add host",
   "console.agent_hosts_suggest_title": "Let AI agents use these secrets through 7key agent?",
   "console.agent_hosts_apply": "Apply suggested hosts",
   "console.agent_hosts_applied": "Agent hosts set",
+  "console.agent_hosts_remove": "Remove {host}",
+  "console.agent_hosts_suggested_tip": "Suggested from the name or the value. Click to add it.",
+  "console.agent_hosts_saved": "Hosts saved for every environment",
   "console.history": "History",
   "console.history_title": "Earlier values of {name}",
   "console.history_hint":

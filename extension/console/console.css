@@ -1957,3 +1957,99 @@ tr.pending-row {
 .avatar-stack .pending-pill {
   margin-left: 10px;
 }
+
+.secret-hosts {
+  min-width: 180px;
+}
+.host-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.host-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 4px 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: nowrap;
+}
+.host-chip button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.host-chip button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.host-chip .icon,
+.host-add .icon {
+  width: 12px;
+  height: 12px;
+}
+.host-chip.suggested {
+  gap: 4px;
+  padding: 0 9px 0 7px;
+  border-style: dashed;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.host-chip.suggested:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.host-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.host-add:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.host-chips input.host-input {
+  flex: none;
+  width: 170px;
+  min-height: 0;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}
+.host-chips input.host-input.invalid {
+  border-color: var(--danger);
+}

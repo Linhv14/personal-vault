@@ -478,17 +478,15 @@ export const vi: Catalogue = {
   "console.kind_secret": "Secret",
   "console.agent_hosts": "Host cho AI agent",
   "console.agent_hosts_optional": "Host cho AI agent (không bắt buộc)",
-  "console.agent_hosts_title": "Host cho AI agent của {name}",
   "console.agent_hosts_hint":
     "7key agent chỉ gửi secret này tới các host dưới đây; bản thân agent chỉ thấy placeholder. Mỗi dòng một host, dùng *.example.com cho subdomain.",
-  "console.agent_hosts_invalid":
-    "Nhập tên host như api.stripe.com hoặc *.myshopify.com, tối đa 10 host.",
-  "console.agent_hosts_add": "Host cho agent",
-  "console.agent_hosts_suggested": "Gợi ý:",
-  "console.agent_hosts_everywhere": "Dùng các host này cho {name} ở mọi môi trường",
+  "console.agent_hosts_add": "Thêm host",
   "console.agent_hosts_suggest_title": "Cho AI agent dùng các secret này qua 7key agent?",
   "console.agent_hosts_apply": "Áp dụng host gợi ý",
   "console.agent_hosts_applied": "Đã đặt host cho agent",
+  "console.agent_hosts_remove": "Gỡ {host}",
+  "console.agent_hosts_suggested_tip": "Gợi ý dựa trên tên hoặc giá trị. Bấm để thêm.",
+  "console.agent_hosts_saved": "Đã lưu host cho mọi môi trường",
   "console.history": "Lịch sử",
   "console.history_title": "Các giá trị cũ của {name}",
   "console.history_hint":
