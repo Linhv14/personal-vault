@@ -257,6 +257,13 @@
         font-size: 13px;
         box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
       }
+      .turnstile-slot {
+        display: flex;
+        justify-content: center;
+      }
+      .turnstile-slot:empty {
+        display: none;
+      }
       .error {
         margin: 4px 0 0;
         color: var(--danger);
@@ -470,7 +477,9 @@
   </head>
   <body>
     <main>
-      <div class="brand"><span data-logo="22" data-logo-bare></span><span data-wordmark></span></div>
+      <div class="brand">
+        <span data-logo="22" data-logo-bare></span><span data-wordmark></span>
+      </div>
       <div class="card">
         <div class="state" id="state-loading">
           <div class="spinner"></div>
@@ -490,6 +499,7 @@
               autofocus
               data-i18n-placeholder="view.passphrase_placeholder"
             />
+            <div class="turnstile-slot" data-turnstile></div>
             <button class="primary" type="submit" data-i18n="view.open"></button>
             <p id="passphrase-error" class="error" hidden></p>
           </form>
@@ -507,6 +517,7 @@
               required
               data-i18n-placeholder="view.email_placeholder"
             />
+            <div class="turnstile-slot" data-turnstile></div>
             <button class="primary" type="submit" data-i18n="view.send_code"></button>
           </form>
           <form id="code-form" hidden>
@@ -521,6 +532,7 @@
               placeholder="000000"
               required
             />
+            <div class="turnstile-slot" data-turnstile></div>
             <button class="primary" type="submit" data-i18n="view.open"></button>
             <div class="code-links">
               <button type="button" class="link" id="code-resend"></button>

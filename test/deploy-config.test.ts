@@ -58,6 +58,30 @@ describe("parseDeployFlags", () => {
   });
 });
 
+describe("Turnstile deploy option", () => {
+  it("reads and clears the site key", () => {
+    expect(parseDeployFlags(["--turnstile-site-key", "0x4AAAAAAAB1cD2eF3gH4iJ5"])).toEqual({
+      turnstileSiteKey: "0x4AAAAAAAB1cD2eF3gH4iJ5",
+    });
+    expect(parseDeployFlags(["--turnstile-site-key", "none"])).toEqual({ turnstileSiteKey: null });
+    expect(() => parseDeployFlags(["--turnstile-site-key", "not a key"])).toThrow(/Turnstile/);
+  });
+
+  it("publishes the site key as a var and requires the secret only when set", () => {
+    expect(render().vars.TURNSTILE_SITE_KEY).toBeUndefined();
+    expect(requiredSecrets(DEFAULT_DEPLOY_OPTIONS)).not.toContain("TURNSTILE_SECRET");
+    const config = render({ turnstileSiteKey: "0x4AAAAAAAB1cD2eF3gH4iJ5" });
+    expect(config.vars.TURNSTILE_SITE_KEY).toBe("0x4AAAAAAAB1cD2eF3gH4iJ5");
+    expect(config.secrets.required).toContain("TURNSTILE_SECRET");
+  });
+
+  it("picks the site key up from deploy/production.json", () => {
+    expect(
+      resolveDeployOptions({ turnstileSiteKey: "0x4AAAAAAAB1cD2eF3gH4iJ5" }).turnstileSiteKey,
+    ).toBe("0x4AAAAAAAB1cD2eF3gH4iJ5");
+  });
+});
+
 describe("resolveDeployOptions", () => {
   it("lets flags override what the last deploy saved, and ignores unrelated state", () => {
     expect(

@@ -28,15 +28,43 @@ interface ServerError {
   params?: Record<string, string | number>;
 }
 
+export type HumanCheck = (apiUrl: string, siteKey: string) => Promise<string>;
+
+let humanCheck: HumanCheck | null = null;
+
+export function setHumanCheck(check: HumanCheck | null): void {
+  humanCheck = check;
+}
+
+export async function humanCheckHeaders(apiUrl: string): Promise<Record<string, string>> {
+  if (!humanCheck) return {};
+  const { turnstileSiteKey } = await serverConfig(apiUrl);
+  if (!turnstileSiteKey) return {};
+  try {
+    return { "X-Turnstile-Token": await humanCheck(apiUrl, turnstileSiteKey) };
+  } catch {
+    throw new ApiError("error.auth.bot_check_failed", 403);
+  }
+}
+
 export async function request<T>(
   path: string,
-  init: RequestInit & { auth?: boolean; extraHeaders?: Record<string, string> } = {},
+  init: RequestInit & {
+    auth?: boolean;
+    humanCheck?: boolean;
+    extraHeaders?: Record<string, string>;
+  } = {},
 ): Promise<T> {
   const { apiUrl } = await getLocal();
   if (!apiUrl) throw new ApiError("error.api.no_server", 0);
 
   const headers = new Headers(init.extraHeaders);
   if (init.body) headers.set("Content-Type", "application/json");
+  if (init.humanCheck) {
+    for (const [name, value] of Object.entries(await humanCheckHeaders(apiUrl))) {
+      headers.set(name, value);
+    }
+  }
 
   if (init.auth !== false) {
     const session = await getUnlocked();
@@ -111,6 +139,7 @@ export async function register(
     {
       method: "POST",
       auth: false,
+      humanCheck: true,
       extraHeaders: { "X-Registration-Token": registrationToken },
       body: JSON.stringify({ email, ...record, verificationCode, inviteId }),
     },
@@ -188,6 +217,7 @@ export async function deleteAccount(currentAuthKey: string): Promise<void> {
 export interface ServerConfig {
   registrationOpen: boolean;
   emailVerification: boolean;
+  turnstileSiteKey?: string;
 }
 
 const SERVER_CONFIG_TIMEOUT_MS = 3000;
@@ -198,10 +228,17 @@ export async function serverConfig(apiUrl: string): Promise<ServerConfig> {
     const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/config`, {
       signal: AbortSignal.timeout(SERVER_CONFIG_TIMEOUT_MS),
     });
-    const body = (await response.json()) as { registration?: string; emailVerification?: boolean };
+    const body = (await response.json()) as {
+      registration?: string;
+      emailVerification?: boolean;
+      turnstileSiteKey?: unknown;
+    };
     return {
       registrationOpen: body.registration === "open",
       emailVerification: body.emailVerification === true,
+      ...(typeof body.turnstileSiteKey === "string" && body.turnstileSiteKey
+        ? { turnstileSiteKey: body.turnstileSiteKey }
+        : {}),
     };
   } catch {
     return { registrationOpen: false, emailVerification: false };
@@ -213,11 +250,12 @@ export async function requestVerificationCode(
   email: string,
   locale: string,
 ): Promise<void> {
+  const humanHeaders = await humanCheckHeaders(apiUrl);
   let response: Response;
   try {
     response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/auth/verify-email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...humanHeaders },
       body: JSON.stringify({ email, locale }),
     });
   } catch {

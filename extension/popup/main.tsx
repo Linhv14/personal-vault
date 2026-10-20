@@ -1,8 +1,10 @@
 import { render } from "preact";
 import { useEffect } from "preact/hooks";
+import { setHumanCheck } from "../lib/api.js";
 import { resumeUnlock } from "../lib/resume.js";
 import { defaultServer } from "../lib/server.js";
 import { getLocal, getUnlocked, loadPendingSignup } from "../lib/storage.js";
+import { frameTurnstileToken } from "../lib/turnstile-frame.js";
 import { Toast } from "../ui/components/Toast.js";
 import { localeSignal, setUiLocale } from "../ui/i18n.js";
 import { Editor } from "./screens/Editor.js";
@@ -94,6 +96,7 @@ async function boot(): Promise<void> {
   await enterVault(session.vaultKeyRaw);
 }
 
+setHumanCheck((apiUrl) => frameTurnstileToken(apiUrl));
 const root = document.getElementById("app");
 if (!root) throw new Error("Missing #app");
 render(<App />, root);

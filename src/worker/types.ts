@@ -24,6 +24,8 @@ export interface Env {
   SECURITY_CONTACT?: string;
   CI_TEST_JWKS?: string;
   CI_TEST_ISSUER?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET?: string;
 }
 
 export interface SessionContext {
