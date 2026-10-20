@@ -13,7 +13,13 @@ import { createAuthority, verifies } from "../cli/agent/certs.js";
 import { parseAgentArgs } from "../cli/agent/main.js";
 import { startProxy, type RunningProxy } from "../cli/agent/proxy.js";
 import { childEnvironment, plan } from "../cli/agent/run.js";
-import { scrub, substitute, substituteHeader, type Injectable } from "../cli/agent/substitute.js";
+import {
+  scrub,
+  Scrubber,
+  substitute,
+  substituteHeader,
+  type Injectable,
+} from "../cli/agent/substitute.js";
 
 const run = promisify(execFile);
 
@@ -110,6 +116,50 @@ describe("placeholders", () => {
       expect(scrub(text, [odd])).toContain(odd.placeholder);
       expect(Buffer.from(scrub(text, [odd]), "latin1").toString()).not.toContain("live");
     }
+  });
+
+  it("hides base64, percent, JSON and hex forms of a value", () => {
+    const value = "sk_live/ä+b c?~!";
+    const odd: Injectable = { ...STRIPE, value };
+    const bytes = Buffer.from(value);
+    const outputs = [
+      bytes.toString("base64"),
+      bytes.toString("base64").replace(/=+$/, ""),
+      bytes.toString("base64url"),
+      bytes.toString("base64url").padEnd(bytes.toString("base64").length, "="),
+      encodeURIComponent(value),
+      encodeURIComponent(value).replace(/%[0-9A-F]{2}/g, (escape) => escape.toLowerCase()),
+      new URLSearchParams({ q: value }).toString().slice(2),
+      [...bytes].map((byte) => `%${byte.toString(16).padStart(2, "0")}`).join(""),
+      JSON.stringify(value).slice(1, -1),
+      bytes.toString("hex"),
+      bytes.toString("hex").toUpperCase(),
+    ];
+    for (const output of outputs) {
+      const text = `before ${Buffer.from(output, "utf8").toString("latin1")} after`;
+      const scrubbed = scrub(text, [odd]);
+      expect(scrubbed, output).toContain(odd.placeholder);
+      expect(scrubbed, output).not.toContain(output);
+    }
+  });
+
+  it("hides a value base64-encoded inside a longer payload at any byte offset", () => {
+    for (const prefix of ["", "u:", "user:", "ab"]) {
+      for (const alphabet of ["base64", "base64url"] as const) {
+        const encoded = Buffer.from(`${prefix}${STRIPE.value}","more":1}`).toString(alphabet);
+        const scrubbed = scrub(encoded, [STRIPE]);
+        expect(scrubbed, `${alphabet} ${prefix}`).toContain(STRIPE.placeholder);
+      }
+    }
+  });
+
+  it("holds back a chunk tail that could be the start of an encoded value", () => {
+    const hex = Buffer.from(STRIPE.value).toString("hex");
+    const scrubber = new Scrubber([STRIPE]);
+    const first = scrubber.split(`ok ${hex.slice(0, 10)}`);
+    expect(first.ready).toBe("ok ");
+    const second = scrubber.split(first.pending + hex.slice(10) + " done");
+    expect(second.ready).toBe(`${STRIPE.placeholder} done`);
   });
 
   it("gives only secrets with allowed hosts a placeholder and passes variables through", () => {
