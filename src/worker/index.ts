@@ -74,6 +74,7 @@ app.use("/api/auth/verify-email", limitByClientIp);
 app.use("/api/auth/register", limitByClientIp);
 app.use("/api/auth/prelogin", limitByClientIp);
 app.use("/api/auth/login", limitByClientIp);
+app.use("/api/auth/login/2fa", limitByClientIp);
 app.use("/api/auth/recover/*", limitByClientIp);
 app.on("GET", "/api/shares/*", limitByClientIp);
 app.on("POST", ["/api/shares/:id/code", "/api/shares/:id/open"], limitByClientIp);
@@ -222,6 +223,7 @@ export default {
       env.DB.prepare("DELETE FROM auth_throttle WHERE updated_at <= ?").bind(
         now - PAIR_MEMORY_SECONDS,
       ),
+      env.DB.prepare("DELETE FROM two_factor_challenges WHERE expires_at <= ?").bind(now),
     ]);
     const [shares, sessions, loginAttempts, registrationCounts, verifications, shareCodes] =
       results.map((result) => result.meta.changes);

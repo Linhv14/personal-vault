@@ -1,9 +1,23 @@
 import { Hono } from "hono";
 import { isPublicKey } from "../../core/identity.js";
 import { protectAuthKey, protectWrappedKey, recoveryScope, verifyAuthKey } from "../at-rest.js";
+import { twoFactorDisabledEmail, twoFactorEnabledEmail } from "../emails.js";
 import { apiError } from "../errors.js";
-import { now } from "../http.js";
+import { inBackground, now } from "../http.js";
+import { createMailer } from "../mailer.js";
+import { clientIp, requestLocale } from "../request.js";
+import { revokeOtherSessions } from "../session.js";
+import { throttle } from "../throttle.js";
+import {
+  confirmSetup,
+  disableStatements,
+  regenerateBackupCodes,
+  startSetup,
+  twoFactorStatus,
+  verifySecondFactor,
+} from "../two-factor.js";
 import { isBase64, isSealed } from "../validate.js";
+import type { Context } from "hono";
 import type { AppBindings } from "../types.js";
 
 const account = new Hono<AppBindings>();
@@ -111,6 +125,112 @@ account.delete("/recovery", async (c) => {
     .bind(accountId)
     .run();
   return c.json({ ok: true });
+});
+
+account.get("/2fa", async (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json(await twoFactorStatus(c.env, c.get("session").accountId));
+});
+
+async function accountEmail(env: AppBindings["Bindings"], accountId: string): Promise<string> {
+  const row = await env.DB.prepare("SELECT email FROM accounts WHERE id = ?")
+    .bind(accountId)
+    .first<{ email: string }>();
+  return row?.email ?? "";
+}
+
+function notify(
+  c: Context<AppBindings>,
+  email: string,
+  locale: unknown,
+  render: typeof twoFactorEnabledEmail,
+): void {
+  const mailer = createMailer(c.env);
+  if (!mailer || !email) return;
+  const message = render({ locale: requestLocale(c, locale), siteUrl: new URL(c.req.url).origin });
+  inBackground(c, "two_factor_email_failed", () => mailer.send({ to: email, ...message }));
+}
+
+async function checkCode(
+  c: Context<AppBindings>,
+  accountId: string,
+  code: unknown,
+): Promise<Response | null> {
+  const timestamp = now();
+  const email = await accountEmail(c.env, accountId);
+  const guard = await throttle(c.env, "two_factor", email, clientIp(c), timestamp);
+  if (guard.retryAfter) {
+    return c.json(apiError("auth.rate_limited", { seconds: guard.retryAfter }), 429);
+  }
+  await guard.slowDown();
+  if (!(await verifySecondFactor(c.env, accountId, code, timestamp))) {
+    await guard.fail();
+    return c.json(apiError("auth.invalid_2fa"), 401);
+  }
+  await guard.clear();
+  return null;
+}
+
+account.post("/2fa/setup", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const { accountId } = c.get("session");
+  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
+  if ((await twoFactorStatus(c.env, accountId)).enabled) {
+    return c.json(apiError("two_factor.already_enabled"), 409);
+  }
+  c.header("Cache-Control", "no-store");
+  return c.json(await startSetup(c.env, accountId, await accountEmail(c.env, accountId), now()));
+});
+
+account.post("/2fa/enable", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const { accountId, tokenHash } = c.get("session");
+  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
+  const result = await confirmSetup(c.env, accountId, body?.code, now());
+  if (!result.ok) {
+    if (result.reason === "enabled") return c.json(apiError("two_factor.already_enabled"), 409);
+    if (result.reason === "expired") return c.json(apiError("two_factor.setup_expired"), 400);
+    return c.json(apiError("auth.invalid_2fa"), 400);
+  }
+  await revokeOtherSessions(c.env, accountId, tokenHash);
+  notify(c, await accountEmail(c.env, accountId), body?.locale, twoFactorEnabledEmail);
+  c.header("Cache-Control", "no-store");
+  return c.json({ enabledAt: result.enabledAt, backupCodes: result.backupCodes });
+});
+
+account.post("/2fa/disable", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const { accountId } = c.get("session");
+  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
+  if (!(await twoFactorStatus(c.env, accountId)).enabled) {
+    return c.json(apiError("two_factor.not_enabled"), 409);
+  }
+  const refused = await checkCode(c, accountId, body?.code);
+  if (refused) return refused;
+  await c.env.DB.batch(disableStatements(c.env, accountId));
+  notify(c, await accountEmail(c.env, accountId), body?.locale, twoFactorDisabledEmail);
+  return c.json({ ok: true });
+});
+
+account.post("/2fa/backup-codes", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const { accountId } = c.get("session");
+  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
+  if (!(await twoFactorStatus(c.env, accountId)).enabled) {
+    return c.json(apiError("two_factor.not_enabled"), 409);
+  }
+  const refused = await checkCode(c, accountId, body?.code);
+  if (refused) return refused;
+  c.header("Cache-Control", "no-store");
+  return c.json({ backupCodes: await regenerateBackupCodes(c.env, accountId, now()) });
 });
 
 export default account;

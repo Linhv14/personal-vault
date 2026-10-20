@@ -18,6 +18,8 @@ const NONCE_BYTES = 12;
 interface AtRestKeys {
   authHmac: CryptoKey;
   wrap: CryptoKey;
+  twoFactorSecret: CryptoKey;
+  backupCodeHmac: CryptoKey;
 }
 
 let cached: { secret: string; keys: Promise<AtRestKeys> } | null = null;
@@ -40,7 +42,7 @@ async function deriveKeys(secret: string): Promise<AtRestKeys> {
     info: utf8Encode(`personal-vault/at-rest/${info}`),
   });
 
-  const [authHmac, wrap] = await Promise.all([
+  const [authHmac, wrap, twoFactorSecret, backupCodeHmac] = await Promise.all([
     crypto.subtle.deriveKey(
       hkdf("auth-key-hash"),
       root,
@@ -55,8 +57,22 @@ async function deriveKeys(secret: string): Promise<AtRestKeys> {
       false,
       ["encrypt", "decrypt"],
     ),
+    crypto.subtle.deriveKey(
+      hkdf("two-factor-secret"),
+      root,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    ),
+    crypto.subtle.deriveKey(
+      hkdf("two-factor-backup-code"),
+      root,
+      { name: "HMAC", hash: "SHA-256", length: 256 },
+      false,
+      ["sign"],
+    ),
   ]);
-  return { authHmac, wrap };
+  return { authHmac, wrap, twoFactorSecret, backupCodeHmac };
 }
 
 export async function protectAuthKey(env: AtRestEnv, authKeyBase64: string): Promise<string> {
@@ -123,4 +139,49 @@ export async function revealWrappedKey(
     blob.slice(NONCE_BYTES),
   );
   return { ciphertext: toBase64(new Uint8Array(plaintext)), needsUpgrade: false };
+}
+
+function twoFactorAad(accountId: string): Uint8Array<ArrayBuffer> {
+  return utf8Encode(`personal-vault/two-factor-secret/${accountId}`);
+}
+
+export async function protectTwoFactorSecret(
+  env: AtRestEnv,
+  accountId: string,
+  secret: string,
+): Promise<string> {
+  const { twoFactorSecret } = await keysFor(env);
+  const nonce = randomBytes(NONCE_BYTES);
+  const sealed = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: twoFactorAad(accountId) },
+    twoFactorSecret,
+    utf8Encode(secret),
+  );
+  return VERSION_PREFIX + toBase64(concat(nonce, new Uint8Array(sealed)));
+}
+
+export async function revealTwoFactorSecret(
+  env: AtRestEnv,
+  accountId: string,
+  stored: string,
+): Promise<string> {
+  if (!stored.startsWith(VERSION_PREFIX)) throw new Error("Unexpected two-factor secret format");
+  const { twoFactorSecret } = await keysFor(env);
+  const blob = fromBase64(stored.slice(VERSION_PREFIX.length));
+  const plaintext = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: blob.slice(0, NONCE_BYTES), additionalData: twoFactorAad(accountId) },
+    twoFactorSecret,
+    blob.slice(NONCE_BYTES),
+  );
+  return new TextDecoder().decode(plaintext);
+}
+
+export async function protectBackupCode(
+  env: AtRestEnv,
+  accountId: string,
+  code: string,
+): Promise<string> {
+  const { backupCodeHmac } = await keysFor(env);
+  const mac = await crypto.subtle.sign("HMAC", backupCodeHmac, utf8Encode(`${accountId}:${code}`));
+  return VERSION_PREFIX + toBase64(new Uint8Array(mac));
 }
