@@ -1,0 +1,219 @@
+import { gsap } from "gsap";
+
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+if (!reduced) {
+  revealSections();
+  animateAudienceTabs();
+  animateCounters();
+  typeTerminal();
+  travelPacket();
+}
+
+function belowFold(element: Element): boolean {
+  return element.getBoundingClientRect().top > window.innerHeight * 0.92;
+}
+
+function onView(
+  elements: Element[],
+  callback: (entered: Element[]) => void,
+  rootMargin = "0px 0px -8% 0px",
+): void {
+  if (elements.length === 0) return;
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const entered = entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target);
+      for (const element of entered) observer.unobserve(element);
+      if (entered.length > 0) callback(entered);
+    },
+    { rootMargin },
+  );
+  for (const element of elements) observer.observe(element);
+}
+
+function revealSections(): void {
+  const targets = gsap.utils
+    .toArray<HTMLElement>(
+      [
+        "main section .kicker",
+        "main section h2",
+        "main section .lede",
+        ".seg",
+        ".aud .panel > *",
+        ".flow > .node",
+        ".facts",
+        ".dev > .term",
+        ".side > *",
+        ".bento > .tile",
+        ".tbl",
+        ".note",
+        ".plans > .plan",
+        ".install li",
+        "#faq details",
+        ".final h2",
+        ".final p",
+        ".final .ctas",
+      ].join(","),
+    )
+    .filter(belowFold);
+  gsap.set(targets, { autoAlpha: 0, y: 28 });
+  onView(targets, (batch) =>
+    gsap.to(batch, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 }),
+  );
+  const chips = gsap.utils.toArray<HTMLElement>(".bento .chip, .bento .mini").filter(belowFold);
+  gsap.set(chips, { autoAlpha: 0, scale: 0.85 });
+  onView(chips, (batch) =>
+    gsap.to(batch, {
+      autoAlpha: 1,
+      scale: 1,
+      duration: 0.5,
+      delay: 0.35,
+      ease: "back.out(2)",
+      stagger: 0.05,
+    }),
+  );
+}
+
+function animateAudienceTabs(): void {
+  for (const panel of document.querySelectorAll<HTMLElement>(".aud .panel")) {
+    panel.style.animation = "none";
+  }
+  for (const input of document.querySelectorAll<HTMLInputElement>(".aud > input")) {
+    input.addEventListener("change", () => {
+      const panel = document.getElementById(input.getAttribute("aria-controls") ?? "");
+      if (!panel) return;
+      gsap.fromTo(
+        panel.querySelectorAll(".mock, .benefits li"),
+        { autoAlpha: 0, y: 14 },
+        { autoAlpha: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.05, overwrite: true },
+      );
+      gsap.fromTo(
+        panel.querySelectorAll(".float"),
+        { autoAlpha: 0, scale: 0.9 },
+        { autoAlpha: 1, scale: 1, duration: 0.45, delay: 0.2, ease: "back.out(2)", stagger: 0.1 },
+      );
+    });
+  }
+}
+
+function animateCounters(): void {
+  const format = new Intl.NumberFormat(document.documentElement.lang || "en");
+  const counters = [...document.querySelectorAll<HTMLElement>("[data-count]")].filter(
+    (element) => Number.isFinite(Number(element.dataset.count)) && belowFold(element),
+  );
+  for (const element of counters) element.textContent = format.format(0);
+  onView(counters, (entered) => {
+    for (const element of entered as HTMLElement[]) {
+      const target = Number(element.dataset.count);
+      const value = { n: 0 };
+      gsap.to(value, {
+        n: target,
+        duration: target > 100 ? 1.6 : 0.9,
+        delay: 0.3,
+        ease: "power2.out",
+        onUpdate: () => {
+          element.textContent = format.format(Math.round(value.n));
+        },
+      });
+    }
+  });
+}
+
+function typeTerminal(): void {
+  const code = document.querySelector<HTMLElement>(".term pre code");
+  if (!code || !belowFold(code)) return;
+  code.innerHTML = code.innerHTML
+    .split("\n")
+    .map((line) => `<span class="ln">${line}</span>`)
+    .join("\n");
+  const lines = gsap.utils.toArray<HTMLElement>(".term .ln");
+  gsap.set(lines, { autoAlpha: 0 });
+  const timeline = gsap.timeline({ paused: true, delay: 0.3 });
+  for (const line of lines) {
+    const command = line.firstElementChild?.classList.contains("t-p") ?? false;
+    const length = Math.max(1, (line.textContent ?? "").length);
+    if (command && length > 2) {
+      timeline.fromTo(
+        line,
+        { autoAlpha: 1, clipPath: "inset(0 100% 0 0)" },
+        { clipPath: "inset(0 0% 0 0)", duration: length * 0.018, ease: `steps(${length})` },
+        "+=0.15",
+      );
+    } else {
+      timeline.to(line, { autoAlpha: 1, duration: 0.3, ease: "power1.out" }, "+=0.08");
+    }
+  }
+  onView([code], () => timeline.play(), "0px 0px -20% 0px");
+}
+
+function travelPacket(): void {
+  const flow = document.querySelector<HTMLElement>(".flow");
+  const wires = flow?.querySelectorAll<HTMLElement>(".wire");
+  const nodes = flow?.querySelectorAll<HTMLElement>(".node");
+  if (!flow || wires?.length !== 2 || nodes?.length !== 3) return;
+  const [first, second] = [wires[0]!, wires[1]!];
+  flow.classList.add("js-packet");
+  const packet = document.createElement("span");
+  packet.className = "packet";
+  packet.setAttribute("aria-hidden", "true");
+  flow.append(packet);
+
+  const point = (wire: HTMLElement, start: boolean) => {
+    const box = wire.getBoundingClientRect();
+    const origin = flow.getBoundingClientRect();
+    const across = box.width >= box.height;
+    const x = across ? (start ? box.left : box.right) : box.left + box.width / 2;
+    const y = across ? box.top + box.height / 2 : start ? box.top : box.bottom;
+    return { x: x - origin.left, y: y - origin.top };
+  };
+
+  const glow = (node: HTMLElement | undefined) =>
+    gsap.fromTo(
+      node?.querySelector(".ic") ?? [],
+      { scale: 1, boxShadow: "0 0 0 0 rgba(255,106,61,0.6)" },
+      {
+        scale: 1.12,
+        boxShadow: "0 0 0 10px rgba(255,106,61,0)",
+        duration: 0.4,
+        yoyo: true,
+        repeat: 1,
+      },
+    );
+
+  const timeline = gsap.timeline({ repeat: -1, repeatDelay: 0.8, paused: true });
+  timeline
+    .add(glow(nodes[0]))
+    .fromTo(
+      packet,
+      { x: () => point(first, true).x, y: () => point(first, true).y, autoAlpha: 0 },
+      {
+        x: () => point(first, false).x,
+        y: () => point(first, false).y,
+        autoAlpha: 1,
+        duration: 0.9,
+        ease: "power2.inOut",
+      },
+    )
+    .to(packet, { autoAlpha: 0, duration: 0.15 })
+    .add(glow(nodes[1]))
+    .set(packet, { x: () => point(second, true).x, y: () => point(second, true).y })
+    .to(packet, { autoAlpha: 1, duration: 0.15 })
+    .to(packet, {
+      x: () => point(second, false).x,
+      y: () => point(second, false).y,
+      duration: 0.9,
+      ease: "power2.inOut",
+    })
+    .to(packet, { autoAlpha: 0, duration: 0.15 })
+    .add(glow(nodes[2]));
+
+  new IntersectionObserver((entries) => {
+    if (entries.some((entry) => entry.isIntersecting)) timeline.play();
+    else timeline.pause();
+  }).observe(flow);
+  let resize = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resize);
+    resize = window.setTimeout(() => timeline.invalidate(), 150);
+  });
+}

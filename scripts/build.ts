@@ -74,6 +74,25 @@ async function logoSvgs(): Promise<{ still: string; animated: string; mark: stri
   return { still: logoSvg(), animated: logoSvg("", true, true), mark: logoSvg("", false, true) };
 }
 
+async function iconSvg(): Promise<(name: string) => string> {
+  const { outputFiles } = await build({
+    entryPoints: [path.join(root, "src", "ui", "icons.ts")],
+    bundle: true,
+    format: "esm",
+    write: false,
+    logLevel: "silent",
+  });
+  const source = Buffer.from(outputFiles[0]?.text ?? "").toString("base64");
+  const { iconMarkup } = (await import(`data:text/javascript;base64,${source}`)) as {
+    iconMarkup: (name: string) => string | undefined;
+  };
+  return (name) => {
+    const markup = iconMarkup(name);
+    if (!markup) throw new Error(`share/landing.html uses an unknown icon "${name}"`);
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">${markup}</svg>`;
+  };
+}
+
 async function replaceAsync(
   text: string,
   pattern: RegExp,
@@ -111,8 +130,17 @@ async function buildSharePage() {
     path.join(outPublic, "security.html"),
     await injectTokens(filled, "share/security.html"),
   );
+  await build({
+    ...common,
+    entryPoints: [path.join(root, "share", "landing.ts")],
+    outfile: path.join(outPublic, "landing.js"),
+    minify: true,
+    sourcemap: false,
+  });
   const site = (deployedServerUrl() || "https://7key.online").replace(/\/$/, "");
+  const svg = await iconSvg();
   const landing = (await readFile(path.join(root, "share", "landing.html"), "utf8"))
+    .replace(/\{\{icon:([a-z-]+)\}\}/g, (_: string, name: string) => svg(name))
     .replaceAll("{{site}}", site)
     .replaceAll("{{logo}}", (await logoSvgs()).animated)
     .replaceAll("{{mark}}", (await logoSvgs()).mark);
