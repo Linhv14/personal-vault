@@ -34,6 +34,7 @@ export interface LocalState {
   unboundItemsMigrated?: boolean;
   aadBoundAccounts?: string[];
   autofillPromoDismissed?: boolean;
+  neverAskForms?: string[];
   sharedLinks?: SealedData;
   autoLockMinutes?: number;
   hasPasskeys?: boolean;

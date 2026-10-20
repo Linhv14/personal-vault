@@ -1,6 +1,7 @@
 import { Icon } from "../../ui/components/Icon.js";
 import { useEffect } from "preact/hooks";
 import { ITEM_TYPES, NEW_LABEL, TYPE_ICON, TYPE_LABEL } from "../../lib/item-types.js";
+import { siteWarning } from "../../lib/site-warning.js";
 import { registrableDomain } from "../../lib/vault.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { inScope, inVault, listView, live, scopeExists, typeCounts } from "../filters.js";
@@ -51,6 +52,7 @@ export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
   }, [selected?.id]);
 
   const emptyVault = live(all).length === 0 && currentScope !== "trash";
+  const warning = siteWarning(tabUrl.value, items.value);
 
   return (
     <aside className="list-pane">
@@ -108,6 +110,12 @@ export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
         />
       </div>
       <div className="list-scroll" role="listbox" aria-label={t("list.all_items")}>
+        {warning && (
+          <p className="lookalike-badge" role="alert">
+            <Icon name="alert" />
+            {t("autofill.lookalike_title", { domain: warning.target })}
+          </p>
+        )}
         {view.matched.length > 0 && (
           <>
             <h2 className="list-heading" id="matching-title">

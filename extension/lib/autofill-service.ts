@@ -16,6 +16,9 @@ import type {
   TotpPrompt,
 } from "./autofill-protocol.js";
 import { fillCardFrames } from "./card-frames.js";
+import { boundToSite } from "./form-capture.js";
+import { handleFormRequest } from "./form-save.js";
+import { siteWarning } from "./site-warning.js";
 import { getLocal } from "./storage.js";
 import {
   byLastUsed,
@@ -148,6 +151,11 @@ function addressDataOf(item: Partial<VaultItem>): AddressData {
     "country",
   ] as const;
   return Object.fromEntries(keys.flatMap((key) => (item[key] ? [[key, item[key]]] : [])));
+}
+
+function bySiteBound(domain: string) {
+  const rank = (item: VaultItem) => (boundToSite(item, domain) ? 0 : 1);
+  return (a: VaultItem, b: VaultItem) => rank(a) - rank(b) || byLastUsed(a, b);
 }
 
 async function formsAllowed(sender: TrustedSender): Promise<boolean> {
@@ -473,7 +481,7 @@ export async function handleAutofill(
       if (!vault) return { ok: true, locked: true };
       const identities = vault.items
         .filter(isIdentity)
-        .sort(byLastUsed)
+        .sort(bySiteBound(sender.domain))
         .map((item) => identitySuggestionOf(item, vault));
       return { ok: true, locked: false, identities };
     }
@@ -508,6 +516,19 @@ export async function handleAutofill(
         aliases: emailAliases([...(email ? [email] : []), ...known], tag),
         site: tag,
       };
+    }
+
+    case "autofill:form-capture":
+    case "autofill:form-pending":
+    case "autofill:form-save":
+    case "autofill:form-dismiss":
+      return handleFormRequest(request, sender, await formsAllowed(sender));
+
+    case "autofill:site-check": {
+      if (await isVaultServer(sender.url)) return { ok: true, lookalike: null };
+      const vault = await openVault();
+      if (!vault) return { ok: true, lookalike: null };
+      return { ok: true, lookalike: siteWarning(sender.url, vault.items) };
     }
 
     case "autofill:open-popup":

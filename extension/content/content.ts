@@ -4,6 +4,7 @@ import type {
   AddressData,
   AutofillRequest,
   AutofillResponse,
+  FormPrompt,
   PendingPrompt,
   Suggestion,
   TotpPrompt,
@@ -12,6 +13,8 @@ import { icon, type IconName } from "../../src/ui/icons.js";
 import { logo, wordmark } from "../../src/ui/logo.js";
 import { brandMark, flagMark } from "../../src/ui/marks.js";
 import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
+import type { LookalikeMatch } from "../../src/core/lookalike.js";
+import { CARD_BRAND_NAMES } from "../lib/item-types.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
@@ -21,9 +24,18 @@ import {
   fillAddress,
   fillCard,
   formKindOf,
-  setFieldValue as setValue,
+  isCardKind,
+  setFieldValue,
+  type FormField,
   type FormKind,
 } from "./forms.js";
+import {
+  fillState,
+  isSubmitLike,
+  readAddress,
+  readCard,
+  type FilledFields,
+} from "./form-capture.js";
 import {
   fillCode,
   findOneTimeCodeField,
@@ -43,6 +55,9 @@ let activeInput: HTMLInputElement | null = null;
 let cardFrame: HTMLIFrameElement | null = null;
 let lastCapture = { password: "", at: 0 };
 let outcomeTimer: ReturnType<typeof setInterval> | undefined;
+let siteWarning: LookalikeMatch | null = null;
+let lastFormCapture = { key: "", at: 0 };
+const filled: FilledFields = new WeakMap();
 
 const OUTCOME_WAIT_MS = 10_000;
 const OUTCOME_STABLE_MS = 1_000;
@@ -65,7 +80,25 @@ menu.hidden = true;
 const banner = document.createElement("div");
 banner.className = "banner";
 banner.hidden = true;
-shadow.append(style, trigger, menu, banner);
+const chip = document.createElement("div");
+chip.className = "chip";
+chip.hidden = true;
+shadow.append(style, trigger, menu, banner, chip);
+
+function trackValue(element: FormField, value: string, random: boolean): void {
+  setFieldValue(element, value);
+  if (!(element instanceof HTMLInputElement && element.type === "password")) {
+    filled.set(element, { value: element.value, random });
+  }
+}
+
+function setValue(element: FormField, value: string): void {
+  trackValue(element, value, false);
+}
+
+function setRandomValue(element: FormField, value: string): void {
+  trackValue(element, value, true);
+}
 
 async function send(request: AutofillRequest): Promise<AutofillResponse> {
   try {
@@ -212,6 +245,7 @@ function menuRow(
   row.append(leading, text);
   row.addEventListener("click", (event) => {
     if (!event.isTrusted) return;
+    if (siteWarning && !row.dataset.armed) return armRow(row);
     onPick();
   });
   return row;
@@ -269,6 +303,7 @@ async function fillOneTimeCode(suggestion: Suggestion, input: HTMLInputElement):
 }
 
 function menuHeading(): HTMLElement {
+  if (siteWarning) return warningHeading(siteWarning);
   const heading = document.createElement("div");
   heading.className = "heading";
   heading.append(logo(16), wordmark());
@@ -276,10 +311,12 @@ function menuHeading(): HTMLElement {
 }
 
 function lockedRow(): HTMLButtonElement {
-  return menuRow(t("autofill.locked"), t("autofill.locked_hint"), badge("lock"), () => {
+  const row = menuRow(t("autofill.locked"), t("autofill.locked_hint"), badge("lock"), () => {
     void send({ type: "autofill:open-popup" });
     closeMenu();
   });
+  row.dataset.armed = "1";
+  return row;
 }
 
 async function openCodeMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
@@ -328,7 +365,8 @@ async function fillAddressFrom(request: AutofillRequest, input: HTMLInputElement
   closeMenu();
   if (!response.ok || !("identity" in response)) return;
   const data: AddressData = response.identity;
-  fillAddress(detectFields(scopeOf(input)), data, setValue);
+  const random = request.type === "autofill:random-address";
+  fillAddress(detectFields(scopeOf(input)), data, random ? setRandomValue : setValue);
 }
 
 async function openFrameCardMenu(frame: HTMLIFrameElement, onlyIfUseful: boolean): Promise<void> {
@@ -372,6 +410,7 @@ function onWindowBlur(): void {
     activeInput = null;
     cardFrame = focused;
     placeTrigger();
+    void checkSite();
     if (menu.hidden) void openFrameCardMenu(focused, true);
   }, 0);
 }
@@ -742,6 +781,7 @@ function onFocusIn(event: FocusEvent): void {
   activeInput = target;
   cardFrame = null;
   placeTrigger();
+  void checkSite();
   const offersPassword = target.type === "password" && !target.value && wantsNewPassword(target);
   if (menu.hidden && (offersPassword || (isCodeField(target) && !target.value))) {
     void openMenu({ onlyIfUseful: true });
@@ -840,6 +880,205 @@ document.addEventListener(
 window.addEventListener("scroll", placeTrigger, true);
 window.addEventListener("resize", placeTrigger);
 
+function warningHeading(warning: LookalikeMatch): HTMLElement {
+  const heading = document.createElement("div");
+  heading.className = "heading warning";
+  const title = document.createElement("strong");
+  title.textContent = t("autofill.lookalike_title", { domain: warning.target });
+  heading.append(icon("alert"), title);
+  return heading;
+}
+
+function armRow(row: HTMLButtonElement): void {
+  row.dataset.armed = "1";
+  row.classList.add("armed");
+  const text = row.querySelector(".text");
+  let detail = text?.querySelector("small");
+  if (text && !detail) {
+    detail = document.createElement("small");
+    text.append(detail);
+  }
+  if (detail) detail.textContent = t("autofill.fill_anyway");
+  row.focus();
+}
+
+async function checkSite(): Promise<LookalikeMatch | null> {
+  if (location.protocol !== "https:") return null;
+  const response = await send({ type: "autofill:site-check" });
+  const warning = response.ok && "lookalike" in response ? response.lookalike : null;
+  const changed = warning?.target !== siteWarning?.target;
+  siteWarning = warning;
+  if (changed && !menu.hidden) menu.querySelector(".heading")?.replaceWith(menuHeading());
+  return warning;
+}
+
+function showChip(field: HTMLInputElement, warning: LookalikeMatch): void {
+  const rect = field.getBoundingClientRect();
+  chip.replaceChildren(icon("alert"), t("autofill.lookalike_title", { domain: warning.target }));
+  chip.style.left = `${Math.max(8, rect.left)}px`;
+  chip.style.top = `${rect.bottom + 6}px`;
+  chip.hidden = false;
+  const hide = () => (chip.hidden = true);
+  field.addEventListener("blur", hide, { once: true });
+  setTimeout(hide, 8000);
+}
+
+function hasPaymentFrames(scope: ParentNode): boolean {
+  return [...scope.querySelectorAll("iframe")].some((frame) => isPaymentFrameUrl(frame.src));
+}
+
+function formLeading(prompt: FormPrompt): HTMLElement {
+  if (prompt.kind === "card") {
+    return prompt.brand && prompt.brand !== "card" ? brandMark(prompt.brand) : badge("card");
+  }
+  if (prompt.country) return flagMark(prompt.country);
+  return badge(prompt.random ? "globe" : "map-pin");
+}
+
+function formTitle(prompt: FormPrompt): string {
+  if (prompt.kind === "card") {
+    return t(prompt.update ? "autofill.update_card_title" : "autofill.save_card_title", {
+      last4: prompt.last4 ?? "",
+    });
+  }
+  if (prompt.random && !prompt.update) {
+    return t("autofill.keep_identity_title", { domain: prompt.domain });
+  }
+  return t(prompt.update ? "autofill.update_address_title" : "autofill.save_address_title");
+}
+
+function formDetail(prompt: FormPrompt): string {
+  if (prompt.kind === "address") return prompt.preview ?? "";
+  const brand = prompt.brand ? CARD_BRAND_NAMES[prompt.brand] : "";
+  return [brand, prompt.expiry].filter(Boolean).join(" · ");
+}
+
+function showFormBanner(prompt: FormPrompt): void {
+  banner.replaceChildren();
+  const title = document.createElement("strong");
+  title.textContent = formTitle(prompt);
+  const detail = document.createElement("small");
+  detail.textContent = formDetail(prompt);
+  const text = document.createElement("div");
+  text.className = "text";
+  text.append(title, detail);
+
+  const cvv = document.createElement("input");
+  cvv.type = "checkbox";
+  if (prompt.kind === "card" && prompt.hasCvv) {
+    const label = document.createElement("label");
+    label.className = "check";
+    label.append(cvv, t("autofill.save_cvv"));
+    text.append(label);
+  }
+
+  const never = document.createElement("button");
+  never.type = "button";
+  never.className = "link";
+  never.textContent = t("autofill.never_here");
+  text.append(never);
+
+  const save = document.createElement("button");
+  save.type = "button";
+  save.className = "primary";
+  save.textContent = t(prompt.update ? "autofill.update" : "autofill.save");
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.textContent = t("autofill.skip");
+
+  save.addEventListener("click", async (event) => {
+    if (!event.isTrusted) return;
+    const response = await send({ type: "autofill:form-save", cvv: cvv.checked });
+    if (response.ok && "saved" in response && response.saved) {
+      banner.replaceChildren(logo(24), t("autofill.saved"));
+      setTimeout(() => (banner.hidden = true), 2000);
+    } else if (response.ok && "locked" in response && response.locked) {
+      detail.textContent = t("autofill.unlock_to_save");
+    } else {
+      detail.textContent = t("autofill.save_failed");
+    }
+  });
+  dismiss.addEventListener("click", (event) => {
+    if (!event.isTrusted) return;
+    void send({ type: "autofill:form-dismiss" });
+    banner.hidden = true;
+  });
+  never.addEventListener("click", (event) => {
+    if (!event.isTrusted) return;
+    void send({ type: "autofill:form-dismiss", never: true });
+    banner.hidden = true;
+  });
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  actions.append(dismiss, save);
+  banner.append(formLeading(prompt), text, actions);
+  banner.hidden = false;
+}
+
+async function captureForm(scope: ParentNode): Promise<void> {
+  if (location.protocol !== "https:") return;
+  if (passwordFields(scope).some((field) => field.value)) return;
+  const fields = detectFields(scope);
+  const cardFields = fields.filter((field) => isCardKind(field.kind));
+  const placeFields = fields.filter((field) => !isCardKind(field.kind));
+  const typedCard = cardFields.some((field) => field.kind === "cc-number" && field.element.value);
+  const framed = hasPaymentFrames(scope === document ? document : (scope as Element));
+  const kind = placeFields[0] ? formKindOf(placeFields[0].element, fields) : null;
+  const cardState = fillState(cardFields, filled);
+  const placeState = fillState(placeFields, filled);
+  const card = typedCard || framed ? readCard(cardFields) : undefined;
+  const address =
+    kind && (placeState.typed || placeState.random) ? readAddress(placeFields) : undefined;
+  if (!card && !address) return;
+  const key = JSON.stringify([card, address]);
+  if (key === lastFormCapture.key && Date.now() - lastFormCapture.at < 3000) return;
+  lastFormCapture = { key, at: Date.now() };
+  const response = await send({
+    type: "autofill:form-capture",
+    ...(card ? { card, untouched: !cardState.typed } : {}),
+    ...(address ? { address, random: placeState.random } : {}),
+  });
+  if (response.ok && "form" in response && response.form) showFormBanner(response.form);
+}
+
+document.addEventListener(
+  "submit",
+  (event) => {
+    if (event.target instanceof HTMLFormElement) void captureForm(event.target);
+  },
+  true,
+);
+document.addEventListener(
+  "click",
+  (event) => {
+    if (!event.isTrusted) return;
+    const button = (event.target as Element | null)?.closest?.(
+      'button, input[type="submit"], input[type="button"], [role="button"]',
+    );
+    if (!button || !isSubmitLike(button)) return;
+    const scope = (button as HTMLButtonElement).form ?? button.closest("form") ?? document;
+    void captureForm(scope);
+  },
+  true,
+);
+document.addEventListener(
+  "paste",
+  (event) => {
+    const target = event.target;
+    if (!event.isTrusted || !(target instanceof HTMLInputElement) || target.type !== "password") {
+      return;
+    }
+    void checkSite().then((warning) => warning && showChip(target, warning));
+  },
+  true,
+);
+chrome.runtime.onMessage?.addListener((message: unknown) => {
+  if ((message as { type?: unknown } | null)?.type === "7key:form-capture") {
+    void captureForm(document);
+  }
+});
+
 async function start(): Promise<void> {
   const { locale } = (await chrome.storage.local.get("locale")) as { locale?: LocalePreference };
   t = createTranslator(resolveLocale(locale));
@@ -851,6 +1090,9 @@ async function start(): Promise<void> {
   if (response.ok && "prompt" in response && response.prompt) {
     if (response.prompt.confirmed) showBanner(response.prompt);
     else watchOutcome([]);
+  } else {
+    const form = await send({ type: "autofill:form-pending" });
+    if (form.ok && "form" in form && form.form) showFormBanner(form.form);
   }
 
   if (document.activeElement instanceof HTMLInputElement) {

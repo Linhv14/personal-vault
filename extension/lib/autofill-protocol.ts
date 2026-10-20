@@ -1,3 +1,4 @@
+import type { LookalikeMatch } from "../../src/core/lookalike.js";
 import type { CardBrand } from "./item-types.js";
 
 export const AUTOFILL_SCRIPT_ID = "personal-vault-autofill";
@@ -50,6 +51,26 @@ export interface AddressData {
   country?: string;
 }
 
+export interface CapturedCard {
+  cardholder?: string;
+  number?: string;
+  expiry?: string;
+  cvv?: string;
+}
+
+export interface FormPrompt {
+  kind: "card" | "address";
+  domain: string;
+  update: boolean;
+  random?: boolean;
+  brand?: CardBrand;
+  last4?: string;
+  expiry?: string;
+  hasCvv?: boolean;
+  preview?: string;
+  country?: string;
+}
+
 export interface PendingPrompt {
   domain: string;
   username?: string;
@@ -84,7 +105,25 @@ export type AutofillRequest =
   | { type: "autofill:identities" }
   | { type: "autofill:identity"; id: string }
   | { type: "autofill:random-address"; country: string }
-  | { type: "autofill:aliases" };
+  | { type: "autofill:aliases" }
+  | {
+      type: "autofill:form-capture";
+      card?: CapturedCard;
+      untouched?: boolean;
+      address?: AddressData;
+      random?: boolean;
+    }
+  | { type: "autofill:form-pending" }
+  | { type: "autofill:form-save"; cvv?: boolean }
+  | { type: "autofill:form-dismiss"; never?: boolean }
+  | { type: "autofill:site-check" };
+
+export interface CardFrameCapture {
+  type: "autofill:card-frame-capture";
+  card: CapturedCard;
+  untouched: boolean;
+  submit: boolean;
+}
 
 export type AutofillResponse =
   | { ok: true; locked: true }
@@ -101,6 +140,8 @@ export type AutofillResponse =
   | { ok: true; locked: false; identities: IdentitySuggestion[] }
   | { ok: true; identity: AddressData }
   | { ok: true; aliases: string[]; site: string }
+  | { ok: true; form: FormPrompt | null }
+  | { ok: true; lookalike: LookalikeMatch | null }
   | { ok: false; error: string };
 
 export function isAutofillRequest(message: unknown): message is AutofillRequest {
