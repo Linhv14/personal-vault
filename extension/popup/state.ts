@@ -1,5 +1,6 @@
 import { ensureIdentity } from "../lib/identity.js";
 import { signal } from "@preact/signals";
+import { createContext } from "preact";
 import { createTranslator, describeError, type Translate } from "../../src/i18n/index.js";
 import { formatDateTime } from "../ui/format.js";
 import { localeSignal } from "../ui/i18n.js";
@@ -10,6 +11,7 @@ import {
   decryptEverything,
   newItemId,
   importKey,
+  markUsed,
   migrateUnboundItems,
   removeItem,
   saveItem,
@@ -81,11 +83,18 @@ export function toast(message: string): void {
   toastTimer = setTimeout(() => (toastMessage.value = null), 1800);
 }
 
-export async function copy(value: string, what: string): Promise<void> {
+export async function copy(value: string, what: string, from?: VaultItem): Promise<void> {
   await navigator.clipboard.writeText(value);
   toast(translator()("common.copied", { what }));
+  if (from && vaultKey.value) {
+    void markUsed(vaultKey.value, from)
+      .then(reloadItems)
+      .catch(() => {});
+  }
   await scheduleClipboardClear();
 }
+
+export const CopySource = createContext<VaultItem | undefined>(undefined);
 
 function setItems(next: VaultItem[]): void {
   items.value = next;

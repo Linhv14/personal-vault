@@ -2106,3 +2106,37 @@ input.switch:focus-visible {
   color: var(--warn);
   cursor: help;
 }
+.purge-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warn) !important;
+}
+.purge-note .icon {
+  width: 12px;
+  height: 12px;
+}
+.purge-note.soon {
+  color: var(--danger) !important;
+}
+.purge-badge {
+  flex: none;
+  align-self: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.purge-badge.soon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.icon-button.pill-icon.danger {
+  color: var(--danger);
+}
+.icon-button.pill-icon.danger:hover {
+  background: var(--danger-soft);
+}

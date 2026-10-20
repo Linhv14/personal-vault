@@ -54,6 +54,7 @@ function EditField({
   const [scanHint, setScanHint] = useState<ScanHint>(null);
   const input = useRef<HTMLInputElement>(null);
   const secret = spec.kind === "password" || spec.kind === "secret";
+  const cvv = spec.key === "cardCvv";
   const multiline =
     spec.kind === "multiline" || spec.kind === "codes" || spec.kind === "multilineSecret";
   const value = initialValue(spec, item, tabUrl.value);
@@ -97,9 +98,11 @@ function EditField({
             ? spec.kind
             : "text"
       }
-      inputMode={spec.kind === "cardNumber" || spec.kind === "expiry" ? "numeric" : undefined}
-      maxLength={spec.kind === "expiry" ? 5 : undefined}
-      pattern={spec.kind === "expiry" ? "(0[1-9]|1[0-2])/[0-9]{2}" : undefined}
+      inputMode={
+        spec.kind === "cardNumber" || spec.kind === "expiry" || cvv ? "numeric" : undefined
+      }
+      maxLength={spec.kind === "expiry" ? 5 : cvv ? 4 : undefined}
+      pattern={spec.kind === "expiry" ? "(0[1-9]|1[0-2])/[0-9]{2}" : cvv ? "[0-9]{3,4}" : undefined}
       title={spec.kind === "expiry" ? "MM/YY" : undefined}
       onInput={
         spec.kind === "expiry"
@@ -107,7 +110,12 @@ function EditField({
               const field = event.currentTarget;
               field.value = maskExpiry(field.value);
             }
-          : undefined
+          : cvv
+            ? (event) => {
+                const field = event.currentTarget;
+                field.value = field.value.replace(/\D/g, "").slice(0, cvvLength(field.form));
+              }
+            : undefined
       }
       className={spec.kind === "cardNumber" ? "mono" : undefined}
       placeholder={
@@ -117,7 +125,9 @@ function EditField({
             ? t("edit.totp_placeholder")
             : spec.kind === "expiry"
               ? "MM/YY"
-              : undefined
+              : cvv
+                ? "123"
+                : undefined
       }
     />
   );
@@ -182,6 +192,12 @@ function EditField({
 
 function storedVault(id: string): string | undefined {
   return id === DEFAULT_VAULT_ID ? undefined : id;
+}
+
+function cvvLength(form: HTMLFormElement | null): number {
+  const number = form?.elements.namedItem("cardNumber");
+  const digits = number instanceof HTMLInputElement ? number.value.replace(/\D/g, "") : "";
+  return /^3[47]/.test(digits) ? 4 : 3;
 }
 
 function maskExpiry(raw: string): string {

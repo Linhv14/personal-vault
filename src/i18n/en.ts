@@ -636,6 +636,7 @@ export const en = {
   "detail.empty": "Pick an item to see it here.",
   "item.more": "More",
   "item.modified": "Modified {date}",
+  "item.last_used_label": "Last used",
   "item.created_label": "Created",
   "item.created": "Created {date}",
   "vault.all": "All vaults",
@@ -752,6 +753,7 @@ export const en = {
   "item.codes_all_used": "All codes used. Generate new ones on the site.",
   "item.code": "Code {number}",
   "list.empty_type": "Nothing here yet.",
+  "edit.cvv_invalid": "The security code has 3 or 4 digits.",
   "edit.expiry_invalid": "Write the expiry as MM/YY.",
   "kind.wifi": "Wi-Fi",
   "kind.recovery": "Recovery codes",
@@ -878,6 +880,7 @@ export const en = {
   "trash.empty": "Empty trash",
   "trash.empty_state": "Trash is empty",
   "trash.no_match": "No items match",
+  "trash.days_left": "{days, plural, =0 {Due today} other {# days}}",
   "trash.purges_in":
     "{days, plural, =0 {Purges today} one {Purges in # day} other {Purges in # days}}",
   "trash.confirm_delete":

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { generateTotp, secondsRemaining, type TotpConfig } from "../../../src/core/totp.js";
 import { useT } from "../../ui/i18n.js";
-import { copy, nowMs } from "../state.js";
+import { copy, CopySource, nowMs } from "../state.js";
 import { CopyRow } from "./FieldRow.js";
 
 function Ring({
@@ -94,12 +94,13 @@ function LiveCode({
 export function TotpRow({ config }: { config: TotpConfig }) {
   const t = useT();
   const totp = useTotp(config);
+  const source = useContext(CopySource);
   return (
     <CopyRow
       icon="clock"
       label={t("common.totp")}
       onCopy={() => {
-        if (totp.code) void copy(totp.code, t("common.totp"));
+        if (totp.code) void copy(totp.code, t("common.totp"), source);
       }}
     >
       <LiveCode totp={totp} radius={8} size={20} />

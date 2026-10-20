@@ -77,6 +77,7 @@ export interface VaultItem {
   fields?: CustomField[];
   passwordHistory?: PasswordChange[];
   lastUsedAt?: number;
+  editedAt?: number;
   expiresOn?: string;
   sshPublicKey?: string;
   sshPrivateKey?: string;
@@ -240,7 +241,7 @@ export async function saveItem(
   source?: { vault?: string },
 ): Promise<VaultItem> {
   const now = Math.floor(Date.now() / 1000);
-  const payload = { ...item, createdAt: item.createdAt ?? now, updatedAt: now };
+  const payload = { ...item, createdAt: item.createdAt ?? now, editedAt: now, updatedAt: now };
   const from = source ? locationOf(source.vault) : await locate(item.id);
   const saved = isSharedVaultId(payload.vault)
     ? await saveSharedItem(key, payload.vault, payload)
@@ -283,7 +284,11 @@ export async function markUsed(
   if (!row || !isLive(row)) return;
   const { item: latest } = await openItem(key, row, false);
   if (usedRecently(latest, now)) return;
-  await storeItem(key, { ...latest, lastUsedAt: now }, row.updatedAt);
+  await storeItem(
+    key,
+    { ...latest, editedAt: latest.editedAt ?? latest.updatedAt, lastUsedAt: now },
+    row.updatedAt,
+  );
 }
 
 export function byLastUsed(a: VaultItem, b: VaultItem): number {

@@ -2,12 +2,14 @@ import { itemSubtitle } from "../../lib/item-subtitle.js";
 import type { VaultItem } from "../../lib/vault.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
-import { selectItem, selectedId } from "../state.js";
+import { daysUntilPurge } from "../../lib/trash.js";
+import { nowMs, selectItem, selectedId } from "../state.js";
 import { ItemIcon } from "./ItemIcons.js";
 
 export function Row({ item }: { item: VaultItem }) {
   const t = useT();
   const selected = selectedId.value === item.id;
+  const purgeDays = daysUntilPurge(item, Math.floor(nowMs() / 1000));
   return (
     <div
       className={selected ? "row selected" : "row"}
@@ -32,6 +34,14 @@ export function Row({ item }: { item: VaultItem }) {
         </div>
         <div className="row-sub">{itemSubtitle(item, t)}</div>
       </div>
+      {purgeDays !== null && (
+        <span
+          className={purgeDays <= 3 ? "purge-badge soon" : "purge-badge"}
+          title={t("trash.purges_in", { days: purgeDays })}
+        >
+          {t("trash.days_left", { days: purgeDays })}
+        </span>
+      )}
     </div>
   );
 }

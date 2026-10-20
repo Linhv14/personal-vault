@@ -1,10 +1,10 @@
 import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
+import { useContext, useState } from "preact/hooks";
 import type { IconName } from "../../../src/ui/icons.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";
-import { copy } from "../state.js";
+import { copy, CopySource } from "../state.js";
 
 export function Field({ label, children }: { label: string; children: ComponentChildren }) {
   return (
@@ -69,13 +69,14 @@ export function ValueRow({
   masked?: string;
 }) {
   const t = useT();
+  const source = useContext(CopySource);
   const [revealed, setRevealed] = useState(false);
   return (
     <CopyRow
       icon={icon}
       label={label}
       multiline={multiline}
-      onCopy={() => void copy(value, label.toLowerCase())}
+      onCopy={() => void copy(value, label.toLowerCase(), source)}
       actions={
         secret && (
           <IconButton

@@ -12,6 +12,7 @@ import {
   type FieldSpec,
 } from "../../lib/item-types.js";
 import type { VaultItem } from "../../lib/vault.js";
+import { daysUntilPurge } from "../../lib/trash.js";
 import { vaultOf } from "../../lib/vaults.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
@@ -22,7 +23,9 @@ import { ItemIcon } from "../components/ItemIcons.js";
 import { TotpRow } from "../components/Totp.js";
 import {
   copy,
+  CopySource,
   deleteForever,
+  nowMs,
   formatDate,
   openEditor,
   openShare,
@@ -209,18 +212,18 @@ function Actions({ item }: { item: VaultItem }) {
   if (item.trashedAt) {
     return (
       <div className="detail-actions">
-        <button
-          type="button"
-          className="pill"
+        <IconButton
+          icon="refresh"
+          className="pill-icon"
+          label={t("list.restore")}
           onClick={() => void run(() => setTrashed(item, false))}
-        >
-          <Icon name="refresh" />
-          {t("list.restore")}
-        </button>
-        <button type="button" className="pill danger" onClick={() => void deleteForever(item)}>
-          <Icon name="trash" />
-          {t("edit.delete")}
-        </button>
+        />
+        <IconButton
+          icon="trash"
+          className="pill-icon danger"
+          label={t("edit.delete")}
+          onClick={() => void deleteForever(item)}
+        />
       </div>
     );
   }
@@ -309,102 +312,118 @@ export function Detail({ item }: { item: VaultItem | null }) {
   const main = specs.filter((spec) => !SEPARATE_KEYS.has(spec.key));
   const websites = [item.url, ...(item.urls ?? [])].filter((url): url is string => Boolean(url));
   const fields = item.fields ?? [];
+  const purgeDays = daysUntilPurge(item, Math.floor(nowMs() / 1000));
 
   return (
-    <section className="screen detail" id="detail" key={item.id}>
-      <header className="detail-head">
-        <ItemIcon item={item} />
-        <div className="detail-title">
-          <h1>{item.title}</h1>
-          <p>
-            {[
-              t(KIND_LABEL[type]),
-              ...(vaults.value.length > 1
-                ? [vaults.value.find((vault) => vault.id === vaultOf(item))?.name ?? ""]
-                : []),
-              ...(item.tags ?? []),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+    <CopySource.Provider value={item}>
+      <section className="screen detail" id="detail" key={item.id}>
+        <header className="detail-head">
+          <ItemIcon item={item} />
+          <div className="detail-title">
+            <h1>{item.title}</h1>
+            {purgeDays !== null ? (
+              <p className={purgeDays <= 3 ? "purge-note soon" : "purge-note"}>
+                <Icon name="clock" />
+                {t("trash.purges_in", { days: purgeDays })}
+              </p>
+            ) : (
+              <p>
+                {[
+                  t(KIND_LABEL[type]),
+                  ...(vaults.value.length > 1
+                    ? [vaults.value.find((vault) => vault.id === vaultOf(item))?.name ?? ""]
+                    : []),
+                  ...(item.tags ?? []),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
+          </div>
+          <Actions item={item} />
+        </header>
+
+        <div className="detail-body">
+          {main.some((spec) =>
+            spec.key === "totp" ? item.totp : item[spec.key as keyof VaultItem],
+          ) && (
+            <div className="group">
+              {main.map((spec) => (
+                <MainRow spec={spec} item={item} key={spec.key} />
+              ))}
+            </div>
+          )}
+
+          {websites.length > 0 && (
+            <div className="group">
+              {websites.map((url, index) => (
+                <ValueRow
+                  key={`${index}-${url}`}
+                  icon="link"
+                  label={t("field.website")}
+                  value={url}
+                />
+              ))}
+            </div>
+          )}
+
+          {item.codes?.length ? <RecoveryCodes item={item} /> : null}
+
+          {fields.length > 0 && (
+            <div className="group">
+              {fields.map((field, index) => (
+                <ValueRow
+                  key={`field-${index}`}
+                  icon={field.hidden ? "key" : "note"}
+                  label={field.label || t("edit.field_value")}
+                  value={field.value}
+                  secret={field.hidden === true}
+                />
+              ))}
+            </div>
+          )}
+
+          {item.note && (
+            <div className="group">
+              <ValueRow icon="note" label={t("common.note")} value={item.note} multiline />
+            </div>
+          )}
+
+          {item.passkey && (
+            <div className="group">
+              <div className="field-row static">
+                <Icon name="shield" className="field-icon" />
+                <Field label={t("common.passkey")}>
+                  <span className="v">{t("item.passkey_saved", { site: item.passkey.rpId })}</span>
+                </Field>
+              </div>
+            </div>
+          )}
+
+          <PasswordHistory item={item} />
+
+          <dl className="detail-meta">
+            {item.lastUsedAt && (
+              <div>
+                <dt>{t("item.last_used_label")}</dt>
+                <dd>{formatDate(item.lastUsedAt)}</dd>
+              </div>
+            )}
+            {(item.editedAt ?? item.updatedAt) && (
+              <div>
+                <dt>{t("console.last_change")}</dt>
+                <dd>{formatDate(item.editedAt ?? item.updatedAt)}</dd>
+              </div>
+            )}
+            {item.createdAt && (
+              <div>
+                <dt>{t("item.created_label")}</dt>
+                <dd>{formatDate(item.createdAt)}</dd>
+              </div>
+            )}
+          </dl>
         </div>
-        <Actions item={item} />
-      </header>
-
-      <div className="detail-body">
-        {main.some((spec) =>
-          spec.key === "totp" ? item.totp : item[spec.key as keyof VaultItem],
-        ) && (
-          <div className="group">
-            {main.map((spec) => (
-              <MainRow spec={spec} item={item} key={spec.key} />
-            ))}
-          </div>
-        )}
-
-        {websites.length > 0 && (
-          <div className="group">
-            {websites.map((url, index) => (
-              <ValueRow
-                key={`${index}-${url}`}
-                icon="link"
-                label={t("field.website")}
-                value={url}
-              />
-            ))}
-          </div>
-        )}
-
-        {item.codes?.length ? <RecoveryCodes item={item} /> : null}
-
-        {fields.length > 0 && (
-          <div className="group">
-            {fields.map((field, index) => (
-              <ValueRow
-                key={`field-${index}`}
-                icon={field.hidden ? "key" : "note"}
-                label={field.label || t("edit.field_value")}
-                value={field.value}
-                secret={field.hidden === true}
-              />
-            ))}
-          </div>
-        )}
-
-        {item.note && (
-          <div className="group">
-            <ValueRow icon="note" label={t("common.note")} value={item.note} multiline />
-          </div>
-        )}
-
-        {item.passkey && (
-          <div className="group">
-            <div className="field-row static">
-              <Icon name="shield" className="field-icon" />
-              <Field label={t("common.passkey")}>
-                <span className="v">{t("item.passkey_saved", { site: item.passkey.rpId })}</span>
-              </Field>
-            </div>
-          </div>
-        )}
-
-        <PasswordHistory item={item} />
-
-        <dl className="detail-meta">
-          {item.updatedAt && (
-            <div>
-              <dt>{t("console.last_change")}</dt>
-              <dd>{formatDate(item.updatedAt)}</dd>
-            </div>
-          )}
-          {item.createdAt && (
-            <div>
-              <dt>{t("item.created_label")}</dt>
-              <dd>{formatDate(item.createdAt)}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
-    </section>
+      </section>
+    </CopySource.Provider>
   );
 }

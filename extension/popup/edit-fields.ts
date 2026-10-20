@@ -62,6 +62,12 @@ export function readEditedFields(
       fields.totp = raw ? parseTotpInput(raw, text("username")) : undefined;
       continue;
     }
+    if (key === "cardCvv") {
+      const raw = text(key);
+      if (raw && !/^\d{3,4}$/.test(raw)) throw new InvalidField("edit.cvv_invalid");
+      fields.cardCvv = raw || undefined;
+      continue;
+    }
     if (key === "codes") {
       const codes = parseRecoveryCodes(String(data.get(key) ?? ""));
       fields.codes = codes.length > 0 ? codes : undefined;
