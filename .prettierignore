@@ -5,3 +5,4 @@ package-lock.json
 action/dist
 tools/demo-video/site
 tools/demo-video/out
+e2e-browser/.artifacts
