@@ -215,3 +215,19 @@
   color: var(--muted);
   font-size: 11px;
 }
+.two-factor-step,
+.second-factor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.two-factor-step {
+  gap: 16px;
+}
+.two-factor-step .second-factor > button[type="submit"] {
+  width: 100%;
+}
+.two-factor-step > button[type="button"],
+.two-factor-step .second-factor > button[type="button"] {
+  align-self: center;
+}

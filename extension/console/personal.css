@@ -457,3 +457,6 @@
   flex: 1;
   margin: 0;
 }
+.personal .second-factor > button[type="button"] {
+  align-self: flex-start;
+}
