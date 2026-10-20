@@ -54,10 +54,12 @@ master password ─ PBKDF2-SHA256, 600k ─► master key
 ```
 
 The server learns your email, how many items you have and when they change. It
-never learns site names, usernames, passwords, 2FA secrets or notes. Two limits,
-stated plainly:
+never learns usernames, passwords, 2FA secrets or notes. With website icons on, it
+sees a login's domain while it fetches that site's logo. Two limits, stated plainly:
 
-1. **A forgotten master password cannot be recovered.** Nobody holds a copy.
+1. **A forgotten master password can only be reset with a recovery code.** Nobody
+   holds a copy of the password. Create a recovery code in Settings and keep it
+   somewhere safe; without one, the vault cannot be opened.
 2. **Whatever app carries a share link can open it.** Add a link password and
    send it another way when that matters.
 
