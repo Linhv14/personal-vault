@@ -265,13 +265,25 @@ function websiteField(raw: string): HTMLElement {
   const valueNode = document.createElement("div");
   valueNode.className = "value";
   const anchor = document.createElement("a");
+  anchor.className = "site";
   anchor.href = url.href;
   anchor.target = "_blank";
   anchor.rel = "noopener noreferrer";
-  anchor.textContent = url.href.replace(/\/$/, "");
+  anchor.title = url.href;
+  const host = document.createElement("span");
+  host.className = "site-host";
+  host.textContent = url.host;
+  const rest = `${url.pathname}${url.search}`.replace(/^\/$/, "");
+  anchor.append(host);
+  if (rest) {
+    const path = document.createElement("span");
+    path.className = "site-path";
+    path.textContent = rest;
+    anchor.append(path);
+  }
   valueNode.append(anchor);
   body.append(valueNode);
-  wrap.append(copyButton(anchor.textContent).element);
+  wrap.append(copyButton(url.href.replace(/\/$/, "")).element);
   return wrap;
 }
 
@@ -373,7 +385,17 @@ function secretField(label: string, password: string): HTMLElement {
   valueNode.className = "value mono masked";
   valueNode.textContent = PASSWORD_MASK;
   body.append(valueNode);
-  wrap.append(copyButton(password).element);
+  let shown = false;
+  const toggle = iconButton("eye", t("common.show"), () => {
+    shown = !shown;
+    valueNode.textContent = shown ? password : PASSWORD_MASK;
+    valueNode.classList.toggle("masked", !shown);
+    toggle.replaceChildren(icon(shown ? "eye-off" : "eye"));
+    const label = t(shown ? "common.hide" : "common.show");
+    toggle.title = label;
+    toggle.setAttribute("aria-label", label);
+  });
+  wrap.append(toggle, copyButton(password).element);
   return wrap;
 }
 
