@@ -286,6 +286,14 @@ function render(payload: SharePayload): void {
   if (payload.username) fields.append(textField(t("common.username"), payload.username));
   if (payload.password) fields.append(passwordField(payload.password));
   if (payload.totp) fields.append(totpField(payload.totp));
+  for (const custom of payload.fields ?? []) {
+    if (typeof custom?.value !== "string" || !custom.value) continue;
+    const label =
+      typeof custom.label === "string" && custom.label ? custom.label : t("common.field");
+    fields.append(
+      custom.hidden ? secretField(label, custom.value) : textField(label, custom.value),
+    );
+  }
   if (payload.note) fields.append(noteField(payload.note));
 
   renderBanner(cached);
@@ -356,7 +364,11 @@ function textField(label: string, value: string): HTMLElement {
 const PASSWORD_MASK = "•".repeat(12);
 
 function passwordField(password: string): HTMLElement {
-  const { wrap, body } = field(t("common.password"));
+  return secretField(t("common.password"), password);
+}
+
+function secretField(label: string, password: string): HTMLElement {
+  const { wrap, body } = field(label);
   const valueNode = document.createElement("div");
   valueNode.className = "value mono masked";
   valueNode.textContent = PASSWORD_MASK;

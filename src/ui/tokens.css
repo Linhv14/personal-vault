@@ -19,6 +19,7 @@
   --danger-solid: #d0342c;
   --danger-solid-hover: #b42a23;
   --danger-on: #ffffff;
+  --segment-active: var(--card);
   --ok: #1e7f5a;
   --warn: #a15c07;
   --warn-soft: color-mix(in srgb, #f7b955 22%, transparent);
@@ -45,6 +46,7 @@
     --danger-soft: color-mix(in srgb, #ff5a4a 14%, transparent);
     --danger-solid: #e5483d;
     --danger-solid-hover: #f05d52;
+    --segment-active: #3a3633;
     --ok: #5ad49e;
     --warn: #f7b955;
     --warn-soft: color-mix(in srgb, #f7b955 12%, transparent);

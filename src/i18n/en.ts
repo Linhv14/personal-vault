@@ -93,6 +93,7 @@ export const en = {
   "common.url": "Website",
   "common.note": "Note",
 
+  "common.field": "Field",
   "strength.very_weak": "very weak",
   "strength.weak": "weak",
   "strength.fair": "fair",
@@ -820,8 +821,10 @@ export const en = {
   "share.views_1": "Once",
   "share.views_unlimited": "Until it expires",
   "share.passphrase": "Link password",
-  "share.passphrase_placeholder": "Leave empty if not needed",
+  "share.passphrase_placeholder": "Send it to them separately",
   "share.create": "Create link",
+  "share.create_count":
+    "{count, plural, =0 {Pick something to share} one {Create link with # item} other {Create link with # items}}",
   "share.link": "Link",
   "share.ready": "Your link is ready",
   "share.copy_link": "Copy link",
@@ -838,7 +841,7 @@ export const en = {
     "Recipients must enter a code sent to their email to see it. Up to 10 addresses.",
   "share.passphrase_hint":
     "The recipient must enter this password. Send it separately, for example the link by email and the password by text message.",
-  "share.contents": "The recipient sees",
+  "share.contents": "Includes",
   "share.totp_hint": "2FA secret included: codes outlive the link.",
   "share.views_hint":
     "With more than one recipient, the link stays open until it expires so each of them can view it.",

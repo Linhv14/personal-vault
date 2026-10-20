@@ -24,6 +24,7 @@ export interface SharePayload {
   password?: string;
   note?: string;
   totp?: TotpConfig;
+  fields?: { label: string; value: string; hidden?: boolean }[];
 }
 
 export interface CreatedShare {

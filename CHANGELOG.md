@@ -8,6 +8,12 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Fixed
+
+- Share links now carry an item's custom fields, such as an account ID, and
+  the share screen lets you pick each part to include; the note stays out
+  unless picked.
+
 ### Added
 
 - **Settings → Trash** lists deleted items with when each was deleted and how

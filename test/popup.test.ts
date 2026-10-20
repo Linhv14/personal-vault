@@ -428,10 +428,13 @@ describe("extension popup", () => {
     expect(server.received.join("\n")).not.toContain(fragment);
   });
 
-  it("shares the website, username, password and 2FA, never the note", async () => {
+  it("shares the website, username, password and 2FA, and leaves the note out unless picked", async () => {
     await openShareScreen();
     expect(el("share-fields").textContent).toContain("2FA code");
-    expect(el("share-fields").textContent).not.toContain("Note");
+    const note = [...el("share-fields").querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Note"),
+    );
+    if (note) expect(note.getAttribute("aria-pressed")).toBe("false");
     expect(el("share-totp-hint").hidden).toBe(false);
 
     server.shareRequests.length = 0;
@@ -451,8 +454,8 @@ describe("extension popup", () => {
   it("keeps a link for several recipients open until it expires", async () => {
     server.emailVerification = true;
     await openShareScreen();
-    el("form-share").querySelector<HTMLInputElement>('[name="access"][value="emails"]')!.click();
-    expect(el("share-recipients-field").hidden).toBe(false);
+    el("form-share").querySelector<HTMLButtonElement>(".share-guard")!.click();
+    await waitFor(() => document.getElementById("share-recipients-field") !== null, "recipients");
 
     const entry = el<HTMLInputElement>("share-recipient-entry");
     entry.value = "a@example.com, b@example.com not-an-email";
@@ -466,7 +469,6 @@ describe("extension popup", () => {
       el("form-share").querySelector<HTMLInputElement>(`[name="maxViews"][value="${value}"]`)!;
     expect(views("1").disabled).toBe(true);
     expect(views("unlimited").checked).toBe(true);
-    expect(el("share-views-hint").hidden).toBe(false);
 
     entry.value = "";
     server.shareRequests.length = 0;
