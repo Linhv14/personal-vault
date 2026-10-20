@@ -97,7 +97,7 @@
                 "name": "Forgot my master password?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "The vault can't be opened. Nobody has a copy, so there is no reset. A recovery code you created beforehand is the only way back in."
+                  "text": "If you created a recovery code, use it to set a new master password. Without one, the vault can't be opened: nobody else has a copy."
                 }
               },
               {
@@ -118,7 +118,7 @@
               },
               {
                 "@type": "Question",
-                "name": "Has it been audited?",
+                "name": "Has it been independently audited?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Not yet. The design and its limits are in the threat model."
@@ -142,7 +142,7 @@
               },
               {
                 "@type": "Question",
-                "name": "What happens to a share link?",
+                "name": "How long does a share link last?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "It stops opening after 1 hour, 1 day, 7 or 30 days, or after its one view, and you can revoke it at any time. The key is in the link itself, so the server can't read what you shared."
@@ -153,7 +153,7 @@
                 "name": "What happens when someone leaves the team?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "The team gets new keys and every secret is re-encrypted, so what they kept can't open anything written afterwards."
+                  "text": "An admin re-keys the team in one click. Every secret is re-encrypted, so what they kept can't open anything written afterwards."
                 }
               },
               {
@@ -258,7 +258,7 @@
                 "name": "Quên mật khẩu chính thì sao?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Kho sẽ không mở được nữa. Không ai giữ bản sao nên cũng không có cách đặt lại. Cách duy nhất là mã khôi phục bạn đã tạo từ trước."
+                  "text": "Nếu đã tạo mã khôi phục, bạn dùng nó để đặt mật khẩu chính mới. Nếu chưa, kho không thể mở lại vì không ai giữ bản sao."
                 }
               },
               {
@@ -279,7 +279,7 @@
               },
               {
                 "@type": "Question",
-                "name": "7key đã được audit chưa?",
+                "name": "7key đã được kiểm định bảo mật độc lập chưa?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Chưa. Thiết kế và các giới hạn đều ghi rõ trong mô hình đe doạ."
@@ -303,7 +303,7 @@
               },
               {
                 "@type": "Question",
-                "name": "Link chia sẻ sẽ ra sao?",
+                "name": "Link chia sẻ tồn tại bao lâu?",
                 "acceptedAnswer": {
                   "@type": "Answer",
                   "text": "Link ngừng mở sau 1 giờ, 1 ngày, 7 hoặc 30 ngày, hoặc sau lần xem duy nhất, và bạn thu hồi được bất cứ lúc nào. Khoá nằm ngay trong link nên server không đọc được nội dung."
@@ -314,15 +314,15 @@
                 "name": "Có người rời nhóm thì sao?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Nhóm được cấp khoá mới và mọi secret được mã hoá lại, nên những gì người đó còn giữ không mở được dữ liệu ghi sau này."
+                  "text": "Admin đổi khoá nhóm bằng một nút: mọi secret được mã hoá lại, nên những gì người đó còn giữ không mở được dữ liệu ghi sau này."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Nhóm tự chạy server riêng được không?",
+                "name": "Nhóm tự chạy máy chủ riêng được không?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Được. Nhóm có thể tự chạy server 7key trên domain của mình. Liên hệ hello@7key.online."
+                  "text": "Được. Nhóm có thể tự chạy máy chủ 7key trên domain của mình. Liên hệ hello@7key.online."
                 }
               }
             ]
@@ -2412,7 +2412,7 @@
           <!-- /lang -->
           <!-- lang:vi -->
           <a class="hide-sm" href="#product">Sản phẩm</a
-          ><a class="hide-sm" href="#developers">Developer</a
+          ><a class="hide-sm" href="#developers">Lập trình viên</a
           ><a class="hide-sm" href="#security">Bảo mật</a
           ><a class="hide-sm" href="#pricing">Bảng giá</a
           ><a href="/" hreflang="en" lang="en">English</a
@@ -2427,7 +2427,7 @@
         <div class="wrap">
           <a class="pill" href="#developers"><span>New</span>AI agents use keys they never see</a>
           <h1>Passwords, 2FA and team secrets. <span class="grad">One vault.</span></h1>
-          <p class="sub">End-to-end encrypted, for you, your team and your deploys.</p>
+          <p class="sub">Encrypted on your device, shared only with the people you choose.</p>
           <div class="ctas">
             <a class="btn primary" href="#install">Add to Chrome</a
             ><a class="btn" href="#product">See how it works</a>
@@ -2544,7 +2544,8 @@
                   ><span
                     ><strong>Share without sending a password</strong
                     ><span
-                      >A link that expires, with an optional passphrase or named recipients.</span
+                      >A link that expires, with an optional link password or named
+                      recipients.</span
                     ></span
                   >
                 </li>
@@ -2603,7 +2604,7 @@
                 <li>
                   <span class="ic">{{icon:lock}}</span
                   ><span
-                    ><strong>Production stays protected</strong
+                    ><strong>Protect production</strong
                     ><span>Everyone reads it, only admins change it.</span></span
                   >
                 </li>
@@ -2617,9 +2618,10 @@
                 <li>
                   <span class="ic">{{icon:refresh}}</span
                   ><span
-                    ><strong>Someone leaves, the keys change</strong
+                    ><strong>Re-key when someone leaves</strong
                     ><span
-                      >New keys, everything re-encrypted. Old copies open nothing new.</span
+                      >One click gives the team new keys and re-encrypts everything. Old copies open
+                      nothing new.</span
                     ></span
                   >
                 </li>
@@ -3205,12 +3207,12 @@
       <section id="faq">
         <div class="wrap">
           <span class="kicker">FAQ</span>
-          <h2>Questions.</h2>
+          <h2>Common questions.</h2>
           <details>
             <summary>Forgot my master password?</summary>
             <p>
-              The vault can't be opened. Nobody has a copy, so there is no reset. A recovery code
-              you created beforehand is the only way back in.
+              If you created a recovery code, use it to set a new master password. Without one, the
+              vault can't be opened: nobody else has a copy.
             </p>
           </details>
           <details>
@@ -3225,7 +3227,7 @@
             </p>
           </details>
           <details>
-            <summary>Has it been audited?</summary>
+            <summary>Has it been independently audited?</summary>
             <p>
               Not yet. The design and its limits are in the <a href="/security">threat model</a>.
             </p>
@@ -3245,7 +3247,7 @@
             </p>
           </details>
           <details>
-            <summary>What happens to a share link?</summary>
+            <summary>How long does a share link last?</summary>
             <p>
               It stops opening after 1 hour, 1 day, 7 or 30 days, or after its one view, and you can
               revoke it at any time. The key is in the link itself, so the server can't read what
@@ -3255,8 +3257,8 @@
           <details>
             <summary>What happens when someone leaves the team?</summary>
             <p>
-              The team gets new keys and every secret is re-encrypted, so what they kept can't open
-              anything written afterwards.
+              An admin re-keys the team in one click. Every secret is re-encrypted, so what they
+              kept can't open anything written afterwards.
             </p>
           </details>
           <details>
@@ -3286,16 +3288,16 @@
       <div class="hero">
         <div class="wrap">
           <a class="pill" href="#developers"
-            ><span>Mới</span>AI agent dùng key mà không nhìn thấy key</a
+            ><span>Mới</span>AI agent dùng key mà không bao giờ thấy giá trị</a
           >
           <h1>Mật khẩu, 2FA và secret của nhóm. <span class="grad">Gọn trong một kho.</span></h1>
-          <p class="sub">Mã hoá đầu-cuối, cho bạn, cho nhóm và cho từng lần deploy.</p>
+          <p class="sub">Mã hoá ngay trên máy, chỉ chia sẻ cho đúng người bạn chọn.</p>
           <div class="ctas">
             <a class="btn primary" href="#install">Thêm vào Chrome</a
             ><a class="btn" href="#product">Xem cách hoạt động</a>
           </div>
           <div class="trust">
-            <span>AES-256 ngay trên máy</span><span>Server không đọc được gì</span
+            <span>AES-256 ngay trên máy</span><span>Máy chủ không đọc được dữ liệu</span
             ><span>Miễn phí cho nhóm đến 5 thành viên</span>
           </div>
           <div class="browser">
@@ -3316,7 +3318,7 @@
             </video>
           </div>
           <p class="strip">
-            <span>Chuyển sang trong một phút từ</span><span class="src">Bitwarden</span
+            <span>Nhập dữ liệu trong một phút từ</span><span class="src">Bitwarden</span
             ><span class="src">1Password</span><span class="src">Proton Pass</span
             ><span class="src">Chrome</span><span class="src">Firefox</span
             ><span class="src">Safari</span>
@@ -3338,7 +3340,7 @@
             /><input type="radio" name="aud" id="aud-dev" aria-controls="p-dev" />
             <div class="seg" role="group" aria-label="Chọn đối tượng">
               <label for="aud-you">Cá nhân</label><label for="aud-team">Nhóm</label
-              ><label for="aud-dev">Developer</label>
+              ><label for="aud-dev">Lập trình viên</label>
             </div>
             <div class="panel" id="p-you" role="region" aria-label="Cho cá nhân">
               <div class="card stage" aria-hidden="true">
@@ -3391,7 +3393,7 @@
                   ><span
                     ><strong>Tự điền khi đăng nhập</strong
                     ><span
-                      >Tài khoản, thẻ và địa chỉ. Gặp tài khoản mới thì hỏi bạn có lưu không.</span
+                      >Tài khoản, thẻ và địa chỉ. Tự hỏi lưu khi bạn tạo tài khoản mới.</span
                     ></span
                   >
                 </li>
@@ -3409,7 +3411,8 @@
                   ><span
                     ><strong>Chia sẻ mà không phải gửi mật khẩu</strong
                     ><span
-                      >Link tự hết hạn, có thể đặt passphrase hoặc chỉ định email người nhận.</span
+                      >Link tự hết hạn, có thể đặt mật khẩu mở link hoặc giới hạn email người
+                      nhận.</span
                     ></span
                   >
                 </li>
@@ -3458,13 +3461,15 @@
                   <span class="ic">{{icon:users}}</span
                   ><span
                     ><strong>Phân quyền theo từng người</strong
-                    ><span>Được sửa hoặc chỉ xem, theo từng nhóm. Mời thẳng vào nhóm.</span></span
+                    ><span
+                      >Sửa hoặc chỉ xem, đặt riêng trong từng nhóm. Mời thẳng vào nhóm.</span
+                    ></span
                   >
                 </li>
                 <li>
                   <span class="ic">{{icon:lock}}</span
                   ><span
-                    ><strong>Production luôn được bảo vệ</strong
+                    ><strong>Bảo vệ Production</strong
                     ><span>Cả nhóm đọc được, chỉ admin được sửa.</span></span
                   >
                 </li>
@@ -3480,9 +3485,10 @@
                 <li>
                   <span class="ic">{{icon:refresh}}</span
                   ><span
-                    ><strong>Có người rời nhóm, khoá đổi luôn</strong
+                    ><strong>Đổi khoá khi có người rời nhóm</strong
                     ><span
-                      >Tạo khoá mới, mã hoá lại toàn bộ. Khoá cũ không mở được gì mới.</span
+                      >Một nút để cấp khoá mới và mã hoá lại toàn bộ. Khoá cũ không mở được dữ liệu
+                      mới.</span
                     ></span
                   >
                 </li>
@@ -3576,7 +3582,8 @@
           <span class="kicker">Zero-knowledge hoạt động thế nào</span>
           <h2>Chúng tôi không đọc được dữ liệu của bạn.</h2>
           <p class="lede">
-            Mã hoá xong mới rời khỏi máy. Không phải lời hứa, mà do cách 7key được thiết kế.
+            Dữ liệu được mã hoá trước khi rời khỏi máy. Đây không phải lời hứa, mà là cách 7key được
+            thiết kế.
             <a href="/security">Xem mô hình đe doạ</a>.
           </p>
           <ol class="flow" style="margin: 0; padding: 0; list-style: none">
@@ -3610,7 +3617,7 @@
           <div class="card facts">
             <div><b>AES-256-GCM</b><span>Chuẩn mã hoá phổ biến nhất hiện nay</span></div>
             <div>
-              <b data-count="600000">600.000</b><span>vòng PBKDF2 cho mật khẩu của bạn</span>
+              <b data-count="600000">600.000</b><span>lần lặp PBKDF2 bảo vệ mật khẩu chính</span>
             </div>
             <div><b>Không cửa sau</b><span>Không ai mở được kho thay bạn</span></div>
             <div><b>Đồng bộ</b><span>Mọi thiết bị, vẫn mã hoá đầu-cuối</span></div>
@@ -3620,9 +3627,9 @@
 
       <section id="developers">
         <div class="wrap">
-          <span class="kicker">Developer</span>
-          <h2>Secret có mặt ở nơi code chạy.</h2>
-          <p class="lede">Từ terminal tới CI tới AI agent, không cần dán giá trị nào.</p>
+          <span class="kicker">Lập trình viên</span>
+          <h2>Secret có mặt đúng nơi code chạy.</h2>
+          <p class="lede">Từ terminal, CI đến AI agent, không phải dán giá trị nào.</p>
           <div class="dev">
             <div class="card term">
               <div class="term-top"><i></i><i></i><i></i><span>~/payments-api</span></div>
@@ -3667,8 +3674,8 @@
               <div class="card pad">
                 <h3><span class="ic">{{icon:wand}}</span>AI agent</h3>
                 <p>
-                  Model chỉ nhận placeholder. 7key thay bằng giá trị thật, và chỉ cho host bạn cho
-                  phép.
+                  Model chỉ nhận placeholder. 7key chỉ thay bằng giá trị thật khi gọi tới host bạn
+                  cho phép.
                 </p>
                 <div class="hosts" aria-hidden="true">
                   <div class="host">
@@ -3933,10 +3940,10 @@
             <div class="card plan">
               <div class="plan-top">
                 <h3>Tự host</h3>
-                <span class="chip">Server riêng</span>
+                <span class="chip">Máy chủ riêng</span>
               </div>
               <div class="price">0đ</div>
-              <p>Tự chạy server 7key trên Cloudflare của nhóm.</p>
+              <p>Tự chạy máy chủ 7key trên Cloudflare của nhóm.</p>
               <ul class="checks">
                 <li>Đủ tính năng, không giới hạn</li>
                 <li>Domain, sao lưu do bạn giữ</li>
@@ -4071,8 +4078,8 @@
           <details>
             <summary>Quên mật khẩu chính thì sao?</summary>
             <p>
-              Kho sẽ không mở được nữa. Không ai giữ bản sao nên cũng không có cách đặt lại. Cách
-              duy nhất là mã khôi phục bạn đã tạo từ trước.
+              Nếu đã tạo mã khôi phục, bạn dùng nó để đặt mật khẩu chính mới. Nếu chưa, kho không
+              thể mở lại vì không ai giữ bản sao.
             </p>
           </details>
           <details>
@@ -4087,7 +4094,7 @@
             </p>
           </details>
           <details>
-            <summary>7key đã được audit chưa?</summary>
+            <summary>7key đã được kiểm định bảo mật độc lập chưa?</summary>
             <p>
               Chưa. Thiết kế và các giới hạn đều ghi rõ trong
               <a href="/security">mô hình đe doạ</a>.
@@ -4108,7 +4115,7 @@
             </p>
           </details>
           <details>
-            <summary>Link chia sẻ sẽ ra sao?</summary>
+            <summary>Link chia sẻ tồn tại bao lâu?</summary>
             <p>
               Link ngừng mở sau 1 giờ, 1 ngày, 7 hoặc 30 ngày, hoặc sau lần xem duy nhất, và bạn thu
               hồi được bất cứ lúc nào. Khoá nằm ngay trong link nên server không đọc được nội dung.
@@ -4117,14 +4124,14 @@
           <details>
             <summary>Có người rời nhóm thì sao?</summary>
             <p>
-              Nhóm được cấp khoá mới và mọi secret được mã hoá lại, nên những gì người đó còn giữ
-              không mở được dữ liệu ghi sau này.
+              Admin đổi khoá nhóm bằng một nút: mọi secret được mã hoá lại, nên những gì người đó
+              còn giữ không mở được dữ liệu ghi sau này.
             </p>
           </details>
           <details>
-            <summary>Nhóm tự chạy server riêng được không?</summary>
+            <summary>Nhóm tự chạy máy chủ riêng được không?</summary>
             <p>
-              Được. Nhóm có thể tự chạy server 7key trên domain của mình. Liên hệ
+              Được. Nhóm có thể tự chạy máy chủ 7key trên domain của mình. Liên hệ
               <a href="mailto:hello@7key.online">hello@7key.online</a>.
             </p>
           </details>
