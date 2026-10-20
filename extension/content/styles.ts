@@ -69,4 +69,30 @@ export const CONTENT_STYLES = `${TOKENS}
 .actions button.primary:hover { background: var(--accent-hover); }
 .actions button:not(.primary):hover { background: var(--surface-hover); }
 button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.heading.warning {
+  margin: -6px -6px 4px; padding: 10px 14px; border-radius: 12px 12px 0 0;
+  background: var(--danger-soft); color: var(--danger);
+}
+.heading.warning strong { font-weight: 700; }
+.heading.warning .icon { stroke-width: 2.2; }
+.row.armed { background: var(--danger-soft); }
+.row.armed .text small { color: var(--danger); font-weight: 600; }
+
+.banner .check {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--text); cursor: pointer;
+}
+.banner .check input { margin: 0; accent-color: var(--accent); }
+.banner .link {
+  align-self: flex-start; margin-top: 4px; padding: 0; border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 11.5px; color: var(--muted); text-align: left;
+}
+.banner .link:hover { color: var(--text); text-decoration: underline; }
+
+.chip {
+  position: fixed; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+  background: var(--danger-solid); color: var(--danger-on); font-size: 12px; font-weight: 600; line-height: 1.3;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.2);
+}
+.chip .icon { width: 14px; height: 14px; stroke-width: 2.2; }
 `;

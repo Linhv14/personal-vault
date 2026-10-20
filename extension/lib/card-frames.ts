@@ -37,3 +37,14 @@ export async function fillCardFrames(tabId: number, card: CardData): Promise<num
   );
   return frames.length;
 }
+
+export async function isCardFrame(
+  sender: chrome.runtime.MessageSender,
+  extensionId: string,
+): Promise<boolean> {
+  const tabId = sender.tab?.id;
+  if (sender.id !== extensionId || tabId === undefined || !sender.frameId) return false;
+  if (!isPaymentFrameUrl(sender.url)) return false;
+  const frames = (await chrome.storage.session.get(key(tabId)))[key(tabId)] as number[] | undefined;
+  return frames?.includes(sender.frameId) ?? false;
+}

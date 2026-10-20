@@ -12,12 +12,14 @@ const PROMPT: PendingPrompt = {
 
 let pendingOnLoad: PendingPrompt | null = null;
 const sent: string[] = [];
+const requests: AutofillRequest[] = [];
 
 vi.stubGlobal("chrome", {
   storage: { local: { get: async () => ({}) } },
   runtime: {
     sendMessage: vi.fn(async (request: AutofillRequest) => {
       sent.push(request.type);
+      requests.push(request);
       switch (request.type) {
         case "autofill:pending":
           return { ok: true, prompt: pendingOnLoad };
@@ -69,6 +71,7 @@ async function load(): Promise<void> {
 
 beforeEach(() => {
   sent.length = 0;
+  requests.length = 0;
 });
 
 describe("save prompt timing", () => {
@@ -149,5 +152,83 @@ describe("save prompt after a page load", () => {
     await load();
     await vi.advanceTimersByTimeAsync(11_000);
     expect(sent).toEqual(["autofill:pending"]);
+  });
+});
+
+function pageUrl(url: string): void {
+  (window as unknown as { happyDOM: { setURL: (url: string) => void } }).happyDOM.setURL(url);
+}
+
+describe("card and address capture", () => {
+  function checkout(): HTMLFormElement {
+    document.body.innerHTML = `
+      <form id="checkout">
+        <input autocomplete="name" value="Alex Rivera" />
+        <input autocomplete="address-line1" value="1 Main St" />
+        <input autocomplete="address-level2" value="Springfield" />
+        <input autocomplete="postal-code" value="12345" />
+        <button type="submit">Place order</button>
+      </form>
+      <form id="pay">
+        <input autocomplete="cc-number" value="4111 1111 1111 1111" />
+        <input autocomplete="cc-exp" value="01/30" />
+        <button type="submit">Pay</button>
+      </form>`;
+    return document.querySelector<HTMLFormElement>("#checkout")!;
+  }
+
+  function captures() {
+    return requests.filter((request) => request.type === "autofill:form-capture");
+  }
+
+  it("never captures on a page that is not https", async () => {
+    await load();
+    const form = checkout();
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(captures()).toEqual([]);
+  });
+
+  it("sends typed address and card values on submit over https", async () => {
+    pageUrl("https://shop.example/checkout");
+    try {
+      await load();
+      const form = checkout();
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(captures()).toContainEqual({
+        type: "autofill:form-capture",
+        address: {
+          fullName: "Alex Rivera",
+          address: "1 Main St",
+          city: "Springfield",
+          postalCode: "12345",
+        },
+        random: false,
+      });
+      expect(captures().some((request) => "card" in request)).toBe(false);
+      const pay = document.querySelector<HTMLFormElement>("#pay")!;
+      pay.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(captures()).toContainEqual({
+        type: "autofill:form-capture",
+        card: { number: "4111111111111111", expiry: "01/30" },
+        untouched: false,
+      });
+    } finally {
+      pageUrl("about:blank");
+    }
+  });
+
+  it("leaves login forms to the password prompt", async () => {
+    pageUrl("https://shop.example/login");
+    try {
+      await load();
+      const { form, password } = loginForm();
+      await submit(form, password, "secret-password");
+      expect(captures()).toEqual([]);
+    } finally {
+      pageUrl("about:blank");
+    }
   });
 });

@@ -33,6 +33,7 @@ export interface LocalState {
   lastSync?: number;
   unboundItemsMigrated?: boolean;
   autofillPromoDismissed?: boolean;
+  neverAskForms?: string[];
   sharedLinks?: SealedData;
   autoLockMinutes?: number;
   hasPasskeys?: boolean;
