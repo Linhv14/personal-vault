@@ -54,6 +54,10 @@ version may change the API or storage format; such releases list the steps in
   in a template from a file or standard input, fetching each environment once.
   It writes nothing when a reference is unknown, and `-o` creates a file only
   you can read.
+- Browser tests: `npm run test:browser` loads the built extension in Chromium
+  with Playwright and drives sign-up, lock and unlock, autofill, the console
+  and the recovery code against a local Worker on port 8789. See
+  [Run the browser tests](docs/how-to/run-browser-tests.md).
 
 ## [0.4.1] - 2026-10-19
 
