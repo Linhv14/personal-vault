@@ -1,0 +1,6555 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "7key API",
+    "version": "0.4.1",
+    "description": "HTTP API of the 7key zero-knowledge password manager, served by a Cloudflare Worker. Clients derive keys and encrypt everything before sending it: the server only ever stores and returns ciphertext, wrapped keys and keyed hashes, never plaintext or the master password. Binary values (ciphertext, nonces, keys, salts) are standard base64 with padding unless noted as base64url; timestamps are Unix seconds. The API follows the extension release and is not a versioned public contract."
+  },
+  "servers": [
+    {
+      "url": "https://7key.online"
+    }
+  ],
+  "externalDocs": {
+    "url": "https://7key.online/api-docs"
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Server"
+    },
+    {
+      "name": "Accounts"
+    },
+    {
+      "name": "Sessions"
+    },
+    {
+      "name": "Device unlock",
+      "description": "PIN and biometric unlock, scoped to one session"
+    },
+    {
+      "name": "Recovery code"
+    },
+    {
+      "name": "Two-factor authentication"
+    },
+    {
+      "name": "Account key pair"
+    },
+    {
+      "name": "Organizations"
+    },
+    {
+      "name": "Invitations"
+    },
+    {
+      "name": "Teams"
+    },
+    {
+      "name": "Team vaults"
+    },
+    {
+      "name": "Projects and secrets"
+    },
+    {
+      "name": "CI"
+    },
+    {
+      "name": "Items"
+    },
+    {
+      "name": "Shares"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["Server"],
+        "operationId": "getHealth",
+        "summary": "Liveness check",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "const": "ok"
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": ["Server"],
+        "operationId": "getConfig",
+        "summary": "What the server requires at sign-up",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "registration": {
+                      "type": "string",
+                      "description": "`token` needs `X-Registration-Token` at register; `open` does not",
+                      "enum": ["token", "open"]
+                    },
+                    "emailVerification": {
+                      "type": "boolean",
+                      "description": "True when a sender and a mail provider are configured"
+                    },
+                    "turnstileSiteKey": {
+                      "type": "string",
+                      "description": "Present only when Turnstile is configured"
+                    }
+                  },
+                  "required": ["registration", "emailVerification"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/time": {
+      "get": {
+        "tags": ["Server"],
+        "operationId": "getTime",
+        "summary": "Server clock, for correcting 2FA codes on a skewed machine",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serverTime": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    }
+                  },
+                  "required": ["serverTime"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logo": {
+      "get": {
+        "tags": ["Server"],
+        "operationId": "getLogo",
+        "summary": "Website icon for a hostname",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "required": true,
+            "description": "Plain hostname",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Fetched from DuckDuckGo or Google and cached at the edge for 7 days. Images over 64 KiB are refused. Response is `Cache-Control: private, no-store`.",
+        "responses": {
+          "200": {
+            "description": "The icon image",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/*"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`server.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-email": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "verifyEmail",
+        "summary": "Send a 6-digit sign-up code",
+        "parameters": [
+          {
+            "name": "X-Turnstile-Token",
+            "in": "header",
+            "required": false,
+            "description": "Turnstile token; required when `GET /api/config` returns `turnstileSiteKey`, otherwise `403 auth.bot_check_failed`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "description": "Only meaningful when `emailVerification` is on. An address that already has an account gets a different email, with the same response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code sent, or no email needed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "required": {
+                      "type": "boolean",
+                      "description": "False when the server sends no email"
+                    }
+                  },
+                  "required": ["ok", "required"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_email`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`auth.bot_check_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.code_cooldown`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "register",
+        "summary": "Create an account",
+        "parameters": [
+          {
+            "name": "X-Registration-Token",
+            "in": "header",
+            "required": false,
+            "description": "Required when `registration` is `token`, unless `inviteId` names a pending invitation for the same address",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Turnstile-Token",
+            "in": "header",
+            "required": false,
+            "description": "Turnstile token; required when `GET /api/config` returns `turnstileSiteKey`, otherwise `403 auth.bot_check_failed`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "description": "The client derives every key; the server receives only the auth key and the wrapped vault key. Without email verification, a taken address still gets a 201 with an unusable token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "Normalized to lower case"
+                  },
+                  "kdf": {
+                    "$ref": "#/components/schemas/Kdf"
+                  },
+                  "authKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "wrappedVaultKey": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "verificationCode": {
+                    "type": "string",
+                    "description": "6 digits; required when `emailVerification` is on"
+                  },
+                  "inviteId": {
+                    "type": "string",
+                    "description": "A pending invitation for `email`; the new account joins that organization",
+                    "format": "uuid"
+                  }
+                },
+                "required": ["email", "kdf", "authKey", "wrappedVaultKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accountId": {
+                      "type": "string"
+                    },
+                    "token": {
+                      "type": "string",
+                      "description": "Session token"
+                    },
+                    "expiresAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    },
+                    "orgId": {
+                      "type": "string",
+                      "description": "Present when an invitation was accepted",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": ["accountId", "token", "expiresAt"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_body`, `auth.invalid_email`, `auth.invalid_kdf`, `auth.invalid_auth_key`, `auth.invalid_wrapped_key`, `auth.invalid_code`, `auth.code_expired`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`auth.bad_registration_token`, `auth.bot_check_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`auth.email_taken`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.registration_limit`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/prelogin": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "prelogin",
+        "summary": "KDF parameters for an address",
+        "security": [],
+        "description": "An unknown address gets stable, plausible parameters, so the response does not reveal whether an account exists.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KDF parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kdf": {
+                      "$ref": "#/components/schemas/Kdf"
+                    }
+                  },
+                  "required": ["kdf"]
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "login",
+        "summary": "Sign in",
+        "security": [],
+        "description": "Failures are throttled per address and network. With 2FA on, a correct `authKey` returns a `TwoFactorChallenge` instead of a session.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "authKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  }
+                },
+                "required": ["email", "authKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session, or a 2FA challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/LoginResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TwoFactorChallenge"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login/2fa": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "loginTwoFactor",
+        "summary": "Complete sign-in with a 2FA code",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "challenge": {
+                    "type": "string",
+                    "description": "From the `TwoFactorChallenge`"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "6-digit TOTP code or a backup code (`xxxxx-xxxxx`)"
+                  }
+                },
+                "required": ["challenge", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`auth.invalid_2fa`, `auth.two_factor_expired`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/resume-key": {
+      "get": {
+        "tags": ["Accounts"],
+        "operationId": "getResumeKey",
+        "summary": "Per-session key for reopening the vault after a browser restart",
+        "responses": {
+          "200": {
+            "description": "Resume key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resumeKey": {
+                      "type": "string",
+                      "description": "32 random bytes",
+                      "contentEncoding": "base64"
+                    }
+                  },
+                  "required": ["resumeKey"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/pin": {
+      "put": {
+        "tags": ["Device unlock"],
+        "operationId": "enablePin",
+        "summary": "Turn on PIN unlock for this session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "verifier": {
+                    "type": "string",
+                    "description": "32 bytes, derived from the PIN",
+                    "contentEncoding": "base64"
+                  }
+                },
+                "required": ["verifier"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PIN key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pinKey": {
+                      "type": "string",
+                      "description": "32 random bytes",
+                      "contentEncoding": "base64"
+                    }
+                  },
+                  "required": ["pinKey"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Device unlock"],
+        "operationId": "disablePin",
+        "summary": "Turn off PIN unlock for this session",
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/pin/unlock": {
+      "post": {
+        "tags": ["Device unlock"],
+        "operationId": "unlockWithPin",
+        "summary": "Unlock with a PIN verifier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "verifier": {
+                    "type": "string",
+                    "description": "32 bytes",
+                    "contentEncoding": "base64"
+                  }
+                },
+                "required": ["verifier"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PIN key; the attempt count resets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pinKey": {
+                      "type": "string",
+                      "contentEncoding": "base64"
+                    }
+                  },
+                  "required": ["pinKey"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.pin_wrong`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "`auth.pin_off`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/biometric": {
+      "put": {
+        "tags": ["Device unlock"],
+        "operationId": "enableBiometric",
+        "summary": "Register a platform authenticator for this session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "credentialId": {
+                    "type": "string",
+                    "description": "base64url"
+                  },
+                  "publicKey": {
+                    "type": "string",
+                    "description": "base64url SPKI"
+                  },
+                  "algorithm": {
+                    "type": "integer",
+                    "enum": [-7, -257],
+                    "description": "-7 (ES256) or -257 (RS256)"
+                  },
+                  "rpId": {
+                    "type": "string",
+                    "description": "The extension id"
+                  },
+                  "origin": {
+                    "type": "string",
+                    "description": "`chrome-extension://<id>`"
+                  }
+                },
+                "required": ["credentialId", "publicKey", "algorithm", "rpId", "origin"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Biometric key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bioKey": {
+                      "type": "string",
+                      "description": "32 random bytes",
+                      "contentEncoding": "base64"
+                    }
+                  },
+                  "required": ["bioKey"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Device unlock"],
+        "operationId": "disableBiometric",
+        "summary": "Turn off biometric unlock for this session",
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/biometric/challenge": {
+      "post": {
+        "tags": ["Device unlock"],
+        "operationId": "createBiometricChallenge",
+        "summary": "One-time WebAuthn challenge",
+        "responses": {
+          "200": {
+            "description": "Challenge, valid two minutes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "challenge": {
+                      "type": "string",
+                      "description": "base64url"
+                    },
+                    "credentialId": {
+                      "type": "string",
+                      "description": "base64url"
+                    }
+                  },
+                  "required": ["challenge", "credentialId"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "410": {
+            "description": "`auth.biometric_off`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/biometric/unlock": {
+      "post": {
+        "tags": ["Device unlock"],
+        "operationId": "unlockWithBiometric",
+        "summary": "Unlock with a WebAuthn assertion",
+        "requestBody": {
+          "required": true,
+          "description": "Fields from `navigator.credentials.get`",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientDataJSON": {
+                    "type": "string",
+                    "description": "base64url"
+                  },
+                  "authenticatorData": {
+                    "type": "string",
+                    "description": "base64url"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "base64url"
+                  }
+                },
+                "required": ["clientDataJSON", "authenticatorData", "signature"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Biometric key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "bioKey": {
+                      "type": "string",
+                      "contentEncoding": "base64"
+                    }
+                  },
+                  "required": ["bioKey"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.biometric_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "logout",
+        "summary": "Revoke the current session",
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "changePassword",
+        "summary": "Replace KDF, auth key and wrapped vault key",
+        "description": "Revokes every session of the account, or every other one with `keepSession`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "kdf": {
+                    "$ref": "#/components/schemas/Kdf"
+                  },
+                  "authKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "wrappedVaultKey": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "keepSession": {
+                    "type": "boolean",
+                    "description": "True keeps this session"
+                  }
+                },
+                "required": ["currentAuthKey", "kdf", "authKey", "wrappedVaultKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_kdf`, `auth.invalid_auth_key`, `auth.invalid_wrapped_key`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/delete-account": {
+      "post": {
+        "tags": ["Accounts"],
+        "operationId": "deleteAccount",
+        "summary": "Delete the account, its items and sessions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  }
+                },
+                "required": ["currentAuthKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/sessions": {
+      "get": {
+        "tags": ["Sessions"],
+        "operationId": "listSessions",
+        "summary": "Active sessions of the account",
+        "responses": {
+          "200": {
+            "description": "Sessions, current first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string",
+                            "description": "Device label, empty when unknown"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "description": "Unix seconds"
+                          },
+                          "lastSeenAt": {
+                            "type": ["integer", "null"],
+                            "description": "Unix seconds"
+                          },
+                          "current": {
+                            "type": "boolean"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": ["browser", "cli", "ci", "unknown"]
+                          }
+                        },
+                        "required": ["id", "label", "createdAt", "lastSeenAt", "current", "kind"]
+                      }
+                    }
+                  },
+                  "required": ["sessions"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/sessions/revoke-others": {
+      "post": {
+        "tags": ["Sessions"],
+        "operationId": "revokeOtherSessions",
+        "summary": "Revoke every session but this one",
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "revoked": {
+                      "type": "integer",
+                      "description": "Sessions revoked"
+                    }
+                  },
+                  "required": ["ok", "revoked"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/sessions/{id}": {
+      "delete": {
+        "tags": ["Sessions"],
+        "operationId": "revokeSession",
+        "summary": "Revoke one session",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Session id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`auth.session_not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/recovery": {
+      "get": {
+        "tags": ["Recovery code"],
+        "operationId": "getRecovery",
+        "summary": "Whether a recovery code exists",
+        "responses": {
+          "200": {
+            "description": "Recovery status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "createdAt": {
+                      "type": ["integer", "null"],
+                      "description": "Unix seconds"
+                    }
+                  },
+                  "required": ["createdAt"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Recovery code"],
+        "operationId": "setRecovery",
+        "summary": "Create or replace the recovery code",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "authKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "wrappedVaultKey": {
+                    "$ref": "#/components/schemas/Sealed"
+                  }
+                },
+                "required": ["currentAuthKey", "authKey", "wrappedVaultKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "createdAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    }
+                  },
+                  "required": ["createdAt"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_auth_key`, `auth.invalid_wrapped_key`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Recovery code"],
+        "operationId": "deleteRecovery",
+        "summary": "Remove the recovery code",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  }
+                },
+                "required": ["currentAuthKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recover/email": {
+      "post": {
+        "tags": ["Recovery code"],
+        "operationId": "recoverEmail",
+        "summary": "Check a recovery code and email a confirmation code",
+        "parameters": [
+          {
+            "name": "X-Turnstile-Token",
+            "in": "header",
+            "required": false,
+            "description": "Turnstile token; required when `GET /api/config` returns `turnstileSiteKey`, otherwise `403 auth.bot_check_failed`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "recoveryAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["email", "recoveryAuthKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code sent, or not needed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "required": {
+                      "type": "boolean",
+                      "description": "False on a server without email; the next calls take no `emailCode`"
+                    }
+                  },
+                  "required": ["required"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`auth.invalid_recovery_code`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`auth.bot_check_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.code_cooldown`, `auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recover/start": {
+      "post": {
+        "tags": ["Recovery code"],
+        "operationId": "recoverStart",
+        "summary": "Get the vault key sealed under the recovery code",
+        "parameters": [
+          {
+            "name": "X-Turnstile-Token",
+            "in": "header",
+            "required": false,
+            "description": "Turnstile token; required when `GET /api/config` returns `turnstileSiteKey`, otherwise `403 auth.bot_check_failed`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "recoveryAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "emailCode": {
+                    "type": "string",
+                    "description": "6 digits, when email is on"
+                  }
+                },
+                "required": ["email", "recoveryAuthKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wrapped vault key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "wrappedVaultKey": {
+                      "$ref": "#/components/schemas/Sealed"
+                    }
+                  },
+                  "required": ["wrappedVaultKey"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_code`, `auth.code_expired`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`auth.invalid_recovery_code`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`auth.bot_check_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/recover/finish": {
+      "post": {
+        "tags": ["Recovery code"],
+        "operationId": "recoverFinish",
+        "summary": "Set a new master password and recovery code",
+        "security": [],
+        "description": "Revokes every session. If 2FA was on, it is turned off and backup codes are deleted.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "recoveryAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "emailCode": {
+                    "type": "string",
+                    "description": "6 digits, when email is on"
+                  },
+                  "kdf": {
+                    "$ref": "#/components/schemas/Kdf"
+                  },
+                  "authKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "wrappedVaultKey": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "recovery": {
+                    "type": "object",
+                    "description": "The new recovery code",
+                    "properties": {
+                      "authKey": {
+                        "$ref": "#/components/schemas/AuthKey"
+                      },
+                      "wrappedVaultKey": {
+                        "$ref": "#/components/schemas/Sealed"
+                      }
+                    },
+                    "required": ["authKey", "wrappedVaultKey"]
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": [
+                  "email",
+                  "recoveryAuthKey",
+                  "kdf",
+                  "authKey",
+                  "wrappedVaultKey",
+                  "recovery"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "twoFactorDisabled": {
+                      "type": "boolean",
+                      "description": "Present when 2FA was turned off"
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_code`, `auth.code_expired`, `auth.invalid_kdf`, `auth.invalid_auth_key`, `auth.invalid_wrapped_key`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`auth.invalid_recovery_code`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/2fa": {
+      "get": {
+        "tags": ["Two-factor authentication"],
+        "operationId": "getTwoFactor",
+        "summary": "2FA status",
+        "responses": {
+          "200": {
+            "description": "Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "enabledAt": {
+                      "type": ["integer", "null"],
+                      "description": "Unix seconds"
+                    },
+                    "backupCodesLeft": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["enabled", "enabledAt", "backupCodesLeft"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/account/2fa/setup": {
+      "post": {
+        "tags": ["Two-factor authentication"],
+        "operationId": "setupTwoFactor",
+        "summary": "Generate a TOTP secret",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["currentAuthKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Secret, valid 15 minutes for enable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "string",
+                      "description": "base32"
+                    },
+                    "uri": {
+                      "type": "string",
+                      "description": "`otpauth://` URI"
+                    }
+                  },
+                  "required": ["secret", "uri"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`two_factor.already_enabled`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/2fa/enable": {
+      "post": {
+        "tags": ["Two-factor authentication"],
+        "operationId": "enableTwoFactor",
+        "summary": "Confirm the secret and turn 2FA on",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "TOTP code or backup code"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["currentAuthKey", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enabled; other sessions signed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabledAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    },
+                    "backupCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Ten codes, shown once"
+                    }
+                  },
+                  "required": ["enabledAt", "backupCodes"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_2fa`, `two_factor.setup_expired`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`two_factor.already_enabled`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/2fa/disable": {
+      "post": {
+        "tags": ["Two-factor authentication"],
+        "operationId": "disableTwoFactor",
+        "summary": "Turn 2FA off",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "TOTP code or backup code"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["currentAuthKey", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`two_factor.not_enabled`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/2fa/backup-codes": {
+      "post": {
+        "tags": ["Two-factor authentication"],
+        "operationId": "regenerateBackupCodes",
+        "summary": "Replace the backup codes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "currentAuthKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "TOTP code or backup code"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["currentAuthKey", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New codes; earlier ones stop working",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "backupCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["backupCodes"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`two_factor.not_enabled`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`auth.rate_limited`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/account/identity": {
+      "get": {
+        "tags": ["Account key pair"],
+        "operationId": "getIdentity",
+        "summary": "The account's ECDH P-256 key pair",
+        "responses": {
+          "200": {
+            "description": "Identity, or null before one exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "identity": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/Identity"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["identity"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Account key pair"],
+        "operationId": "setIdentity",
+        "summary": "Store the key pair once",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Identity"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`auth.invalid_body`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "`account.identity_exists`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs": {
+      "get": {
+        "tags": ["Organizations"],
+        "operationId": "listOrgs",
+        "summary": "Organizations the caller belongs to",
+        "responses": {
+          "200": {
+            "description": "Organizations with the caller's role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "Organization with `id`, `name` and `role`",
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": ["orgs"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Organizations"],
+        "operationId": "createOrg",
+        "summary": "Create an organization; the caller becomes owner",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "const": "owner"
+                    }
+                  },
+                  "required": ["id", "name", "role"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`orgs.invalid_name`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "`orgs.limit_reached`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}": {
+      "get": {
+        "tags": ["Organizations"],
+        "operationId": "getOrg",
+        "summary": "Organization, members, invitations, teams and projects",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The organization (with `allowedDomains`), its members (email, role, public key), pending invitations (admins only), teams (wrapped key only for teams the caller is in) and `projects` mapping each team the caller holds a key for to `{ generation, projects }`",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/domains": {
+      "put": {
+        "tags": ["Organizations"],
+        "operationId": "setOrgDomains",
+        "summary": "Set the allowed email domains (owner)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "domains": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Up to 10, exact match; `[]` allows any address"
+                  }
+                },
+                "required": ["domains"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "allowedDomains": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["allowedDomains"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`orgs.invalid_domains`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/invites": {
+      "post": {
+        "tags": ["Organizations"],
+        "operationId": "createInvite",
+        "summary": "Invite an address for 14 days (admins)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "member"]
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  },
+                  "teams": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "teamId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "access": {
+                          "$ref": "#/components/schemas/TeamAccess"
+                        }
+                      },
+                      "required": ["teamId"]
+                    },
+                    "description": "Teams to add the person to once accepted"
+                  }
+                },
+                "required": ["email", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "expiresAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    },
+                    "emailed": {
+                      "type": "boolean"
+                    },
+                    "link": {
+                      "type": "string",
+                      "description": "Opens the invitation in the dashboard"
+                    }
+                  },
+                  "required": ["id", "expiresAt", "emailed", "link"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`orgs.domain_not_allowed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.seat_limit`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/invites/{inviteId}": {
+      "delete": {
+        "tags": ["Organizations"],
+        "operationId": "withdrawInvite",
+        "summary": "Withdraw an invitation (admins)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "inviteId",
+            "in": "path",
+            "required": true,
+            "description": "Invitation id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Withdrawn",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/members/{accountId}": {
+      "patch": {
+        "tags": ["Organizations"],
+        "operationId": "setMemberRole",
+        "summary": "Make someone admin or member (owner)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "Account id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "member"]
+                  }
+                },
+                "required": ["role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Organizations"],
+        "operationId": "removeMember",
+        "summary": "Remove someone from the organization",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "Account id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "Owner, admins for members, anyone for themselves. Affected teams are flagged for re-keying.",
+        "responses": {
+          "200": {
+            "description": "Removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/owner": {
+      "post": {
+        "tags": ["Organizations"],
+        "operationId": "transferOwnership",
+        "summary": "Make an admin the owner",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "`authKey` is the caller's own",
+                "properties": {
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "authKey": {
+                    "$ref": "#/components/schemas/AuthKey"
+                  }
+                },
+                "required": ["accountId", "authKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`orgs.transfer_needs_admin`, `orgs.transfer_needs_key`, `orgs.domain_not_allowed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`auth.invalid_credentials`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/audit": {
+      "get": {
+        "tags": ["Organizations"],
+        "operationId": "getAuditLog",
+        "summary": "Audit log (admins)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "description": "Return events before this sequence number",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 100 most recent events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Events and whether the hash chain verifies",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invites": {
+      "get": {
+        "tags": ["Invitations"],
+        "operationId": "listInvites",
+        "summary": "Invitations for the caller's email",
+        "responses": {
+          "200": {
+            "description": "Invitations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "invites": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "Invitation",
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": ["invites"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/invites/{inviteId}/preview": {
+      "get": {
+        "tags": ["Invitations"],
+        "operationId": "previewInvite",
+        "summary": "Preview an invitation without a session",
+        "parameters": [
+          {
+            "name": "inviteId",
+            "in": "path",
+            "required": true,
+            "description": "Invitation id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Organization name, inviter, role, expiry, invited address, `hasAccount` and `domainAllowed`",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/invites/{inviteId}/accept": {
+      "post": {
+        "tags": ["Invitations"],
+        "operationId": "acceptInvite",
+        "summary": "Join the organization",
+        "parameters": [
+          {
+            "name": "inviteId",
+            "in": "path",
+            "required": true,
+            "description": "Invitation id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Joined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": ["orgId"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.invite_domain_blocked`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invites/{inviteId}": {
+      "delete": {
+        "tags": ["Invitations"],
+        "operationId": "declineInvite",
+        "summary": "Decline an invitation",
+        "parameters": [
+          {
+            "name": "inviteId",
+            "in": "path",
+            "required": true,
+            "description": "Invitation id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Declined",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams": {
+      "post": {
+        "tags": ["Teams"],
+        "operationId": "createTeam",
+        "summary": "Create a team at key generation 0 (admins)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "wrappedKey": {
+                    "type": "string",
+                    "description": "The new team key wrapped for the caller"
+                  }
+                },
+                "required": ["id", "name", "wrappedKey"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The team",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.team_limit`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}": {
+      "delete": {
+        "tags": ["Teams"],
+        "operationId": "deleteTeam",
+        "summary": "Delete a team (admins)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/members/{accountId}": {
+      "put": {
+        "tags": ["Teams"],
+        "operationId": "addTeamMember",
+        "summary": "Add someone with the team key wrapped for them",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "Account id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "wrappedKey": {
+                    "type": "string"
+                  },
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  },
+                  "access": {
+                    "$ref": "#/components/schemas/TeamAccess"
+                  }
+                },
+                "required": ["wrappedKey", "generation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.stale_team_key`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Teams"],
+        "operationId": "removeTeamMember",
+        "summary": "Remove someone; flags the team for re-keying",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "Account id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/members/{accountId}/access": {
+      "put": {
+        "tags": ["Teams"],
+        "operationId": "setTeamAccess",
+        "summary": "Set edit or view access",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "description": "Account id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "access": {
+                    "$ref": "#/components/schemas/TeamAccess"
+                  }
+                },
+                "required": ["access"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/key": {
+      "put": {
+        "tags": ["Teams"],
+        "operationId": "rekeyTeam",
+        "summary": "Replace the team key and re-encrypt everything",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "`generation` is the current one plus 1; maps must cover every entity of the team, no more and no fewer",
+                "properties": {
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  },
+                  "wrappedKeys": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Account id to the new key wrapped for that member"
+                  },
+                  "projects": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Project id to its re-encryption"
+                  },
+                  "secrets": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Secret id to its re-encryption"
+                  },
+                  "versions": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Earlier secret values re-encrypted; omit to drop history"
+                  },
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Team vault item id to its re-encryption"
+                  }
+                },
+                "required": ["generation", "wrappedKeys", "projects", "secrets", "items"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Re-keyed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.stale_team_key`, `orgs.team_changed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/vault": {
+      "get": {
+        "tags": ["Teams"],
+        "operationId": "getTeamVault",
+        "summary": "Every project, secret and item of the team, for re-keying (admins in the team)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team contents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Projects, secrets and team vault items, sealed",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/items/{itemId}": {
+      "put": {
+        "tags": ["Team vaults"],
+        "operationId": "putTeamItem",
+        "summary": "Create or replace a team vault item",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "Item id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sealed": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  }
+                },
+                "required": ["sealed", "generation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updatedAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    }
+                  },
+                  "required": ["updatedAt"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.read_only`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.rekey_required`, `orgs.stale_team_key`, `orgs.item_limit`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Team vaults"],
+        "operationId": "deleteTeamItem",
+        "summary": "Delete a team vault item",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "description": "Item id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.read_only`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/vaults": {
+      "get": {
+        "tags": ["Team vaults"],
+        "operationId": "listVaults",
+        "summary": "Every team vault the caller can read",
+        "responses": {
+          "200": {
+            "description": "Team vaults",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "vaults": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "orgId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "orgName": {
+                            "type": "string"
+                          },
+                          "teamId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "generation": {
+                            "$ref": "#/components/schemas/Generation"
+                          },
+                          "rekeyNeeded": {
+                            "type": "boolean"
+                          },
+                          "wrappedKey": {
+                            "type": "string",
+                            "description": "Team key wrapped for the caller"
+                          },
+                          "viewOnly": {
+                            "type": "boolean",
+                            "description": "Present for view-only access"
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/SealedRecord"
+                            }
+                          }
+                        },
+                        "required": [
+                          "orgId",
+                          "orgName",
+                          "teamId",
+                          "name",
+                          "generation",
+                          "rekeyNeeded",
+                          "wrappedKey",
+                          "items"
+                        ],
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": ["vaults"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects": {
+      "get": {
+        "tags": ["Projects and secrets"],
+        "operationId": "listProjects",
+        "summary": "Projects of a team",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projects, sealed under the team key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generation": {
+                      "$ref": "#/components/schemas/Generation"
+                    },
+                    "rekeyNeeded": {
+                      "type": "boolean"
+                    },
+                    "projects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "sealed": {
+                            "$ref": "#/components/schemas/Sealed"
+                          },
+                          "createdAt": {
+                            "type": "integer",
+                            "description": "Unix seconds"
+                          },
+                          "protectedEnvironments": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          }
+                        },
+                        "required": ["id", "sealed", "createdAt"],
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "required": ["generation", "rekeyNeeded", "projects"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Projects and secrets"],
+        "operationId": "createProject",
+        "summary": "Create a project (admins in the team)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "sealed": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  }
+                },
+                "required": ["id", "sealed", "generation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The project",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.project_limit`, `orgs.stale_team_key`, `orgs.rekey_required`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}": {
+      "put": {
+        "tags": ["Projects and secrets"],
+        "operationId": "updateProject",
+        "summary": "Replace the sealed project (admins in the team)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sealed": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  }
+                },
+                "required": ["sealed", "generation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.stale_team_key`, `orgs.rekey_required`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Projects and secrets"],
+        "operationId": "deleteProject",
+        "summary": "Delete a project and its secrets (admins in the team)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/environments/{environmentId}/protection": {
+      "put": {
+        "tags": ["Projects and secrets"],
+        "operationId": "setEnvironmentProtection",
+        "summary": "Protect or unprotect an environment",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "environmentId",
+            "in": "path",
+            "required": true,
+            "description": "Environment id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "protected": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["protected"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/environments/{environmentId}/secrets": {
+      "get": {
+        "tags": ["Projects and secrets"],
+        "operationId": "listSecrets",
+        "summary": "Secrets of an environment",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "environmentId",
+            "in": "path",
+            "required": true,
+            "description": "Environment id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sealed secrets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generation": {
+                      "$ref": "#/components/schemas/Generation"
+                    },
+                    "secrets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SealedRecord"
+                      }
+                    }
+                  },
+                  "required": ["generation", "secrets"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/secrets": {
+      "post": {
+        "tags": ["Projects and secrets"],
+        "operationId": "putSecretsBatch",
+        "summary": "Write up to 500 secrets in one transaction",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  },
+                  "secrets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "environmentId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "sealed": {
+                          "$ref": "#/components/schemas/Sealed"
+                        }
+                      },
+                      "required": ["id", "environmentId", "sealed"]
+                    }
+                  }
+                },
+                "required": ["generation", "secrets"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.read_only`, `orgs.protected_environment`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.stale_team_key`, `orgs.rekey_required`, `orgs.invalid_secret`, `orgs.secret_limit`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/secrets/{secretId}": {
+      "put": {
+        "tags": ["Projects and secrets"],
+        "operationId": "putSecret",
+        "summary": "Create or replace a secret",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "secretId",
+            "in": "path",
+            "required": true,
+            "description": "Secret id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "environmentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "sealed": {
+                    "$ref": "#/components/schemas/Sealed"
+                  },
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  }
+                },
+                "required": ["environmentId", "sealed", "generation"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.read_only`, `orgs.protected_environment`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.stale_team_key`, `orgs.rekey_required`, `orgs.invalid_secret`, `orgs.secret_limit`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Projects and secrets"],
+        "operationId": "deleteSecret",
+        "summary": "Delete a secret",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "secretId",
+            "in": "path",
+            "required": true,
+            "description": "Secret id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.read_only`, `orgs.protected_environment`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/secrets/delete": {
+      "post": {
+        "tags": ["Projects and secrets"],
+        "operationId": "deleteSecretsBatch",
+        "summary": "Delete up to 1,000 secrets in one transaction",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "required": ["ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.read_only`, `orgs.protected_environment`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/secrets/{secretId}/versions": {
+      "get": {
+        "tags": ["Projects and secrets"],
+        "operationId": "listSecretVersions",
+        "summary": "Last 5 earlier values of a secret",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "secretId",
+            "in": "path",
+            "required": true,
+            "description": "Secret id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versions, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generation": {
+                      "$ref": "#/components/schemas/Generation"
+                    },
+                    "environmentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "versions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SealedRecord"
+                      }
+                    }
+                  },
+                  "required": ["generation", "environmentId", "versions"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/access": {
+      "post": {
+        "tags": ["Projects and secrets"],
+        "operationId": "logSecretAccess",
+        "summary": "Log a reveal, copy, export or agent injection",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "environmentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "access": {
+                    "type": "string",
+                    "enum": ["revealed", "copied", "exported", "injected"]
+                  }
+                },
+                "required": ["environmentId", "access"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/links": {
+      "get": {
+        "tags": ["CI"],
+        "operationId": "listRepositoryLinks",
+        "summary": "Repository links of a project",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Links",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Repository, environment, rule, who linked it and when it was last read",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["CI"],
+        "operationId": "createRepositoryLink",
+        "summary": "Link a GitHub repository (admins in the team)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "description": "At least one of `branch` and `githubEnvironment`. At most 50 per project.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "environmentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "repository": {
+                    "type": "string",
+                    "description": "`owner/name`"
+                  },
+                  "branch": {
+                    "type": "string"
+                  },
+                  "githubEnvironment": {
+                    "type": "string"
+                  },
+                  "publicKey": {
+                    "type": "string"
+                  },
+                  "wrappedKey": {
+                    "type": "string"
+                  },
+                  "generation": {
+                    "$ref": "#/components/schemas/Generation"
+                  }
+                },
+                "required": [
+                  "id",
+                  "environmentId",
+                  "repository",
+                  "publicKey",
+                  "wrappedKey",
+                  "generation"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Linked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "The link",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`orgs.stale_team_key`, `orgs.rekey_required`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgId}/teams/{teamId}/projects/{projectId}/links/{linkId}": {
+      "delete": {
+        "tags": ["CI"],
+        "operationId": "deleteRepositoryLink",
+        "summary": "Unlink a repository (admins in the team)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "description": "Organization id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "description": "Team id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "linkId",
+            "in": "path",
+            "required": true,
+            "description": "Repository link id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unlinked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Acknowledgement",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`orgs.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`orgs.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ci/secrets": {
+      "post": {
+        "tags": ["CI"],
+        "operationId": "readCiSecrets",
+        "summary": "Read an environment's sealed secrets from GitHub Actions",
+        "security": [
+          {
+            "githubOidc": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "link": {
+                    "type": "string",
+                    "description": "`<org>.<link>`"
+                  }
+                },
+                "required": ["link"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Environment key wrapped for the repository, and sealed values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "projectId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "environmentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "generation": {
+                      "$ref": "#/components/schemas/Generation"
+                    },
+                    "wrappedKey": {
+                      "type": "string"
+                    },
+                    "secrets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "sealed": {
+                            "$ref": "#/components/schemas/Sealed"
+                          }
+                        },
+                        "required": ["id", "sealed"]
+                      }
+                    }
+                  },
+                  "required": ["projectId", "environmentId", "generation", "wrappedKey", "secrets"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`ci.unauthorized`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`ci.forbidden`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/items": {
+      "get": {
+        "tags": ["Items"],
+        "operationId": "listItems",
+        "summary": "Item changes since a cursor, oldest first",
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "description": "Previous `serverTime`; omit or 0 for everything",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "serverTime": {
+                      "type": "integer",
+                      "description": "Use as the next `since`"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ciphertext": {
+                            "type": ["string", "null"],
+                            "description": "base64; null for a tombstone"
+                          },
+                          "nonce": {
+                            "type": ["string", "null"],
+                            "description": "base64; null for a tombstone"
+                          },
+                          "updatedAt": {
+                            "type": "integer",
+                            "description": "Unix seconds"
+                          },
+                          "deletedAt": {
+                            "type": ["integer", "null"],
+                            "description": "Unix seconds; set for a tombstone"
+                          }
+                        },
+                        "required": ["id", "ciphertext", "nonce", "updatedAt", "deletedAt"]
+                      }
+                    }
+                  },
+                  "required": ["serverTime", "items"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/items/{id}": {
+      "put": {
+        "tags": ["Items"],
+        "operationId": "putItem",
+        "summary": "Create or replace an item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Client-chosen UUID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "ifUpdatedAt",
+            "in": "query",
+            "required": false,
+            "description": "Conditional write",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "description": "Writing to a deleted item's id restores it. With `ifUpdatedAt` the write only replaces a live item with that exact `updatedAt`.",
+        "requestBody": {
+          "required": true,
+          "description": "Ciphertext at most 64 KiB",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Sealed"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "updatedAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    }
+                  },
+                  "required": ["id", "updatedAt"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`items.invalid_id`, `items.invalid_payload`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`items.forbidden`, `items.quota_exceeded`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`items.conflict`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Items"],
+        "operationId": "deleteItem",
+        "summary": "Replace an item with a tombstone",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Item UUID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deletedAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    }
+                  },
+                  "required": ["id", "deletedAt"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`items.not_found`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/items/batch": {
+      "post": {
+        "tags": ["Items"],
+        "operationId": "createItemsBatch",
+        "summary": "Create up to 100 new items",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "ciphertext": {
+                          "type": "string",
+                          "contentEncoding": "base64"
+                        },
+                        "nonce": {
+                          "type": "string",
+                          "contentEncoding": "base64"
+                        }
+                      },
+                      "required": ["id", "ciphertext", "nonce"]
+                    }
+                  }
+                },
+                "required": ["items"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created; existing ids are skipped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "updatedAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    },
+                    "created": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    }
+                  },
+                  "required": ["updatedAt", "created"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`items.invalid_id`, `items.invalid_payload`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`items.quota_exceeded`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/shares": {
+      "post": {
+        "tags": ["Shares"],
+        "operationId": "createShare",
+        "summary": "Store an encrypted share",
+        "description": "The share key stays in the link fragment (`/s/<id>#<key>`) and never reaches the server.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ciphertext": {
+                    "type": "string",
+                    "description": "At most 16 KiB decoded",
+                    "contentEncoding": "base64"
+                  },
+                  "nonce": {
+                    "type": "string",
+                    "description": "12 bytes",
+                    "contentEncoding": "base64"
+                  },
+                  "ttlSeconds": {
+                    "type": "number",
+                    "minimum": 60,
+                    "maximum": 2592000
+                  },
+                  "maxViews": {
+                    "type": ["integer", "null"],
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "`null` for no view limit"
+                  },
+                  "recipients": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Up to 10 addresses; needs email on the server"
+                  }
+                },
+                "required": ["ciphertext", "nonce", "ttlSeconds", "maxViews"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "base64url"
+                    },
+                    "expiresAt": {
+                      "type": "integer",
+                      "description": "Unix seconds"
+                    },
+                    "maxViews": {
+                      "type": ["integer", "null"]
+                    },
+                    "revokeToken": {
+                      "type": "string",
+                      "description": "base64url; keep it to revoke or check the share"
+                    }
+                  },
+                  "required": ["id", "expiresAt", "maxViews", "revokeToken"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`shares.invalid_payload`, `shares.invalid_ttl`, `shares.invalid_max_views`, `shares.invalid_recipients`, `shares.email_unavailable`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/shares/status": {
+      "post": {
+        "tags": ["Shares"],
+        "operationId": "getShareStatus",
+        "summary": "Look up shares you created",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shares": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "revokeToken": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "revokeToken"]
+                    },
+                    "description": "Up to 50"
+                  }
+                },
+                "required": ["shares"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Statuses; a wrong token reads as inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "shares": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "expiresAt": {
+                            "type": "integer",
+                            "description": "Unix seconds"
+                          },
+                          "viewsLeft": {
+                            "type": ["integer", "null"],
+                            "description": "null without a view limit"
+                          }
+                        },
+                        "required": ["id", "active"]
+                      }
+                    }
+                  },
+                  "required": ["shares"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`shares.invalid_payload`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/shares/{id}": {
+      "delete": {
+        "tags": ["Shares"],
+        "operationId": "revokeShare",
+        "summary": "Delete a share at once",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Share id (base64url)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": [],
+            "revokeToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "`shares.gone`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Shares"],
+        "operationId": "openShare",
+        "summary": "Spend one view and return the ciphertext",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Share id (base64url)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Share ciphertext",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareContent"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`shares.email_required`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`shares.gone`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/shares/{id}/code": {
+      "post": {
+        "tags": ["Shares"],
+        "operationId": "requestShareCode",
+        "summary": "Email a 6-digit code to a recipient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Share id (base64url)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Turnstile-Token",
+            "in": "header",
+            "required": false,
+            "description": "Turnstile token; required when `GET /api/config` returns `turnstileSiteKey`, otherwise `403 auth.bot_check_failed`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "description": "Always returns `{ ok: true }`, so it cannot be used to test addresses against the recipient list.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "$ref": "#/components/schemas/Locale"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": ["ok"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`auth.bot_check_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/shares/{id}/open": {
+      "post": {
+        "tags": ["Shares"],
+        "operationId": "openShareWithCode",
+        "summary": "Open a restricted share with an emailed code",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Share id (base64url)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "6 digits"
+                  }
+                },
+                "required": ["email", "code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Share ciphertext",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareContent"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`shares.invalid_code`, `shares.code_expired`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`shares.gone`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Session token from register or login"
+      },
+      "githubOidc": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "GitHub Actions OIDC token requested with this server's origin as the audience"
+      },
+      "revokeToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Revoke-Token",
+        "description": "Revoke token returned when the share was created"
+      }
+    },
+    "schemas": {
+      "Sealed": {
+        "type": "object",
+        "description": "A value sealed with AES-256-GCM on the client",
+        "properties": {
+          "ciphertext": {
+            "type": "string",
+            "description": "AES-256-GCM ciphertext",
+            "contentEncoding": "base64"
+          },
+          "nonce": {
+            "type": "string",
+            "description": "12-byte nonce",
+            "contentEncoding": "base64"
+          }
+        },
+        "required": ["ciphertext", "nonce"]
+      },
+      "SealedRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sealed": {
+            "$ref": "#/components/schemas/Sealed"
+          },
+          "updatedAt": {
+            "type": "integer",
+            "description": "Unix seconds"
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "Account id of the last writer"
+          }
+        },
+        "required": ["id", "sealed", "updatedAt", "updatedBy"]
+      },
+      "Kdf": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "pbkdf2-sha256"
+          },
+          "iterations": {
+            "type": "integer",
+            "minimum": 600000,
+            "maximum": 5000000
+          },
+          "salt": {
+            "type": "string",
+            "description": "At most 64 bytes",
+            "contentEncoding": "base64"
+          }
+        },
+        "required": ["type", "iterations", "salt"]
+      },
+      "AuthKey": {
+        "type": "string",
+        "description": "32 bytes derived on the client; the server stores only a keyed hash",
+        "contentEncoding": "base64"
+      },
+      "Locale": {
+        "type": "string",
+        "description": "Email language",
+        "enum": ["en", "vi"],
+        "default": "en"
+      },
+      "Generation": {
+        "type": "integer",
+        "description": "Team key generation",
+        "minimum": 0
+      },
+      "TeamAccess": {
+        "type": "string",
+        "enum": ["edit", "view"]
+      },
+      "Identity": {
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string",
+            "description": "ECDH P-256 public key"
+          },
+          "wrappedPrivateKey": {
+            "$ref": "#/components/schemas/Sealed",
+            "description": "Sealed under the vault key"
+          }
+        },
+        "required": ["publicKey", "wrappedPrivateKey"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Session token for `Authorization: Bearer`"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "description": "Unix seconds"
+          },
+          "wrappedVaultKey": {
+            "$ref": "#/components/schemas/Sealed"
+          },
+          "upgradeKdf": {
+            "type": "boolean",
+            "description": "True when the account uses fewer than 600,000 iterations"
+          }
+        },
+        "required": ["token", "expiresAt", "wrappedVaultKey"]
+      },
+      "TwoFactorChallenge": {
+        "type": "object",
+        "properties": {
+          "twoFactor": {
+            "const": "required"
+          },
+          "challenge": {
+            "type": "string",
+            "description": "Pass to `/api/auth/login/2fa`; five minutes, single use"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "description": "Unix seconds"
+          }
+        },
+        "required": ["twoFactor", "challenge", "expiresAt"]
+      },
+      "ShareContent": {
+        "type": "object",
+        "properties": {
+          "ciphertext": {
+            "type": "string",
+            "contentEncoding": "base64"
+          },
+          "nonce": {
+            "type": "string",
+            "contentEncoding": "base64"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "description": "Unix seconds"
+          },
+          "viewsLeft": {
+            "type": ["integer", "null"],
+            "description": "null without a view limit, 0 after the last view"
+          }
+        },
+        "required": ["ciphertext", "nonce", "expiresAt", "viewsLeft"]
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "English sentence for humans"
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable machine-readable code, e.g. `auth.rate_limited`"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Values for the localized message, e.g. `seconds`"
+          }
+        },
+        "required": ["error", "code"]
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "`auth.unauthorized`: missing, unknown or expired session token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "`server.rate_limited`",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      }
+    }
+  }
+}
