@@ -21,6 +21,7 @@ import {
 } from "../src/i18n/index.js";
 import { hydrateIcons, icon, type IconName } from "../src/ui/icons.js";
 import { hydrateBrand } from "../src/ui/logo.js";
+import { guardReveal } from "./reveal.js";
 
 interface ShareResponse {
   ciphertext: string;
@@ -386,15 +387,19 @@ function secretField(label: string, password: string): HTMLElement {
   valueNode.textContent = PASSWORD_MASK;
   body.append(valueNode);
   let shown = false;
-  const toggle = iconButton("eye", t("common.show"), () => {
-    shown = !shown;
+  const render = (next: boolean) => {
+    shown = next;
     valueNode.textContent = shown ? password : PASSWORD_MASK;
     valueNode.classList.toggle("masked", !shown);
     toggle.replaceChildren(icon(shown ? "eye-off" : "eye"));
     const label = t(shown ? "common.hide" : "common.show");
     toggle.title = label;
     toggle.setAttribute("aria-label", label);
-  });
+    if (shown) guard.revealed();
+    else guard.hidden();
+  };
+  const guard = guardReveal(() => render(false));
+  const toggle = iconButton("eye", t("common.show"), () => render(!shown));
   wrap.append(toggle, copyButton(password).element);
   return wrap;
 }
