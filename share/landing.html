@@ -2564,8 +2564,8 @@
           <ol class="flow" style="margin: 0; padding: 0; list-style: none">
             <li class="card node">
               <div class="num"><span>01</span><span class="ic">{{icon:lock}}</span></div>
-              <h3>Your device encrypts</h3>
-              <p>AES-256-GCM, with a key only your master password unlocks.</p>
+              <h3>Encrypted on your device</h3>
+              <p>AES-256-GCM, with a key only your master password can unlock.</p>
               <div class="blob" aria-hidden="true">
                 <span class="k">STRIPE_KEY=</span><span class="v">sk_live_51Hq…4f2a</span>
               </div>
@@ -2573,16 +2573,16 @@
             <li class="wire" aria-hidden="true"></li>
             <li class="card node mid">
               <div class="num"><span>02</span><span class="ic">{{icon:database}}</span></div>
-              <h3>The server stores ciphertext</h3>
-              <p>A stolen database reveals nothing readable.</p>
+              <h3>Stored as ciphertext</h3>
+              <p>Even a leaked database reveals nothing readable.</p>
               <div class="blob" aria-hidden="true">
-                <span class="x">9f3a·c1e7·Vt9x·Qm2b·04dd·e8a1</span>
+                <span class="x">q7Vt9xQm2bE04dd…c1e7e8A1==</span>
               </div>
             </li>
             <li class="wire late" aria-hidden="true"></li>
             <li class="card node">
               <div class="num"><span>03</span><span class="ic">{{icon:person}}</span></div>
-              <h3>Your teammate decrypts</h3>
+              <h3>Decrypted by your teammate</h3>
               <p>With their own key, on their own device.</p>
               <div class="blob" aria-hidden="true">
                 <span class="k">STRIPE_KEY=</span><span class="v">sk_live_51Hq…4f2a</span>
@@ -2590,12 +2590,12 @@
             </li>
           </ol>
           <div class="card facts">
-            <div><b>AES-256-GCM</b><span>Encrypted on your device</span></div>
+            <div><b>AES-256-GCM</b><span>The most widely used cipher</span></div>
             <div>
               <b data-count="600000">600,000</b><span>PBKDF2 iterations on your password</span>
             </div>
-            <div><b>No reset</b><span>Nobody can open your vault for you</span></div>
-            <div><b>Synced</b><span>Across your devices, still end-to-end encrypted</span></div>
+            <div><b>No backdoor</b><span>Nobody can open your vault for you</span></div>
+            <div><b>Synced</b><span>Every device, still end-to-end encrypted</span></div>
           </div>
         </div>
       </section>
@@ -3330,8 +3330,8 @@
           <ol class="flow" style="margin: 0; padding: 0; list-style: none">
             <li class="card node">
               <div class="num"><span>01</span><span class="ic">{{icon:lock}}</span></div>
-              <h3>Máy bạn mã hoá</h3>
-              <p>AES-256-GCM, bằng khoá chỉ mật khẩu chính của bạn mở được.</p>
+              <h3>Mã hoá ngay trên máy bạn</h3>
+              <p>Dùng AES-256-GCM, với khoá chỉ mở được bằng mật khẩu chính của bạn.</p>
               <div class="blob" aria-hidden="true">
                 <span class="k">STRIPE_KEY=</span><span class="v">sk_live_51Hq…4f2a</span>
               </div>
@@ -3339,29 +3339,29 @@
             <li class="wire" aria-hidden="true"></li>
             <li class="card node mid">
               <div class="num"><span>02</span><span class="ic">{{icon:database}}</span></div>
-              <h3>Server chỉ giữ bản mã</h3>
-              <p>Lỡ lộ database cũng không ai đọc được gì.</p>
+              <h3>Máy chủ chỉ lưu bản mã</h3>
+              <p>Kể cả khi cơ sở dữ liệu bị lộ, dữ liệu vẫn không thể đọc được.</p>
               <div class="blob" aria-hidden="true">
-                <span class="x">9f3a·c1e7·Vt9x·Qm2b·04dd·e8a1</span>
+                <span class="x">q7Vt9xQm2bE04dd…c1e7e8A1==</span>
               </div>
             </li>
             <li class="wire late" aria-hidden="true"></li>
             <li class="card node">
               <div class="num"><span>03</span><span class="ic">{{icon:person}}</span></div>
-              <h3>Đồng đội giải mã</h3>
-              <p>Bằng khoá của chính họ, trên máy của họ.</p>
+              <h3>Thành viên nhóm tự giải mã</h3>
+              <p>Bằng khoá riêng, ngay trên thiết bị của họ.</p>
               <div class="blob" aria-hidden="true">
                 <span class="k">STRIPE_KEY=</span><span class="v">sk_live_51Hq…4f2a</span>
               </div>
             </li>
           </ol>
           <div class="card facts">
-            <div><b>AES-256-GCM</b><span>Mã hoá ngay trên máy bạn</span></div>
+            <div><b>AES-256-GCM</b><span>Chuẩn mã hoá phổ biến nhất hiện nay</span></div>
             <div>
               <b data-count="600000">600.000</b><span>vòng PBKDF2 cho mật khẩu của bạn</span>
             </div>
-            <div><b>Không reset</b><span>Không ai mở kho thay bạn được</span></div>
-            <div><b>Đồng bộ</b><span>Giữa các thiết bị, vẫn mã hoá đầu-cuối</span></div>
+            <div><b>Không cửa sau</b><span>Không ai mở được kho thay bạn</span></div>
+            <div><b>Đồng bộ</b><span>Mọi thiết bị, vẫn mã hoá đầu-cuối</span></div>
           </div>
         </div>
       </section>
