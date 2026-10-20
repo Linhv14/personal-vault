@@ -99,8 +99,15 @@ list, search, autofill and import. When two devices write it at once, the
 popup merges both by vault id and keeps the newest definition.
 
 The normal decrypted list and autofill paths exclude items with `trashedAt`.
-The popup requests trashed items explicitly so they can be restored or deleted
-forever; deleting forever is the server tombstone delete.
+The popup and **Settings → Trash** request trashed items explicitly so they can
+be restored or deleted forever; deleting forever is the server tombstone delete.
+
+The server cannot read `trashedAt`, so the 30-day retention
+(`TRASH_RETENTION_DAYS` in `extension/lib/trash.ts`) is enforced by the client.
+After the popup unlocks and a sync succeeds, it deletes forever every personal
+item trashed more than 30 days earlier, through the same tombstone delete.
+Items in team vaults are never purged automatically. A purge that fails part way
+stops and resumes after the next sync; running it again finds nothing new to do.
 
 ## `sessions`
 

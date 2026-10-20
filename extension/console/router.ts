@@ -1,6 +1,13 @@
 import { signal } from "@preact/signals";
 
-export const PERSONAL_SECTIONS = ["general", "security", "health", "data", "account"] as const;
+export const PERSONAL_SECTIONS = [
+  "general",
+  "security",
+  "health",
+  "data",
+  "trash",
+  "account",
+] as const;
 export type PersonalSection = (typeof PERSONAL_SECTIONS)[number];
 
 export type Route =

@@ -338,3 +338,46 @@
   overflow-wrap: anywhere;
   user-select: all;
 }
+.personal .trash .toolbar input[type="checkbox"],
+.personal .trash .trash-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.personal .trash .trash-check {
+  width: 1%;
+  padding-right: 0;
+}
+.personal .trash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.personal .trash .cell-icon {
+  flex-shrink: 0;
+}
+.personal .trash-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.personal .trash-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.personal .trash-sub {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.personal .trash .row-actions .icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
