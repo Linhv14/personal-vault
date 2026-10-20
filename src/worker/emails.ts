@@ -81,6 +81,17 @@ const STRINGS = {
       ignore:
         "If this wasn't you, don't share this code. Someone has your recovery code: sign in and replace it under Settings → Security.",
     },
+    newSignIn: {
+      subject: `New sign-in to your ${APP_NAME} vault`,
+      preheader: (device: string) => `Your vault was opened from ${device}.`,
+      heading: "New sign-in",
+      intro: (device: string, date: string) =>
+        `Your ${APP_NAME} vault was opened from a device it hasn't seen before: ${device}, on ${date}.`,
+      next: "If this was you, there's nothing to do.",
+      ignore:
+        "If it wasn't you, change your master password right away and sign out the other devices under Settings → Account.",
+      unknown: "an unrecognized device",
+    },
   },
   vi: {
     code: {
@@ -149,6 +160,17 @@ const STRINGS = {
       expiry: "Mã hết hạn sau 15 phút.",
       ignore:
         "Nếu không phải bạn, đừng đưa mã này cho ai. Có người đang giữ mã khôi phục của bạn: hãy đăng nhập và tạo mã mới trong Cài đặt → Bảo mật.",
+    },
+    newSignIn: {
+      subject: `Có lượt đăng nhập mới vào kho ${APP_NAME}`,
+      preheader: (device: string) => `Kho của bạn vừa được mở từ ${device}.`,
+      heading: "Đăng nhập mới",
+      intro: (device: string, date: string) =>
+        `Kho ${APP_NAME} của bạn vừa được mở từ một thiết bị chưa từng dùng trước đây: ${device}, ngày ${date}.`,
+      next: "Nếu đó là bạn, bạn không cần làm gì thêm.",
+      ignore:
+        "Nếu không phải bạn, hãy đổi mật khẩu chính ngay và đăng xuất các thiết bị khác trong Cài đặt → Tài khoản.",
+      unknown: "một thiết bị không xác định",
     },
   },
 } as const;
@@ -266,6 +288,24 @@ export function recoveryCodeEmail(context: EmailContext, code: string): Rendered
       { kind: "text", text: strings.intro },
       { kind: "code", code },
       { kind: "text", text: strings.expiry, tone: "muted" },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
+}
+
+export function newSignInEmail(
+  context: EmailContext,
+  details: { device: string; at: number },
+): RenderedEmail {
+  const strings = STRINGS[context.locale].newSignIn;
+  const device = details.device || strings.unknown;
+  return renderEmail(context, {
+    subject: strings.subject,
+    preheader: strings.preheader(device),
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro(device, formatDate(details.at, context.locale)) },
+      { kind: "text", text: strings.next, tone: "muted" },
       { kind: "text", text: strings.ignore, tone: "small" },
     ],
   });

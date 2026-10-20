@@ -131,7 +131,7 @@ export async function prelogin(email: string): Promise<KdfParams> {
 export async function login(
   email: string,
   authKey: string,
-): Promise<{ token: string; wrappedVaultKey: SealedData }> {
+): Promise<{ token: string; wrappedVaultKey: SealedData; upgradeKdf?: boolean }> {
   return request("/api/auth/login", {
     method: "POST",
     auth: false,
@@ -148,11 +148,34 @@ export async function logout(): Promise<void> {
 export async function changePassword(
   currentAuthKey: string,
   record: AccountCryptoRecord,
+  options: { keepSession?: boolean; token?: string } = {},
 ): Promise<void> {
   await request("/api/auth/change-password", {
     method: "POST",
-    body: JSON.stringify({ currentAuthKey, ...record }),
+    ...(options.token ? asSession(options.token) : {}),
+    body: JSON.stringify({ currentAuthKey, ...record, keepSession: options.keepSession }),
   });
+}
+
+export interface SessionInfo {
+  id: string;
+  label: string;
+  kind: "browser" | "cli" | "ci" | "unknown";
+  createdAt: number;
+  lastSeenAt: number | null;
+  current: boolean;
+}
+
+export async function listSessions(): Promise<SessionInfo[]> {
+  return (await request<{ sessions: SessionInfo[] }>("/api/auth/sessions")).sessions;
+}
+
+export async function revokeSession(id: string): Promise<void> {
+  await request(`/api/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function revokeOtherSessions(): Promise<void> {
+  await request("/api/auth/sessions/revoke-others", { method: "POST" });
 }
 
 export async function deleteAccount(currentAuthKey: string): Promise<void> {

@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "../../core/bytes.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
-import { now } from "../http.js";
+import { inBackground, now } from "../http.js";
 import { createMailer } from "../mailer.js";
 import { isCode } from "../one-time-code.js";
 import { hashToken } from "../session.js";
@@ -211,16 +211,15 @@ shares.post("/:id/code", async (c) => {
 
   const mailer = createMailer(c.env);
   if (mailer) {
-    await sendShareCode(
-      c.env,
-      mailer,
-      {
-        shareId: c.req.param("id"),
-        email,
-        locale: body?.locale === "vi" ? "vi" : "en",
-        siteUrl: new URL(c.req.url).origin,
-      },
-      now(),
+    const request = {
+      shareId: c.req.param("id"),
+      email,
+      locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+      siteUrl: new URL(c.req.url).origin,
+    };
+    const timestamp = now();
+    inBackground(c, "share_access_email_failed", () =>
+      sendShareCode(c.env, mailer, request, timestamp),
     );
   }
   return c.json({ ok: true });

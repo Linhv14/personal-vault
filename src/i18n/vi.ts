@@ -177,6 +177,7 @@ export const vi: Catalogue = {
   "bio.turned_off": "Mở khoá bằng {method} đã tắt. Dùng mật khẩu chính nhé.",
   "error.auth.biometric_off": "Mở khoá sinh trắc học đang tắt. Dùng mật khẩu chính nhé.",
   "error.auth.biometric_failed": "Xác thực sinh trắc học chưa thành công.",
+  "error.auth.session_not_found": "Thiết bị đó đã được đăng xuất rồi",
   "orgs.invited_to": "Bạn được mời vào {name}",
   "orgs.invited_many": "{count, plural, other {# lời mời}} vào tổ chức",
   "orgs.review": "Xem lời mời",
@@ -1044,6 +1045,15 @@ export const vi: Catalogue = {
   "settings.deleted": "Đã xoá tài khoản và kho.",
   "settings.logout_confirm":
     "Đăng xuất và xoá toàn bộ dữ liệu trên máy này? Kho trên server vẫn giữ nguyên.",
+  "settings.sessions": "Thiết bị đang đăng nhập",
+  "settings.sessions_this_device": "Thiết bị này",
+  "settings.sessions_unknown_device": "Thiết bị không xác định",
+  "settings.sessions_revoke": "Đăng xuất",
+  "settings.sessions_revoke_confirm": "Đăng xuất {device}?",
+  "settings.sessions_revoked": "Đã đăng xuất thiết bị",
+  "settings.sessions_revoke_others": "Đăng xuất các thiết bị khác",
+  "settings.sessions_revoke_others_confirm": "Đăng xuất mọi thiết bị trừ thiết bị này?",
+  "settings.sessions_revoked_others": "Đã đăng xuất các thiết bị khác",
 
   // --- Share recipient page ------------------------------------------------
   "common.close": "Đóng",

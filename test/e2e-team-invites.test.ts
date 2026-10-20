@@ -33,7 +33,7 @@ async function api(path: string, init: RequestInit & { token?: string } = {}) {
 
 async function person(label: string): Promise<Person> {
   const email = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.com`;
-  const { record } = await createAccount(email, `password for ${label}`, 100_000);
+  const { record } = await createAccount(email, `password for ${label}`, 600_000);
   const registered = await api("/api/auth/register", {
     method: "POST",
     headers: { "x-registration-token": REGISTRATION_TOKEN },

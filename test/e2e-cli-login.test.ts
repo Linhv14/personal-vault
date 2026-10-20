@@ -68,7 +68,7 @@ describe.skipIf(!enabled)("7key login, link and run against Worker + D1", () => 
   });
 
   beforeAll(async () => {
-    const { record, vaultKey } = await createAccount(email, PASSWORD, 100_000);
+    const { record, vaultKey } = await createAccount(email, PASSWORD, 600_000);
     const registered = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },

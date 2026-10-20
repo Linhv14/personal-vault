@@ -32,7 +32,7 @@ interface Person {
 
 async function person(label: string): Promise<Person> {
   const email = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@example.com`;
-  const { record } = await createAccount(email, `password for ${label}`, 100_000);
+  const { record } = await createAccount(email, `password for ${label}`, 600_000);
   const registered = await api("/api/auth/register", {
     method: "POST",
     headers: { "x-registration-token": REGISTRATION_TOKEN },
@@ -328,7 +328,7 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
         method: "POST",
         body: JSON.stringify({
           email: as,
-          ...(await createAccount(as, "newcomer password", 100_000)).record,
+          ...(await createAccount(as, "newcomer password", 600_000)).record,
           inviteId,
         }),
       });
@@ -365,7 +365,7 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
       });
 
     const lateEmail = `late-${Date.now()}@other.test`;
-    const { record } = await createAccount(lateEmail, "late password", 100_000);
+    const { record } = await createAccount(lateEmail, "late password", 600_000);
     const late = await api("/api/auth/register", {
       method: "POST",
       headers: { "x-registration-token": REGISTRATION_TOKEN },

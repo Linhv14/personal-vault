@@ -8,6 +8,7 @@ import {
 } from "../../src/core/crypto.js";
 import { toBase64 } from "../../src/core/bytes.js";
 import * as api from "../lib/api.js";
+import { upgradeKdf } from "../lib/kdf-upgrade.js";
 import { rememberUnlock } from "../lib/resume.js";
 import { getLocal, setLocal, unlock } from "../lib/storage.js";
 import { enterVault, toast, translator } from "./state.js";
@@ -26,6 +27,11 @@ export async function signIn(email: string, password: string): Promise<void> {
     const result = await api.login(email, authKey);
     token = result.token;
     wrapped = result.wrappedVaultKey;
+    if (result.upgradeKdf) {
+      const raw = await openSealed(await deriveWrappingKey(masterKey), wrapped);
+      const upgraded = await upgradeKdf(email, password, raw, authKey, token);
+      if (upgraded) ({ kdf, wrappedVaultKey: wrapped } = upgraded);
+    }
     await setLocal({ kdf, wrappedVaultKey: wrapped });
   } catch (error) {
     const networkFailure = error instanceof api.ApiError && error.status === 0;

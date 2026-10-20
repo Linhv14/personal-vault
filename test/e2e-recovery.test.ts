@@ -10,7 +10,7 @@ import {
 
 const BASE = process.env.VAULT_E2E_URL ?? "http://127.0.0.1:8787";
 const REGISTRATION_TOKEN = process.env.VAULT_REGISTRATION_TOKEN ?? "token-dev-local";
-const ITERATIONS = 100_000;
+const ITERATIONS = 600_000;
 const enabled = process.env.VAULT_E2E === "1";
 
 async function api(

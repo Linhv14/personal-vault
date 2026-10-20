@@ -381,3 +381,18 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+.personal .sessions h2 {
+  margin: 0;
+}
+.personal .session {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.personal .session > .icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
