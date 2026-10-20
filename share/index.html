@@ -315,18 +315,72 @@
       }
 
       .fields {
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        margin: 0 -12px;
+      }
+      .site {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        min-width: 0;
+        margin-top: 2px;
+      }
+      .site-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        color: var(--accent);
+        font-size: 14px;
+        text-decoration: none;
+      }
+      .site-link:hover {
+        text-decoration: underline;
+      }
+      .site-text {
         overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .site-link .icon {
+        width: 14px;
+        height: 14px;
+      }
+      .site .icon-button {
+        width: 30px;
+        height: 30px;
+      }
+      .site .icon-button .icon {
+        width: 15px;
+        height: 15px;
+      }
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 18px 0 0;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .meta .icon {
+        width: 14px;
+        height: 14px;
       }
       .field {
         display: flex;
         align-items: center;
         gap: 4px;
-        padding: 10px 8px 10px 14px;
+        padding: 10px 6px 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 0.12s;
+      }
+      .field:hover {
+        background: var(--surface);
       }
       .field + .field {
-        border-top: 1px solid var(--border);
+        margin-top: 2px;
       }
       .field-body {
         flex: 1;
@@ -408,19 +462,16 @@
         display: flex;
         align-items: flex-start;
         gap: 10px;
-        margin: -28px -28px 24px;
-        padding: 12px 28px;
-        border-radius: 20px 20px 0 0;
-        border-bottom: 1px solid var(--border);
+        margin: 0 0 18px;
+        padding: 10px 12px;
+        border-radius: 12px;
         background: var(--surface);
         color: var(--muted);
         font-size: 13px;
       }
       @media (max-width: 520px) {
         .banner {
-          margin: -16px -16px 16px;
-          padding: 10px 16px;
-          border-radius: 16px 16px 0 0;
+          margin: 0 0 14px;
         }
       }
       .banner .icon {
@@ -517,15 +568,16 @@
         </div>
 
         <div id="state-content" hidden>
-          <div class="banner" id="banner" role="status"></div>
+          <div class="banner" id="banner" role="status" hidden></div>
           <div class="head">
             <span class="avatar" id="avatar"></span>
             <div class="head-text">
-              <p class="eyebrow" data-i18n="view.shared_with_you"></p>
               <h1 id="title"></h1>
+              <div id="site"></div>
             </div>
           </div>
           <div class="fields" id="fields"></div>
+          <p class="meta" id="meta" hidden></p>
         </div>
       </div>
       <div class="toast" id="toast" role="status" hidden></div>
