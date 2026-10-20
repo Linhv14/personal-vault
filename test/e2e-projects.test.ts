@@ -361,14 +361,10 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
     project = reopened!;
   });
 
-  it("caps projects by plan", async () => {
+  it("lets the free plan keep adding projects", async () => {
     as(owner);
     const current = await teamAs(owner);
-    for (let n = 0; n < 4; n++) await createProject(orgId, current, owner.identity, `P${n}`);
-    await expect(createProject(orgId, current, owner.identity, "over")).rejects.toMatchObject({
-      messageKey: "error.orgs.project_limit",
-      params: { limit: 5 },
-    });
+    for (let n = 0; n < 5; n++) await createProject(orgId, current, owner.identity, `P${n}`);
   });
 
   it("deletes a project with its secrets and logs every step without names or values", async () => {

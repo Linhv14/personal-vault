@@ -67,7 +67,10 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     expect((await fetch(`${BASE}/api/migration/export`)).status).toBe(401);
     const exported = await (await fetch(`${BASE}/api/migration/export`, { headers: auth })).json();
     const [accountId, dump] = Object.entries(exported.users as Record<string, unknown>).find(
-      ([, store]) => Object.keys(store as object).length > 0,
+      ([, store]) =>
+        Object.values(store as Record<string, { rows: unknown[] }>).some(
+          (table) => table.rows.length > 0,
+        ),
     )!;
     const copyId = crypto.randomUUID();
     const restore = (users: Record<string, unknown>) =>

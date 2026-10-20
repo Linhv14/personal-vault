@@ -433,7 +433,7 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
     expect(full.body).toMatchObject({ code: "orgs.seat_limit", params: { limit: 5 } });
   });
 
-  it("caps the number of teams by plan", async () => {
+  it("lets the free plan keep adding teams", async () => {
     const create = async () => {
       const id = crypto.randomUUID();
       return api(`/api/orgs/${orgId}/teams`, {
@@ -450,11 +450,7 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
         }),
       });
     };
-    expect((await create()).status).toBe(201);
-    expect((await create()).status).toBe(201);
-    const over = await create();
-    expect(over.status).toBe(409);
-    expect(over.body).toMatchObject({ code: "orgs.team_limit", params: { limit: 3 } });
+    for (let n = 0; n < 4; n++) expect((await create()).status).toBe(201);
   });
 
   it("hands ownership to another member, and only the owner can", async () => {
