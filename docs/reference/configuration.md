@@ -6,22 +6,24 @@ Everything that configures a deployment, where it is set, and who reads it.
 
 Plain-text values in the generated Wrangler config, set through deploy options.
 
-| Variable            | Values                    | Set by                                        | Effect                                                                                                                |
-| ------------------- | ------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `REGISTRATION_MODE` | `token` (default), `open` | `--open-registration`, `--token-registration` | `token`: `/api/auth/register` needs the `X-Registration-Token` header. `open`: it does not.                           |
-| `EMAIL_FROM`        | An address, or unset      | `--email-from`                                | When set and a mail provider is available, sign-up needs an emailed code and restricted share links become available. |
+| Variable             | Values                         | Set by                                                                    | Effect                                                                                                                                                            |
+| -------------------- | ------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REGISTRATION_MODE`  | `token` (default), `open`      | `--open-registration`, `--token-registration`                             | `token`: `/api/auth/register` needs the `X-Registration-Token` header. `open`: it does not.                                                                       |
+| `EMAIL_FROM`         | An address, or unset           | `--email-from`                                                            | When set and a mail provider is available, sign-up needs an emailed code and restricted share links become available.                                             |
+| `TURNSTILE_SITE_KEY` | A Turnstile site key, or unset | `--turnstile-site-key`, or `turnstileSiteKey` in `deploy/production.json` | With `TURNSTILE_SECRET`, sign-up, its email code, account recovery and share-code requests need a Turnstile token in `X-Turnstile-Token`. Either unset: no check. |
 
 ## Worker secrets
 
 Encrypted by Cloudflare and never shown again once set. `npm run deploy`
 generates the first three; the fourth comes from you.
 
-| Secret               | Required                                  | Generated            | Purpose                                                                                              |
-| -------------------- | ----------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------- |
-| `REGISTRATION_TOKEN` | Always                                    | Yes, 24 random bytes | Gate on account creation in `token` mode.                                                            |
-| `EMAIL_PROBE_SECRET` | Always                                    | Yes, 32 random bytes | Key for decoy KDF salts, recipient and code hashes, the per-network registration counter.            |
-| `AT_REST_SECRET`     | Always                                    | Yes, 32 random bytes | Root of the server-side layer over auth hashes and wrapped vault keys. **Back it up; never rotate.** |
-| `RESEND_API_KEY`     | With `--email-from` and provider `resend` | No                   | Sends email through Resend. `deploy` stops until it is set.                                          |
+| Secret               | Required                                  | Generated            | Purpose                                                                                                                                                                   |
+| -------------------- | ----------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REGISTRATION_TOKEN` | Always                                    | Yes, 24 random bytes | Gate on account creation in `token` mode.                                                                                                                                 |
+| `EMAIL_PROBE_SECRET` | Always                                    | Yes, 32 random bytes | Key for decoy KDF salts, recipient and code hashes, the per-network registration counter.                                                                                 |
+| `AT_REST_SECRET`     | Always                                    | Yes, 32 random bytes | Root of the server-side layer over auth hashes and wrapped vault keys. **Back it up; never rotate.**                                                                      |
+| `RESEND_API_KEY`     | With `--email-from` and provider `resend` | No                   | Sends email through Resend. `deploy` stops until it is set.                                                                                                               |
+| `TURNSTILE_SECRET`   | With `--turnstile-site-key`               | No                   | Verifies Turnstile tokens with Cloudflare siteverify. `deploy` stops until it is set. Local dev: pass it with `--var`, since `.dev.vars` only loads the required secrets. |
 
 Set or replace one with:
 

@@ -509,6 +509,8 @@ if (!command || !(command in COMMANDS)) {
            --email-from <addr>   send sign-up codes from this address ("none" to drop)
            --email-provider <p>  "resend" (default; needs the RESEND_API_KEY secret)
                                  or "cloudflare" (Email Sending; Workers Paid plan)
+           --turnstile-site-key <key>  require a Turnstile check on sign-up, recovery and
+                                 share codes; needs the TURNSTILE_SECRET secret ("none" to drop)
   ci       Deploy from Workers Builds with deploy/production.json: migrate,
            build and deploy. Secrets must already be set on the Worker.
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787

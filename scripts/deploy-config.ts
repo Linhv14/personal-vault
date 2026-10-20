@@ -6,6 +6,7 @@ export interface DeployOptions {
   aliasDomains: string[];
   emailFrom: string | null;
   emailProvider: EmailProvider;
+  turnstileSiteKey: string | null;
 }
 
 type EmailProvider = (typeof EMAIL_PROVIDERS)[number];
@@ -18,6 +19,7 @@ export const DEFAULT_DEPLOY_OPTIONS: Readonly<DeployOptions> = Object.freeze({
   aliasDomains: [],
   emailFrom: null,
   emailProvider: "resend",
+  turnstileSiteKey: null,
 });
 
 function isEmailProvider(value: string): value is EmailProvider {
@@ -25,6 +27,7 @@ function isEmailProvider(value: string): value is EmailProvider {
 }
 const HOSTNAME = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TURNSTILE_SITE_KEY = /^[0-9a-zA-Z_-]{10,64}$/;
 
 function clearable(value: string): string | null {
   return value === "none" ? null : value;
@@ -67,6 +70,14 @@ export function parseDeployFlags(argv: readonly string[]): Partial<DeployOptions
         flags.emailProvider = provider;
         break;
       }
+      case "--turnstile-site-key": {
+        const siteKey = clearable(takeValue());
+        if (siteKey && !TURNSTILE_SITE_KEY.test(siteKey)) {
+          throw new Error(`Not a Turnstile site key: ${siteKey}`);
+        }
+        flags.turnstileSiteKey = siteKey;
+        break;
+      }
       default:
         throw new Error(`Unknown option: ${flag}`);
     }
@@ -89,6 +100,7 @@ export function resolveDeployOptions(
 export function requiredSecrets(options: DeployOptions): string[] {
   const secrets = ["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET", "AT_REST_SECRET"];
   if (options.emailFrom && options.emailProvider === "resend") secrets.push("RESEND_API_KEY");
+  if (options.turnstileSiteKey) secrets.push("TURNSTILE_SECRET");
   return secrets;
 }
 
@@ -131,6 +143,8 @@ export function renderConfig(
     vars.EMAIL_FROM = options.emailFrom;
     if (options.emailProvider === "cloudflare") config.send_email = [{ name: "EMAIL" }];
   }
+
+  if (options.turnstileSiteKey) vars.TURNSTILE_SITE_KEY = options.turnstileSiteKey;
 
   config.secrets = { required: requiredSecrets(options) };
 

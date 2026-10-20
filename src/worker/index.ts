@@ -18,6 +18,13 @@ import { clientIp, isOpenRegistration } from "./request.js";
 import { resolveSession, SESSION_IDLE_SECONDS } from "./session.js";
 import { securityTxt, SHARE_PAGE_HEADERS, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import { PAIR_MEMORY_SECONDS } from "./throttle-policy.js";
+import {
+  requireHuman,
+  TURNSTILE_HEADER,
+  turnstileFrameHeaders,
+  turnstileFramePage,
+  turnstileSiteKey,
+} from "./turnstile.js";
 import type { AppBindings, Env } from "./types.js";
 
 const app = new Hono<AppBindings>();
@@ -29,7 +36,7 @@ app.use(
       origin.startsWith("chrome-extension://") || origin.startsWith("moz-extension://")
         ? origin
         : null,
-    allowHeaders: ["Content-Type", "Authorization", "X-Registration-Token"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Registration-Token", TURNSTILE_HEADER],
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     maxAge: 86_400,
   }),
@@ -77,6 +84,12 @@ app.use("/api/auth/login", limitByClientIp);
 app.use("/api/auth/recover/*", limitByClientIp);
 app.on("GET", "/api/shares/*", limitByClientIp);
 app.on("POST", ["/api/shares/:id/code", "/api/shares/:id/open"], limitByClientIp);
+
+app.use("/api/auth/register", requireHuman);
+app.use("/api/auth/verify-email", requireHuman);
+app.use("/api/auth/recover/email", requireHuman);
+app.use("/api/auth/recover/start", requireHuman);
+app.on("POST", "/api/shares/:id/code", requireHuman);
 
 const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
   const session = await resolveSession(c.env, c.req.header("Authorization"));
@@ -135,12 +148,14 @@ app.use("/api/shares/status", requireAuth);
 app.on("DELETE", "/api/shares/*", requireAuth);
 app.on("DELETE", "/api/shares/*", limitWritesByAccount);
 
-app.get("/api/config", (c) =>
-  c.json({
+app.get("/api/config", (c) => {
+  const siteKey = turnstileSiteKey(c.env);
+  return c.json({
     registration: isOpenRegistration(c.env) ? "open" : "token",
     emailVerification: emailVerificationEnabled(c.env),
-  }),
-);
+    ...(siteKey ? { turnstileSiteKey: siteKey } : {}),
+  });
+});
 
 app.route("/api/auth", auth);
 app.route("/api/auth", deviceUnlock);
@@ -172,6 +187,15 @@ app.get("/s/:id", async (c) => {
     response.headers.set("Strict-Transport-Security", STRICT_TRANSPORT_SECURITY);
   }
   return response;
+});
+
+app.get("/turnstile", (c) => {
+  const siteKey = turnstileSiteKey(c.env);
+  if (!siteKey) return c.notFound();
+  const nonce = crypto.randomUUID().replaceAll("-", "");
+  return new Response(turnstileFramePage(siteKey, nonce), {
+    headers: turnstileFrameHeaders(nonce),
+  });
 });
 
 app.get("/.well-known/security.txt", (c) => {

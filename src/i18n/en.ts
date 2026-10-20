@@ -181,6 +181,7 @@ export const en = {
   "error.auth.biometric_off": "Biometric unlock is off. Use your master password.",
   "error.auth.biometric_failed": "The biometric check didn't pass.",
   "error.auth.session_not_found": "That device was already signed out",
+  "error.auth.bot_check_failed": "Could not confirm you are human. Try again.",
   "orgs.invited_to": "You're invited to {name}",
   "orgs.invited_many": "{count, plural, one {# invitation} other {# invitations}} to organizations",
   "orgs.review": "Review",

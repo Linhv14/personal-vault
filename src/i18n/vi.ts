@@ -178,6 +178,7 @@ export const vi: Catalogue = {
   "error.auth.biometric_off": "Mở khoá sinh trắc học đang tắt. Dùng mật khẩu chính nhé.",
   "error.auth.biometric_failed": "Xác thực sinh trắc học chưa thành công.",
   "error.auth.session_not_found": "Thiết bị đó đã được đăng xuất rồi",
+  "error.auth.bot_check_failed": "Chưa xác minh được bạn là người thật. Hãy thử lại.",
   "orgs.invited_to": "Bạn được mời vào {name}",
   "orgs.invited_many": "{count, plural, other {# lời mời}} vào tổ chức",
   "orgs.review": "Xem lời mời",
