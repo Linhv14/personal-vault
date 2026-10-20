@@ -6,5 +6,6 @@
   "customDomain": "7key.online",
   "emailFrom": "no-reply@7key.online",
   "emailProvider": "resend",
-  "aliasDomains": []
+  "aliasDomains": [],
+  "turnstileSiteKey": "0x4AAAAAAFdd_eUW6Xwzs8Yu"
 }
