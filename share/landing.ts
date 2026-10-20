@@ -2,6 +2,10 @@ import { gsap } from "gsap";
 
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+document.documentElement.classList.add("js");
+pickSystem();
+enableCopy();
+
 if (!reduced) {
   revealSections();
   animateAudienceTabs();
@@ -244,5 +248,27 @@ function followCursor(): void {
       moveY(point.y);
     });
     card.addEventListener("pointerleave", () => card.classList.remove("glowing"));
+  }
+}
+
+function pickSystem(): void {
+  const platform = `${navigator.userAgent} ${navigator.platform}`.toLowerCase();
+  const id = platform.includes("win")
+    ? "os-win"
+    : platform.includes("linux") && !platform.includes("android")
+      ? "os-linux"
+      : "os-mac";
+  const input = document.getElementById(id);
+  if (input instanceof HTMLInputElement) input.checked = true;
+}
+
+function enableCopy(): void {
+  for (const button of document.querySelectorAll<HTMLButtonElement>(".copy[data-copy]")) {
+    button.addEventListener("click", () => {
+      void navigator.clipboard.writeText(button.dataset.copy ?? "").then(() => {
+        button.classList.add("done");
+        window.setTimeout(() => button.classList.remove("done"), 1200);
+      });
+    });
   }
 }

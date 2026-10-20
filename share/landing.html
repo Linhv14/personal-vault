@@ -1718,6 +1718,157 @@
       .vrow.hover .vrestore {
         opacity: 1;
       }
+      .start {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .start-card {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 28px;
+      }
+      .start-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+      }
+      .start-head h3 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      .start-head p {
+        margin: 0;
+        color: var(--l-muted);
+        font-size: 14.5px;
+      }
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: s;
+      }
+      .steps li {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 10px;
+        color: var(--l-muted);
+        font-size: 14.5px;
+        counter-increment: s;
+      }
+      .steps li::before {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid var(--l-line2);
+        border-radius: 50%;
+        content: counter(s);
+        color: var(--l-text);
+        font: 600 12px var(--l-mono);
+      }
+      .steps b {
+        color: var(--l-text);
+      }
+      .start-foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        margin-top: auto;
+        color: var(--l-dim);
+        font-size: 13px;
+      }
+      .os > input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .os-seg {
+        align-self: flex-start;
+        margin-bottom: 0;
+      }
+      #os-mac:checked ~ .os-seg [for="os-mac"],
+      #os-win:checked ~ .os-seg [for="os-win"],
+      #os-linux:checked ~ .os-seg [for="os-linux"] {
+        background: var(--l-text);
+        color: #14110f;
+      }
+      #os-mac:focus-visible ~ .os-seg [for="os-mac"],
+      #os-win:focus-visible ~ .os-seg [for="os-win"],
+      #os-linux:focus-visible ~ .os-seg [for="os-linux"] {
+        outline: 2px solid var(--l-accent);
+        outline-offset: 2px;
+      }
+      .os-panel {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #os-mac:checked ~ #os-mac-panel,
+      #os-win:checked ~ #os-win-panel,
+      #os-linux:checked ~ #os-linux-panel {
+        display: flex;
+      }
+      .cmd {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 0 8px 0 16px;
+        border: 1px solid var(--l-line);
+        border-radius: 12px;
+        background: rgb(0 0 0 / 0.3);
+        font: 13.5px var(--l-mono);
+      }
+      .cmd code {
+        flex: 1;
+        min-width: 0;
+        overflow-x: auto;
+        padding: 0;
+        background: none;
+        color: var(--l-text);
+        font: inherit;
+        white-space: nowrap;
+      }
+      .copy {
+        display: none;
+        place-items: center;
+        flex: none;
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        background: none;
+        color: var(--l-muted);
+        cursor: pointer;
+      }
+      .js .copy {
+        display: grid;
+      }
+      .copy:hover,
+      .copy.done {
+        background: rgb(255 255 255 / 0.06);
+        color: var(--l-text);
+      }
+      .copy svg {
+        width: 15px;
+        height: 15px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .os-note {
+        margin: 2px 0 0;
+        color: var(--l-dim);
+        font-size: 13px;
+      }
       .tbl {
         overflow-x: auto;
         border: 1px solid var(--l-line);
@@ -2107,6 +2258,9 @@
         }
         .facts div:nth-child(n + 3) {
           border-top: 1px solid var(--l-line);
+        }
+        .start {
+          grid-template-columns: minmax(0, 1fr);
         }
         .install {
           grid-template-columns: 1fr;
@@ -2936,17 +3090,122 @@
 
       <section id="install">
         <div class="wrap">
-          <span class="kicker">Install</span>
-          <h2>Ready in a minute.</h2>
-          <p class="lede">Chrome Web Store listing coming soon.</p>
-          <ol class="install">
-            <li>
-              <b>Download</b> <a href="/download/7key-extension.zip">7key-extension.zip</a> and
-              unzip.
-            </li>
-            <li><b>Open</b> <code>chrome://extensions</code>, turn on Developer mode.</li>
-            <li><b>Load unpacked</b> and pick the folder.</li>
-          </ol>
+          <span class="kicker">Get started</span>
+          <h2>Up and running in a minute.</h2>
+          <p class="lede">The extension for your browser, the CLI for your terminal.</p>
+          <div class="start">
+            <div class="card start-card">
+              <div class="start-head">
+                <span class="ic">{{icon:lock}}</span>
+                <div>
+                  <h3>Chrome extension</h3>
+                  <p>Vault, autofill and 2FA codes in your browser.</p>
+                </div>
+              </div>
+              <ol class="steps">
+                <li>
+                  <span>
+                    <b>Download</b>
+                    <a href="/download/7key-extension.zip">7key-extension.zip</a> and unzip it.
+                  </span>
+                </li>
+                <li>
+                  <span
+                    ><b>Open</b> <code>chrome://extensions</code> and turn on Developer mode.</span
+                  >
+                </li>
+                <li>
+                  <span><b>Load unpacked</b> and pick the folder.</span>
+                </li>
+              </ol>
+              <div class="start-foot">
+                <a class="btn primary" href="/download/7key-extension.zip">Download for Chrome</a>
+                <span>Chrome Web Store listing coming soon.</span>
+              </div>
+            </div>
+            <div class="card start-card os">
+              <input type="radio" name="os" id="os-mac" checked /><input
+                type="radio"
+                name="os"
+                id="os-win"
+              /><input type="radio" name="os" id="os-linux" />
+              <div class="start-head">
+                <span class="ic">{{icon:terminal}}</span>
+                <div>
+                  <h3>CLI</h3>
+                  <p>Secrets for local runs, CI and AI agents.</p>
+                </div>
+              </div>
+              <div class="seg os-seg" role="group" aria-label="Choose your system">
+                <label for="os-mac">macOS</label><label for="os-win">Windows</label
+                ><label for="os-linux">Linux</label>
+              </div>
+              <div class="os-panel" id="os-mac-panel">
+                <div class="cmd">
+                  <span class="t-p">$</span><code>brew install linhv14/7key/sevenkey</code
+                  ><button
+                    type="button"
+                    class="copy"
+                    data-copy="brew install linhv14/7key/sevenkey"
+                    aria-label="Copy"
+                  >
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <div class="cmd">
+                  <span class="t-p">$</span><code>7key login</code
+                  ><button type="button" class="copy" data-copy="7key login" aria-label="Copy">
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <p class="os-note">Requires Homebrew.</p>
+              </div>
+              <div class="os-panel" id="os-win-panel">
+                <div class="cmd">
+                  <span class="t-p">&gt;</span><code>npm install -g @7key/cli</code
+                  ><button
+                    type="button"
+                    class="copy"
+                    data-copy="npm install -g @7key/cli"
+                    aria-label="Copy"
+                  >
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <div class="cmd">
+                  <span class="t-p">&gt;</span><code>7key login</code
+                  ><button type="button" class="copy" data-copy="7key login" aria-label="Copy">
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <p class="os-note">Or without installing: <code>npx @7key/cli login</code></p>
+                <p class="os-note">
+                  Requires Node.js 20 or later. In PowerShell or Command Prompt.
+                </p>
+              </div>
+              <div class="os-panel" id="os-linux-panel">
+                <div class="cmd">
+                  <span class="t-p">$</span><code>npm install -g @7key/cli</code
+                  ><button
+                    type="button"
+                    class="copy"
+                    data-copy="npm install -g @7key/cli"
+                    aria-label="Copy"
+                  >
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <div class="cmd">
+                  <span class="t-p">$</span><code>7key login</code
+                  ><button type="button" class="copy" data-copy="7key login" aria-label="Copy">
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <p class="os-note">Or without installing: <code>npx @7key/cli login</code></p>
+                <p class="os-note">Requires Node.js 20 or later.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -3702,16 +3961,120 @@
 
       <section id="install">
         <div class="wrap">
-          <span class="kicker">Cài đặt</span>
-          <h2>Cài xong trong một phút.</h2>
-          <p class="lede">Sắp có trên Chrome Web Store.</p>
-          <ol class="install">
-            <li>
-              <b>Tải</b> <a href="/download/7key-extension.zip">7key-extension.zip</a> rồi giải nén.
-            </li>
-            <li><b>Mở</b> <code>chrome://extensions</code> và bật Developer mode.</li>
-            <li><b>Bấm</b> Load unpacked và chọn thư mục vừa giải nén.</li>
-          </ol>
+          <span class="kicker">Bắt đầu</span>
+          <h2>Sẵn sàng sau một phút.</h2>
+          <p class="lede">Extension cho trình duyệt, CLI cho terminal.</p>
+          <div class="start">
+            <div class="card start-card">
+              <div class="start-head">
+                <span class="ic">{{icon:lock}}</span>
+                <div>
+                  <h3>Extension cho Chrome</h3>
+                  <p>Kho, tự điền và mã 2FA ngay trong trình duyệt.</p>
+                </div>
+              </div>
+              <ol class="steps">
+                <li>
+                  <span>
+                    <b>Tải</b> <a href="/download/7key-extension.zip">7key-extension.zip</a> rồi
+                    giải nén.
+                  </span>
+                </li>
+                <li>
+                  <span><b>Mở</b> <code>chrome://extensions</code> và bật Developer mode.</span>
+                </li>
+                <li>
+                  <span><b>Chọn Load unpacked</b> rồi trỏ tới thư mục vừa giải nén.</span>
+                </li>
+              </ol>
+              <div class="start-foot">
+                <a class="btn primary" href="/download/7key-extension.zip">Tải cho Chrome</a>
+                <span>Sắp có trên Chrome Web Store.</span>
+              </div>
+            </div>
+            <div class="card start-card os">
+              <input type="radio" name="os" id="os-mac" checked /><input
+                type="radio"
+                name="os"
+                id="os-win"
+              /><input type="radio" name="os" id="os-linux" />
+              <div class="start-head">
+                <span class="ic">{{icon:terminal}}</span>
+                <div>
+                  <h3>CLI</h3>
+                  <p>Secret cho máy local, CI và AI agent.</p>
+                </div>
+              </div>
+              <div class="seg os-seg" role="group" aria-label="Chọn hệ điều hành">
+                <label for="os-mac">macOS</label><label for="os-win">Windows</label
+                ><label for="os-linux">Linux</label>
+              </div>
+              <div class="os-panel" id="os-mac-panel">
+                <div class="cmd">
+                  <span class="t-p">$</span><code>brew install linhv14/7key/sevenkey</code
+                  ><button
+                    type="button"
+                    class="copy"
+                    data-copy="brew install linhv14/7key/sevenkey"
+                    aria-label="Sao chép"
+                  >
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <div class="cmd">
+                  <span class="t-p">$</span><code>7key login</code
+                  ><button type="button" class="copy" data-copy="7key login" aria-label="Sao chép">
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <p class="os-note">Cần có Homebrew.</p>
+              </div>
+              <div class="os-panel" id="os-win-panel">
+                <div class="cmd">
+                  <span class="t-p">&gt;</span><code>npm install -g @7key/cli</code
+                  ><button
+                    type="button"
+                    class="copy"
+                    data-copy="npm install -g @7key/cli"
+                    aria-label="Sao chép"
+                  >
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <div class="cmd">
+                  <span class="t-p">&gt;</span><code>7key login</code
+                  ><button type="button" class="copy" data-copy="7key login" aria-label="Sao chép">
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <p class="os-note">Hoặc chạy không cần cài: <code>npx @7key/cli login</code></p>
+                <p class="os-note">
+                  Cần Node.js 20 trở lên. Chạy trong PowerShell hoặc Command Prompt.
+                </p>
+              </div>
+              <div class="os-panel" id="os-linux-panel">
+                <div class="cmd">
+                  <span class="t-p">$</span><code>npm install -g @7key/cli</code
+                  ><button
+                    type="button"
+                    class="copy"
+                    data-copy="npm install -g @7key/cli"
+                    aria-label="Sao chép"
+                  >
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <div class="cmd">
+                  <span class="t-p">$</span><code>7key login</code
+                  ><button type="button" class="copy" data-copy="7key login" aria-label="Sao chép">
+                    {{icon:copy}}
+                  </button>
+                </div>
+                <p class="os-note">Hoặc chạy không cần cài: <code>npx @7key/cli login</code></p>
+                <p class="os-note">Cần Node.js 20 trở lên.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
