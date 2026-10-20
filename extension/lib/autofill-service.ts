@@ -463,7 +463,7 @@ export async function handleAutofill(
         ...(item.cardExpiry ? { expiry: item.cardExpiry } : {}),
         ...(item.cardCvv ? { cvv: item.cardCvv } : {}),
       };
-      if (sender.url.startsWith("https:")) await fillCardFrames(sender.tabId, card);
+      await fillCardFrames(sender.tabId, sender.url, card);
       return { ok: true, card };
     }
 

@@ -1,37 +1,61 @@
 import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
 import type { CardData } from "./autofill-protocol.js";
 
+interface CardFrame {
+  frameId: number;
+  documentId: string;
+}
+
 const key = (tabId: number) => `cardFrames:${tabId}`;
+
+function isHttps(raw: string | undefined): boolean {
+  try {
+    return new URL(raw ?? "").protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function storedFrames(tabId: number): Promise<CardFrame[]> {
+  const stored = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
+  if (!Array.isArray(stored)) return [];
+  return stored.filter(
+    (entry): entry is CardFrame =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as CardFrame).frameId === "number" &&
+      typeof (entry as CardFrame).documentId === "string",
+  );
+}
 
 export async function rememberCardFrame(
   sender: chrome.runtime.MessageSender,
   extensionId: string,
 ): Promise<void> {
   const tabId = sender.tab?.id;
-  if (sender.id !== extensionId || tabId === undefined || !sender.frameId) return;
-  if (!isPaymentFrameUrl(sender.url)) return;
-  try {
-    if (new URL(sender.tab?.url ?? "").protocol !== "https:") return;
-  } catch {
-    return;
-  }
-  const stored = (await chrome.storage.session.get(key(tabId)))[key(tabId)] as number[] | undefined;
-  const frames = new Set(stored ?? []);
-  frames.add(sender.frameId);
-  await chrome.storage.session.set({ [key(tabId)]: [...frames] });
+  const { frameId, documentId } = sender;
+  if (sender.id !== extensionId || tabId === undefined || !frameId || !documentId) return;
+  if (!isPaymentFrameUrl(sender.url) || !isHttps(sender.tab?.url)) return;
+  const frames = (await storedFrames(tabId)).filter((frame) => frame.frameId !== frameId);
+  frames.push({ frameId, documentId });
+  await chrome.storage.session.set({ [key(tabId)]: frames });
 }
 
 export async function forgetCardFrames(tabId: number): Promise<void> {
   await chrome.storage.session.remove(key(tabId));
 }
 
-export async function fillCardFrames(tabId: number, card: CardData): Promise<number> {
-  const frames =
-    ((await chrome.storage.session.get(key(tabId)))[key(tabId)] as number[] | undefined) ?? [];
+export async function fillCardFrames(
+  tabId: number,
+  topUrl: string,
+  card: CardData,
+): Promise<number> {
+  if (!isHttps(topUrl)) return 0;
+  const frames = await storedFrames(tabId);
   await Promise.all(
-    frames.map((frameId) =>
+    frames.map(({ documentId }) =>
       chrome.tabs
-        .sendMessage(tabId, { type: "7key:card-frame-fill", card }, { frameId })
+        .sendMessage(tabId, { type: "7key:card-frame-fill", card }, { documentId })
         .catch(() => {}),
     ),
   );
