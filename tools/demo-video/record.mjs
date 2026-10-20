@@ -212,11 +212,15 @@ try {
   await st(() => st.zoom('[data-cam="form"]', 1.4, 0, 0));
   await sleep(250);
   await mark(
-    "ttl",
-    `return d.querySelector('#form-share input[name=ttl][value="604800"]')?.closest("label");`,
+    "part",
+    `return [...d.querySelectorAll("#form-share .share-part")].find((x) => /2FA/.test(x.textContent));`,
   );
+  await clickOn(cam("part"), 250);
+  await mark("ttl", `return d.querySelector("#form-share select[name=ttl]");`);
   await clickOn(cam("ttl"), 0);
-  await frame(`d.querySelector('#form-share input[name=ttl][value="604800"]')?.click();`);
+  await frame(
+    `const s = d.querySelector("#form-share select[name=ttl]"); s.value = "604800"; s.dispatchEvent(new w.Event("change", { bubbles: true }));`,
+  );
   await sleep(300);
   await mark("make", `return d.querySelector("#form-share button[type=submit]");`);
   await clickOn(cam("make"), 500);
