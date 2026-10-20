@@ -107,20 +107,23 @@ function tickCodes(): void {
   for (const demo of document.querySelectorAll<HTMLElement>(".codes-demo")) {
     const cells = [...demo.querySelectorAll<HTMLElement>(".cd")];
     const left = demo.querySelector<HTMLElement>("[data-codes-left]");
+    const bar = demo.querySelector<HTMLElement>("[data-codes-bar]");
+    const total = cells.length;
     let used = 0;
     const step = () => {
-      if (used === 2) {
+      if (used === 3) {
         used = 0;
         for (const cell of cells) cell.classList.remove("used");
       } else {
         cells[used]?.classList.add("used");
         used++;
       }
-      if (left) left.textContent = String(10 - used);
+      if (left) left.textContent = String(total - used);
+      if (bar) bar.style.width = `${((total - used) / total) * 100}%`;
     };
     onView([demo], () => {
-      setTimeout(step, 900);
-      setInterval(step, 1800);
+      setTimeout(step, 700);
+      setInterval(step, 1500);
     });
   }
 }

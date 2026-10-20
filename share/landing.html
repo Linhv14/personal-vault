@@ -1086,62 +1086,157 @@
         color: var(--l-muted);
         font-size: 14.5px;
       }
-      .codes-demo {
-        display: block;
-        margin-top: 12px;
-        padding: 10px;
+      .spot {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        align-items: center;
+        gap: 40px;
+        padding: 40px;
+      }
+      .spot-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--l-accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .spot-kicker svg,
+      .spot-chips svg,
+      .cd-head svg,
+      .cd i svg {
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .spot-kicker svg {
+        width: 16px;
+        height: 16px;
+        stroke-width: 2;
+      }
+      .spot h3 {
+        margin: 12px 0 10px;
+        font-size: clamp(24px, 3vw, 32px);
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+      .spot p {
+        margin: 0;
+        color: var(--l-muted);
+        font-size: 15.5px;
+        line-height: 1.6;
+      }
+      .spot-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 22px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .spot-chips li {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 12px;
         border: 1px solid var(--l-line);
-        border-radius: 12px;
+        border-radius: 999px;
+        color: var(--l-text);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .spot-chips svg {
+        width: 14px;
+        height: 14px;
+        color: var(--l-accent);
+        stroke-width: 2.2;
+      }
+      .codes-demo {
+        padding: 18px;
+        border: 1px solid var(--l-line2);
+        border-radius: 16px;
         background: #12100f;
+        box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
       }
       .cd-head {
         display: flex;
         align-items: center;
-        gap: 7px;
-        margin-bottom: 8px;
+        gap: 12px;
+      }
+      .cd-site {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: #24292f;
         color: var(--l-text);
-        font-size: 12.5px;
-        font-weight: 600;
+        font-weight: 700;
       }
-      .cd-head svg {
-        width: 14px;
-        height: 14px;
-        color: var(--l-accent);
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 2;
+      .cd-title {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        line-height: 1.25;
       }
-      .cd-head b {
-        margin-left: auto;
+      .cd-title small {
         color: var(--l-muted);
-        font-weight: 600;
+        font-size: 12.5px;
+      }
+      .cd-count {
+        color: var(--l-muted);
+        font-size: 13px;
         font-variant-numeric: tabular-nums;
+      }
+      .cd-count b {
+        color: var(--l-text);
+        font-size: 18px;
+      }
+      .cd-bar {
+        height: 4px;
+        margin: 14px 0;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgb(255 255 255 / 0.08);
+      }
+      .cd-bar span {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--l-accent);
+        transition: width 0.5s ease;
       }
       .cd-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        gap: 8px;
       }
       .cd {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 6px;
-        padding: 6px 8px;
-        border-radius: 8px;
+        gap: 8px;
+        padding: 9px 10px;
+        border-radius: 9px;
         background: rgb(255 255 255 / 0.04);
         color: var(--l-text);
-        font: 500 12px/1.2 var(--l-mono);
+        font: 500 13px/1.2 var(--l-mono);
         transition:
           color 0.3s,
-          opacity 0.3s;
+          background 0.3s;
       }
       .cd i {
         display: grid;
         place-items: center;
         flex: none;
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         border: 1.5px solid var(--l-line2);
         border-radius: 50%;
         color: transparent;
@@ -1152,13 +1247,12 @@
           transform 0.25s;
       }
       .cd i svg {
-        width: 10px;
-        height: 10px;
-        fill: none;
-        stroke: currentColor;
+        width: 11px;
+        height: 11px;
         stroke-width: 3;
       }
       .cd.used {
+        background: rgb(255 255 255 / 0.02);
         color: var(--l-dim);
         text-decoration: line-through;
       }
@@ -1167,6 +1261,16 @@
         background: var(--l-accent);
         color: #1a0d07;
         transform: scale(1.1);
+      }
+      @media (max-width: 860px) {
+        .spot {
+          grid-template-columns: 1fr;
+          gap: 24px;
+          padding: 24px 18px;
+        }
+        .cd {
+          font-size: 12px;
+        }
       }
       .matrix {
         width: 100%;
@@ -2675,26 +2779,6 @@
                   >
                 </li>
                 <li>
-                  <span class="ic">{{icon:life-buoy}}</span
-                  ><span
-                    ><strong>Backup codes that keep count</strong
-                    ><span
-                      >Save a site&rsquo;s recovery codes, tick each one off as you use it.</span
-                    ><span class="codes-demo" aria-hidden="true"
-                      ><span class="cd-head"
-                        >{{icon:life-buoy}}GitHub<b
-                          ><span data-codes-left>10</span>/10 left</b
-                        ></span
-                      ><span class="cd-grid"
-                        ><span class="cd">4F7K-9QX2<i>{{icon:check}}</i></span
-                        ><span class="cd">M2JD-8RTA<i>{{icon:check}}</i></span
-                        ><span class="cd">Z6PW-3LNE<i>{{icon:check}}</i></span
-                        ><span class="cd">H9CV-5YBQ<i>{{icon:check}}</i></span></span
-                      ></span
-                    ></span
-                  >
-                </li>
-                <li>
                   <span class="ic">{{icon:mail}}</span
                   ><span
                     ><strong>A separate email for each site</strong
@@ -2705,6 +2789,41 @@
                   >
                 </li>
               </ul>
+              <div class="card spot">
+                <div class="spot-text">
+                  <span class="spot-kicker">{{icon:life-buoy}}Recovery codes</span>
+                  <h3>Backup codes that keep count.</h3>
+                  <p>
+                    Save the codes a site gives you when you turn on 2FA. Tick each one off when you
+                    use it, and always know how many are left.
+                  </p>
+                  <ul class="spot-chips">
+                    <li>{{icon:copy}}Paste the whole list</li>
+                    <li>{{icon:check}}Tick off used codes</li>
+                    <li>{{icon:key}}Copy the ones left</li>
+                  </ul>
+                </div>
+                <div class="codes-demo" aria-hidden="true">
+                  <div class="cd-head">
+                    <span class="cd-site">G</span>
+                    <span class="cd-title"><b>GitHub</b><small>Recovery codes</small></span>
+                    <span class="cd-count"><b data-codes-left>10</b>/10 left</span>
+                  </div>
+                  <div class="cd-bar"><span data-codes-bar></span></div>
+                  <div class="cd-grid">
+                    <span class="cd">4F7K-9QX2<i>{{icon:check}}</i></span>
+                    <span class="cd">M2JD-8RTA<i>{{icon:check}}</i></span>
+                    <span class="cd">Z6PW-3LNE<i>{{icon:check}}</i></span>
+                    <span class="cd">H9CV-5YBQ<i>{{icon:check}}</i></span>
+                    <span class="cd">R3TN-7KQW<i>{{icon:check}}</i></span>
+                    <span class="cd">B8XL-2MPC<i>{{icon:check}}</i></span>
+                    <span class="cd">Q5VE-6HJD<i>{{icon:check}}</i></span>
+                    <span class="cd">W7GA-4ZNS<i>{{icon:check}}</i></span>
+                    <span class="cd">D2KR-9FUX<i>{{icon:check}}</i></span>
+                    <span class="cd">N6YP-3CTB<i>{{icon:check}}</i></span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="panel" id="p-team" role="region" aria-label="For your team">
               <div class="card stage" aria-hidden="true">
@@ -3582,25 +3701,6 @@
                   >
                 </li>
                 <li>
-                  <span class="ic">{{icon:life-buoy}}</span
-                  ><span
-                    ><strong>Mã khôi phục, biết còn bao nhiêu</strong
-                    ><span>Lưu mã dự phòng của từng trang, dùng mã nào thì đánh dấu mã đó.</span
-                    ><span class="codes-demo" aria-hidden="true"
-                      ><span class="cd-head"
-                        >{{icon:life-buoy}}GitHub<b
-                          ><span data-codes-left>10</span>/10 còn lại</b
-                        ></span
-                      ><span class="cd-grid"
-                        ><span class="cd">4F7K-9QX2<i>{{icon:check}}</i></span
-                        ><span class="cd">M2JD-8RTA<i>{{icon:check}}</i></span
-                        ><span class="cd">Z6PW-3LNE<i>{{icon:check}}</i></span
-                        ><span class="cd">H9CV-5YBQ<i>{{icon:check}}</i></span></span
-                      ></span
-                    ></span
-                  >
-                </li>
-                <li>
                   <span class="ic">{{icon:mail}}</span
                   ><span
                     ><strong>Mỗi trang một email riêng</strong
@@ -3611,6 +3711,41 @@
                   >
                 </li>
               </ul>
+              <div class="card spot">
+                <div class="spot-text">
+                  <span class="spot-kicker">{{icon:life-buoy}}Mã khôi phục</span>
+                  <h3>Mã dự phòng, biết còn bao nhiêu.</h3>
+                  <p>
+                    Lưu các mã dự phòng trang web đưa khi bạn bật 2FA. Dùng mã nào thì đánh dấu mã
+                    đó, luôn biết còn lại bao nhiêu.
+                  </p>
+                  <ul class="spot-chips">
+                    <li>{{icon:copy}}Dán cả danh sách</li>
+                    <li>{{icon:check}}Đánh dấu mã đã dùng</li>
+                    <li>{{icon:key}}Sao chép mã còn lại</li>
+                  </ul>
+                </div>
+                <div class="codes-demo" aria-hidden="true">
+                  <div class="cd-head">
+                    <span class="cd-site">G</span>
+                    <span class="cd-title"><b>GitHub</b><small>Mã khôi phục</small></span>
+                    <span class="cd-count"><b data-codes-left>10</b>/10 còn lại</span>
+                  </div>
+                  <div class="cd-bar"><span data-codes-bar></span></div>
+                  <div class="cd-grid">
+                    <span class="cd">4F7K-9QX2<i>{{icon:check}}</i></span>
+                    <span class="cd">M2JD-8RTA<i>{{icon:check}}</i></span>
+                    <span class="cd">Z6PW-3LNE<i>{{icon:check}}</i></span>
+                    <span class="cd">H9CV-5YBQ<i>{{icon:check}}</i></span>
+                    <span class="cd">R3TN-7KQW<i>{{icon:check}}</i></span>
+                    <span class="cd">B8XL-2MPC<i>{{icon:check}}</i></span>
+                    <span class="cd">Q5VE-6HJD<i>{{icon:check}}</i></span>
+                    <span class="cd">W7GA-4ZNS<i>{{icon:check}}</i></span>
+                    <span class="cd">D2KR-9FUX<i>{{icon:check}}</i></span>
+                    <span class="cd">N6YP-3CTB<i>{{icon:check}}</i></span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="panel" id="p-team" role="region" aria-label="Cho nhóm">
               <div class="card stage" aria-hidden="true">
