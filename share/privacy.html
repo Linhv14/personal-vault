@@ -364,7 +364,7 @@
 
         <div class="summary">
           <ul>
-            <li>Vault của bạn được mã hoá đầu-cuối. Chúng tôi không đọc được.</li>
+            <li>Kho của bạn được mã hoá đầu-cuối. Chúng tôi không đọc được.</li>
             <li>Chúng tôi chỉ lưu email của bạn và những gì tối thiểu để vận hành dịch vụ.</li>
             <li>Không analytics, quảng cáo hay theo dõi. Chúng tôi không bán dữ liệu.</li>
             <li>
@@ -382,7 +382,7 @@
         <h2>2. Những gì chúng tôi không truy cập được</h2>
         <p>
           Địa chỉ web, tên đăng nhập, mật khẩu, khoá 2FA và ghi chú được mã hoá ngay trên thiết bị
-          của bạn bằng khoá sinh từ master password, và master password không bao giờ rời thiết bị.
+          của bạn bằng khoá sinh ra từ mật khẩu chính, và mật khẩu chính không bao giờ rời thiết bị.
           Chúng tôi chỉ lưu bản đã mã hoá và không có cách nào giải mã. Nội dung link chia sẻ cũng
           vậy: khoá nằm trong chính đường link và không bao giờ được gửi tới chúng tôi.
         </p>
@@ -407,23 +407,23 @@
                 <td>Đến khi bạn xoá tài khoản</td>
               </tr>
               <tr>
-                <td>Item và khoá vault đã mã hoá</td>
-                <td>Lưu và đồng bộ vault giữa các thiết bị</td>
-                <td>Đến khi bạn xoá item hoặc tài khoản</td>
+                <td>Các mục và khoá kho đã mã hoá</td>
+                <td>Lưu và đồng bộ kho giữa các thiết bị</td>
+                <td>Đến khi bạn xoá mục đó hoặc xoá tài khoản</td>
               </tr>
               <tr>
                 <td>Bản băm có khoá của khoá đăng nhập</td>
-                <td>Xác minh đăng nhập mà không lưu thứ gì giải mã được vault</td>
+                <td>Xác minh đăng nhập mà không lưu thứ gì giải mã được kho</td>
                 <td>Đến khi bạn xoá tài khoản</td>
               </tr>
               <tr>
-                <td>Số lượng, kích thước, thời điểm sửa item; thời điểm đăng nhập</td>
+                <td>Số lượng, kích thước, thời điểm sửa mục; thời điểm đăng nhập</td>
                 <td>Đồng bộ và quản lý phiên đăng nhập</td>
                 <td>Đến khi bạn xoá tài khoản; phiên hết hạn sau 30 ngày</td>
               </tr>
               <tr>
                 <td>Link chia sẻ bạn tạo</td>
-                <td>Gửi item đã mã hoá, áp dụng thời hạn và số lượt xem, cho phép bạn thu hồi</td>
+                <td>Gửi mục đã mã hoá, áp thời hạn và số lượt xem, cho phép bạn thu hồi</td>
                 <td>Xoá trong vòng một giờ sau khi hết hạn, hết lượt hoặc bị thu hồi</td>
               </tr>
               <tr>
@@ -499,12 +499,12 @@
 
         <h2>6. Extension trình duyệt</h2>
         <p>
-          Extension giữ một bản vault đã mã hoá trên thiết bị và chỉ giữ khoá đã mở trong bộ nhớ.
-          Nếu bạn bật "Tự điền và passkey trên trang web", extension đọc form đăng nhập trên các
-          trang bạn mở để gợi ý và lưu tài khoản; việc này diễn ra trên thiết bị của bạn, và chỉ
-          những tài khoản bạn chọn lưu mới được gửi tới chúng tôi, ở dạng mã hoá. Passkey bạn tạo
-          bằng 7key cũng được lưu như vậy, trong vault đã mã hoá. Việc sử dụng thông tin mà
-          extension nhận được tuân thủ
+          Extension giữ một bản kho đã mã hoá trên thiết bị và chỉ giữ khoá đã mở trong bộ nhớ. Nếu
+          bạn bật "Tự điền và passkey trên trang web", extension đọc form đăng nhập trên các trang
+          bạn mở để gợi ý và lưu tài khoản; mọi thứ diễn ra trên thiết bị của bạn, và chỉ những tài
+          khoản bạn chọn lưu mới được gửi tới chúng tôi, ở dạng mã hoá. Passkey bạn tạo bằng 7key
+          cũng được lưu như vậy, trong kho đã mã hoá. Cách extension dùng thông tin nhận được tuân
+          thủ
           <a href="https://developer.chrome.com/docs/webstore/program-policies/user-data-faq"
             >Chính sách dữ liệu người dùng của Chrome Web Store</a
           >, bao gồm các yêu cầu Limited Use.
@@ -517,31 +517,31 @@
           bấm.
         </p>
         <p>
-          Khi bật "Logo website" (mặc định), extension xin server logo theo tên miền của từng trang
-          đã lưu. Server tải logo từ
+          Khi bật "Logo trang web" (mặc định), extension xin server logo theo tên miền của từng
+          trang đã lưu. Server tải logo từ
           <a href="https://duckduckgo.com/privacy">DuckDuckGo</a>, nếu không có thì từ
           <a href="https://policies.google.com/privacy">Google</a>, bằng địa chỉ của server chứ
-          không phải của bạn. Vì vậy server thấy tên miền các trang trong vault khi tải logo, nhưng
+          không phải của bạn. Vì vậy server thấy tên miền các trang trong kho khi tải logo, nhưng
           không lưu lại. Tắt tuỳ chọn này trong Cài đặt để không gửi gì.
         </p>
 
         <h2>7. Bảo mật</h2>
         <p>
-          Dữ liệu được mã hoá khi truyền bằng TLS, và riêng nội dung vault được mã hoá đầu-cuối bằng
+          Dữ liệu được mã hoá khi truyền bằng TLS, và riêng nội dung kho được mã hoá đầu-cuối bằng
           AES-256-GCM. Thiết kế và giới hạn của nó được công bố trong
-          <a href="/security">threat model</a>. Không hệ thống nào an toàn tuyệt đối, và master
-          password không thể khôi phục nếu bạn quên.
+          <a href="/security">mô hình đe doạ</a>. Không hệ thống nào an toàn tuyệt đối, và mật khẩu
+          chính không thể khôi phục nếu bạn quên.
         </p>
 
         <h2>8. Lựa chọn và quyền của bạn</h2>
         <ul>
           <li>
-            <strong>Xoá:</strong> Cài đặt → Xoá tài khoản xoá ngay tài khoản, item và phiên đăng
+            <strong>Xoá:</strong> Cài đặt → Xoá tài khoản xoá ngay tài khoản, các mục và phiên đăng
             nhập. Lịch sử database tự xoá trong vòng 30 ngày.
           </li>
           <li>
-            <strong>Truy cập và mang dữ liệu đi:</strong> vault luôn đọc được trong extension. Với
-            dữ liệu tài khoản chúng tôi lưu, hãy gửi email tới
+            <strong>Truy cập và mang dữ liệu đi:</strong> kho luôn đọc được trong extension. Với dữ
+            liệu tài khoản chúng tôi lưu, hãy gửi email tới
             <a href="mailto:hello@7key.online">hello@7key.online</a>.
           </li>
           <li>
@@ -550,7 +550,7 @@
         </ul>
         <p>
           Tuỳ nơi bạn sống, bạn có thể có thêm quyền theo các luật bảo vệ dữ liệu cá nhân như GDPR.
-          Hãy liên hệ chúng tôi để thực hiện các quyền đó.
+          Liên hệ chúng tôi nếu bạn muốn dùng các quyền đó.
         </p>
 
         <h2>9. Trẻ em</h2>

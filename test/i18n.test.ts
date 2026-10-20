@@ -105,7 +105,7 @@ describe("describeError", () => {
   it("localizes a VaultError by code", () => {
     const error = new VaultError("crypto.wrong_password");
     expect(describeError(error, createTranslator("en"))).toBe("Incorrect master password");
-    expect(describeError(error, createTranslator("vi"))).toBe("Master password không đúng");
+    expect(describeError(error, createTranslator("vi"))).toBe("Sai mật khẩu chính");
   });
 
   it("interpolates params from the error", () => {

@@ -22,17 +22,17 @@
     <meta property="og:image" content="{{site}}/assets/og-en.png" />
     <!-- /lang -->
     <!-- lang:vi -->
-    <title>7key · Quản lý mật khẩu, mã 2FA và secret của team, mã hoá đầu-cuối</title>
+    <title>7key · Trình quản lý mật khẩu, mã 2FA và secret cho team, mã hoá đầu-cuối</title>
     <meta
       name="description"
-      content="7key giữ mật khẩu, mã 2FA và secret môi trường của team trong một vault mã hoá đầu-cuối cho Chrome, tích hợp GitHub Actions."
+      content="7key cất mật khẩu, mã 2FA và secret theo môi trường của team trong một kho mã hoá đầu-cuối trên Chrome, nối thẳng với GitHub Actions."
     />
     <link rel="canonical" href="{{site}}/vi" />
     <meta property="og:locale" content="vi_VN" />
-    <meta property="og:title" content="7key · Mật khẩu, mã 2FA và secret của team" />
+    <meta property="og:title" content="7key · Mật khẩu, mã 2FA và secret của team ở một nơi" />
     <meta
       property="og:description"
-      content="Trình quản lý mật khẩu mã hoá đầu-cuối cho Chrome, có sẵn mã 2FA, dự án cho team và secret cho CI."
+      content="Trình quản lý mật khẩu mã hoá đầu-cuối cho Chrome: có sẵn mã 2FA, project cho team và secret cho CI."
     />
     <meta property="og:url" content="{{site}}/vi" />
     <meta property="og:image" content="{{site}}/assets/og-vi.png" />
@@ -107,10 +107,10 @@
         "mainEntity": [
           {
             "@type": "Question",
-            "name": "Quên master password?",
+            "name": "Quên mật khẩu chính thì sao?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Vault không mở được. Không ai giữ bản sao nên không có cách đặt lại."
+              "text": "Kho sẽ không mở được nữa. Không ai giữ bản sao nên cũng không có cách đặt lại."
             }
           },
           {
@@ -118,7 +118,7 @@
             "name": "7key có đọc được dữ liệu không?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Không. Dữ liệu được mã hoá trên máy bạn và khoá không rời khỏi máy."
+              "text": "Không. Dữ liệu được mã hoá ngay trên máy bạn, và khoá không bao giờ rời khỏi máy."
             }
           },
           {
@@ -126,15 +126,15 @@
             "name": "Dữ liệu lưu ở đâu?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Bản mã trên Cloudflare và trên thiết bị của bạn. Xem chính sách quyền riêng tư."
+              "text": "Bản đã mã hoá nằm trên Cloudflare và trên thiết bị của bạn. Chi tiết trong chính sách quyền riêng tư."
             }
           },
           {
             "@type": "Question",
-            "name": "Đã được kiểm toán chưa?",
+            "name": "7key đã được audit chưa?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Chưa. Thiết kế và giới hạn có trong mô hình đe doạ."
+              "text": "Chưa. Thiết kế và các giới hạn đều ghi rõ trong mô hình đe doạ."
             }
           }
         ]
@@ -1055,15 +1055,17 @@
     <main>
       <div class="hero">
         <div class="wrap">
-          <a class="pill" href="#features"><span>Mới</span>AI agent dùng key mà không thấy</a>
-          <h1>Mật khẩu, 2FA và secret của team. <span class="grad">Một vault.</span></h1>
-          <p class="sub">Mã hoá đầu-cuối, cho bạn và team.</p>
+          <a class="pill" href="#features"
+            ><span>Mới</span>AI agent dùng key mà không nhìn thấy key</a
+          >
+          <h1>Mật khẩu, 2FA và secret của team. <span class="grad">Gọn trong một kho.</span></h1>
+          <p class="sub">Mã hoá đầu-cuối, dùng một mình hay cùng team đều được.</p>
           <div class="ctas">
-            <a class="btn primary" href="#install">Cài cho Chrome</a
+            <a class="btn primary" href="#install">Thêm vào Chrome</a
             ><a class="btn" href="#features">Xem cách hoạt động</a>
           </div>
           <div class="trust">
-            <span>AES-256 ngay trên máy</span><span>Server không đọc được dữ liệu</span
+            <span>AES-256 ngay trên máy</span><span>Server không đọc được gì</span
             ><span>Chạy trên Cloudflare</span>
           </div>
           <div class="browser">
@@ -1089,19 +1091,19 @@
       <section id="features">
         <div class="wrap">
           <span class="kicker">Tính năng</span>
-          <h2>Mọi thứ bạn dùng để đăng nhập.</h2>
-          <p class="lede">Cho bạn và cho team, cùng một cách mã hoá.</p>
+          <h2>Mọi thứ để đăng nhập, gọn ở một nơi.</h2>
+          <p class="lede">Dùng một mình hay cùng team, mã hoá như nhau.</p>
           <div class="bento">
             <div class="tile t-a">
-              <h3>Có sẵn mã 2FA</h3>
-              <p>Ngay cạnh tài khoản. Không cần điện thoại.</p>
+              <h3>Mã 2FA có sẵn</h3>
+              <p>Nằm ngay cạnh tài khoản. Khỏi cần mở điện thoại.</p>
               <div class="visual">
                 <div class="otp"><span class="ring"></span>481 920</div>
               </div>
             </div>
             <div class="tile t-b">
               <h3>Tự điền khi đăng nhập</h3>
-              <p>Gợi ý, điền và lưu tài khoản.</p>
+              <p>Gợi ý đúng tài khoản, tự điền và lưu luôn.</p>
               <div class="visual fill">
                 <div class="field">Tên đăng nhập <b>alex@acme.dev</b></div>
                 <div class="field focus">
@@ -1114,7 +1116,7 @@
             </div>
             <div class="tile t-c">
               <h3>Secret theo môi trường</h3>
-              <p>Thấy chỗ thiếu trước khi deploy hỏng.</p>
+              <p>Biết ngay thiếu biến nào trước khi deploy lỗi.</p>
               <div class="visual">
                 <table class="matrix">
                   <tr>
@@ -1146,7 +1148,7 @@
             </div>
             <div class="tile t-d">
               <h3>GitHub Actions</h3>
-              <p>Không copy-paste. Xác minh bằng OIDC.</p>
+              <p>Hết cảnh copy-paste. Xác minh bằng OIDC.</p>
               <div class="visual">
                 <pre class="code">
 - uses: <i>7key-action@v1</i>
@@ -1162,7 +1164,7 @@
                 </svg>
               </div>
               <h3>Link tự hết hạn</h3>
-              <p>Chia sẻ một lần rồi biến mất.</p>
+              <p>Gửi một lần, xem xong là mất.</p>
             </div>
             <div class="tile t-f">
               <div class="glyph">
@@ -1172,7 +1174,7 @@
                 </svg>
               </div>
               <h3>Passkey</h3>
-              <p>Mở bằng Touch ID hoặc Windows Hello.</p>
+              <p>Đăng nhập bằng Touch ID hoặc Windows Hello.</p>
             </div>
             <div class="tile t-g">
               <span class="soon">Mới</span>
@@ -1184,7 +1186,7 @@
                 </svg>
               </div>
               <h3>AI agent</h3>
-              <p>Claude, Codex dùng key mà không thấy giá trị.</p>
+              <p>Claude, Codex dùng được key mà không bao giờ thấy giá trị.</p>
             </div>
           </div>
         </div>
@@ -1195,18 +1197,20 @@
           <span class="kicker">Bảo mật</span>
           <h2>Chúng tôi không đọc được dữ liệu của bạn.</h2>
           <p class="lede">
-            Không phải lời hứa, mà là thiết kế. <a href="/security">Xem mô hình đe doạ</a>.
+            Không phải lời hứa, mà do cách 7key được thiết kế.
+            <a href="/security">Xem mô hình đe doạ</a>.
           </p>
           <div class="pillars">
             <div class="pillar">
-              <strong>Mã hoá ngay trên máy</strong><span>AES-256-GCM trước khi gửi đi.</span>
+              <strong>Mã hoá ngay trên máy</strong><span>AES-256-GCM, mã hoá xong mới gửi đi.</span>
             </div>
             <div class="pillar">
-              <strong>Server chỉ giữ bản mã</strong><span>Lộ database cũng không lộ gì.</span>
+              <strong>Server chỉ giữ bản mã</strong
+              ><span>Lỡ lộ database cũng không ai đọc được.</span>
             </div>
             <div class="pillar">
               <strong>Chỉ bạn giữ khoá</strong
-              ><span>Không reset, không cửa sau, kể cả với chúng tôi.</span>
+              ><span>Không reset, không cửa sau, kể cả chúng tôi.</span>
             </div>
           </div>
         </div>
@@ -1215,14 +1219,14 @@
       <section id="install">
         <div class="wrap">
           <span class="kicker">Cài đặt</span>
-          <h2>Xong trong một phút.</h2>
-          <p class="lede">Bản trên Chrome Web Store sắp có.</p>
+          <h2>Cài xong trong một phút.</h2>
+          <p class="lede">Sắp có trên Chrome Web Store.</p>
           <ol class="install">
             <li>
-              <b>Tải</b> <a href="/download/7key-extension.zip">7key-extension.zip</a> và giải nén.
+              <b>Tải</b> <a href="/download/7key-extension.zip">7key-extension.zip</a> rồi giải nén.
             </li>
-            <li><b>Mở</b> <code>chrome://extensions</code>, bật Developer mode.</li>
-            <li><b>Load unpacked</b> và chọn thư mục.</li>
+            <li><b>Mở</b> <code>chrome://extensions</code> và bật Developer mode.</li>
+            <li><b>Bấm</b> Load unpacked và chọn thư mục vừa giải nén.</li>
           </ol>
         </div>
       </section>
@@ -1230,34 +1234,37 @@
       <section id="faq">
         <div class="wrap">
           <span class="kicker">Hỏi đáp</span>
-          <h2>Câu hỏi.</h2>
+          <h2>Câu hỏi thường gặp.</h2>
           <details>
-            <summary>Quên master password?</summary>
-            <p>Vault không mở được. Không ai giữ bản sao nên không có cách đặt lại.</p>
+            <summary>Quên mật khẩu chính thì sao?</summary>
+            <p>Kho sẽ không mở được nữa. Không ai giữ bản sao nên cũng không có cách đặt lại.</p>
           </details>
           <details>
             <summary>7key có đọc được dữ liệu không?</summary>
-            <p>Không. Dữ liệu được mã hoá trên máy bạn và khoá không rời khỏi máy.</p>
+            <p>Không. Dữ liệu được mã hoá ngay trên máy bạn, và khoá không bao giờ rời khỏi máy.</p>
           </details>
           <details>
             <summary>Dữ liệu lưu ở đâu?</summary>
             <p>
-              Bản mã trên Cloudflare và trên thiết bị của bạn. Xem
+              Bản đã mã hoá nằm trên Cloudflare và trên thiết bị của bạn. Chi tiết trong
               <a href="/privacy#vi">chính sách quyền riêng tư</a>.
             </p>
           </details>
           <details>
-            <summary>Đã được kiểm toán chưa?</summary>
-            <p>Chưa. Thiết kế và giới hạn có trong <a href="/security">mô hình đe doạ</a>.</p>
+            <summary>7key đã được audit chưa?</summary>
+            <p>
+              Chưa. Thiết kế và các giới hạn đều ghi rõ trong
+              <a href="/security">mô hình đe doạ</a>.
+            </p>
           </details>
         </div>
       </section>
 
       <div class="final">
         <div class="wrap">
-          <h2>Một vault cho mọi chìa khoá.</h2>
+          <h2>Một kho cho mọi chìa khoá.</h2>
           <div class="ctas">
-            <a class="btn primary" href="#install">Cài cho Chrome</a>
+            <a class="btn primary" href="#install">Thêm vào Chrome</a>
           </div>
         </div>
       </div>
