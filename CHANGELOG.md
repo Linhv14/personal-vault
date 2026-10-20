@@ -21,6 +21,12 @@ version may change the API or storage format; such releases list the steps in
   extension shows the team vault as view only.
 - Protected environments: **Protect** an environment such as production from
   the project's menu, and only admins can change its secrets.
+- `7key read <reference>` prints one secret, by name in the linked project or
+  as `7key://<project>/<env>/<NAME>`.
+- `7key inject` fills `{{ 7key:NAME }}` and `{{ 7key://<project>/<env>/<NAME> }}`
+  in a template from a file or standard input, fetching each environment once.
+  It writes nothing when a reference is unknown, and `-o` creates a file only
+  you can read.
 
 ## [0.4.1] - 2026-10-19
 

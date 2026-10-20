@@ -3,11 +3,13 @@ import { formatDotenv } from "../src/core/projects.js";
 import {
   defaultContext,
   dotenvLocal,
+  inject,
   link,
   listSecrets,
   login,
   logout,
   parseFlags,
+  readSecret,
   runLocal,
   whoami,
   type Context,
@@ -24,6 +26,10 @@ On your computer
   run -- <command…>   Run a command with the linked secrets in its environment
   dotenv              Print the linked secrets as a .env file
   secrets             List the linked secrets by name, without values
+  read <reference>    Print one value: NAME, or 7key://<project>/<env>/<NAME>
+  inject [-i <file>] [-o <file>] [--force]
+                      Fill {{ 7key:NAME }} and {{ 7key://<project>/<env>/<NAME> }}
+                      in a template (stdin by default); -o writes a 0600 file
   agent -- <command…> Let an AI agent use secrets it cannot see (7key agent --help)
   whoami | logout
 
@@ -49,6 +55,8 @@ const LOCAL: Record<string, (flags: Flags, context: Context) => Promise<number>>
   run: runLocal,
   dotenv: dotenvLocal,
   secrets: listSecrets,
+  read: readSecret,
+  inject,
 };
 
 interface Parsed {
@@ -88,7 +96,10 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<numb
   const local = argv[0] ? LOCAL[argv[0]] : undefined;
   const ciCommand = argv[0] === "run" || argv[0] === "dotenv";
   if (local && !(ciCommand && ciMode(argv, env))) {
-    return local(parseFlags(argv.slice(1)), defaultContext(env));
+    return local(
+      parseFlags(argv.slice(1), { positional: argv[0] === "read" }),
+      defaultContext(env),
+    );
   }
   const { command, link, server, rest } = parseArgs(argv, env);
   if (!command || command === "help" || command === "--help") {

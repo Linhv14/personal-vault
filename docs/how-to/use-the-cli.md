@@ -36,6 +36,23 @@ folder and its parents.
 7key run --env production -- npm run migrate
 ```
 
+## Read one value or fill a template
+
+```bash
+7key read STRIPE_KEY                                  # linked project and environment
+7key read 7key://payments-api/production/STRIPE_KEY   # <project>/<env>/<NAME>
+7key inject -i config.yml.tpl -o config.yml
+```
+
+`7key read` prints the value alone, without a trailing newline when piped, so
+`"$(7key read STRIPE_KEY)"` works in scripts. `7key inject` reads a template
+from `-i` or standard input and replaces `{{ 7key:NAME }}` with a value from
+the linked project and environment (or `--project` and `--env`), and
+`{{ 7key://<project>/<env>/<NAME> }}` with a value from anywhere you have
+access to. When a reference is unknown, it lists every one and writes nothing.
+With `-o`, the file is created readable only by you; pass `--force` to replace
+an existing one.
+
 ## Name a project without linking
 
 `--org`, `--project` and `--env` take an id, a handle or the name:
