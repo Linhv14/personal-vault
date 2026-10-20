@@ -62,3 +62,63 @@ describe("isDefaultServer", () => {
     expect(isDefaultServer(HOSTED, "")).toBe(false);
   });
 });
+
+describe("creating a vault", () => {
+  const fetchMock = vi.fn();
+
+  afterEach(() => {
+    fetchMock.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  async function openCreateForm() {
+    render(h(Setup, { apiUrl: "", defaultServer: HOSTED, signup: null }));
+    await waitFor(() => expect(serverConfig).toHaveBeenCalled());
+    fireEvent.click(document.querySelector<HTMLButtonElement>(".choice")!);
+    await waitFor(() => expect(document.querySelector<HTMLElement>("#setup-choice")!.hidden).toBe(true));
+  }
+
+  function fill(name: string, value: string) {
+    const input = document.querySelector<HTMLInputElement>(`input[name=${name}]`)!;
+    fireEvent.input(input, { target: { value } });
+    return input;
+  }
+
+  it("blocks a master password found in a breach and marks the field", async () => {
+    const password = "password1234";
+    const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password));
+    const hash = [...new Uint8Array(digest)]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+    fetchMock.mockResolvedValue(new Response(`${hash.slice(5)}:1234`));
+    vi.stubGlobal("fetch", fetchMock);
+    await openCreateForm();
+    fill("email", "me@example.com");
+    const input = fill("password", password);
+    fill("confirm", password);
+    fireEvent.submit(document.querySelector("#form-setup")!);
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "This password has been exposed in breaches 1,234 times",
+    );
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      `https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`,
+    );
+  });
+
+  it("rejects a master password shorter than 12 characters before any network call", async () => {
+    vi.stubGlobal("fetch", fetchMock);
+    await openCreateForm();
+    fill("email", "me@example.com");
+    fill("password", "short pass");
+    fill("confirm", "short pass");
+    fireEvent.submit(document.querySelector("#form-setup")!);
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Use at least 12 characters",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

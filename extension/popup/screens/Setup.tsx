@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { createAccount } from "../../../src/core/crypto.js";
+import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
 import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
+import { checkNewMasterPassword } from "../../lib/master-password.js";
 import {
   clearPendingSignup,
   getLocal,
@@ -12,6 +14,7 @@ import {
 } from "../../lib/storage.js";
 import { isDefaultServer } from "../../lib/server.js";
 import { Icon } from "../../ui/components/Icon.js";
+import { MasterPasswordInput } from "../../ui/components/MasterPasswordInput.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { finishUnlock, signIn } from "../auth.js";
 import { AuthLayout } from "../components/AuthLayout.js";
@@ -52,6 +55,8 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const [working, setWorking] = useState(false);
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
   const [recovering, setRecovering] = useState<{ email: string; server: string } | null>(null);
+  const [email, setEmail] = useState(signup?.email ?? "");
+  const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
 
   const registering = mode === "register";
   const codeStep = registering && verificationRequired && codeSentTo !== null;
@@ -132,6 +137,13 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
         setCodeSentTo(email);
         setFocusTarget("verificationCode");
         return;
+      }
+      if (registering) {
+        const issue = await checkNewMasterPassword(password, email);
+        if (issue) {
+          setPasswordIssue(issue);
+          return;
+        }
       }
       await setLocal({ apiUrl: server, email });
       if (registering) {
@@ -242,6 +254,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
               autoComplete="username"
               defaultValue={signup?.email ?? ""}
               required={!codeStep}
+              onInput={(event) => setEmail(event.currentTarget.value)}
             />
           </label>
           <label hidden={!registering || registrationOpen || codeStep}>
@@ -284,13 +297,22 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
           </div>
           <label hidden={!askPassword}>
             <span>{t("setup.master_password")}</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete={registering ? "new-password" : "current-password"}
-              minLength={registering ? 12 : 0}
-              required={askPassword}
-            />
+            {registering ? (
+              <MasterPasswordInput
+                name="password"
+                email={email}
+                issue={passwordIssue}
+                onEdit={() => setPasswordIssue(null)}
+                required={askPassword}
+              />
+            ) : (
+              <input
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required={askPassword}
+              />
+            )}
           </label>
           <label hidden={!askPassword || !registering}>
             <span>{t("setup.confirm")}</span>

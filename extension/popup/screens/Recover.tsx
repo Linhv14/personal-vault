@@ -1,9 +1,12 @@
 import { useState } from "preact/hooks";
+import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
 import { normalizeRecoveryCode } from "../../../src/core/recovery.js";
 import { describeError } from "../../../src/i18n/index.js";
 import { recoverAccount, requestRecoveryEmail } from "../../lib/account-recovery.js";
+import { checkNewMasterPassword } from "../../lib/master-password.js";
 import { getLocal, setLocal } from "../../lib/storage.js";
 import { Icon } from "../../ui/components/Icon.js";
+import { MasterPasswordInput } from "../../ui/components/MasterPasswordInput.js";
 import { RecoveryCodeView } from "../../ui/components/RecoveryCodeView.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { signIn } from "../auth.js";
@@ -28,6 +31,7 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
   const [working, setWorking] = useState(false);
   const [proven, setProven] = useState<Proven | null>(null);
   const [done, setDone] = useState<{ email: string; password: string; code: string } | null>(null);
+  const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
 
   const withServer = async <T,>(email: string, action: () => Promise<T>): Promise<T> => {
     const previous = await getLocal();
@@ -90,6 +94,11 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
     }
     const emailCode = proven.emailRequired ? String(data.get("emailCode")).trim() : undefined;
     void run(async () => {
+      const issue = await checkNewMasterPassword(password, proven.email);
+      if (issue) {
+        setPasswordIssue(issue);
+        return;
+      }
       const next = await withServer(proven.email, () =>
         recoverAccount(proven.email, proven.code, password, localeSignal.value, emailCode),
       );
@@ -161,12 +170,11 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
           )}
           <label>
             <span>{t("settings.new_password")}</span>
-            <input
+            <MasterPasswordInput
               name="password"
-              type="password"
-              autoComplete="new-password"
-              minLength={12}
-              required
+              email={proven.email}
+              issue={passwordIssue}
+              onEdit={() => setPasswordIssue(null)}
               autoFocus={!proven.emailRequired}
             />
           </label>

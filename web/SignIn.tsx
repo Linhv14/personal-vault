@@ -1,6 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
+import type { MasterPasswordIssue } from "../src/core/master-password.js";
 import { previewInvite, type InvitePreview } from "../extension/lib/orgs.js";
 import * as api from "../extension/lib/api.js";
+import { checkNewMasterPassword } from "../extension/lib/master-password.js";
+import { MasterPasswordInput } from "../extension/ui/components/MasterPasswordInput.js";
 import { Spinner } from "../extension/console/components.js";
 import { ROLE_LABEL } from "../extension/console/labels.js";
 import { Wordmark } from "../extension/ui/components/Logo.js";
@@ -26,6 +29,7 @@ export function SignIn() {
   const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
 
   useEffect(() => {
     if (!inviteId) return;
@@ -59,6 +63,12 @@ export function SignIn() {
       }
       setWorking(true);
       try {
+        const issue = await checkNewMasterPassword(password, email);
+        if (issue) {
+          setPasswordIssue(issue);
+          setCodeSent(false);
+          return;
+        }
         if (verification && !codeSent) {
           await api.requestVerificationCode(location.origin, email, localeSignal.value);
           setCodeSent(true);
@@ -173,14 +183,23 @@ export function SignIn() {
         )}
         <label className="field" hidden={registering && codeSent}>
           <span className="field-label">{t("setup.master_password")}</span>
-          <input
-            name="password"
-            type="password"
-            autoComplete={registering ? "new-password" : "current-password"}
-            minLength={registering ? 12 : 0}
-            required
-            autoFocus={invite !== null}
-          />
+          {registering ? (
+            <MasterPasswordInput
+              name="password"
+              email={invite.email}
+              issue={passwordIssue}
+              onEdit={() => setPasswordIssue(null)}
+              autoFocus
+            />
+          ) : (
+            <input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              autoFocus={invite !== null}
+            />
+          )}
         </label>
         {registering && (
           <label className="field" hidden={codeSent}>

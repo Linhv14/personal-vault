@@ -121,6 +121,12 @@ export const vi: Catalogue = {
   "setup.code_resent": "Đã gửi lại mã",
   "setup.password_mismatch": "Hai mật khẩu chính chưa khớp",
   "setup.working": "Đang tạo khoá…",
+  "password.too_short": "Cần ít nhất {min} ký tự",
+  "password.too_long": "Tối đa {max} ký tự",
+  "password.matches_email": "Không được trùng với email",
+  "password.breached": "{count, plural, other {Mật khẩu này đã bị lộ # lần}}",
+  "password.checking": "Đang kiểm tra rò rỉ…",
+  "password.strength": "Độ mạnh: {strength}",
 
   // --- Unlock --------------------------------------------------------------
   "pin.title": "Mở khoá bằng PIN",

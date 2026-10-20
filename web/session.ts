@@ -9,6 +9,7 @@ import {
 import { toBase64 } from "../src/core/bytes.js";
 import { signal } from "@preact/signals";
 import * as api from "../extension/lib/api.js";
+import { assertMasterPasswordPolicy } from "../extension/lib/master-password.js";
 import { memoryArea, usePlatform } from "../extension/lib/platform.js";
 import { getUnlocked, lock, setLocal, touch, unlock } from "../extension/lib/storage.js";
 import { refreshSession, vaultKeySignal } from "../extension/ui/store/session.js";
@@ -63,6 +64,7 @@ export async function registerFromInvite(
   inviteId: string,
   verificationCode: string | undefined,
 ): Promise<string | undefined> {
+  assertMasterPasswordPolicy(password, email);
   const { record } = await createAccount(email, password);
   const { token, orgId } = await api.register(email, record, "", verificationCode, inviteId);
   const { vaultKeyRaw } = await unlockVault(email, password, record);

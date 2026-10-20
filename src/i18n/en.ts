@@ -123,6 +123,13 @@ export const en = {
   "setup.code_resent": "Code sent again",
   "setup.password_mismatch": "The two master passwords do not match",
   "setup.working": "Deriving keys…",
+  "password.too_short": "Use at least {min} characters",
+  "password.too_long": "Use at most {max} characters",
+  "password.matches_email": "Can't be your email address",
+  "password.breached":
+    "{count, plural, one {This password has been exposed in a breach # time} other {This password has been exposed in breaches # times}}",
+  "password.checking": "Checking against known breaches…",
+  "password.strength": "Strength: {strength}",
 
   // --- Unlock --------------------------------------------------------------
   "pin.title": "Unlock with a PIN",

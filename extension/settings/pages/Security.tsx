@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { rewrapVaultKey } from "../../../src/core/crypto.js";
+import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
 import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
 import {
@@ -23,9 +24,11 @@ import {
   PIN_MAX_LENGTH,
   PIN_MIN_LENGTH,
 } from "../../lib/pin.js";
+import { checkNewMasterPassword } from "../../lib/master-password.js";
 import { getLocal, lock, setLocal } from "../../lib/storage.js";
 import { Button } from "../../ui/components/Button.js";
 import { Card } from "../../ui/components/Card.js";
+import { MasterPasswordInput } from "../../ui/components/MasterPasswordInput.js";
 import { RecoveryCodeView } from "../../ui/components/RecoveryCodeView.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
@@ -36,6 +39,13 @@ export function Security() {
   const t = useT();
   const vaultKey = vaultKeySignal.value;
   const [changeError, setChangeError] = useState<string | null>(null);
+  const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
+  const [accountEmail, setAccountEmail] = useState("");
+  const [changing, setChanging] = useState(false);
+
+  useEffect(() => {
+    void getLocal().then(({ email }) => setAccountEmail(email ?? ""));
+  }, []);
 
   const handleChangePassword = async (event: Event) => {
     event.preventDefault();
@@ -58,7 +68,13 @@ export function Security() {
       setChangeError(t("settings.wrong_current"));
       return;
     }
+    setChanging(true);
     try {
+      const issue = await checkNewMasterPassword(next, email);
+      if (issue) {
+        setPasswordIssue(issue);
+        return;
+      }
       const record = await rewrapVaultKey(email, next, vaultKeyRaw);
       await api.changePassword(authKey, record);
       await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
@@ -68,6 +84,8 @@ export function Security() {
       await reloadLocal();
     } catch (error) {
       setChangeError(describeError(error, t));
+    } finally {
+      setChanging(false);
     }
   };
 
@@ -91,13 +109,13 @@ export function Security() {
               placeholder={t("settings.current_password")}
               required
             />
-            <input
+            <MasterPasswordInput
               name="next"
-              type="password"
-              minLength={12}
-              autoComplete="new-password"
+              email={accountEmail}
+              issue={passwordIssue}
+              onEdit={() => setPasswordIssue(null)}
               placeholder={t("settings.new_password")}
-              required
+              ariaLabel={t("settings.new_password")}
             />
             <input
               name="confirm"
@@ -111,7 +129,7 @@ export function Security() {
                 {changeError}
               </p>
             )}
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" disabled={changing}>
               {t("settings.change_submit")}
             </Button>
           </form>

@@ -7,6 +7,7 @@ import {
   sealForRecovery,
 } from "../../src/core/recovery.js";
 import { ApiError, request } from "./api.js";
+import { assertMasterPasswordPolicy } from "./master-password.js";
 
 export async function recoveryCreatedAt(): Promise<number | null> {
   const { createdAt } = await request<{ createdAt: number | null }>("/api/account/recovery");
@@ -53,6 +54,7 @@ export async function recoverAccount(
   locale: string,
   emailCode?: string,
 ): Promise<string> {
+  assertMasterPasswordPolicy(newPassword, email);
   const authKey = await recoveryAuthKey(code);
   const { wrappedVaultKey } = await request<{ wrappedVaultKey: SealedData }>(
     "/api/auth/recover/start",

@@ -3,6 +3,7 @@ import type { VaultItem } from "./vault.js";
 
 export const WEAK_BELOW_BITS = 60;
 export const BREACH_RANGE_URL = "https://api.pwnedpasswords.com/range/";
+const BREACH_CHECK_TIMEOUT_MS = 8000;
 
 const SEQUENCES = ["abcdefghijklmnopqrstuvwxyz", "0123456789", "qwertyuiopasdfghjklzxcvbnm"];
 
@@ -74,6 +75,7 @@ export const fetchBreachRange: FetchRange = async (prefix) => {
     cache: "no-store",
     credentials: "omit",
     referrerPolicy: "no-referrer",
+    signal: AbortSignal.timeout(BREACH_CHECK_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`Breach check failed with HTTP ${response.status}`);
   return response.text();

@@ -2053,3 +2053,43 @@ tr.pending-row {
 .host-chips input.host-input.invalid {
   border-color: var(--danger);
 }
+
+.pw-meter {
+  display: block;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.pw-meter > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--muted);
+  transition:
+    width 0.2s ease,
+    background-color 0.2s ease;
+}
+.pw-meter[data-strength="invalid"] > span,
+.pw-meter[data-strength="very_weak"] > span {
+  background: var(--danger);
+}
+.pw-meter[data-strength="weak"] > span,
+.pw-meter[data-strength="fair"] > span {
+  background: var(--warn);
+}
+.pw-meter[data-strength="strong"] > span,
+.pw-meter[data-strength="very_strong"] > span {
+  background: var(--ok);
+}
+.pw-issue {
+  display: block;
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 12px;
+}
+input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
