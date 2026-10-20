@@ -10,7 +10,7 @@
     <title>7key · Passwords, 2FA and team secrets, encrypted</title>
     <meta
       name="description"
-      content="Zero-knowledge password manager for Chrome: 2FA codes, autofill, team secrets per environment, CLI, GitHub Actions and AI agents. Free in beta."
+      content="Zero-knowledge password manager for Chrome: 2FA codes, autofill, team secrets per environment, CLI, GitHub Actions and AI agents. Free for you and teams of up to 5."
     />
     <link rel="canonical" href="{{site}}/" />
     <meta property="og:locale" content="en_US" />
@@ -72,11 +72,21 @@
             "publisher": {
               "@id": "{{site}}/#organization"
             },
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            }
+            "offers": [
+              { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+              {
+                "@type": "Offer",
+                "name": "Team",
+                "price": "3",
+                "priceCurrency": "USD",
+                "priceSpecification": {
+                  "@type": "UnitPriceSpecification",
+                  "price": "3",
+                  "priceCurrency": "USD",
+                  "unitText": "user per month, billed yearly"
+                }
+              }
+            ]
           },
           {
             "@type": "FAQPage",
@@ -164,7 +174,7 @@
     <title>7key · Mật khẩu, 2FA và secret của team, mã hoá</title>
     <meta
       name="description"
-      content="Trình quản lý mật khẩu zero-knowledge cho Chrome: mã 2FA, tự điền, secret của team theo môi trường, CLI, GitHub Actions, AI agent. Miễn phí khi beta."
+      content="Trình quản lý mật khẩu zero-knowledge cho Chrome: mã 2FA, tự điền, secret của team theo môi trường, CLI, GitHub Actions, AI agent. Miễn phí cho bạn và team đến 5 người."
     />
     <link rel="canonical" href="{{site}}/vi" />
     <meta property="og:locale" content="vi_VN" />
@@ -223,11 +233,21 @@
             "publisher": {
               "@id": "{{site}}/#organization"
             },
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            }
+            "offers": [
+              { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+              {
+                "@type": "Offer",
+                "name": "Team",
+                "price": "3",
+                "priceCurrency": "USD",
+                "priceSpecification": {
+                  "@type": "UnitPriceSpecification",
+                  "price": "3",
+                  "priceCurrency": "USD",
+                  "unitText": "user per month, billed yearly"
+                }
+              }
+            ]
           },
           {
             "@type": "FAQPage",
@@ -1600,7 +1620,7 @@
       }
       .plans {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 14px;
       }
       .plan {
@@ -1631,6 +1651,25 @@
         font-weight: 760;
         letter-spacing: -0.04em;
         line-height: 1;
+      }
+      .price .per {
+        margin-left: 6px;
+        color: var(--l-muted);
+        font-size: 15px;
+        font-weight: 560;
+        letter-spacing: 0;
+      }
+      .plan > p.billed {
+        margin: 0 0 14px;
+        font-size: 13px;
+      }
+      .plan > p.plan-note {
+        margin: auto 0 18px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgb(255 255 255 / 0.04);
+        font-size: 12.5px;
+        line-height: 1.5;
       }
       .price.word {
         font-size: 34px;
@@ -2051,7 +2090,7 @@
           </div>
           <div class="trust">
             <span>AES-256 on your device</span><span>Zero-knowledge server</span
-            ><span>Free during the beta</span>
+            ><span>Free for teams of up to 5</span>
           </div>
           <div class="browser">
             <div class="chrome"><i></i><i></i><i></i></div>
@@ -2628,40 +2667,65 @@
       <section id="pricing">
         <div class="wrap">
           <span class="kicker">Pricing</span>
-          <h2>Free while we're in beta.</h2>
-          <p class="lede">Every feature included. Team limits apply per organization.</p>
+          <h2>Less than a coffee per person.</h2>
+          <p class="lede">
+            Every feature on every plan. You pay only for team members beyond five.
+          </p>
           <div class="plans">
-            <div class="card plan hot">
+            <div class="card plan">
               <div class="plan-top">
                 <h3>Free</h3>
-                <span class="chip hot">Beta</span>
+                <span class="chip">Start here</span>
               </div>
               <div class="price">$0</div>
-              <p>For you and a small team, while 7key is in beta.</p>
+              <p>For you, and for a team of up to 5.</p>
               <div class="limits">
                 <div><b data-count="5">5</b><span>members</span></div>
-                <div><b data-count="3">3</b><span>teams</span></div>
-                <div><b data-count="5">5</b><span>projects</span></div>
+                <div><b>∞</b><span>teams</span></div>
+                <div><b>∞</b><span>projects</span></div>
               </div>
               <ul class="checks">
                 <li>Personal vault with 2FA, passkeys and autofill</li>
+                <li>Teams, projects, CLI, CI and AI agents</li>
                 <li>Share links, import and encrypted export</li>
-                <li>CLI, GitHub Actions and AI agents</li>
               </ul>
-              <div class="ctas"><a class="btn primary" href="#install">Add to Chrome</a></div>
+              <div class="ctas"><a class="btn" href="#install">Add to Chrome</a></div>
+            </div>
+            <div class="card plan hot">
+              <div class="plan-top">
+                <h3>Team</h3>
+                <span class="chip hot">Most teams</span>
+              </div>
+              <div class="price">$3<span class="per">/ person / month</span></div>
+              <p class="billed">billed yearly, or $3.5 monthly</p>
+              <p>For teams of 6 and more.</p>
+              <ul class="checks">
+                <li>Everything in Free</li>
+                <li>As many members as you need</li>
+                <li>Billed per person, never per project</li>
+                <li>Add or remove people any time</li>
+              </ul>
+              <p class="plan-note">
+                Payments aren't open yet: teams over 5 use Team free until then, with 30 days'
+                notice before any charge.
+              </p>
+              <div class="ctas">
+                <a class="btn primary" href="mailto:hello@7key.online?subject=Team%20plan"
+                  >Get Team free</a
+                >
+              </div>
             </div>
             <div class="card plan">
               <div class="plan-top">
                 <h3>Self-host</h3>
-                <span class="chip">For teams</span>
+                <span class="chip">Your server</span>
               </div>
-              <div class="price word">Your own server</div>
-              <p>Run the 7key server on your own Cloudflare account.</p>
+              <div class="price">$0</div>
+              <p>Run the 7key server yourself, on your own Cloudflare account.</p>
               <ul class="checks">
-                <li>Your account, your domain, your backups</li>
+                <li>Every feature, no seat limit</li>
+                <li>Your domain, your backups</li>
                 <li>The same end-to-end encryption</li>
-                <li>Invite-only or open registration</li>
-                <li>Email verification for new accounts</li>
               </ul>
               <div class="ctas">
                 <a class="btn" href="mailto:hello@7key.online?subject=Self-hosting%207key"
@@ -2759,7 +2823,7 @@
       <div class="final">
         <div class="wrap">
           <h2>One vault for every key.</h2>
-          <p>Free during the beta. Set up in a minute.</p>
+          <p>Free for you and teams of up to 5. Set up in a minute.</p>
           <div class="ctas">
             <a class="btn primary" href="#install">Add to Chrome</a
             ><a class="btn" href="mailto:hello@7key.online">Talk to us</a>
@@ -2783,7 +2847,7 @@
           </div>
           <div class="trust">
             <span>AES-256 ngay trên máy</span><span>Server không đọc được gì</span
-            ><span>Miễn phí trong giai đoạn beta</span>
+            ><span>Miễn phí cho team đến 5 người</span>
           </div>
           <div class="browser">
             <div class="chrome"><i></i><i></i><i></i></div>
@@ -3365,40 +3429,63 @@
       <section id="pricing">
         <div class="wrap">
           <span class="kicker">Bảng giá</span>
-          <h2>Miễn phí trong giai đoạn beta.</h2>
-          <p class="lede">Đủ mọi tính năng. Giới hạn cho team tính theo từng tổ chức.</p>
+          <h2>Rẻ hơn một ly cà phê mỗi người.</h2>
+          <p class="lede">Gói nào cũng đủ tính năng. Chỉ tính tiền từ thành viên thứ sáu.</p>
           <div class="plans">
-            <div class="card plan hot">
+            <div class="card plan">
               <div class="plan-top">
                 <h3>Miễn phí</h3>
-                <span class="chip hot">Beta</span>
+                <span class="chip">Bắt đầu</span>
               </div>
               <div class="price">0đ</div>
-              <p>Cho bạn và một team nhỏ, trong lúc 7key còn beta.</p>
+              <p>Cho bạn, và cho team đến 5 người.</p>
               <div class="limits">
                 <div><b data-count="5">5</b><span>thành viên</span></div>
-                <div><b data-count="3">3</b><span>team</span></div>
-                <div><b data-count="5">5</b><span>project</span></div>
+                <div><b>∞</b><span>team</span></div>
+                <div><b>∞</b><span>project</span></div>
               </div>
               <ul class="checks">
                 <li>Kho cá nhân với 2FA, passkey và tự điền</li>
+                <li>Team, project, CLI, CI và AI agent</li>
                 <li>Link chia sẻ, nhập dữ liệu và xuất bản mã hoá</li>
-                <li>CLI, GitHub Actions và AI agent</li>
               </ul>
-              <div class="ctas"><a class="btn primary" href="#install">Thêm vào Chrome</a></div>
+              <div class="ctas"><a class="btn" href="#install">Thêm vào Chrome</a></div>
+            </div>
+            <div class="card plan hot">
+              <div class="plan-top">
+                <h3>Team</h3>
+                <span class="chip hot">Phổ biến</span>
+              </div>
+              <div class="price">$3<span class="per">/ người / tháng</span></div>
+              <p class="billed">trả theo năm, hoặc $3.5 theo tháng</p>
+              <p>Cho team từ 6 người trở lên.</p>
+              <ul class="checks">
+                <li>Mọi thứ của gói Miễn phí</li>
+                <li>Thêm bao nhiêu thành viên cũng được</li>
+                <li>Tính theo số người, không theo project</li>
+                <li>Thêm, bớt người bất cứ lúc nào</li>
+              </ul>
+              <p class="plan-note">
+                Chưa mở thanh toán: team trên 5 người dùng gói Team miễn phí đến lúc đó, và được báo
+                trước 30 ngày trước khi tính phí.
+              </p>
+              <div class="ctas">
+                <a class="btn primary" href="mailto:hello@7key.online?subject=G%C3%B3i%20Team"
+                  >Dùng Team miễn phí</a
+                >
+              </div>
             </div>
             <div class="card plan">
               <div class="plan-top">
                 <h3>Tự host</h3>
-                <span class="chip">Cho team</span>
+                <span class="chip">Server riêng</span>
               </div>
-              <div class="price word">Server riêng</div>
-              <p>Chạy server 7key trên chính tài khoản Cloudflare của team.</p>
+              <div class="price">0đ</div>
+              <p>Tự chạy server 7key trên tài khoản Cloudflare của team.</p>
               <ul class="checks">
-                <li>Tài khoản, domain và bản sao lưu đều là của bạn</li>
+                <li>Đủ tính năng, không giới hạn người</li>
+                <li>Domain và bản sao lưu là của bạn</li>
                 <li>Vẫn mã hoá đầu-cuối như bản gốc</li>
-                <li>Chỉ người được mời, hoặc mở đăng ký tự do</li>
-                <li>Xác minh email cho tài khoản mới</li>
               </ul>
               <div class="ctas">
                 <a class="btn" href="mailto:hello@7key.online?subject=T%E1%BB%B1%20host%207key"
@@ -3495,7 +3582,7 @@
       <div class="final">
         <div class="wrap">
           <h2>Một kho cho mọi chìa khoá.</h2>
-          <p>Miễn phí trong giai đoạn beta. Cài xong trong một phút.</p>
+          <p>Miễn phí cho bạn và team đến 5 người. Cài xong trong một phút.</p>
           <div class="ctas">
             <a class="btn primary" href="#install">Thêm vào Chrome</a
             ><a class="btn" href="mailto:hello@7key.online">Liên hệ</a>

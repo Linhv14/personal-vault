@@ -486,6 +486,16 @@ export function MenuItem({
 }
 
 export function Usage({ label, used, limit }: { label: string; used: number; limit: number }) {
+  if (!Number.isFinite(limit)) {
+    return (
+      <div className="usage">
+        <div className="usage-row">
+          <span>{label}</span>
+          <span className="usage-value">{used}</span>
+        </div>
+      </div>
+    );
+  }
   const ratio = Math.min(1, used / limit);
   return (
     <div className="usage">

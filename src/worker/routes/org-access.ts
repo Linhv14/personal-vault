@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { isOrgAdmin, planLimits, type Principal } from "../../core/org-model.js";
+import { HARD_LIMITS, isOrgAdmin, planLimits, type Principal } from "../../core/org-model.js";
 import { apiError } from "../errors.js";
 import { OrgDirectory } from "../orgs/directory.js";
 import type { AppBindings } from "../types.js";
@@ -18,7 +18,12 @@ export const isGeneration = (value: unknown): value is number =>
   Number.isSafeInteger(value) && (value as number) >= 0;
 
 export async function limitsOf(c: Ctx, orgId: string) {
-  return planLimits((await directory(c).org(orgId))?.plan ?? "free");
+  const limits = planLimits((await directory(c).org(orgId))?.plan ?? "free");
+  return {
+    seats: limits.seats,
+    teams: Math.min(limits.teams, HARD_LIMITS.teams),
+    projects: Math.min(limits.projects, HARD_LIMITS.projects),
+  };
 }
 
 export function asMember(
