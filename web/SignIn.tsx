@@ -208,6 +208,7 @@ export function SignIn() {
             <span className="field-hint">{t("setup.hint_create")}</span>
           </label>
         )}
+        <div className="turnstile-slot" data-turnstile />
         {error && (
           <p className="form-error" role="alert">
             {error}

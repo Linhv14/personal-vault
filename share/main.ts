@@ -21,6 +21,7 @@ import {
 } from "../src/i18n/index.js";
 import { hydrateIcons, icon, type IconName } from "../src/ui/icons.js";
 import { hydrateBrand } from "../src/ui/logo.js";
+import { turnstileToken } from "../src/ui/turnstile.js";
 import { guardReveal } from "./reveal.js";
 
 interface ShareResponse {
@@ -162,10 +163,10 @@ async function fetchShare(): Promise<ShareResponse> {
   return (await (await shareRequest("")).json()) as ShareResponse;
 }
 
-function postJson(body: unknown): RequestInit {
+function postJson(body: unknown, headers: Record<string, string> = {}): RequestInit {
   return {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   };
 }
@@ -205,10 +206,36 @@ function startResendCountdown(): void {
   }, 1000) as unknown as number;
 }
 
+let siteKeyRequest: Promise<string | null> | null = null;
+
+function turnstileSiteKey(): Promise<string | null> {
+  siteKeyRequest ??= fetch("/api/config")
+    .then((response) => response.json() as Promise<{ turnstileSiteKey?: unknown }>)
+    .then(({ turnstileSiteKey }) =>
+      typeof turnstileSiteKey === "string" && turnstileSiteKey ? turnstileSiteKey : null,
+    )
+    .catch(() => {
+      siteKeyRequest = null;
+      return null;
+    });
+  return siteKeyRequest;
+}
+
+async function humanCheckHeaders(): Promise<Record<string, string>> {
+  const siteKey = await turnstileSiteKey();
+  if (!siteKey) return {};
+  try {
+    return { "X-Turnstile-Token": await turnstileToken(siteKey) };
+  } catch {
+    throw new Error(t("error.auth.bot_check_failed"));
+  }
+}
+
 async function requestCode(): Promise<void> {
   el("email-error").hidden = true;
   try {
-    await shareRequest("/code", postJson({ email: recipientEmail, locale }));
+    const headers = await humanCheckHeaders();
+    await shareRequest("/code", postJson({ email: recipientEmail, locale }, headers));
   } catch (error) {
     showEmailError(error);
     return;

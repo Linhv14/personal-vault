@@ -46,3 +46,12 @@
   background: transparent;
   color: var(--muted);
 }
+
+.turnstile-slot {
+  display: flex;
+  justify-content: center;
+}
+
+.turnstile-slot:empty {
+  display: none;
+}

@@ -42,6 +42,7 @@ export async function requestRecoveryEmail(
   const { required } = await request<{ required: boolean }>("/api/auth/recover/email", {
     method: "POST",
     auth: false,
+    humanCheck: true,
     body: JSON.stringify({ email, recoveryAuthKey: await recoveryAuthKey(code), locale }),
   });
   return required;
@@ -61,6 +62,7 @@ export async function recoverAccount(
     {
       method: "POST",
       auth: false,
+      humanCheck: true,
       body: JSON.stringify({ email, recoveryAuthKey: authKey, emailCode }),
     },
   );

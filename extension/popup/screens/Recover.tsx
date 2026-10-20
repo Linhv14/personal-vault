@@ -182,6 +182,7 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
             <span>{t("setup.confirm")}</span>
             <input name="confirm" type="password" autoComplete="new-password" required />
           </label>
+          <div className="turnstile-slot" data-turnstile />
           <button className="primary" type="submit" disabled={working}>
             {t(working ? "setup.working" : "recovery.reset_submit")}
           </button>
@@ -210,6 +211,7 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
               autoFocus
             />
           </label>
+          <div className="turnstile-slot" data-turnstile />
           <button className="primary" type="submit" disabled={working}>
             {t(working ? "unlock.working" : "recovery.next")}
           </button>

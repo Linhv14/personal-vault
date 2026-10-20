@@ -326,6 +326,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
           <p className="hint" hidden={!(registering && askPassword)}>
             {t("setup.hint_create")}
           </p>
+          <div className="turnstile-slot" data-turnstile />
           <button className="primary" type="submit" disabled={working}>
             {buttonLabel}
           </button>
