@@ -259,11 +259,11 @@
       .btn.primary {
         border-color: transparent;
         background: var(--l-accent);
-        color: #04211c;
+        color: #1b0a03;
         box-shadow: 0 8px 30px rgb(255 106 61 / 0.35);
       }
       .btn.primary:hover {
-        background: #6ae8cf;
+        background: #ff8a63;
       }
       .nav .btn {
         height: 36px;
@@ -271,7 +271,7 @@
         font-size: 14px;
       }
       .nav .btn.primary {
-        color: #04211c;
+        color: #1b0a03;
       }
       .hero {
         position: relative;
@@ -537,13 +537,37 @@
         font-weight: 560;
         margin-left: auto;
       }
-      .chip {
-        padding: 3px 10px;
-        border-radius: 999px;
-        background: var(--l-accent);
-        color: #04211c;
-        font-size: 12px;
-        font-weight: 700;
+      .field.focus {
+        border-color: rgb(255 106 61 / 0.55);
+        box-shadow: 0 0 0 3px rgb(255 106 61 / 0.12);
+      }
+      .field-mark {
+        display: inline-flex;
+        width: 18px;
+        height: 18px;
+        flex: none;
+      }
+      .field-mark svg {
+        width: 100%;
+        height: 100%;
+      }
+      .suggest {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: -2px;
+        padding: 10px 14px;
+        border: 1px solid var(--l-line);
+        border-radius: 12px;
+        background: rgb(20 18 17 / 0.92);
+        box-shadow: 0 12px 28px rgb(0 0 0 / 0.35);
+        font-size: 13.5px;
+        color: var(--l-text);
+      }
+      .suggest em {
+        margin-left: auto;
+        color: var(--l-muted);
+        font-style: normal;
       }
       .matrix {
         width: 100%;
@@ -595,9 +619,10 @@
         color: var(--l-accent);
       }
       .soon {
+        position: absolute;
+        top: 22px;
+        right: 22px;
         line-height: 1.4;
-        align-self: flex-start;
-        margin-bottom: 4px;
         padding: 2px 9px;
         border-radius: 999px;
         background: rgb(255 181 71 / 0.15);
@@ -864,7 +889,12 @@
               <p>Suggests, fills and saves logins.</p>
               <div class="visual fill">
                 <div class="field">Username <b>linh@acme.dev</b></div>
-                <div class="field">Password <b>••••••••••••</b><span class="chip">Fill</span></div>
+                <div class="field focus">
+                  Password <b>••••••••••••</b><span class="field-mark">{{mark}}</span>
+                </div>
+                <div class="suggest">
+                  <span class="field-mark">{{mark}}</span><span>GitHub</span><em>linh@acme.dev</em>
+                </div>
               </div>
             </div>
             <div class="tile t-c">
@@ -1074,7 +1104,12 @@
               <p>Gợi ý, điền và lưu tài khoản.</p>
               <div class="visual fill">
                 <div class="field">Tên đăng nhập <b>linh@acme.dev</b></div>
-                <div class="field">Mật khẩu <b>••••••••••••</b><span class="chip">Điền</span></div>
+                <div class="field focus">
+                  Mật khẩu <b>••••••••••••</b><span class="field-mark">{{mark}}</span>
+                </div>
+                <div class="suggest">
+                  <span class="field-mark">{{mark}}</span><span>GitHub</span><em>linh@acme.dev</em>
+                </div>
               </div>
             </div>
             <div class="tile t-c">

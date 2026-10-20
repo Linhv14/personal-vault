@@ -114,7 +114,8 @@ async function buildSharePage() {
   const site = (deployedServerUrl() || "https://7key.online").replace(/\/$/, "");
   const landing = (await readFile(path.join(root, "share", "landing.html"), "utf8"))
     .replaceAll("{{site}}", site)
-    .replaceAll("{{logo}}", (await logoSvgs()).animated);
+    .replaceAll("{{logo}}", (await logoSvgs()).animated)
+    .replaceAll("{{mark}}", (await logoSvgs()).mark);
   for (const [lang, file] of [
     ["en", "index.html"],
     ["vi", "vi.html"],
