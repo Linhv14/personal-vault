@@ -36,7 +36,18 @@ try {
       removed++;
     }
   }
-  console.log("removed", removed);
+  let unhosted = 0;
+  for (let guard = 0; guard < 30; guard++) {
+    const left = await ev(
+      `const b = document.querySelector("main .host-chip:not(.suggested) button"); if (!b) return false; b.click(); await new Promise((r) => setTimeout(r, 1200)); return true;`,
+    );
+    if (!left) break;
+    unhosted++;
+  }
+  const unprotected = await ev(
+    `const wait = (ms) => new Promise((r) => setTimeout(r, ms)); let n = 0; for (let guard = 0; guard < 5; guard++) { const tab = [...document.querySelectorAll("a[role=tab]")].find((a) => a.querySelector(".tab-lock")); if (!tab) break; tab.click(); await wait(1200); [...document.querySelectorAll("main button")].find((x) => /^(More|Thêm)$/.test(x.getAttribute("aria-label") || ""))?.click(); await wait(500); const item = [...document.querySelectorAll("[role=menuitem]")].find((x) => /Stop protecting|Bỏ bảo vệ/.test(x.textContent)); if (!item) break; item.click(); await wait(2000); n++; } return n;`,
+  );
+  console.log("removed", removed, "hosts", unhosted, "unprotected", unprotected);
 } finally {
   b.close();
 }

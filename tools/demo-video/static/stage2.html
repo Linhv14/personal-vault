@@ -34,7 +34,7 @@
         position: absolute;
         inset: 0;
         transform-origin: 0 0;
-        transition: transform 0.75s cubic-bezier(0.65, 0, 0.25, 1);
+        transition: transform 0.6s cubic-bezier(0.65, 0, 0.25, 1);
       }
       #device {
         position: absolute;
@@ -58,18 +58,6 @@
         border: 0;
         background: #121110;
         transform-origin: 0 0;
-      }
-      #dim {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.5s;
-        background: radial-gradient(
-          circle at var(--x, 50%) var(--y, 50%),
-          transparent var(--r, 120px),
-          rgba(0, 0, 0, 0.42) calc(var(--r, 120px) + 90px)
-        );
       }
       #cursor {
         position: absolute;
@@ -314,17 +302,6 @@
         background: rgba(255, 181, 71, 0.14);
         color: #ffb547;
       }
-      .wire {
-        position: relative;
-        width: 84px;
-        height: 2px;
-        background: linear-gradient(
-          90deg,
-          rgba(255, 106, 61, 0.15),
-          rgba(255, 106, 61, 0.6),
-          rgba(255, 106, 61, 0.15)
-        );
-      }
       .pkt {
         position: absolute;
         top: -13px;
@@ -376,11 +353,6 @@
       .stg > *:nth-child(7) {
         animation-delay: 1.5s;
       }
-      .tree {
-        display: flex;
-        gap: 28px;
-        align-items: center;
-      }
       .col {
         display: flex;
         flex-direction: column;
@@ -422,45 +394,6 @@
         font-size: 13px;
         font-weight: 600;
         color: #e6dfd8;
-      }
-      .arrow {
-        color: #ff6a3d;
-        font-size: 28px;
-        opacity: 0.8;
-      }
-      .members {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .mem {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 14px;
-        border-radius: 12px;
-        background: #171513;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        font-size: 15px;
-      }
-      .mem b {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: grid;
-        place-items: center;
-        background: rgba(255, 106, 61, 0.18);
-        color: #ff6a3d;
-        font-size: 13px;
-      }
-      .mem em {
-        margin-left: auto;
-        font-style: normal;
-        color: #ff6a3d;
-        font:
-          600 12px ui-monospace,
-          Menlo,
-          monospace;
       }
       .win {
         width: 860px;
@@ -627,7 +560,7 @@
         padding: 7px 12px;
       }
       .sub2 {
-        margin: -6px 0 34px;
+        margin: -6px 0 46px;
         color: #aaa29b;
         font-size: 22px;
       }
@@ -674,21 +607,6 @@
       }
       .zk .val.enc {
         color: #ffb547;
-      }
-      .zk .lane {
-        position: relative;
-        height: 2px;
-        margin: 0 10px;
-        background: linear-gradient(
-          90deg,
-          rgba(255, 106, 61, 0.1),
-          rgba(255, 106, 61, 0.7),
-          rgba(255, 181, 71, 0.7),
-          rgba(255, 181, 71, 0.1)
-        );
-      }
-      .zk .lane .pkt {
-        top: -14px;
       }
       .ic svg {
         width: 24px;
@@ -747,66 +665,359 @@
         font-weight: 600;
         color: #e6dfd8;
       }
+      h1 img.lg {
+        width: 0.86em;
+        height: 0.86em;
+        margin-right: 0.22em;
+        vertical-align: -0.1em;
+      }
+      #hole {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        z-index: 5;
+        pointer-events: none;
+        border-radius: 12px;
+        opacity: 0;
+        box-shadow: 0 0 0 2400px rgba(4, 3, 2, 0.58);
+        transition: opacity 0.3s;
+      }
+      #hole::after {
+        content: "";
+        position: absolute;
+        inset: -3px;
+        border-radius: inherit;
+        border: 2.5px solid #ffb547;
+        animation: halo 1.3s ease-out infinite;
+      }
+      #hole.on {
+        opacity: 1;
+      }
+      @keyframes halo {
+        0% {
+          box-shadow: 0 0 0 0 rgba(255, 181, 71, 0.55);
+        }
+        100% {
+          box-shadow: 0 0 0 14px rgba(255, 181, 71, 0);
+        }
+      }
       #callout {
         position: absolute;
+        left: 0;
+        top: 0;
         z-index: 6;
-        padding: 8px 14px;
+        padding: 9px 16px;
         border-radius: 999px;
-        background: #f3b562;
+        background: #ffb547;
         color: #2a1a00;
         font-weight: 750;
-        font-size: 18px;
+        font-size: 19px;
         white-space: nowrap;
         opacity: 0;
-        transform: translate(-50%, -150%) scale(0.9);
-        transition:
-          opacity 0.3s,
-          transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        pointer-events: none;
+        transition: opacity 0.25s;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
       }
       #callout::after {
         content: "";
         position: absolute;
         left: 50%;
-        bottom: -7px;
-        width: 14px;
-        height: 14px;
-        background: #f3b562;
-        transform: translateX(-50%) rotate(45deg);
+        bottom: -6px;
+        width: 13px;
+        height: 13px;
+        margin-left: -6.5px;
+        background: #ffb547;
+        transform: rotate(45deg);
         border-radius: 2px;
+      }
+      #callout.below::after {
+        bottom: auto;
+        top: -6px;
       }
       #callout.on {
         opacity: 1;
-        transform: translate(-50%, -160%) scale(1);
       }
-      #ring {
+      .dia {
+        position: relative;
+        text-align: left;
+      }
+      .dia > .n {
         position: absolute;
-        z-index: 6;
-        width: 58px;
-        height: 58px;
-        margin: -29px 0 0 -29px;
+        box-sizing: border-box;
+        padding: 14px 18px;
+        border-radius: 16px;
+        background: #171513;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+        font-size: 21px;
+        font-weight: 700;
+        letter-spacing: -0.2px;
+        z-index: 1;
+      }
+      .dia > .n small {
+        display: block;
+        margin-bottom: 4px;
+        color: #aaa29b;
+        font-size: 12.5px;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .dia > .n.hl {
+        border-color: rgba(255, 106, 61, 0.65);
+        background: linear-gradient(180deg, rgba(255, 106, 61, 0.14), #171513 80%);
+      }
+      .dia .envs {
+        display: flex;
+        gap: 5px;
+        margin-top: 10px;
+      }
+      .dia .envs i {
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        font-weight: 650;
+        font-style: normal;
+        color: #e6dfd8;
+      }
+      .dia .hd {
+        position: absolute;
+        top: 0;
+        font-size: 13px;
+        font-weight: 750;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #8d857e;
+      }
+      .dia .split {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background: linear-gradient(
+          180deg,
+          transparent,
+          rgba(255, 255, 255, 0.12) 20%,
+          rgba(255, 255, 255, 0.12) 80%,
+          transparent
+        );
+      }
+      .dia .key {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .dia .key .kic {
+        width: 46px;
+        height: 46px;
+        margin-bottom: 10px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        background: #ff6a3d;
+        color: #1b0a03;
+      }
+      .dia .mono {
+        margin-top: 4px;
+        font:
+          600 13px ui-monospace,
+          Menlo,
+          monospace;
+        color: #ffb547;
+      }
+      .dia .mem {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        column-gap: 12px;
+        align-items: center;
+        font-size: 17px;
+      }
+      .dia .mem .av {
+        grid-row: span 2;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        border: 3px solid #f3b562;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 106, 61, 0.18);
+        color: #ff6a3d;
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .dia .mem .sl {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 3px;
+        color: #8d857e;
+        font-size: 12.5px;
+        white-space: nowrap;
+        font-weight: 600;
+        transition: color 0.3s;
+      }
+      .dia .mem .sl svg {
+        width: 15px;
+        height: 15px;
+      }
+      .dia .mem.sealed {
+        border-color: rgba(255, 181, 71, 0.55);
+      }
+      .dia .mem.sealed .sl {
+        color: #ffb547;
+      }
+      .dia .foot {
+        position: absolute;
+        font-size: 16px;
+        color: #aaa29b;
+      }
+      .dia svg.wires {
+        position: absolute;
+        left: 0;
+        top: 0;
+        overflow: visible;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .wires .ln {
+        fill: none;
+        stroke: rgba(255, 140, 90, 0.75);
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        animation: draw 0.6s cubic-bezier(0.45, 0, 0.2, 1) both;
+      }
+      .wires .ah {
+        fill: rgba(255, 140, 90, 0.95);
+        animation: fadein 0.2s both;
+      }
+      @keyframes draw {
+        from {
+          stroke-dashoffset: var(--len);
+        }
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      @keyframes fadein {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .dia .tok {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 30px;
+        height: 30px;
+        margin: 0;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        background: #ff6a3d;
+        color: #1b0a03;
+        box-shadow: 0 6px 18px rgba(255, 106, 61, 0.45);
+        offset-rotate: 0deg;
         opacity: 0;
-        transition: opacity 0.3s;
+        z-index: 2;
+        animation: travel 0.9s cubic-bezier(0.5, 0, 0.3, 1) both;
       }
-      #ring.on {
-        opacity: 1;
-        animation: pulse 1.2s ease-out infinite;
+      .dia .tok svg,
+      .dia .key .kic svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
       }
-      @keyframes pulse {
+      .dia .key .kic svg {
+        width: 24px;
+        height: 24px;
+      }
+      @keyframes travel {
         0% {
-          box-shadow: 0 0 0 0 rgba(243, 181, 98, 0.55);
+          offset-distance: 0%;
+          opacity: 0;
+        }
+        15% {
+          opacity: 1;
+        }
+        85% {
+          opacity: 1;
         }
         100% {
-          box-shadow: 0 0 0 22px rgba(243, 181, 98, 0);
+          offset-distance: 100%;
+          opacity: 0;
         }
       }
-      h1 img.lg {
-        width: 0.86em;
-        height: 0.86em;
-        margin-right: 0.22em;
-        vertical-align: -0.1em;
+      .dia .mem .sl svg,
+      .zk svg.arw {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .zk .lane {
+        position: relative;
+        height: 24px;
+        margin: 0 8px;
+        background: none;
+      }
+      .zk svg.arw {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 24px;
+        color: #ff8a5c;
+        overflow: visible;
+      }
+      .zk svg.arw path:first-child {
+        stroke-dasharray: 120;
+        animation: draw 0.6s cubic-bezier(0.45, 0, 0.2, 1) both;
+        --len: 120;
+      }
+      .zk svg.arw path + path {
+        fill: #ff8a5c;
+        stroke: none;
+        animation: fadein 0.2s both;
+      }
+      .zk .lane .pkt {
+        top: -22px;
+      }
+      .zk .lane .pkt {
+        animation-name: flyz;
+        animation-delay: 1s;
+        animation-fill-mode: both;
+      }
+      @keyframes flyz {
+        0% {
+          left: 0;
+          opacity: 0;
+        }
+        15% {
+          opacity: 1;
+        }
+        85% {
+          opacity: 1;
+        }
+        100% {
+          left: calc(100% - 78px);
+          opacity: 0;
+        }
+      }
+      .dia > .n,
+      .dia .hd,
+      .dia .foot,
+      .dia .split {
+        animation: pop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
       }
     </style>
   </head>
@@ -826,14 +1037,18 @@
         />
       </svg>
     </div>
-    <div id="dim"></div>
+    <div id="hole"></div>
     <div id="callout"></div>
-    <div id="ring"></div>
     <div id="cap"></div>
     <div id="card"></div>
     <script>
       const $ = (id) => document.getElementById(id);
-      const S = { k: 1, tx: 0, ty: 0, fw: 0, scale: 1, dx: 0, dy: 0 };
+      const S = { k: 1, tx: 0, ty: 0, scale: 1, dx: 0, dy: 0, spot: null, call: null };
+      const camMatrix = () => new DOMMatrix(getComputedStyle($("camera")).transform);
+      const toLocal = (x, y) => {
+        const p = camMatrix().inverse().transformPoint(new DOMPoint(x, y));
+        return { x: p.x, y: p.y };
+      };
       window.st = {
         device(src, w, h, scale) {
           const d = $("device"),
@@ -859,19 +1074,32 @@
         win() {
           return $("frame").contentWindow;
         },
-        local(sel) {
-          const e = st.doc().querySelector(sel);
+        rect(sel) {
+          const e = typeof sel === "string" ? st.doc().querySelector(sel) : sel;
           if (!e) return null;
           const r = e.getBoundingClientRect();
-          return {
-            x: S.dx + (r.left + r.width / 2) * S.scale,
-            y: S.dy + (r.top + r.height / 2) * S.scale,
-            w: r.width * S.scale,
-            h: r.height * S.scale,
-          };
+          const f = $("frame");
+          const F = f.getBoundingClientRect();
+          const k = F.width / parseFloat(f.width);
+          return { x: F.left + r.left * k, y: F.top + r.top * k, w: r.width * k, h: r.height * k };
         },
-        screen(p) {
-          return { x: p.x * S.k + S.tx, y: p.y * S.k + S.ty };
+        local(sel) {
+          const r = st.rect(sel);
+          if (!r) return null;
+          const c = toLocal(r.x + r.w / 2, r.y + r.h / 2);
+          return { x: c.x, y: c.y, w: r.w / S.k, h: r.h / S.k };
+        },
+        reveal(sel, room = 0.5) {
+          const e = st.doc().querySelector(sel);
+          if (!e) return 0;
+          const w = st.win();
+          const r = e.getBoundingClientRect();
+          const top = w.innerHeight * 0.18;
+          const bottom = w.innerHeight * (1 - 0.12);
+          if (r.top >= top && r.bottom <= bottom) return 0;
+          const want = Math.max(0, w.scrollY + r.top + r.height / 2 - w.innerHeight * room);
+          w.scrollTo({ top: want, behavior: "smooth" });
+          return 1;
         },
         zoom(sel, k, ox, oy) {
           if (!sel) {
@@ -879,27 +1107,61 @@
             S.tx = 0;
             S.ty = 0;
           } else {
-            const p = typeof sel === "string" ? st.local(sel) : sel;
-            if (!p) return;
+            const p = st.local(sel);
+            if (!p) return false;
             S.k = k;
             S.tx = 640 + (ox || 0) - p.x * k;
-            S.ty = 420 + (oy || 0) - p.y * k;
+            S.ty = 430 + (oy || 0) - p.y * k;
           }
           $("camera").style.transform = `translate(${S.tx}px,${S.ty}px) scale(${S.k})`;
+          return true;
         },
-        spot(sel, r) {
-          const d = $("dim");
+        spot(sel, pad = 8, radius = 12) {
+          clearTimeout(S.spotOff);
+          $("hole").classList.toggle("on", !!sel);
           if (!sel) {
-            d.style.opacity = 0;
+            S.spotOff = setTimeout(() => (S.spot = null), 350);
             return;
           }
-          const p = st.local(sel);
-          if (!p) return;
-          const s = st.screen(p);
-          d.style.setProperty("--x", s.x + "px");
-          d.style.setProperty("--y", s.y + "px");
-          d.style.setProperty("--r", (r || (Math.max(p.w, p.h) * S.k) / 2 + 20) + "px");
-          d.style.opacity = 1;
+          S.spot = { sel, pad, radius };
+          st.tick(true);
+        },
+        callout(sel, text, place = "top") {
+          const c = $("callout");
+          clearTimeout(S.callOff);
+          if (!sel) {
+            c.classList.remove("on");
+            S.callOff = setTimeout(() => (S.call = null), 350);
+            return;
+          }
+          S.call = { sel, place };
+          c.textContent = text;
+          c.classList.toggle("below", place === "below");
+          st.tick(true);
+          c.classList.add("on");
+        },
+        tick(force) {
+          if (S.spot) {
+            const r = st.rect(S.spot.sel);
+            if (r) {
+              const h = $("hole"),
+                p = S.spot.pad * S.k;
+              h.style.transform = `translate(${r.x - p}px,${r.y - p}px)`;
+              h.style.width = r.w + 2 * p + "px";
+              h.style.height = r.h + 2 * p + "px";
+              h.style.borderRadius = S.spot.radius * S.k + "px";
+            }
+          }
+          if (S.call) {
+            const r = st.rect(S.call.sel);
+            if (r) {
+              const c = $("callout");
+              const pad = (S.spot ? S.spot.pad * S.k : 0) + 16;
+              const x = r.x + r.w / 2 - c.offsetWidth / 2;
+              const y = S.call.place === "below" ? r.y + r.h + pad : r.y - pad - c.offsetHeight;
+              c.style.transform = `translate(${x}px,${y}px)`;
+            }
+          }
         },
         move(sel) {
           const p = st.local(sel);
@@ -928,7 +1190,7 @@
           setTimeout(() => {
             c.innerHTML = (k ? `<span class="k">${k}</span>` : "") + `<h2>${h}</h2>`;
             c.className = "in";
-          }, 180);
+          }, 150);
         },
         nocap() {
           $("cap").className = "out";
@@ -939,28 +1201,80 @@
           c.innerHTML = html;
           void c.offsetWidth;
           c.classList.add("on");
-        },
-        callout(sel, text) {
-          const c = $("callout"),
-            r = $("ring");
-          if (!sel) {
-            c.classList.remove("on");
-            r.classList.remove("on");
-            return;
-          }
-          const p = st.screen(st.local(sel));
-          c.textContent = text;
-          c.style.left = p.x + "px";
-          c.style.top = p.y - 18 + "px";
-          r.style.left = p.x + "px";
-          r.style.top = p.y + "px";
-          c.classList.add("on");
-          r.classList.add("on");
+          c.querySelectorAll(".dia[data-links]").forEach(st.wire);
         },
         nocard() {
           $("card").classList.remove("on");
         },
+        wire(dia) {
+          const NS = "http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(NS, "svg");
+          svg.setAttribute("class", "wires");
+          svg.setAttribute("width", dia.offsetWidth);
+          svg.setAttribute("height", dia.offsetHeight);
+          dia.prepend(svg);
+          const box = (id) => {
+            const e = dia.querySelector(`[data-id="${id}"]`);
+            return { x: e.offsetLeft, y: e.offsetTop, w: e.offsetWidth, h: e.offsetHeight, e };
+          };
+          for (const spec of dia.dataset.links.split(";")) {
+            const [pair, dir, at, tok] = spec.trim().split(":");
+            const [a, b] = pair.split(">").map(box);
+            const delay = parseFloat(at);
+            let x1, y1, x2, y2, d, ang;
+            const gap = 3;
+            if (dir === "v") {
+              x1 = a.x + a.w / 2;
+              y1 = a.y + a.h;
+              x2 = b.x + b.w / 2;
+              y2 = b.y - gap;
+              const m = (y2 - y1) / 2;
+              d = `M${x1},${y1} C${x1},${y1 + m} ${x2},${y2 - m} ${x2},${y2}`;
+              ang = 90;
+            } else {
+              x1 = a.x + a.w;
+              y1 = a.y + a.h / 2;
+              x2 = b.x - gap;
+              y2 = b.y + b.h / 2;
+              const m = (x2 - x1) / 2;
+              d = `M${x1},${y1} C${x1 + m},${y1} ${x2 - m},${y2} ${x2},${y2}`;
+              ang = 0;
+            }
+            const path = document.createElementNS(NS, "path");
+            path.setAttribute("d", d);
+            path.setAttribute("class", "ln");
+            svg.append(path);
+            const len = path.getTotalLength();
+            path.style.strokeDasharray = len;
+            path.style.setProperty("--len", len);
+            path.style.animationDelay = delay + "s";
+            const tip = path.getPointAtLength(len - 9);
+            const head = document.createElementNS(NS, "path");
+            head.setAttribute("d", "M0,0 L-11,-6 L-11,6 Z");
+            head.setAttribute("class", "ah");
+            const rot = (Math.atan2(y2 - tip.y, x2 - tip.x) * 180) / Math.PI;
+            head.setAttribute("transform", `translate(${x2},${y2}) rotate(${rot || ang})`);
+            head.style.animationDelay = delay + 0.5 + "s";
+            svg.append(head);
+            if (tok) {
+              const t = document.createElement("div");
+              t.className = "tok";
+              t.innerHTML = dia.querySelector("template.tokt")?.innerHTML ?? "";
+              t.style.offsetPath = `path("${d}")`;
+              t.style.animationDelay = parseFloat(tok) + "s";
+              dia.append(t);
+              setTimeout(() => b.e.classList.add("sealed"), (parseFloat(tok) + 0.85) * 1000);
+            }
+          }
+        },
       };
+      const loop = () => {
+        try {
+          st.tick();
+        } catch {}
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
     </script>
   </body>
 </html>
