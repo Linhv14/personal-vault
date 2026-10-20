@@ -826,10 +826,8 @@ export const en = {
   "share.views_1": "Once",
   "share.views_unlimited": "Until it expires",
   "share.passphrase": "Link password",
-  "share.passphrase_placeholder": "Send it to them separately",
+  "share.passphrase_placeholder": "Leave empty if not needed",
   "share.create": "Create link",
-  "share.create_count":
-    "{count, plural, =0 {Pick something to share} one {Create link with # item} other {Create link with # items}}",
   "share.link": "Link",
   "share.ready": "Your link is ready",
   "share.copy_link": "Copy link",
@@ -837,9 +835,6 @@ export const en = {
 
   // --- Settings ------------------------------------------------------------
   "share.ttl_30d": "30 days",
-  "share.ttl_option": "Expires in {ttl}",
-  "share.views_once_option": "Opens once",
-  "share.views_unlimited_option": "Opens until it expires",
   "share.access": "Who can open",
   "share.access_anyone": "Anyone with the link",
   "share.access_emails": "Specific emails",
@@ -849,7 +844,7 @@ export const en = {
     "Recipients must enter a code sent to their email to see it. Up to 10 addresses.",
   "share.passphrase_hint":
     "The recipient must enter this password. Send it separately, for example the link by email and the password by text message.",
-  "share.contents": "Includes",
+  "share.contents": "The recipient sees",
   "share.totp_hint": "2FA secret included: codes outlive the link.",
   "share.views_hint":
     "With more than one recipient, the link stays open until it expires so each of them can view it.",

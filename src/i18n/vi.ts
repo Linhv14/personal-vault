@@ -818,9 +818,8 @@ export const vi: Catalogue = {
   "share.views_1": "Một lần",
   "share.views_unlimited": "Đến khi hết hạn",
   "share.passphrase": "Mật khẩu mở link",
-  "share.passphrase_placeholder": "Gửi riêng cho người nhận",
+  "share.passphrase_placeholder": "Để trống nếu không cần",
   "share.create": "Tạo link",
-  "share.create_count": "{count, plural, =0 {Chọn mục cần chia sẻ} other {Tạo link · # mục}}",
   "share.link": "Link",
   "share.ready": "Link đã sẵn sàng",
   "share.copy_link": "Sao chép link",
@@ -828,9 +827,6 @@ export const vi: Catalogue = {
 
   // --- Settings ------------------------------------------------------------
   "share.ttl_30d": "30 ngày",
-  "share.ttl_option": "Hết hạn sau {ttl}",
-  "share.views_once_option": "Mở được 1 lần",
-  "share.views_unlimited_option": "Mở đến khi hết hạn",
   "share.access": "Ai được mở",
   "share.access_anyone": "Bất kỳ ai có link",
   "share.access_emails": "Chỉ email được chọn",
@@ -840,7 +836,7 @@ export const vi: Catalogue = {
     "Người nhận phải nhập mã gửi về email của họ mới xem được. Tối đa 10 email.",
   "share.passphrase_hint":
     "Người nhận phải nhập mật khẩu này. Gửi nó qua kênh khác, ví dụ link qua email, mật khẩu qua Zalo.",
-  "share.contents": "Nội dung",
+  "share.contents": "Người nhận sẽ thấy",
   "share.totp_hint": "Có kèm khoá 2FA: link hết hạn rồi mã vẫn dùng được.",
   "share.views_hint": "Có nhiều người nhận nên link mở được đến khi hết hạn, ai cũng xem được.",
   "share.protection": "Bảo mật thêm",
