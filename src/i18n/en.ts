@@ -866,6 +866,26 @@ export const en = {
   "share.result_once": "Opens once",
   "share.result_unlimited": "Opens until it expires",
   "links.expires": "Expires {expiry}",
+  "trash.title": "Trash",
+  "trash.search": "Search trash",
+  "trash.select_all": "Select all",
+  "trash.select": "Select {title}",
+  "trash.restore": "Restore",
+  "trash.delete": "Delete forever",
+  "trash.restore_count": "Restore {count}",
+  "trash.delete_count": "Delete {count} forever",
+  "trash.empty": "Empty trash",
+  "trash.empty_state": "Trash is empty",
+  "trash.no_match": "No items match",
+  "trash.purges_in":
+    "{days, plural, =0 {Purges today} one {Purges in # day} other {Purges in # days}}",
+  "trash.confirm_delete":
+    "{count, plural, one {Delete # item forever?} other {Delete # items forever?}}",
+  "trash.confirm_empty": "Empty trash?",
+  "trash.confirm_text":
+    "{count, plural, one {# item is removed from every device. This cannot be undone.} other {# items are removed from every device. This cannot be undone.}}",
+  "trash.restored": "{count, plural, one {# item restored} other {# items restored}}",
+  "trash.deleted": "{count, plural, one {# item deleted forever} other {# items deleted forever}}",
   "settings.section_account": "Account",
   "settings.signed_out":
     "You are not signed in. Open 7key from the toolbar to sign in or create an account.",

@@ -84,6 +84,7 @@ describe("personal settings in the console", () => {
       ["security", "Security"],
       ["health", "Password health"],
       ["data", "Data"],
+      ["trash", "Trash"],
       ["account", "Account"],
       ["general", "Preferences"],
     ]) {
@@ -143,6 +144,7 @@ describe("personal settings in the console", () => {
       "#/me/security",
       "#/me/health",
       "#/me/data",
+      "#/me/trash",
       "#/me/account",
       "#/new/projects",
     ]);

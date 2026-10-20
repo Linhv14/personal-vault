@@ -10,6 +10,12 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- **Settings → Trash** lists deleted items with when each was deleted and how
+  long until it is purged. Restore or delete forever one item, a selection, or
+  empty the whole trash; search filters by title.
+- Items stay in the trash for 30 days, then the extension deletes them forever
+  after the next unlock and sync. Items in team vaults are not purged
+  automatically.
 - Secret history: the console keeps the last five values of each secret, with
   who changed it and when; **History** on a secret's row shows them and
   restores one. Re-keying a team re-encrypts the history too.

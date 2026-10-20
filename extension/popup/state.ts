@@ -19,6 +19,7 @@ import {
   type VaultItem,
 } from "../lib/vault.js";
 import { itemType, type ItemType } from "../lib/item-types.js";
+import { purgeExpiredTrash } from "../lib/trash.js";
 import { DEFAULT_VAULT_ID, vaultList, vaultOf, withoutVault, withVault } from "../lib/vaults.js";
 
 export type Screen =
@@ -232,7 +233,13 @@ async function backgroundSync(): Promise<void> {
       syncProblem.value = { kind: "offline", message: t("list.offline") };
     } else {
       syncProblem.value = null;
-      const changed = synced + (vaultKey.value ? await migrateUnboundItems(vaultKey.value) : 0);
+      const key = vaultKey.value;
+      const changed =
+        synced +
+        (key
+          ? (await migrateUnboundItems(key)) +
+            (await purgeExpiredTrash(key, Math.floor(nowMs() / 1000)).catch(() => 0))
+          : 0);
       if (changed > 0) await reloadItems();
     }
   } catch (error) {

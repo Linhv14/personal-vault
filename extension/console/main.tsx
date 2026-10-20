@@ -6,6 +6,7 @@ import { Data } from "../settings/pages/Data.js";
 import { General } from "../settings/pages/General.js";
 import { Health } from "../settings/pages/Health.js";
 import { Security } from "../settings/pages/Security.js";
+import { Trash } from "../settings/pages/Trash.js";
 import { localState, showToast, watchStorage } from "../settings/state.js";
 import { Icon } from "../ui/components/Icon.js";
 import { useT } from "../ui/i18n.js";
@@ -18,6 +19,7 @@ const PERSONAL: PersonalPage[] = [
   { section: "security", icon: "shield", label: "settings.section_security", view: Security },
   { section: "health", icon: "pulse", label: "health.title", view: Health },
   { section: "data", icon: "database", label: "settings.section_data", view: Data },
+  { section: "trash", icon: "trash", label: "trash.title", view: Trash },
   { section: "account", icon: "person", label: "settings.section_account", view: Account },
 ];
 
