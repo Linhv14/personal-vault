@@ -30,9 +30,11 @@ the shared secret with both public keys as salt, and AES-256-GCM with a context
 string naming what is wrapped as associated data, so a wrapped team key cannot
 be passed off as another team's.
 
-Removing a member creates new team and project keys and re-encrypts the
-secrets: the person who left may have kept the old keys, and nothing else
-guarantees they cannot read what is written later.
+After a member is removed, an admin in the team creates new team and project
+keys and re-encrypts the secrets (see "Re-keying" below): the person who left
+may have kept the old keys, and nothing else guarantees they cannot read what
+is written later. The server cannot do this itself; until an admin does, it
+refuses writes to the team.
 
 ### Projects and secrets
 
@@ -333,11 +335,15 @@ GitHub's OIDC token is used to bind a request to a repository, ref and
 environment, the usual pattern for workload identity. It is not
 treated as enough on its own:
 
-- Default deny. A link names one repository and exact refs or GitHub
-  environments; no wildcards, no `pull_request_target`.
-- Production environments require a GitHub environment with required reviewers.
-- Tokens are short-lived; every fetch is audited and unusual ones raise alerts.
-- Plain machine tokens remain for CI that is not GitHub.
+- Default deny. A link names one repository and an exact branch, a GitHub
+  environment, or both; no wildcards, no `pull_request_target`.
+- 7key does not check how a GitHub environment is protected. Linking
+  Production to a GitHub environment with required reviewers is up to you,
+  and recommended.
+- Tokens are short-lived, and every fetch is written to the activity log with
+  the repository, ref and IP. Nothing raises an alert on its own.
+- Only GitHub Actions is supported; there are no machine tokens for other CI
+  yet.
 - Once secrets are in a runner, any step in that job can read them (the
   `tj-actions/changed-files` compromise did exactly this). Pin actions to commit
   SHAs and keep secret-using jobs small.

@@ -43,7 +43,10 @@ What the server requires at sign-up. No authentication.
 ```
 
 `registration` is `token` or `open`. `emailVerification` is `true` when a
-sender and a mail provider are configured.
+sender and a mail provider are configured. When Turnstile is configured, the
+response also carries `turnstileSiteKey`, and `register`, `verify-email`,
+`recover/email`, `recover/start` and `POST /api/shares/:id/code` need a token
+in the `X-Turnstile-Token` header, or answer `403 auth.bot_check_failed`.
 
 ### `GET /api/time`
 
@@ -79,11 +82,12 @@ Send a 6-digit sign-up code to an address. Only meaningful when
 | 200    | `{ "ok": true, "required": true }`; or `"required": false` when the server sends no email |
 | 400    | `auth.invalid_email`                                                                      |
 | 429    | `auth.code_cooldown` with `params.seconds`                                                |
-| 502    | `auth.email_failed`                                                                       |
 
 An address that already has an account receives a "you already have an
 account" email instead of a code, and the response is the same, so the endpoint
-does not reveal which addresses are registered.
+does not reveal which addresses are registered. The account lookup and the
+email happen after the response is sent, so a failed send is logged, not
+returned, and the timing is the same either way.
 
 ### `POST /api/auth/register`
 
@@ -97,7 +101,7 @@ is the admin's consent, so invited people can sign up on a token-only server.
 | Field              | Type   | Notes                                                                                  |
 | ------------------ | ------ | -------------------------------------------------------------------------------------- |
 | `email`            | string | Normalized to lower case                                                               |
-| `kdf`              | object | `{ "type": "pbkdf2-sha256", "iterations": 100000–5000000, "salt": base64 ≤ 64 bytes }` |
+| `kdf`              | object | `{ "type": "pbkdf2-sha256", "iterations": 600000–5000000, "salt": base64 ≤ 64 bytes }` |
 | `authKey`          | string | base64, 32 bytes                                                                       |
 | `wrappedVaultKey`  | sealed | The vault key sealed under the wrapping key                                            |
 | `verificationCode` | string | 6 digits; required when `emailVerification` is on                                      |
@@ -108,8 +112,12 @@ is the admin's consent, so invited people can sign up on a token-only server.
 | 201    | `{ "accountId": string, "token": string, "expiresAt": number, "orgId"?: string }`, `orgId` when an invitation was accepted                                   |
 | 400    | `auth.invalid_body`, `auth.invalid_email`, `auth.invalid_kdf`, `auth.invalid_auth_key`, `auth.invalid_wrapped_key`, `auth.invalid_code`, `auth.code_expired` |
 | 403    | `auth.bad_registration_token`                                                                                                                                |
-| 409    | `auth.email_taken`                                                                                                                                           |
+| 409    | `auth.email_taken`, only when `emailVerification` is on and the code was valid                                                                               |
 | 429    | `auth.registration_limit`                                                                                                                                    |
+
+Without email verification, an address that already has an account gets a
+`201` with a random `accountId` and a token that is not stored, and nothing
+changes, so the response does not reveal that the address is taken.
 
 ### `POST /api/auth/prelogin`
 
@@ -136,7 +144,14 @@ same on every call, so the response does not reveal whether an account exists.
 | 200    | `{ "token": string, "expiresAt": number, "wrappedVaultKey": sealed }`          |
 | 400    | `auth.invalid_credentials` (malformed body)                                    |
 | 401    | `auth.invalid_credentials` (wrong email or key; the two are not distinguished) |
-| 429    | `auth.rate_limited` with `params.seconds` until the lock ends                  |
+| 429    | `auth.rate_limited` with `params.seconds` until the next try is allowed        |
+
+Failures are throttled per address and network: five are free, then each one
+doubles the wait, from 5 seconds up to an hour. After 20 failures in an hour
+on one address from any network, every attempt on it is also slowed, by up to
+5 seconds. There is no hard lock. A `200` adds `"upgradeKdf": true` when the
+account uses fewer than 600,000 iterations; the client then re-wraps the vault
+key through `change-password` with `keepSession`.
 
 When the account has two-factor authentication on, a correct `authKey` returns
 `200 { "twoFactor": "required", "challenge": string, "expiresAt": number }`
@@ -233,12 +248,13 @@ Authenticated. Revokes the current session. Returns `{ "ok": true }`.
 Authenticated. Replaces the KDF parameters, auth key and wrapped vault key in
 one step, then revokes every session of the account.
 
-| Field             | Type   | Notes                                              |
-| ----------------- | ------ | -------------------------------------------------- |
-| `currentAuthKey`  | string | Proves knowledge of the current password           |
-| `kdf`             | object | As in `register`                                   |
-| `authKey`         | string | The new auth key                                   |
-| `wrappedVaultKey` | sealed | The same vault key, wrapped under the new password |
+| Field             | Type   | Notes                                               |
+| ----------------- | ------ | --------------------------------------------------- |
+| `currentAuthKey`  | string | Proves knowledge of the current password            |
+| `kdf`             | object | As in `register`                                    |
+| `authKey`         | string | The new auth key                                    |
+| `wrappedVaultKey` | sealed | The same vault key, wrapped under the new password  |
+| `keepSession`     | bool   | Optional. `true` revokes every session but this one |
 
 Returns `{ "ok": true }`, or `400` for a malformed field and
 `403 auth.invalid_credentials` when `currentAuthKey` is wrong.
@@ -284,8 +300,8 @@ code. Returns `{ "ok": true }`, or `403 auth.invalid_credentials`.
 
 ### `POST /api/auth/recover/email`
 
-Unauthenticated, rate-limited per IP and counted with failed sign-ins for the
-address. Request `{ "email", "recoveryAuthKey", "locale"? }`. Checks the
+Unauthenticated, rate-limited per IP and throttled per address and network
+like `login`, with counters separate from sign-in. Request `{ "email", "recoveryAuthKey", "locale"? }`. Checks the
 recovery code and, when the server can send email, emails a 6-digit code to
 the account's address. Returns `{ "required": boolean }`; `required` is false
 on a server without email, where the next two calls take no `emailCode`.

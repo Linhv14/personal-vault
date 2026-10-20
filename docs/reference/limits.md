@@ -9,22 +9,23 @@ Enforced per Cloudflare location with the Workers rate limiting binding, so they
 are approximate by design. Exceeding one returns `429` with
 `server.rate_limited`.
 
-| Limit                 | Value       | Key       | Applies to                                                                                                                       | Defined in      |
-| --------------------- | ----------- | --------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| Anonymous requests    | 30 / minute | Client IP | `register`, `verify-email`, `prelogin`, `login`, `GET /api/shares/:id`, `POST /api/shares/:id/code`, `POST /api/shares/:id/open` | `wrangler.toml` |
-| Registration requests | 10 / minute | Client IP | `register`, `verify-email`                                                                                                       | `wrangler.toml` |
-| Account writes        | 60 / minute | Account   | `PUT` and `DELETE /api/items/:id`, `POST /api/items/batch`, `POST /api/shares`, `DELETE /api/shares/:id`                         | `wrangler.toml` |
+| Limit                 | Value       | Key       | Applies to                                                                                                                                                 | Defined in      |
+| --------------------- | ----------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Anonymous requests    | 30 / minute | Client IP | `register`, `verify-email`, `prelogin`, `login`, `login/2fa`, `recover/*`, `GET /api/shares/:id`, `POST /api/shares/:id/code`, `POST /api/shares/:id/open` | `wrangler.toml` |
+| Registration requests | 10 / minute | Client IP | `register`, `verify-email`                                                                                                                                 | `wrangler.toml` |
+| Account writes        | 60 / minute | Account   | `PUT` and `DELETE /api/items/:id`, `POST /api/items/batch`, `POST /api/shares`, `DELETE /api/shares/:id`                                                   | `wrangler.toml` |
 
 ## Abuse limits
 
-Exact, stored in D1.
+Exact, stored in D1 or the account's Durable Object.
 
-| Limit                        | Value                      | Result when exceeded                                          | Defined in                   |
-| ---------------------------- | -------------------------- | ------------------------------------------------------------- | ---------------------------- |
-| Accounts per network per day | 5 (open registration only) | `429 auth.registration_limit`                                 | `src/worker/routes/auth.ts`  |
-| Failed logins per email      | 10 within 15 minutes       | Locked for 15 minutes: `429 auth.rate_limited` with `seconds` | `src/worker/routes/auth.ts`  |
-| Live items per account       | 5,000                      | `403 items.quota_exceeded`                                    | `src/worker/routes/items.ts` |
-| Sessions per account         | 20                         | Oldest session is revoked                                     | `src/worker/session.ts`      |
+| Limit                                 | Value                                                                                         | Result when exceeded                                 | Defined in                      |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------- |
+| Accounts per network per day          | 5 (open registration only)                                                                    | `429 auth.registration_limit`                        | `src/worker/routes/auth.ts`     |
+| Failed logins per address and network | 5 free, then a wait doubling from 5 seconds to 1 hour                                         | `429 auth.rate_limited` with `seconds`; no hard lock | `src/worker/throttle-policy.ts` |
+| Failed logins per address             | After 20 in an hour, each attempt slowed by 250 ms, doubling every 5 failures up to 5 seconds | Slower answers                                       | `src/worker/throttle-policy.ts` |
+| Live items per account                | 5,000                                                                                         | `403 items.quota_exceeded`                           | `src/worker/user-store.ts`      |
+| Sessions per account                  | 20                                                                                            | Oldest session is revoked                            | `src/worker/session.ts`         |
 
 ## Sizes and ranges
 
@@ -34,7 +35,7 @@ Exact, stored in D1.
 | Items per import batch          | 100                             | `src/worker/routes/items.ts`  |
 | Share ciphertext                | 16 KiB decoded                  | `src/worker/routes/shares.ts` |
 | AES-GCM nonce                   | 12 bytes                        | `src/core/crypto.ts`          |
-| KDF iterations accepted         | 100,000 – 5,000,000             | `src/worker/routes/auth.ts`   |
+| KDF iterations accepted         | 600,000 – 5,000,000             | `src/worker/routes/auth.ts`   |
 | KDF iterations for new accounts | 600,000                         | `src/core/crypto.ts`          |
 | Share lifetime (API)            | 60 seconds – 30 days            | `src/worker/routes/shares.ts` |
 | Share lifetime (extension)      | 1 hour, **1 day**, 7 or 30 days | `extension/popup/popup.html`  |

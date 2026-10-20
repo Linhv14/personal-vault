@@ -58,8 +58,10 @@ Open the 7key popup and choose **Create a new vault**. Enter:
 
 You are not asked for a server address: the build already knows it.
 
-> The master password cannot be recovered or reset. Nobody holds a copy, which
-> is the point. Choose one you will remember, or store it somewhere you trust.
+> Nobody holds a copy of the master password, which is the point, so the server
+> cannot reset it. Choose one you will remember, and create a recovery code in
+> Settings → Security, the only way back in if you forget it (see
+> [Recover a forgotten master password](../how-to/recover-a-forgotten-master-password.md)).
 
 ## 5. Save a login with a 2FA code
 

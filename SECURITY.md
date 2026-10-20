@@ -3,8 +3,9 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through
-[GitHub private vulnerability reporting](https://github.com/Linhv14/personal-vault/security/advisories/new),
-not in a public issue.
+[GitHub private vulnerability reporting](https://github.com/Linhv14/personal-vault/security/advisories/new)
+or by email to security@7key.online, the contact published at
+`/.well-known/security.txt`, not in a public issue.
 
 Include what an attacker needs (network position, an account, a copy of the
 database), the steps to reproduce, and what they gain. A proof of concept
@@ -20,7 +21,7 @@ What to expect:
 | Fix for a critical or high issue | Within 30 days                                                      |
 | Public advisory                  | When the fix is released, crediting you unless you prefer otherwise |
 
-There is no bug bounty.
+There is no bug bounty yet.
 
 ## Supported versions
 
@@ -31,22 +32,23 @@ stored data is affected and whether users should change their master password.
 
 | Version | Supported |
 | ------- | --------- |
-| 0.2.x   | Yes       |
-| < 0.2   | No        |
+| 0.4.x   | Yes       |
+| < 0.4   | No        |
 
 ## Scope
 
-In scope: the Worker, the extension, the share page, the build and deploy
-scripts, and the cryptographic design.
+In scope: the Worker and its Durable Objects, the extension, the web dashboard
+at `/app`, the share page, the `7key` CLI and `7key agent`, the GitHub Action,
+the build and deploy scripts, and the cryptographic design.
 
 Out of scope: weaknesses that need malware on an unlocked device, a lost master
-password, the service that carries a share link reading it, and the other
+password without a recovery code, the service that carries a share link reading it, and the other
 limits stated in the [threat model](docs/explanation/threat-model.md). Reports
 showing those limits are worse than documented are in scope.
 
 ## Audit status
 
-7key has not had an independent security audit yet. What 7key offers instead is a codebase
-small enough to read end to end, infrastructure you control, and a
+7key has not had an independent security audit yet. What 7key offers instead is
+a codebase small enough to read end to end, infrastructure you control, and a
 [threat model](docs/explanation/threat-model.md) that says what it does not
-protect.
+protect, including its known gaps.

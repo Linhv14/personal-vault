@@ -6,16 +6,17 @@ password and its ciphertext.
 
 ## Primitives
 
-| Purpose                                | Algorithm                     | Parameters                                                                    |
-| -------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
-| Master password → master key           | PBKDF2-HMAC-SHA256            | 600,000 iterations; salt = normalized email ‖ 16 random bytes; 256-bit output |
-| Master key → auth / wrapping key       | HKDF-SHA256                   | info `auth` and `enc`, empty salt                                             |
-| Encryption of items, vault key, shares | AES-256-GCM                   | Fresh random 96-bit nonce per encryption; 128-bit tag                         |
-| Share key with passphrase              | HKDF-SHA256                   | Passphrase as salt, info `share`                                              |
-| Server-side keyed hashes               | HMAC-SHA256                   | Keys from Worker secrets                                                      |
-| Server-side key derivation             | HKDF-SHA256                   | info `personal-vault/at-rest/…`                                               |
-| 2FA codes                              | HMAC-SHA1 / SHA-256 / SHA-512 | Per RFC 6238, as the site specifies                                           |
-| Randomness                             | `crypto.getRandomValues`      | Rejection sampling for uniform choices                                        |
+| Purpose                                | Algorithm                     | Parameters                                                                            |
+| -------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
+| Master password → master key           | PBKDF2-HMAC-SHA256            | 600,000 iterations minimum; salt = normalized email ‖ 16 random bytes; 256-bit output |
+| Master key → auth / wrapping key       | HKDF-SHA256                   | info `auth` and `enc`, empty salt                                                     |
+| Encryption of items, vault key, shares | AES-256-GCM                   | Fresh random 96-bit nonce per encryption; 128-bit tag                                 |
+| Share key with passphrase              | HKDF-SHA256                   | Passphrase as salt, info `share`                                                      |
+| Recovery code → wrap / auth key        | HKDF-SHA256                   | 160-bit code; info `wrap` and `auth`                                                  |
+| Server-side keyed hashes               | HMAC-SHA256                   | Keys from Worker secrets                                                              |
+| Server-side key derivation             | HKDF-SHA256                   | info `personal-vault/at-rest/…`                                                       |
+| 2FA codes                              | HMAC-SHA1 / SHA-256 / SHA-512 | Per RFC 6238, as the site specifies                                                   |
+| Randomness                             | `crypto.getRandomValues`      | Rejection sampling for uniform choices                                                |
 
 ## Key hierarchy
 
@@ -50,10 +51,17 @@ Why each layer exists:
    half-finished state in which some items are under the old password.
 3. **KDF parameters are stored per account.** `kdf_type`, `kdf_iterations` and
    `kdf_salt` travel with the account, so a later move to stronger parameters
-   or another function does not strand existing vaults.
+   or another function does not strand existing vaults. The server refuses
+   fewer than 600,000 iterations for a new password; an account created with
+   fewer is told so at sign-in, and the client re-wraps the vault key at the
+   current cost without asking.
 4. **Each item is bound to its id.** The item id is AES-GCM associated data. A
    server that moves one item's ciphertext into another's row produces an
    authentication failure, not the wrong password shown under the right site.
+   The account id is not part of it; it binds the server-side layer on the
+   wrapped vault key, below. Items written before ids were bound are still
+   opened on a device until it has rewritten them; see the
+   [threat model](threat-model.md#integrity-of-stored-items).
 
 ## What the server holds, and what a copy is worth
 
@@ -65,12 +73,18 @@ from `AT_REST_SECRET`, a Worker secret that is not stored in D1:
 - `wrapped_vault_key` is sealed again with AES-256-GCM under `k_wrap`, with the
   account id as associated data, so rows cannot be swapped between accounts.
 
+The same secret protects the other server-side values: the copy of the vault
+key sealed under a recovery code is sealed again under `k_wrap` with its own
+associated data, the recovery proof is an HMAC like the auth key, a two-factor
+TOTP secret is encrypted under its own derived key bound to the account id, and
+backup codes are stored as HMACs.
+
 As a result:
 
 | An attacker holds                  | Can they test password guesses offline?                        |
 | ---------------------------------- | -------------------------------------------------------------- |
-| A copy of D1                       | No. Nothing in it can be checked without `AT_REST_SECRET`.     |
-| D1 and the Worker secrets          | Yes, at 600,000 PBKDF2-SHA256 iterations per guess.            |
+| A copy of D1 and Durable Objects   | No. Nothing in it can be checked without `AT_REST_SECRET`.     |
+| That copy and the Worker secrets   | Yes, at 600,000 or more PBKDF2-SHA256 iterations per guess.    |
 | D1, secrets, and a master password | Yes: that vault is open. Nothing server-side can prevent this. |
 
 The second row is the position of any password manager whose server loses
