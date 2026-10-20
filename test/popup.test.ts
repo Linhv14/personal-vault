@@ -702,6 +702,40 @@ describe("extension popup", () => {
     expect(rows("all-list").length + rows("matching-list").length).toBe(0);
   });
 
+  it("generates a Vietnamese address and saves it as an address item", async () => {
+    if (!document.querySelector(".drawer")) el("btn-menu").click();
+    [...document.querySelectorAll<HTMLButtonElement>(".drawer-link")]
+      .find((link) => link.textContent === "Generate a password")!
+      .click();
+    await waitFor(() => visibleScreen() === "screen-generator", "the generator");
+    [...document.querySelectorAll<HTMLButtonElement>("#screen-generator .segmented .tab")]
+      .find((tab) => tab.textContent === "Address")!
+      .click();
+    await waitFor(() => document.getElementById("gen-address") !== null, "the address mode");
+    document.querySelector<HTMLButtonElement>('[aria-label="Vietnam"]')!.click();
+    await waitFor(
+      () => /Phường|Xã/.test(el("gen-address").textContent ?? ""),
+      "a Vietnamese address",
+    );
+    const text = el("gen-address").textContent ?? "";
+    expect(text).toMatch(/09\d \d{3} \d{4}/);
+    expect(text).toMatch(/@example\.com/);
+    expect(text).toContain("Việt Nam");
+
+    document.querySelector<HTMLButtonElement>('[aria-label="Save as address"]')!.click();
+    await waitFor(() => visibleScreen() === "screen-edit", "the address editor");
+    const form = el<HTMLFormElement>("form-edit");
+    const fullName = form.querySelector<HTMLInputElement>('[name="fullName"]')!.value;
+    expect(fullName.split(" ")).toHaveLength(3);
+    expect(form.querySelector<HTMLInputElement>('[name="title"]')!.value).toBe(fullName);
+    expect(form.querySelector<HTMLInputElement>('[name="ward"]')!.value).toMatch(/^(Phường|Xã) /);
+    const before = server.items.size;
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
+    expect(server.items.size).toBe(before + 1);
+    expect(server.received.join("\n")).not.toContain(fullName);
+  });
+
   it("forgets the resume copy once the server revokes the session", async () => {
     const { rememberUnlock, resumeUnlock } = await import("../extension/lib/resume.js");
     const vaultKeyRaw = String(sessionArea.get("vaultKeyRaw"));

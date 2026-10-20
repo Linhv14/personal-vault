@@ -9,10 +9,12 @@ import {
 import { describeError, type MessageKey } from "../../../src/i18n/index.js";
 import { useT } from "../../ui/i18n.js";
 import { IconButton } from "../../ui/components/IconButton.js";
+import { AddressGenerator } from "../components/AddressGenerator.js";
 import { copy, showList } from "../state.js";
 import { formatEntropy } from "../strength.js";
 
-type Mode = "password" | "passphrase" | "pin";
+type Mode = "password" | "passphrase" | "pin" | "address";
+type SecretMode = Exclude<Mode, "address">;
 
 interface Options {
   length: number;
@@ -38,7 +40,7 @@ const DEFAULTS: Options = {
   pin: 6,
 };
 
-function generate(mode: Mode, options: Options): GeneratedSecret {
+function generate(mode: SecretMode, options: Options): GeneratedSecret {
   if (mode === "password") {
     return generatePassword({
       length: options.length,
@@ -66,7 +68,7 @@ export function Generator() {
 
   const result = useMemo((): GeneratedSecret | Error => {
     try {
-      return generate(mode, options);
+      return generate(mode === "address" ? "password" : mode, options);
     } catch (error) {
       return error instanceof Error ? error : new Error(String(error));
     }
@@ -106,6 +108,40 @@ export function Generator() {
   const failed = result instanceof Error;
   const strength = failed ? null : rateStrength(result.entropyBits);
 
+  const modes = (
+    <div className="segmented">
+      {(
+        [
+          ["password", "gen.mode_random"],
+          ["passphrase", "gen.mode_passphrase"],
+          ["pin", "gen.mode_pin"],
+          ["address", "gen.mode_address"],
+        ] as const
+      ).map(([value, label]) => (
+        <button
+          type="button"
+          key={value}
+          className={mode === value ? "tab active" : "tab"}
+          onClick={() => setMode(value)}
+        >
+          {t(label)}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (mode === "address") {
+    return (
+      <section id="screen-generator" className="screen">
+        <header className="title-bar">
+          <IconButton icon="back" label={t("common.back")} onClick={showList} />
+          <h1>{t("gen.title")}</h1>
+        </header>
+        <AddressGenerator modes={modes} />
+      </section>
+    );
+  }
+
   return (
     <section id="screen-generator" className="screen">
       <header className="title-bar">
@@ -140,24 +176,7 @@ export function Generator() {
           />
         </div>
       </div>
-      <div className="segmented">
-        {(
-          [
-            ["password", "gen.mode_random"],
-            ["passphrase", "gen.mode_passphrase"],
-            ["pin", "gen.mode_pin"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            type="button"
-            key={value}
-            className={mode === value ? "tab active" : "tab"}
-            onClick={() => setMode(value)}
-          >
-            {t(label)}
-          </button>
-        ))}
-      </div>
+      {modes}
       {mode === "password" && (
         <div className="options">
           {range("length", "gen.length", 8, 64)}

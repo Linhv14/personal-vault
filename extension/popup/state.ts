@@ -48,7 +48,12 @@ export const syncing = signal(false);
 export const syncProblem = signal<SyncProblem>(null);
 export const clockWarning = signal<string | null>(null);
 
-export const editing = signal<{ item: VaultItem | null; type: ItemType; session: number }>({
+export const editing = signal<{
+  item: VaultItem | null;
+  type: ItemType;
+  session: number;
+  draft?: Partial<VaultItem>;
+}>({
   item: null,
   type: "login",
   session: 0,
@@ -271,8 +276,9 @@ export function selectItem(id: string | null): void {
 export function openEditor(
   item: VaultItem | null,
   type: ItemType = item ? itemType(item) : "login",
+  draft?: Partial<VaultItem>,
 ) {
-  editing.value = { item, type, session: editing.value.session + 1 };
+  editing.value = { item, type, session: editing.value.session + 1, ...(draft ? { draft } : {}) };
   screen.value = "edit";
 }
 

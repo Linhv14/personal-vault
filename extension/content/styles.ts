@@ -37,6 +37,19 @@ export const CONTENT_STYLES = `${TOKENS}
   display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
   font-weight: 600; background: var(--surface); color: var(--accent);
 }
+.brand, .flag {
+  display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  background: var(--surface); color: var(--muted); font-size: 10px; font-weight: 700;
+}
+.brand svg, .flag svg { display: block; width: 20px; height: 14px; border-radius: 2px; }
+.flag svg { box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12); }
+.brand { letter-spacing: 0.02em; font-style: italic; }
+.brand-visa { background: #1a1f71; color: #fff; }
+.brand-amex { background: #2e77bc; color: #fff; font-style: normal; }
+.brand-discover { background: #ff6000; color: #fff; font-style: normal; }
+.brand-jcb { background: #0b4ea2; color: #fff; font-style: normal; }
+.brand-unionpay { background: #e21836; color: #fff; font-style: normal; }
+.brand-diners { background: #0079be; color: #fff; font-style: normal; }
 .note { margin: 0; padding: 8px; color: var(--muted); font-size: 12px; }
 
 .banner {
