@@ -173,6 +173,7 @@ export const en = {
   "bio.turned_off": "{method} unlock was turned off. Use your master password.",
   "error.auth.biometric_off": "Biometric unlock is off. Use your master password.",
   "error.auth.biometric_failed": "The biometric check didn't pass.",
+  "error.auth.session_not_found": "That device was already signed out",
   "orgs.invited_to": "You're invited to {name}",
   "orgs.invited_many": "{count, plural, one {# invitation} other {# invitations}} to organizations",
   "orgs.review": "Review",
@@ -1055,6 +1056,15 @@ export const en = {
   "settings.deleted": "Your account and vault have been deleted.",
   "settings.logout_confirm":
     "Sign out and erase all data on this machine? The vault on the server is untouched.",
+  "settings.sessions": "Signed-in devices",
+  "settings.sessions_this_device": "This device",
+  "settings.sessions_unknown_device": "Unknown device",
+  "settings.sessions_revoke": "Sign out",
+  "settings.sessions_revoke_confirm": "Sign out {device}?",
+  "settings.sessions_revoked": "Device signed out",
+  "settings.sessions_revoke_others": "Sign out other devices",
+  "settings.sessions_revoke_others_confirm": "Sign out every device except this one?",
+  "settings.sessions_revoked_others": "Other devices signed out",
 
   // --- Share recipient page ------------------------------------------------
   "common.close": "Close",

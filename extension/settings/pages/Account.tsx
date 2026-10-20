@@ -7,6 +7,8 @@ import { Button } from "../../ui/components/Button.js";
 import { Card } from "../../ui/components/Card.js";
 import { formatDateTime } from "../../ui/format.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
+import { vaultKeySignal } from "../../ui/store/session.js";
+import { SessionsCard } from "./Sessions.js";
 import { currentAuthKey, isSignedIn, localState, reloadLocal, showToast } from "../state.js";
 
 export function Account() {
@@ -86,6 +88,7 @@ export function Account() {
           </div>
         )}
       </Card>
+      {signedIn && vaultKeySignal.value && <SessionsCard />}
       <h2 className="danger-title">{t("settings.danger_zone")}</h2>
       {signedIn && (
         <Card className="danger-card">
