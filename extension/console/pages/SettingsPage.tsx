@@ -118,6 +118,7 @@ export function SettingsPage() {
         <Dialog
           title={t("orgs.leave")}
           description={t("orgs.leave_confirm", { name: org.name })}
+          highlight={[org.name]}
           submitLabel={t("orgs.leave")}
           danger
           onClose={() => setModal(null)}

@@ -437,7 +437,7 @@ export const vi: Catalogue = {
   "console.their_key": "Khoá của họ",
   "console.transfer": "Chuyển quyền sở hữu",
   "console.transfer_title": "Chuyển quyền sở hữu",
-  "console.type_to_confirm": "Gõ {phrase} để xác nhận",
+  "console.type_to_confirm_before": "Để xác nhận, gõ",
   "console.used_of": "Đã dùng {used}/{limit}.",
   "console.verify_hint":
     "Nhờ họ đọc khoá ở Cài đặt → Khoá của bạn, qua cuộc gọi hoặc trực tiếp. Nếu có nhóm nào khác, đừng thêm họ.",

@@ -286,20 +286,26 @@ export function TypeToConfirmDialog({
     <Dialog
       title={title}
       description={text}
+      highlight={[phrase]}
       submitLabel={submitLabel}
       danger
       busy={typed.trim() !== phrase}
       onClose={onClose}
       onSubmit={onConfirm}
     >
-      <Field label={t("console.type_to_confirm", { phrase })}>
+      <label className="confirm-phrase">
+        <span>
+          {t("console.type_to_confirm_before")} <code>{phrase}</code>
+        </span>
         <input
           value={typed}
           autoFocus
           autoComplete="off"
+          spellcheck={false}
+          className={typed.trim() === phrase ? "matched" : undefined}
           onInput={(event) => setTyped(event.currentTarget.value)}
         />
-      </Field>
+      </label>
     </Dialog>
   );
 }

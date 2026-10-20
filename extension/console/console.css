@@ -241,9 +241,9 @@ code,
   background: var(--accent-hover);
 }
 .btn.danger {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: #fff;
+  border-color: var(--danger-solid);
+  background: var(--danger-solid);
+  color: var(--danger-on);
 }
 .btn.ghost {
   border-color: transparent;
@@ -859,7 +859,7 @@ tr.editing td {
 }
 
 .dialog {
-  width: min(520px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -872,23 +872,52 @@ tr.editing td {
 }
 .dialog-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px 0;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 20px 0 22px;
 }
 .dialog-head h2 {
+  flex: 1;
+  padding-top: 5px;
   font-size: 16px;
+  line-height: 1.35;
+}
+.dialog-head .icon-button {
+  margin-top: 1px;
+}
+.dialog-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.dialog-mark svg {
+  width: 18px;
+  height: 18px;
 }
 .dialog-text {
-  padding: 8px 18px 0;
+  padding: 6px 22px 0;
   color: var(--muted);
   font-size: 13.5px;
+  line-height: 1.55;
+}
+.dialog.danger .dialog-text,
+.dialog.danger .dialog-body {
+  padding-left: 72px;
+}
+.dialog-text strong,
+.dialog-text code {
+  color: var(--text);
 }
 .dialog-body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 16px 18px 4px;
+  padding: 18px 22px 4px;
 }
 .dialog-error {
   margin: 12px 18px 0;
@@ -901,7 +930,25 @@ tr.editing td {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 16px 18px;
+  padding: 20px 22px;
+}
+.confirm-phrase {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.confirm-phrase code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  user-select: all;
+}
+.confirm-phrase input.matched {
+  border-color: var(--danger);
 }
 .field {
   display: flex;
@@ -1540,7 +1587,8 @@ tr.pending-row {
   color: var(--danger);
 }
 .btn.danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 88%, #000);
+  border-color: var(--danger-solid-hover);
+  background: var(--danger-solid-hover);
 }
 .btn .spin,
 .btn .icon {

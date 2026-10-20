@@ -254,6 +254,7 @@ export function TeamPage({ teamId }: { teamId: string }) {
             email: modal.member.email,
             team: team.name,
           })}
+          highlight={[modal.member.email, team.name]}
           submitLabel={t("orgs.remove")}
           danger
           onClose={() => setModal(null)}

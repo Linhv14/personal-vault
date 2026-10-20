@@ -110,9 +110,13 @@
   background: var(--accent-hover);
 }
 .personal .button.danger {
-  border-color: var(--danger);
-  background: var(--danger);
-  color: #fff;
+  border-color: var(--danger-solid);
+  background: var(--danger-solid);
+  color: var(--danger-on);
+}
+.personal .button.danger:hover:not(:disabled) {
+  border-color: var(--danger-solid-hover);
+  background: var(--danger-solid-hover);
 }
 .personal .button:focus-visible {
   outline: 2px solid var(--focus-ring);

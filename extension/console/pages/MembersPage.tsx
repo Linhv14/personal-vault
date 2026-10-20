@@ -332,6 +332,7 @@ export function MembersPage() {
         <Dialog
           title={t("orgs.remove")}
           description={t("orgs.remove_confirm", { email: modal.member.email })}
+          highlight={[modal.member.email]}
           submitLabel={t("orgs.remove")}
           danger
           onClose={() => setModal(null)}
@@ -382,6 +383,7 @@ export function MembersPage() {
         <Dialog
           title={t("console.transfer_title")}
           description={t("console.transfer_text", { email: modal.member.email })}
+          highlight={[modal.member.email]}
           submitLabel={t("console.transfer")}
           danger
           onClose={() => setModal(null)}

@@ -442,7 +442,7 @@ export const en = {
   "console.their_key": "Their key",
   "console.transfer": "Transfer ownership",
   "console.transfer_title": "Transfer ownership",
-  "console.type_to_confirm": "Type {phrase} to confirm",
+  "console.type_to_confirm_before": "To confirm, type",
   "console.used_of": "{used} of {limit} used.",
   "console.verify_hint":
     "Ask them to read the key under Settings → Your key, on a call or in person. If any group differs, don't add them.",

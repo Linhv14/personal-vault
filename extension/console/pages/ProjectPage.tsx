@@ -790,6 +790,7 @@ export function ProjectPage({
             name: modal.secret.name,
             env: environment?.name ?? "",
           })}
+          highlight={[modal.secret.name, environment?.name ?? ""]}
           submitLabel={t("projects.delete_secret")}
           danger
           onClose={() => setModal(null)}

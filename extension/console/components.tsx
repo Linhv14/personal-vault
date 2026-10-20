@@ -196,6 +196,17 @@ export function EmptyState({
   );
 }
 
+function emphasize(text: string, words: string[]): ComponentChildren {
+  const wanted = words.filter(Boolean);
+  if (wanted.length === 0) return text;
+  const pattern = new RegExp(
+    `(${wanted.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
+  );
+  return text
+    .split(pattern)
+    .map((part, index) => (wanted.includes(part) ? <strong key={index}>{part}</strong> : part));
+}
+
 export function Dialog({
   title,
   description,
@@ -205,10 +216,12 @@ export function Dialog({
   danger = false,
   busy = false,
   hideCancel = false,
+  highlight = [],
   children,
 }: {
   title: string;
   description?: ComponentChildren;
+  highlight?: string[];
   onClose: () => void;
   onSubmit: (form: HTMLFormElement) => void;
   submitLabel: string;
@@ -231,7 +244,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className="dialog"
+      className={danger ? "dialog danger" : "dialog"}
       aria-busy={working || undefined}
       onCancel={(event) => {
         event.preventDefault();
@@ -250,6 +263,11 @@ export function Dialog({
         }}
       >
         <header className="dialog-head">
+          {danger && (
+            <span className="dialog-mark" aria-hidden="true">
+              <Icon name="alert" />
+            </span>
+          )}
           <h2>{title}</h2>
           <button
             type="button"
@@ -261,7 +279,11 @@ export function Dialog({
             <Icon name="close" />
           </button>
         </header>
-        {description && <div className="dialog-text">{description}</div>}
+        {description && (
+          <div className="dialog-text">
+            {typeof description === "string" ? emphasize(description, highlight) : description}
+          </div>
+        )}
         {children && <div className="dialog-body">{children}</div>}
         {failure$.value && (
           <p className="dialog-error" role="alert">
@@ -270,7 +292,13 @@ export function Dialog({
         )}
         <footer className="dialog-foot">
           {!hideCancel && (
-            <button type="button" className="btn" onClick={close} disabled={working}>
+            <button
+              type="button"
+              className="btn"
+              onClick={close}
+              disabled={working}
+              autoFocus={danger && !children}
+            >
               {t("pin.cancel")}
             </button>
           )}
@@ -279,7 +307,7 @@ export function Dialog({
             className={danger ? "btn danger" : "btn primary"}
             disabled={busy || working}
             aria-busy={working || undefined}
-            autoFocus={!children || hideCancel}
+            autoFocus={!danger && (!children || hideCancel)}
           >
             {working && <Spinner />}
             {submitLabel}

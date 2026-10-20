@@ -278,6 +278,7 @@ export function RepositoryLinks({ project, canManage }: { project: Project; canM
         <Dialog
           title={t("ci.unlink")}
           description={t("ci.unlink_text", { repository: removing.repository })}
+          highlight={[removing.repository]}
           submitLabel={t("ci.unlink")}
           danger
           onClose={() => setRemoving(null)}
