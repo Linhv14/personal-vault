@@ -6,6 +6,7 @@ document.documentElement.classList.add("js");
 pickSystem();
 enableCopy();
 loadVideos();
+registerAgentTools();
 
 if (!reduced) {
   revealSections();
@@ -162,6 +163,130 @@ function loadVideos(): void {
   };
   if (document.readyState === "complete") watch();
   else window.addEventListener("load", watch, { once: true });
+}
+
+interface ModelContext {
+  registerTool(
+    tool: {
+      name: string;
+      title?: string;
+      description: string;
+      inputSchema?: object;
+      annotations?: { readOnlyHint?: boolean };
+      execute: (input: Record<string, unknown>) => Promise<unknown>;
+    },
+    options?: { signal?: AbortSignal },
+  ): Promise<void> | void;
+}
+
+const SECTIONS = [
+  "product",
+  "security",
+  "developers",
+  "teams",
+  "compare",
+  "pricing",
+  "install",
+  "faq",
+];
+
+function text(element: Element | null): string {
+  return (element?.textContent ?? "").replace(/\s+/g, " ").trim();
+}
+
+function registerAgentTools(): void {
+  const context =
+    (document as unknown as { modelContext?: ModelContext }).modelContext ??
+    (navigator as unknown as { modelContext?: ModelContext }).modelContext;
+  if (!context) return;
+  const controller = new AbortController();
+  const lang = document.documentElement.lang.startsWith("vi") ? "vi" : "en";
+  const tools: Parameters<ModelContext["registerTool"]>[0][] = [
+    {
+      name: "get_7key_overview",
+      title: "Read the 7key page",
+      description:
+        "Return this page as Markdown: what 7key is, its features for individuals, teams and developers, security model, pricing and FAQ.",
+      inputSchema: { type: "object", properties: {} },
+      annotations: { readOnlyHint: true },
+      execute: async () => {
+        const response = await fetch(lang === "vi" ? "/vi" : "/", {
+          headers: { Accept: "text/markdown" },
+        });
+        return response.text();
+      },
+    },
+    {
+      name: "get_pricing",
+      title: "Get 7key pricing",
+      description: "List the 7key plans with their price and what each includes.",
+      inputSchema: { type: "object", properties: {} },
+      annotations: { readOnlyHint: true },
+      execute: async () =>
+        [...document.querySelectorAll("#pricing .plan")].map((plan) => ({
+          name: text(plan.querySelector("h3")),
+          details: text(plan),
+        })),
+    },
+    {
+      name: "get_install_steps",
+      title: "How to install 7key",
+      description: "Return the steps to install the 7key browser extension and the 7key CLI.",
+      inputSchema: { type: "object", properties: {} },
+      annotations: { readOnlyHint: true },
+      execute: async () =>
+        [...document.querySelectorAll("#install .start-card")].map((card) => ({
+          name: text(card.querySelector("h3")),
+          steps: [...card.querySelectorAll("li, code")].map(text).filter(Boolean),
+        })),
+    },
+    {
+      name: "search_faq",
+      title: "Search the 7key FAQ",
+      description: "Find answers in the 7key FAQ that match a question or keywords.",
+      inputSchema: {
+        type: "object",
+        properties: { query: { type: "string", description: "Question or keywords" } },
+        required: ["query"],
+      },
+      annotations: { readOnlyHint: true },
+      execute: async (input) => {
+        const words = String(input.query ?? "")
+          .toLowerCase()
+          .split(/\W+/u)
+          .filter((word) => word.length > 2);
+        return [...document.querySelectorAll("#faq details")]
+          .map((item) => ({
+            question: text(item.querySelector("summary")),
+            answer: text(item.querySelector("p, div")),
+          }))
+          .filter((entry) => {
+            const haystack = `${entry.question} ${entry.answer}`.toLowerCase();
+            return words.length === 0 || words.some((word) => haystack.includes(word));
+          });
+      },
+    },
+    {
+      name: "open_section",
+      title: "Scroll to a section",
+      description: "Scroll the page to one of its sections so the user can see it.",
+      inputSchema: {
+        type: "object",
+        properties: { section: { type: "string", enum: SECTIONS } },
+        required: ["section"],
+      },
+      execute: async (input) => {
+        const target = document.getElementById(String(input.section));
+        if (!target) return { ok: false };
+        target.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
+        return { ok: true };
+      },
+    },
+  ];
+  for (const tool of tools) {
+    void Promise.resolve(context.registerTool(tool, { signal: controller.signal })).catch(() => {});
+  }
+  window.addEventListener("pagehide", () => controller.abort(), { once: true });
 }
 
 function animateCounters(): void {

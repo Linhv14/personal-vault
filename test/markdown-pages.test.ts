@@ -50,7 +50,25 @@ describe("markdown negotiation", () => {
     expect(browser.headers.get("content-security-policy")).toContain(
       "https://static.cloudflareinsights.com",
     );
+    expect(browser.headers.get("link")).toContain('</.well-known/api-catalog>; rel="api-catalog"');
+    expect(agent.headers.get("link")).toBeNull();
     const share = await worker.fetch("/s/abc");
     expect(share.headers.get("content-security-policy")).not.toContain("cloudflareinsights");
+  });
+});
+
+describe("discovery", () => {
+  it("publishes an RFC 9727 API catalog and a health check", async () => {
+    const worker = await startWorker();
+    const catalog = await worker.fetch("/.well-known/api-catalog");
+    expect(catalog.status).toBe(200);
+    expect(catalog.headers.get("content-type")).toBe("application/linkset+json");
+    const body = (await catalog.json()) as { linkset: Record<string, { href: string }[]>[] };
+    const entry = body.linkset[0]!;
+    expect(entry.anchor).toBe("https://vault.test/api/");
+    expect(entry["service-desc"]![0]!.href).toBe("https://vault.test/openapi.json");
+    expect(entry["service-doc"]![0]!.href).toBe("https://vault.test/api-docs");
+    expect(entry.status![0]!.href).toBe("https://vault.test/api/health");
+    expect(await (await worker.fetch("/api/health")).json()).toEqual({ status: "ok" });
   });
 });

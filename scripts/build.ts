@@ -165,6 +165,20 @@ async function buildSharePage() {
     path.join(outPublic, "security.html"),
     await injectTokens(filled, "share/security.html"),
   );
+  const apiDocs = security
+    .replace("<title>Security · 7KEY</title>", "<title>API · 7KEY</title>")
+    .replace(
+      "<!-- markdown:docs/explanation/threat-model.md -->",
+      renderMarkdown(await readFile(path.join(root, "docs", "reference", "http-api.md"), "utf8")),
+    );
+  await writeFile(
+    path.join(outPublic, "api-docs.html"),
+    await injectTokens(apiDocs, "share/security.html"),
+  );
+  await cp(path.join(root, "share", "auth.md"), path.join(outPublic, "auth.md"));
+  if (existsSync(path.join(root, "share", "openapi.json"))) {
+    await cp(path.join(root, "share", "openapi.json"), path.join(outPublic, "openapi.json"));
+  }
   await build({
     ...common,
     entryPoints: [path.join(root, "share", "landing.ts")],
@@ -195,7 +209,7 @@ async function buildSharePage() {
     path.join(outPublic, "robots.txt"),
     `User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=no\nAllow: /\nDisallow: /app/\nDisallow: /api/\nDisallow: /s/\n\nSitemap: ${site}/sitemap.xml\n`,
   );
-  const pages = ["/", "/vi", "/privacy", "/security"];
+  const pages = ["/", "/vi", "/privacy", "/security", "/api-docs"];
   await writeFile(
     path.join(outPublic, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages
@@ -206,6 +220,23 @@ async function buildSharePage() {
     const html = await readFile(path.join(outPublic, `${page}.html`), "utf8");
     await writeFile(path.join(outPublic, `${page}.md`), pageMarkdown(html, `${site}/`));
   }
+  await cp(path.join(root, "share", "skills"), path.join(outPublic, "skills"), { recursive: true });
+  const skills: { name: string; type: string; description: string; url: string; digest: string }[] =
+    [];
+  for (const name of await readdir(path.join(root, "share", "skills"))) {
+    const skill = await readFile(path.join(root, "share", "skills", name, "SKILL.md"), "utf8");
+    skills.push({
+      name,
+      type: "skill-md",
+      description: skill.match(/^description:\s*(.+)$/m)?.[1]?.trim() ?? name,
+      url: `${site}/skills/${name}/SKILL.md`,
+      digest: `sha256:${createHash("sha256").update(skill).digest("hex")}`,
+    });
+  }
+  await writeFile(
+    path.join(outPublic, "skills", "index.json"),
+    `${JSON.stringify({ $schema: "https://schemas.agentskills.io/discovery/0.2.0/schema.json", skills }, null, 2)}\n`,
+  );
   await cp(path.join(root, "share", "assets"), path.join(outPublic, "assets"), { recursive: true });
   await writeFile(path.join(outPublic, "favicon.svg"), (await logoSvgs()).still);
   await writeFile(path.join(outPublic, "mark.svg"), (await logoSvgs()).mark);

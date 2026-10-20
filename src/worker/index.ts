@@ -18,6 +18,7 @@ import { clientIp, isOpenRegistration } from "./request.js";
 import { resolveSession, SESSION_IDLE_SECONDS } from "./session.js";
 import { securityTxt, SHARE_PAGE_HEADERS, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import { PAIR_MEMORY_SECONDS } from "./throttle-policy.js";
+import { apiCatalog } from "./discovery.js";
 import { MARKDOWN_PAGES } from "./markdown-negotiation.js";
 import { servePage } from "./markdown-pages.js";
 import {
@@ -178,6 +179,23 @@ app.route("/api/migration", migration);
  * close to undiagnosable without this.
  */
 app.get("/api/time", (c) => c.json({ serverTime: Math.floor(Date.now() / 1000) }));
+
+app.get("/api/health", (c) => c.json({ status: "ok" }));
+
+app.get("/.well-known/agent-skills/index.json", async (c) => {
+  const index = await c.env.ASSETS.fetch(new URL("/skills/index.json", c.req.url));
+  return c.body(await index.text(), index.status === 200 ? 200 : 404, {
+    "Content-Type": "application/json",
+    "Cache-Control": "public, max-age=3600",
+  });
+});
+
+app.get("/.well-known/api-catalog", (c) =>
+  c.body(JSON.stringify(apiCatalog(new URL(c.req.url).origin)), 200, {
+    "Content-Type": "application/linkset+json",
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
 
 app.get("/s/:id", async (c) => {
   const asset = await c.env.ASSETS.fetch(new URL("/share.html", c.req.url));
