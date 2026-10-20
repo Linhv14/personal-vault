@@ -6,7 +6,7 @@ export const CONTENT_STYLES = `${TOKENS}
 [hidden] { display: none !important; }
 .logo { display: inline-block; flex-shrink: 0; }
 .logo svg { display: block; width: 100%; height: 100%; }
-.wordmark { font-weight: 750; letter-spacing: -0.03em; color: var(--text); }
+.wordmark { font-weight: 750; letter-spacing: 0.01em; color: var(--text); }
 .wordmark-accent { color: var(--accent); }
 .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 

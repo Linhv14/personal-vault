@@ -27,7 +27,8 @@ describe("logo", () => {
 
   it("renders the wordmark from the app name with an accented first character", () => {
     const mark = wordmark();
-    expect(mark.textContent).toBe(APP_NAME);
+    expect(mark.textContent).toBe(APP_NAME.toUpperCase());
+    expect(mark.getAttribute("aria-label")).toBe(APP_NAME);
     expect(mark.querySelector(".wordmark-accent")!.textContent).toBe(APP_NAME[0]);
   });
 });

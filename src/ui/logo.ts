@@ -1,4 +1,4 @@
-import { APP_NAME } from "../core/brand.js";
+import { APP_NAME, WORDMARK } from "../core/brand.js";
 
 export const BRAND_INK = "#171513";
 export const BRAND_ORANGE = "#FF6A3D";
@@ -29,8 +29,9 @@ export function wordmark(): HTMLElement {
   word.className = "wordmark";
   const accent = document.createElement("span");
   accent.className = "wordmark-accent";
-  accent.textContent = APP_NAME.slice(0, 1);
-  word.append(accent, APP_NAME.slice(1));
+  word.setAttribute("aria-label", APP_NAME);
+  accent.textContent = WORDMARK.accent;
+  word.append(accent, WORDMARK.rest);
   return word;
 }
 

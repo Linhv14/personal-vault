@@ -206,7 +206,7 @@
         text-decoration: none;
         font-size: 20px;
         font-weight: 760;
-        letter-spacing: -0.03em;
+        letter-spacing: 0.01em;
       }
       .brand b {
         color: var(--l-accent);
@@ -743,10 +743,26 @@
         justify-content: center;
       }
       footer {
-        padding: 30px 0 44px;
+        overflow: hidden;
+        padding: 30px 0 0;
         border-top: 1px solid var(--l-line);
         color: var(--l-muted);
         font-size: 14px;
+      }
+      .giant {
+        margin-top: clamp(40px, 8vw, 96px);
+        font-size: clamp(96px, 27vw, 400px);
+        font-weight: 860;
+        line-height: 0.76;
+        letter-spacing: 0.005em;
+        text-align: center;
+        white-space: nowrap;
+        color: var(--l-text);
+        user-select: none;
+      }
+      .giant b {
+        color: var(--l-accent);
+        font-weight: inherit;
       }
       .foot {
         display: flex;
@@ -819,7 +835,7 @@
     <header>
       <div class="wrap bar">
         <a class="brand" href="/" aria-label="7key"
-          ><span class="mark">{{logo}}</span><span><b>7</b>key</span></a
+          ><span class="mark">{{logo}}</span><span aria-label="7key"><b>7</b>KEY</span></a
         >
         <nav class="nav">
           <!-- lang:en -->
@@ -1283,6 +1299,7 @@
           <a href="mailto:hello@7key.online">hello@7key.online</a>
         </nav>
       </div>
+      <div class="wrap giant" aria-hidden="true"><b>7</b>KEY</div>
     </footer>
   </body>
 </html>
