@@ -1549,6 +1549,175 @@
         font-size: 12px;
         font-weight: 600;
       }
+      .feed {
+        position: relative;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 13.5px;
+      }
+      .feed::before {
+        position: absolute;
+        top: 14px;
+        bottom: 14px;
+        left: 13px;
+        width: 1px;
+        content: "";
+        background: var(--l-line2);
+      }
+      .feed li {
+        position: relative;
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 0;
+      }
+      .feed-ic {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--l-line2);
+        border-radius: 50%;
+        background: #161412;
+        color: var(--l-muted);
+      }
+      .feed-ic svg,
+      .chain svg,
+      .vrestore svg {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .feed-ic svg {
+        width: 14px;
+        height: 14px;
+      }
+      .feed-ic.edit {
+        color: var(--l-accent);
+        border-color: rgb(255 106 61 / 0.35);
+      }
+      .feed-ic.guard {
+        color: #ffb547;
+        border-color: rgb(255 181 71 / 0.35);
+      }
+      .feed-txt {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--l-muted);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .feed-txt b {
+        color: var(--l-text);
+        font-weight: 600;
+      }
+      .feed-txt code {
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: rgb(255 255 255 / 0.05);
+        color: var(--l-text);
+        font: 12px var(--l-mono);
+      }
+      .feed-txt em {
+        margin-left: 6px;
+        color: var(--l-dim);
+        font-style: normal;
+      }
+      .feed time {
+        color: var(--l-dim);
+        font: 12px var(--l-mono);
+      }
+      .chain {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+        padding: 10px 12px;
+        border: 1px solid rgb(143 211 193 / 0.22);
+        border-radius: 12px;
+        background: rgb(143 211 193 / 0.06);
+        color: var(--l-mint);
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .chain svg {
+        width: 15px;
+        height: 15px;
+      }
+      .chain code {
+        margin-left: auto;
+        color: var(--l-dim);
+        font: 11.5px var(--l-mono);
+        font-weight: 400;
+      }
+      .versions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .vrow {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        font-size: 13px;
+      }
+      .vrow code {
+        padding: 0;
+        border: 0;
+        background: none;
+        overflow: hidden;
+        color: var(--l-muted);
+        font: 12.5px var(--l-mono);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vrow.now {
+        border-color: rgb(255 106 61 / 0.3);
+        background: rgb(255 106 61 / 0.06);
+      }
+      .vrow.now code {
+        color: var(--l-text);
+      }
+      .vrow.hover {
+        border-color: var(--l-line2);
+        background: rgb(255 255 255 / 0.03);
+      }
+      .vtag {
+        color: var(--l-dim);
+        font: 600 12px var(--l-mono);
+      }
+      .vrow.now .vtag {
+        color: var(--l-accent);
+      }
+      .vby {
+        color: var(--l-dim);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .vrestore {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--l-text);
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0;
+      }
+      .vrestore svg {
+        width: 13px;
+        height: 13px;
+      }
+      .vrow.hover .vrestore {
+        opacity: 1;
+      }
       .tbl {
         overflow-x: auto;
         border: 1px solid var(--l-line);
@@ -2534,74 +2703,83 @@
               <div class="visual people" aria-hidden="true">
                 <div class="row">
                   <span class="av round a3">A</span
-                  ><span class="who"><b>alex</b><span>Owner</span></span
+                  ><span class="who"><b>Alex</b><span>Owner</span></span
                   ><span class="chip hot">Can edit</span>
                 </div>
                 <div class="row">
                   <span class="av round a2">S</span
-                  ><span class="who"><b>sam</b><span>Member</span></span
+                  ><span class="who"><b>Sam</b><span>Member</span></span
                   ><span class="chip hot">Can edit</span>
                 </div>
                 <div class="row">
                   <span class="av round a4">K</span
-                  ><span class="who"><b>kim</b><span>Member</span></span
+                  ><span class="who"><b>Kim</b><span>Member</span></span
                   ><span class="chip">Can view</span>
                 </div>
                 <div class="row">
                   <span class="av round">J</span
-                  ><span class="who"><b>jo</b><span>Invited</span></span
+                  ><span class="who"><b>Jo</b><span>Invited</span></span
                   ><span class="chip amber">Waiting for key</span>
                 </div>
               </div>
             </div>
             <div class="tile s3">
               <h3>Activity log</h3>
-              <p>Every read and change, chained so a missing entry shows.</p>
+              <p>Every read and change, in a tamper-evident chain.</p>
               <div class="visual" aria-hidden="true">
-                <ul class="log">
+                <ol class="feed">
                   <li>
-                    <time>09:41</time
-                    ><span><b>sam</b> changed <span class="mono">STRIPE_KEY</span> · staging</span>
+                    <span class="feed-ic edit">{{icon:pencil}}</span
+                    ><span class="feed-txt"
+                      ><b>Sam</b> edited <code>STRIPE_KEY</code><em>staging</em></span
+                    ><time>09:41</time>
                   </li>
                   <li>
-                    <time>09:38</time><span><b>acme/payments-api</b> read production · main</span>
+                    <span class="feed-ic read">{{icon:terminal}}</span
+                    ><span class="feed-txt"><b>GitHub Actions</b> read <em>production</em></span
+                    ><time>09:38</time>
                   </li>
                   <li>
-                    <time>09:12</time><span><b>alex</b> protected Production</span>
+                    <span class="feed-ic guard">{{icon:lock}}</span
+                    ><span class="feed-txt"><b>Alex</b> protected <em>Production</em></span
+                    ><time>09:12</time>
                   </li>
                   <li>
-                    <time>08:55</time
-                    ><span
-                      ><b>kim</b> viewed the history of <span class="mono">DATABASE_URL</span></span
-                    >
+                    <span class="feed-ic read">{{icon:history}}</span
+                    ><span class="feed-txt"
+                      ><b>Kim</b> opened the history of <code>DATABASE_URL</code></span
+                    ><time>08:55</time>
                   </li>
-                </ul>
-                <div class="verify">Log intact</div>
+                </ol>
+                <div class="chain">
+                  {{icon:shield}}<span>Chain verified</span><code>sha256 · 3f9a…c21e</code>
+                </div>
               </div>
             </div>
             <div class="tile s3">
               <h3>Secret history</h3>
-              <p>The last five values, with who wrote them. Restore in one click.</p>
-              <div class="visual hist" aria-hidden="true">
-                <div class="ver">
-                  <span class="n">v5</span
-                  ><span class="who"><b>sam · today</b><span>sk_live_••••4f2a</span></span
-                  ><span class="chip hot">Current</span>
-                </div>
-                <div class="ver">
-                  <span class="n">v4</span
-                  ><span class="who"><b>alex · 3 days ago</b><span>sk_live_••••9b10</span></span
-                  ><span class="mini">Restore</span>
-                </div>
-                <div class="ver">
-                  <span class="n">v3</span
-                  ><span class="who"><b>alex · last month</b><span>sk_live_••••c7e3</span></span
-                  ><span class="mini">Restore</span>
-                </div>
-                <div class="ver">
-                  <span class="n">v2</span
-                  ><span class="who"><b>sam · 2 months ago</b><span>sk_live_••••02ad</span></span
-                  ><span class="mini">Restore</span>
+              <p>The last 5 values and who wrote them.</p>
+              <div class="visual" aria-hidden="true">
+                <div class="versions">
+                  <div class="vrow now">
+                    <span class="vtag">v5</span><code>sk_live_••••4f2a</code
+                    ><span class="vby">Sam · today</span><span class="chip hot">Current</span>
+                  </div>
+                  <div class="vrow hover">
+                    <span class="vtag">v4</span><code>sk_live_••••9b10</code
+                    ><span class="vby">Alex · 3 days ago</span
+                    ><span class="vrestore">{{icon:history}}Restore</span>
+                  </div>
+                  <div class="vrow">
+                    <span class="vtag">v3</span><code>sk_live_••••c7e3</code
+                    ><span class="vby">Alex · last month</span
+                    ><span class="vrestore">{{icon:history}}Restore</span>
+                  </div>
+                  <div class="vrow">
+                    <span class="vtag">v2</span><code>sk_live_••••02ad</code
+                    ><span class="vby">Sam · 2 months ago</span
+                    ><span class="vrestore">{{icon:history}}Restore</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3291,74 +3469,82 @@
               <div class="visual people" aria-hidden="true">
                 <div class="row">
                   <span class="av round a3">A</span
-                  ><span class="who"><b>alex</b><span>Chủ sở hữu</span></span
+                  ><span class="who"><b>Alex</b><span>Chủ sở hữu</span></span
                   ><span class="chip hot">Được sửa</span>
                 </div>
                 <div class="row">
                   <span class="av round a2">S</span
-                  ><span class="who"><b>sam</b><span>Thành viên</span></span
+                  ><span class="who"><b>Sam</b><span>Thành viên</span></span
                   ><span class="chip hot">Được sửa</span>
                 </div>
                 <div class="row">
                   <span class="av round a4">K</span
-                  ><span class="who"><b>kim</b><span>Thành viên</span></span
+                  ><span class="who"><b>Kim</b><span>Thành viên</span></span
                   ><span class="chip">Chỉ xem</span>
                 </div>
                 <div class="row">
                   <span class="av round">J</span
-                  ><span class="who"><b>jo</b><span>Đã mời</span></span
+                  ><span class="who"><b>Jo</b><span>Đã mời</span></span
                   ><span class="chip amber">Chờ cấp khoá</span>
                 </div>
               </div>
             </div>
             <div class="tile s3">
               <h3>Nhật ký hoạt động</h3>
-              <p>Mọi lần đọc, mọi thay đổi, nối chuỗi với nhau nên thiếu dòng nào là lộ ngay.</p>
+              <p>Mọi lần đọc và sửa, nối chuỗi chống chỉnh sửa.</p>
               <div class="visual" aria-hidden="true">
-                <ul class="log">
+                <ol class="feed">
                   <li>
-                    <time>09:41</time
-                    ><span><b>sam</b> đã sửa <span class="mono">STRIPE_KEY</span> · staging</span>
+                    <span class="feed-ic edit">{{icon:pencil}}</span
+                    ><span class="feed-txt"
+                      ><b>Sam</b> sửa <code>STRIPE_KEY</code><em>staging</em></span
+                    ><time>09:41</time>
                   </li>
                   <li>
-                    <time>09:38</time><span><b>acme/payments-api</b> đã đọc production · main</span>
+                    <span class="feed-ic read">{{icon:terminal}}</span
+                    ><span class="feed-txt"><b>GitHub Actions</b> đọc <em>production</em></span
+                    ><time>09:38</time>
                   </li>
                   <li>
-                    <time>09:12</time><span><b>alex</b> đã bảo vệ Production</span>
+                    <span class="feed-ic guard">{{icon:lock}}</span
+                    ><span class="feed-txt"><b>Alex</b> bảo vệ <em>Production</em></span
+                    ><time>09:12</time>
                   </li>
                   <li>
-                    <time>08:55</time
-                    ><span
-                      ><b>kim</b> đã xem lịch sử của <span class="mono">DATABASE_URL</span></span
-                    >
+                    <span class="feed-ic read">{{icon:history}}</span
+                    ><span class="feed-txt"><b>Kim</b> xem lịch sử <code>DATABASE_URL</code></span
+                    ><time>08:55</time>
                   </li>
-                </ul>
-                <div class="verify">Nhật ký nguyên vẹn</div>
+                </ol>
+                <div class="chain">
+                  {{icon:shield}}<span>Chuỗi nhật ký khớp</span><code>sha256 · 3f9a…c21e</code>
+                </div>
               </div>
             </div>
             <div class="tile s3">
               <h3>Lịch sử secret</h3>
-              <p>Giữ 5 giá trị gần nhất và ai đã ghi. Khôi phục bằng một cú bấm.</p>
-              <div class="visual hist" aria-hidden="true">
-                <div class="ver">
-                  <span class="n">v5</span
-                  ><span class="who"><b>sam · hôm nay</b><span>sk_live_••••4f2a</span></span
-                  ><span class="chip hot">Hiện tại</span>
-                </div>
-                <div class="ver">
-                  <span class="n">v4</span
-                  ><span class="who"><b>alex · 3 ngày trước</b><span>sk_live_••••9b10</span></span
-                  ><span class="mini">Khôi phục</span>
-                </div>
-                <div class="ver">
-                  <span class="n">v3</span
-                  ><span class="who"><b>alex · tháng trước</b><span>sk_live_••••c7e3</span></span
-                  ><span class="mini">Khôi phục</span>
-                </div>
-                <div class="ver">
-                  <span class="n">v2</span
-                  ><span class="who"><b>sam · 2 tháng trước</b><span>sk_live_••••02ad</span></span
-                  ><span class="mini">Khôi phục</span>
+              <p>5 giá trị gần nhất và người đã ghi.</p>
+              <div class="visual" aria-hidden="true">
+                <div class="versions">
+                  <div class="vrow now">
+                    <span class="vtag">v5</span><code>sk_live_••••4f2a</code
+                    ><span class="vby">Sam · hôm nay</span><span class="chip hot">Hiện tại</span>
+                  </div>
+                  <div class="vrow hover">
+                    <span class="vtag">v4</span><code>sk_live_••••9b10</code
+                    ><span class="vby">Alex · 3 ngày trước</span
+                    ><span class="vrestore">{{icon:history}}Khôi phục</span>
+                  </div>
+                  <div class="vrow">
+                    <span class="vtag">v3</span><code>sk_live_••••c7e3</code
+                    ><span class="vby">Alex · tháng trước</span
+                    ><span class="vrestore">{{icon:history}}Khôi phục</span>
+                  </div>
+                  <div class="vrow">
+                    <span class="vtag">v2</span><code>sk_live_••••02ad</code
+                    ><span class="vby">Sam · 2 tháng trước</span
+                    ><span class="vrestore">{{icon:history}}Khôi phục</span>
+                  </div>
                 </div>
               </div>
             </div>
