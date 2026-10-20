@@ -10,11 +10,19 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- Random US phone numbers use real area codes instead of 555, and Vietnamese
+  ones use real mobile prefixes, so checkout forms accept them.
+- The card expiry field only takes MM/YY.
 - Share links now carry an item's custom fields, such as an account ID, and
   the share screen lets you pick each part to include; the note stays out
   unless picked.
 
 ### Added
+
+- Card autofill works in the card fields that Shopify, Stripe, Braintree, Adyen
+  and other payment providers put in their own frames.
+- Random details in the autofill menu can be made in either US or Vietnam
+  format.
 
 - Email aliases: on sign-up forms, the email field offers an address just for
   that site, such as `you+shopify@gmail.com`, for Gmail, Outlook, iCloud,

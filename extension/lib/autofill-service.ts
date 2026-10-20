@@ -6,6 +6,7 @@ import { generateTotp, parseTotpInput, type TotpConfig } from "../../src/core/to
 import { cardBrand, cardDigits, itemType, lastFour, withPasswordHistory } from "./item-types.js";
 import type {
   AddressData,
+  CardData,
   AutofillRequest,
   AutofillResponse,
   CardSuggestion,
@@ -14,6 +15,7 @@ import type {
   Suggestion,
   TotpPrompt,
 } from "./autofill-protocol.js";
+import { fillCardFrames } from "./card-frames.js";
 import { getLocal } from "./storage.js";
 import {
   byLastUsed,
@@ -454,16 +456,15 @@ export async function handleAutofill(
       const item = vault.items.find((candidate) => candidate.id === request.id);
       if (!item || !isCard(item)) return { ok: false, error: "no_match" };
       void markUsed(vault.key, item).catch(() => {});
-      return {
-        ok: true,
-        card: {
-          number: cardDigits(item.cardNumber),
-          brand: cardBrand(item.cardNumber),
-          ...(item.cardholder ? { cardholder: item.cardholder } : {}),
-          ...(item.cardExpiry ? { expiry: item.cardExpiry } : {}),
-          ...(item.cardCvv ? { cvv: item.cardCvv } : {}),
-        },
+      const card: CardData = {
+        number: cardDigits(item.cardNumber),
+        brand: cardBrand(item.cardNumber),
+        ...(item.cardholder ? { cardholder: item.cardholder } : {}),
+        ...(item.cardExpiry ? { expiry: item.cardExpiry } : {}),
+        ...(item.cardCvv ? { cvv: item.cardCvv } : {}),
       };
+      if (sender.url.startsWith("https:")) await fillCardFrames(sender.tabId, card);
+      return { ok: true, card };
     }
 
     case "autofill:identities": {

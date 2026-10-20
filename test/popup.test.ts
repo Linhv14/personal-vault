@@ -717,7 +717,7 @@ describe("extension popup", () => {
       "a Vietnamese address",
     );
     const text = el("gen-address").textContent ?? "";
-    expect(text).toMatch(/09\d \d{3} \d{4}/);
+    expect(text).toMatch(/0\d{2} \d{3} \d{4}/);
     expect(text).toMatch(/@example\.com/);
     expect(text).toContain("Việt Nam");
 

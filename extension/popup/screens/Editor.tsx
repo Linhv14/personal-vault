@@ -98,6 +98,17 @@ function EditField({
             : "text"
       }
       inputMode={spec.kind === "cardNumber" || spec.kind === "expiry" ? "numeric" : undefined}
+      maxLength={spec.kind === "expiry" ? 5 : undefined}
+      pattern={spec.kind === "expiry" ? "(0[1-9]|1[0-2])/[0-9]{2}" : undefined}
+      title={spec.kind === "expiry" ? "MM/YY" : undefined}
+      onInput={
+        spec.kind === "expiry"
+          ? (event) => {
+              const field = event.currentTarget;
+              field.value = maskExpiry(field.value);
+            }
+          : undefined
+      }
       className={spec.kind === "cardNumber" ? "mono" : undefined}
       placeholder={
         spec.kind === "url"
@@ -171,6 +182,12 @@ function EditField({
 
 function storedVault(id: string): string | undefined {
   return id === DEFAULT_VAULT_ID ? undefined : id;
+}
+
+function maskExpiry(raw: string): string {
+  let digits = raw.replace(/\D/g, "").slice(0, 4);
+  if (digits.length === 1 && Number(digits) > 1) digits = `0${digits}`;
+  return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 }
 
 export function Editor({

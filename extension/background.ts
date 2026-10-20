@@ -17,6 +17,7 @@ import { AUTOFILL_ORIGINS, isAutofillRequest } from "./lib/autofill-protocol.js"
 import { handleAutofill, trustedSender, type TrustedSender } from "./lib/autofill-service.js";
 import { isPasskeyRequest } from "./lib/passkey/protocol.js";
 import { handlePasskey } from "./lib/passkey/service.js";
+import { forgetCardFrames, rememberCardFrame } from "./lib/card-frames.js";
 import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
 import { resumeUnlock } from "./lib/resume.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
@@ -46,6 +47,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if ((message as { type?: unknown } | null)?.type === "autofill:card-frame") {
+    void rememberCardFrame(sender, chrome.runtime.id);
+    return false;
+  }
   const handle: ((trusted: TrustedSender) => Promise<unknown>) | null = isAutofillRequest(message)
     ? (trusted) => handleAutofill(message, trusted)
     : isPasskeyRequest(message)
@@ -62,6 +67,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .catch((error: unknown) => sendResponse({ ok: false, error: String(error) }));
   return true;
 });
+
+chrome.tabs.onUpdated.addListener((tabId, change) => {
+  if (change.status === "loading" && change.url) void forgetCardFrames(tabId);
+});
+chrome.tabs.onRemoved.addListener((tabId) => void forgetCardFrames(tabId));
 
 chrome.permissions.onAdded.addListener((permissions) => {
   if (grantsAutofill(permissions)) void registerAutofillScript();

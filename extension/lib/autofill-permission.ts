@@ -1,6 +1,7 @@
 import {
   AUTOFILL_ORIGINS,
   AUTOFILL_SCRIPT_ID,
+  CARD_FRAME_SCRIPT_ID,
   PASSKEY_BRIDGE_SCRIPT_ID,
   PASSKEY_PAGE_SCRIPT_ID,
 } from "./autofill-protocol.js";
@@ -13,6 +14,14 @@ export const SCRIPTS: chrome.scripting.RegisteredContentScript[] = [
     js: ["content/content.js"],
     runAt: "document_idle",
     allFrames: false,
+    persistAcrossSessions: true,
+  },
+  {
+    id: CARD_FRAME_SCRIPT_ID,
+    matches: AUTOFILL_ORIGINS,
+    js: ["content/card-frame.js"],
+    runAt: "document_idle",
+    allFrames: true,
     persistAcrossSessions: true,
   },
   {

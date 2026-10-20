@@ -6,4 +6,9 @@ export const EXTENSION_PAGES = [
   "console/main.tsx",
 ];
 
-export const INJECTED_SCRIPTS = ["content/content.ts", "passkey/page.ts", "passkey/bridge.ts"];
+export const INJECTED_SCRIPTS = [
+  "content/content.ts",
+  "content/card-frame.ts",
+  "passkey/page.ts",
+  "passkey/bridge.ts",
+];

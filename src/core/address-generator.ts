@@ -79,22 +79,22 @@ const US_STREETS = [
   "Willow Way",
 ];
 
-const US_CITIES: readonly (readonly [string, string, string])[] = [
-  ["Springfield", "IL", "627"],
-  ["Portland", "OR", "972"],
-  ["Austin", "TX", "787"],
-  ["Denver", "CO", "802"],
-  ["Columbus", "OH", "432"],
-  ["Madison", "WI", "537"],
-  ["Raleigh", "NC", "276"],
-  ["Boise", "ID", "837"],
-  ["Sacramento", "CA", "958"],
-  ["Albany", "NY", "122"],
-  ["Richmond", "VA", "232"],
-  ["Nashville", "TN", "372"],
-  ["Phoenix", "AZ", "850"],
-  ["Seattle", "WA", "981"],
-  ["Boston", "MA", "021"],
+const US_CITIES: readonly (readonly [string, string, string, string])[] = [
+  ["Springfield", "IL", "627", "217"],
+  ["Portland", "OR", "972", "503"],
+  ["Austin", "TX", "787", "512"],
+  ["Denver", "CO", "802", "303"],
+  ["Columbus", "OH", "432", "614"],
+  ["Madison", "WI", "537", "608"],
+  ["Raleigh", "NC", "276", "919"],
+  ["Boise", "ID", "837", "208"],
+  ["Sacramento", "CA", "958", "916"],
+  ["Albany", "NY", "122", "518"],
+  ["Richmond", "VA", "232", "804"],
+  ["Nashville", "TN", "372", "615"],
+  ["Phoenix", "AZ", "850", "602"],
+  ["Seattle", "WA", "981", "206"],
+  ["Boston", "MA", "021", "617"],
 ];
 
 const VN_FAMILY = [
@@ -225,10 +225,48 @@ function emailFor(given: string, family: string, domain: string): string {
   return `${local}${1000 + randomInt(9000)}@${domain}`;
 }
 
+const VN_MOBILE = [
+  "032",
+  "033",
+  "034",
+  "035",
+  "036",
+  "037",
+  "038",
+  "039",
+  "070",
+  "076",
+  "077",
+  "078",
+  "079",
+  "081",
+  "082",
+  "083",
+  "084",
+  "085",
+  "086",
+  "088",
+  "089",
+  "090",
+  "091",
+  "093",
+  "094",
+  "096",
+  "097",
+  "098",
+];
+
+function usExchange(): string {
+  for (;;) {
+    const exchange = `${2 + randomInt(8)}${digits(2)}`;
+    if (exchange !== "555" && !exchange.endsWith("11")) return exchange;
+  }
+}
+
 function usAddress(): Omit<RandomAddress, "email"> & { given: string; family: string } {
   const given = pick(US_GIVEN);
   const family = pick(US_FAMILY);
-  const [city, state, zip] = pick(US_CITIES);
+  const [city, state, zip, area] = pick(US_CITIES);
   const street = `${100 + randomInt(9900)} ${pick(US_STREETS)}`;
   const unit = randomInt(3) === 0 ? `\nApt ${1 + randomInt(40)}${pick(["", "A", "B", "C"])}` : "";
   return {
@@ -236,7 +274,7 @@ function usAddress(): Omit<RandomAddress, "email"> & { given: string; family: st
     given,
     family,
     fullName: `${given} ${family}`,
-    phone: `(555) ${digits(3)}-${digits(4)}`,
+    phone: `(${area}) ${usExchange()}-${digits(4)}`,
     address: street + unit,
     city,
     region: state,
@@ -257,7 +295,7 @@ function vnAddress(): Omit<RandomAddress, "email"> & { given: string; family: st
     given,
     family,
     fullName: `${family} ${pick(VN_MIDDLE)} ${given}`,
-    phone: `09${randomInt(10)} ${digits(3)} ${digits(4)}`,
+    phone: `${pick(VN_MOBILE)} ${digits(3)} ${digits(4)}`,
     address: `${number} ${pick(VN_STREETS)}`,
     ward: pick(wards),
     city: district,

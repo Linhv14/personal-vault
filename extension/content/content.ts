@@ -11,6 +11,7 @@ import type {
 import { icon, type IconName } from "../../src/ui/icons.js";
 import { logo, wordmark } from "../../src/ui/logo.js";
 import { brandMark, flagMark } from "../../src/ui/marks.js";
+import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
@@ -39,6 +40,7 @@ const SIGN_UP_BUTTON =
 
 let t: Translate = createTranslator("en");
 let activeInput: HTMLInputElement | null = null;
+let cardFrame: HTMLIFrameElement | null = null;
 let lastCapture = { password: "", at: 0 };
 let outcomeTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -73,7 +75,7 @@ async function send(request: AutofillRequest): Promise<AutofillResponse> {
   }
 }
 
-function isVisible(input: HTMLInputElement): boolean {
+function isVisible(input: HTMLElement): boolean {
   const rect = input.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 && getComputedStyle(input).visibility !== "hidden";
 }
@@ -166,11 +168,12 @@ function isDecoratable(input: HTMLInputElement): boolean {
 }
 
 function placeTrigger(): void {
-  if (!activeInput || !activeInput.isConnected || !isVisible(activeInput)) {
+  const anchor = activeInput ?? cardFrame;
+  if (!anchor || !anchor.isConnected || !isVisible(anchor)) {
     trigger.hidden = true;
     return;
   }
-  const rect = activeInput.getBoundingClientRect();
+  const rect = anchor.getBoundingClientRect();
   const size = Math.min(24, Math.max(18, rect.height - 10));
   trigger.style.width = trigger.style.height = `${size}px`;
   trigger.style.left = `${rect.right - size - 6}px`;
@@ -328,6 +331,51 @@ async function fillAddressFrom(request: AutofillRequest, input: HTMLInputElement
   fillAddress(detectFields(scopeOf(input)), data, setValue);
 }
 
+async function openFrameCardMenu(frame: HTMLIFrameElement, onlyIfUseful: boolean): Promise<void> {
+  const response = await send({ type: "autofill:cards" });
+  if (cardFrame !== frame) return;
+  const empty = response.ok && "cards" in response && response.cards.length === 0;
+  if (onlyIfUseful && (!response.ok || empty)) return;
+  menu.replaceChildren(menuHeading());
+  if (!response.ok) {
+    menu.append(note(t("autofill.unavailable")));
+  } else if ("locked" in response && response.locked) {
+    menu.append(lockedRow());
+  } else if ("cards" in response) {
+    for (const card of response.cards) {
+      menu.append(
+        menuRow(
+          `•••• ${card.last4}`,
+          [card.title, card.vault].filter(Boolean).join(" · ") || undefined,
+          card.brand === "card" ? badge("card") : brandMark(card.brand),
+          () => void fillCardFrom(card.id),
+        ),
+      );
+    }
+    if (response.cards.length === 0) menu.append(note(t("autofill.no_cards")));
+  }
+  showMenu();
+}
+
+async function fillCardFrom(id: string): Promise<void> {
+  const response = await send({ type: "autofill:card", id });
+  closeMenu();
+  if (!response.ok || !("card" in response)) return;
+  fillCard(detectFields(document), response.card, setValue);
+}
+
+function onWindowBlur(): void {
+  setTimeout(() => {
+    const focused = document.activeElement;
+    if (!(focused instanceof HTMLIFrameElement) || !isPaymentFrameUrl(focused.src)) return;
+    if (cardFrame !== focused) closeMenu();
+    activeInput = null;
+    cardFrame = focused;
+    placeTrigger();
+    if (menu.hidden) void openFrameCardMenu(focused, true);
+  }, 0);
+}
+
 async function openCardMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
   const response = await send({ type: "autofill:cards" });
   if (activeInput !== input) return;
@@ -413,14 +461,16 @@ async function openAddressMenu(
     location.hostname,
     document.documentElement.lang,
   );
-  menu.append(
-    menuRow(
-      t(profile ? "autofill.random_profile" : "autofill.random_address"),
-      t(profile ? "autofill.random_profile_hint" : "autofill.random_address_hint"),
-      flagMark(country),
-      () => fillAddressFrom({ type: "autofill:random-address", country }, input),
-    ),
-  );
+  for (const code of country === "VN" ? (["VN", "US"] as const) : (["US", "VN"] as const)) {
+    menu.append(
+      menuRow(
+        t(profile ? "autofill.random_profile" : "autofill.random_address"),
+        t(code === "VN" ? "autofill.random_in_vn" : "autofill.random_in_us"),
+        flagMark(code),
+        () => fillAddressFrom({ type: "autofill:random-address", country: code }, input),
+      ),
+    );
+  }
   showMenu();
 }
 
@@ -690,6 +740,7 @@ function onFocusIn(event: FocusEvent): void {
   if (!(target instanceof HTMLInputElement) || !isDecoratable(target)) return;
   if (activeInput !== target) closeMenu();
   activeInput = target;
+  cardFrame = null;
   placeTrigger();
   const offersPassword = target.type === "password" && !target.value && wantsNewPassword(target);
   if (menu.hidden && (offersPassword || (isCodeField(target) && !target.value))) {
@@ -700,8 +751,9 @@ function onFocusIn(event: FocusEvent): void {
 trigger.addEventListener("mousedown", (event) => event.preventDefault());
 trigger.addEventListener("click", (event) => {
   if (!event.isTrusted) return;
-  if (menu.hidden) void openMenu({ onlyIfUseful: false });
-  else closeMenu();
+  if (!menu.hidden) closeMenu();
+  else if (!activeInput && cardFrame) void openFrameCardMenu(cardFrame, false);
+  else void openMenu({ onlyIfUseful: false });
 });
 
 function menuRows(): HTMLButtonElement[] {
@@ -741,6 +793,7 @@ document.addEventListener(
 );
 
 document.addEventListener("focusin", onFocusIn, true);
+window.addEventListener("blur", onWindowBlur);
 document.addEventListener(
   "mousedown",
   (event) => {
@@ -748,6 +801,7 @@ document.addEventListener(
     closeMenu();
     if (event.target !== activeInput) {
       activeInput = null;
+      cardFrame = null;
       trigger.hidden = true;
     }
   },

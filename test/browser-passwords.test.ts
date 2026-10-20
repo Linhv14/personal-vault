@@ -137,7 +137,7 @@ describe("turning on autofill", () => {
     expect(requested).toEqual([
       { origins: ["https://*/*", "http://*/*"], permissions: ["privacy"] },
     ]);
-    expect(registered).toHaveLength(3);
+    expect(registered).toHaveLength(4);
     expect(browser.value).toBe(false);
     await disableAutofill();
     expect(browser.value).toBe(true);
