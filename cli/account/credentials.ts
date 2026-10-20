@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { fromBase64, toBase64 } from "../../src/core/bytes.js";
-import type { Session } from "../agent/session.js";
+import { AgentError, type Session } from "../agent/session.js";
 
 const SERVICE = "7key-cli";
 const ACCOUNT = "session";
@@ -19,6 +19,8 @@ export interface StoredLogin {
 
 export interface Keyring {
   name: string;
+  warning?: string;
+  unavailable?: string;
   read(): string | null;
   write(value: string): void;
   remove(): void;
@@ -71,28 +73,75 @@ function secretService(): Keyring {
   };
 }
 
-function fileKeyring(env: NodeJS.ProcessEnv): Keyring {
-  const file = path.join(configDirectory(env), "session");
+export const INSECURE_FILE_STORE_FLAG = "--insecure-file-store";
+export const INSECURE_FILE_STORE_ENV = "SEVENKEY_INSECURE_FILE_STORE";
+
+export const NO_KEYRING_MESSAGE = `No system keyring found, so 7key will not keep your session and private key in a plain file.
+Install libsecret and secret-tool (Debian/Ubuntu: sudo apt install libsecret-tools, Fedora: sudo dnf install libsecret) and log in again.
+To store them unencrypted anyway, pass ${INSECURE_FILE_STORE_FLAG} or set ${INSECURE_FILE_STORE_ENV}=1.`;
+
+function sessionFile(env: NodeJS.ProcessEnv): string {
+  return path.join(configDirectory(env), "session");
+}
+
+export function fileKeyring(env: NodeJS.ProcessEnv): Keyring {
+  const file = sessionFile(env);
   return {
     name: `${file} (readable only by you)`,
+    warning: `Warning: your session and private key are stored unencrypted in ${file}. Anyone who can read your files as you can use them.`,
     read: () => (existsSync(file) ? readFileSync(file, "utf8").trim() : null),
     write(value) {
       mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
       writeFileSync(file, `${value}\n`, { mode: 0o600 });
+      chmodSync(file, 0o600);
     },
     remove: () => rmSync(file, { force: true }),
   };
+}
+
+function refusingKeyring(env: NodeJS.ProcessEnv): Keyring {
+  const legacy = fileKeyring(env);
+  return {
+    name: "no keyring",
+    unavailable: NO_KEYRING_MESSAGE,
+    read: legacy.read,
+    write() {
+      throw new AgentError(NO_KEYRING_MESSAGE);
+    },
+    remove: legacy.remove,
+  };
+}
+
+export function insecureFileStoreAllowed(
+  env: NodeJS.ProcessEnv,
+  options: { insecureFileStore?: boolean } = {},
+): boolean {
+  return (
+    options.insecureFileStore === true ||
+    env[INSECURE_FILE_STORE_ENV] === "1" ||
+    env.SEVENKEY_KEYRING === "file"
+  );
 }
 
 function available(command: string): boolean {
   return run("which", [command]).status === 0;
 }
 
-export function systemKeyring(env: NodeJS.ProcessEnv): Keyring {
+export function systemKeyring(
+  env: NodeJS.ProcessEnv,
+  options: {
+    insecureFileStore?: boolean;
+    platform?: NodeJS.Platform;
+    has?: (command: string) => boolean;
+  } = {},
+): Keyring {
+  const platform = options.platform ?? process.platform;
+  const has = options.has ?? available;
+  const insecure = insecureFileStoreAllowed(env, options);
   if (env.SEVENKEY_KEYRING === "file") return fileKeyring(env);
-  if (process.platform === "darwin" && available("security")) return macKeychain();
-  if (process.platform === "linux" && available("secret-tool")) return secretService();
-  return fileKeyring(env);
+  if (platform === "darwin" && has("security")) return macKeychain();
+  if (platform === "linux" && has("secret-tool")) return secretService();
+  return insecure ? fileKeyring(env) : refusingKeyring(env);
 }
 
 export function saveLogin(keyring: Keyring, login: StoredLogin): void {

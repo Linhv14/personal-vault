@@ -32,6 +32,9 @@ On your computer
                       in a template (stdin by default); -o writes a 0600 file
   agent -- <command…> Let an AI agent use secrets it cannot see (7key agent --help)
   whoami | logout
+  login --insecure-file-store
+                      Without a system keyring, keep the session in a plain
+                      0600 file (or set SEVENKEY_INSECURE_FILE_STORE=1)
 
   --project <ref> --env <ref> [--org <ref>]   use another project; a ref is the
                       id, the handle (trust1-portal) or the name
@@ -96,10 +99,8 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<numb
   const local = argv[0] ? LOCAL[argv[0]] : undefined;
   const ciCommand = argv[0] === "run" || argv[0] === "dotenv";
   if (local && !(ciCommand && ciMode(argv, env))) {
-    return local(
-      parseFlags(argv.slice(1), { positional: argv[0] === "read" }),
-      defaultContext(env),
-    );
+    const flags = parseFlags(argv.slice(1), { positional: argv[0] === "read" });
+    return local(flags, defaultContext(env, { insecureFileStore: flags.insecureFileStore }));
   }
   const { command, link, server, rest } = parseArgs(argv, env);
   if (!command || command === "help" || command === "--help") {

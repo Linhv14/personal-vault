@@ -75,7 +75,10 @@ creates the file readable only by you and will not replace an existing file
 unless you pass `--force`.
 
 The session lasts 30 days. On macOS it lives in the Keychain, on Linux in the
-Secret Service keyring (`secret-tool`), elsewhere in a file only you can read.
+Secret Service keyring (`secret-tool`). Without a keyring, `7key login` refuses
+to store the session unless you pass `--insecure-file-store` (or set
+`SEVENKEY_INSECURE_FILE_STORE=1`), which keeps it unencrypted in a file only
+you can read.
 While you are logged in, any program you run can use it, just as it could read
 a `.env` file. For AI agents, use `7key agent` below.
 

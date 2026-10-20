@@ -23,6 +23,7 @@ import {
   pausedBy,
   saveLogin,
   sessionOf,
+  INSECURE_FILE_STORE_FLAG,
   systemKeyring,
   type Keyring,
 } from "./credentials.js";
@@ -38,6 +39,7 @@ export interface Flags {
   input?: string;
   output?: string;
   force?: boolean;
+  insecureFileStore?: boolean;
   positional?: string[];
   command: string[];
 }
@@ -62,11 +64,14 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-export function defaultContext(env: NodeJS.ProcessEnv): Context {
+export function defaultContext(
+  env: NodeJS.ProcessEnv,
+  options: { insecureFileStore?: boolean } = {},
+): Context {
   return {
     env,
     cwd: process.cwd(),
-    keyring: systemKeyring(env),
+    keyring: systemKeyring(env, options),
     request: fetch,
     log: (line) => console.error(line),
     out: (text) => process.stdout.write(text),
@@ -99,6 +104,7 @@ export function parseFlags(argv: string[], options: { positional?: boolean } = {
     else if (arg === "-i" || arg === "--in") flags.input = value();
     else if (arg === "-o" || arg === "--out") flags.output = value();
     else if (arg === "--force") flags.force = true;
+    else if (arg === INSECURE_FILE_STORE_FLAG) flags.insecureFileStore = true;
     else if (options.positional && !arg.startsWith("-")) {
       flags.positional = [...(flags.positional ?? []), arg];
     } else throw new AgentError(`Unexpected argument: ${arg}`);
@@ -132,6 +138,7 @@ export async function login(flags: Flags, context: Context): Promise<number> {
   if (context.env.SEVENKEY_AGENT === "1") {
     throw new AgentError("7key login is not available inside 7key agent");
   }
+  if (context.keyring.unavailable) throw new AgentError(context.keyring.unavailable);
   const saved = remembered(context.env);
   const server = flags.server ?? context.env.SEVENKEY_SERVER ?? saved.server ?? DEFAULT_SERVER;
   const email =
@@ -148,6 +155,7 @@ export async function login(flags: Flags, context: Context): Promise<number> {
   if (previous) await signOut(previous);
   const stored = loginOf(session, email);
   saveLogin(context.keyring, stored);
+  if (context.keyring.warning) context.log(context.keyring.warning);
   remember(context.env, { email, server: session.server });
   context.log(`Logged in as ${email} on ${session.server}.`);
   context.log(`The session is kept in ${context.keyring.name} until ${date(stored.expiresAt)}.`);

@@ -20,7 +20,9 @@ cd ~/code/payments
 
 `7key login` asks for your email and master password once. The session lasts
 30 days and lives in the macOS Keychain, the Linux Secret Service keyring
-(`secret-tool`), or, elsewhere, a file only you can read.
+(`secret-tool`). Without a keyring, login stops and asks you to install
+`secret-tool`; `--insecure-file-store` (or `SEVENKEY_INSECURE_FILE_STORE=1`)
+keeps the session unencrypted in a file only you can read instead.
 
 `7key link` lists your organizations, projects and environments and writes the
 choice to `.7key.json`. The file holds names and ids, never a secret, so commit
