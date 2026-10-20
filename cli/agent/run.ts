@@ -29,6 +29,7 @@ export interface AgentOptions {
   command: string[];
   env: NodeJS.ProcessEnv;
   askPassword: (question: string) => Promise<string>;
+  askCode?: (question: string) => Promise<string>;
   confirm: (question: string) => Promise<boolean>;
   log: (line: string) => void;
   request?: typeof fetch;
@@ -127,6 +128,7 @@ export async function runAgent(options: AgentOptions): Promise<number> {
       options.email,
       await options.askPassword(`Master password for ${options.email}: `),
       options.request,
+      options.askCode,
     ));
   let directory: string | undefined;
   let proxy: Awaited<ReturnType<typeof startProxy>> | undefined;

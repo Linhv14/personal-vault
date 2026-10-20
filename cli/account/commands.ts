@@ -150,7 +150,7 @@ export async function login(flags: Flags, context: Context): Promise<number> {
     ).trim() || saved.email;
   if (!email) throw new AgentError("An email is needed");
   const password = await context.askPassword(`Master password for ${email}: `);
-  const session = await signIn(server, email, password, context.request);
+  const session = await signIn(server, email, password, context.request, context.ask);
   const previous = currentSession(context);
   if (previous) await signOut(previous);
   const stored = loginOf(session, email);

@@ -2196,3 +2196,14 @@ input.switch:focus-visible {
 input[aria-invalid="true"] {
   border-color: var(--danger);
 }
+.notice-line.two-factor-off {
+  border: 0;
+  border-radius: 10px;
+}
+.notice-line.two-factor-off span {
+  flex: 1;
+}
+.notice-line.two-factor-off .link {
+  color: inherit;
+  font-weight: 600;
+}
