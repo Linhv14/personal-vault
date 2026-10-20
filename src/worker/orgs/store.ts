@@ -147,6 +147,7 @@ export class OrgStore extends DurableObject<Env> {
       }
       this.sql.exec("DELETE FROM team_members WHERE account_id = ?", accountId);
       this.sql.exec("DELETE FROM members WHERE account_id = ?", accountId);
+      this.projects.dropReader(accountId);
     });
     await this.record(actor, "member.removed", accountId, ip);
   }
@@ -322,6 +323,7 @@ export class OrgStore extends DurableObject<Env> {
         teamId,
         accountId,
       );
+      this.projects.dropReader(accountId, teamId);
       this.sql.exec("UPDATE teams SET rekey_needed = 1 WHERE id = ?", teamId);
     });
     await this.record(principal.accountId, "team.member_removed", `${teamId}:${accountId}`, ip);
@@ -435,6 +437,32 @@ export class OrgStore extends DurableObject<Env> {
     if (!access.ok) return access;
     if (this.projects.teamOf(projectId) !== teamId) return fail(404, "orgs.not_found");
     return access;
+  }
+
+  private readOnly(principal: Principal, projectId: string): boolean {
+    return !isOrgAdmin(principal.role) && this.projects.isReader(projectId, principal.accountId);
+  }
+
+  async setProjectReaders(
+    principal: Principal,
+    teamId: string,
+    projectId: string,
+    readers: string[],
+    ip: string | null,
+  ): Promise<Result<{ readers: string[] }>> {
+    const access = this.projectAccess(principal, teamId, projectId, true);
+    if (!access.ok) return access;
+    const unique = [...new Set(readers)];
+    if (
+      !unique.every(
+        (accountId) => this.inTeam(teamId, accountId) && this.role(accountId) === "member",
+      )
+    ) {
+      return fail(400, "orgs.invalid_reader");
+    }
+    this.projects.setReaders(projectId, unique);
+    await this.record(principal.accountId, "project.readers_changed", `${teamId}:${projectId}`, ip);
+    return ok({ readers: unique });
   }
 
   async listProjects(
@@ -574,6 +602,7 @@ export class OrgStore extends DurableObject<Env> {
   ): Promise<Result<{ ids: string[] }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
     if (!access.ok) return access;
+    if (this.readOnly(principal, projectId)) return fail(403, "orgs.read_only");
     const refused = this.writable(access.value, batch.generation);
     if (refused) return refused;
     if (new Set(batch.secrets.map((secret) => secret.id)).size !== batch.secrets.length) {
@@ -614,6 +643,7 @@ export class OrgStore extends DurableObject<Env> {
   ): Promise<Result<{ deleted: number }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
     if (!access.ok) return access;
+    if (this.readOnly(principal, projectId)) return fail(403, "orgs.read_only");
     const found = ids
       .map((id) => ({ id, location: this.projects.secretLocation(id) }))
       .filter(({ location }) => location?.projectId === projectId);

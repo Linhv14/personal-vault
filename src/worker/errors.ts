@@ -56,6 +56,8 @@ export type ApiErrorCode =
   | "orgs.secret_limit"
   | "orgs.rekey_required"
   | "orgs.invalid_link"
+  | "orgs.invalid_reader"
+  | "orgs.read_only"
   | "orgs.link_limit"
   | "orgs.invalid_item"
   | "orgs.item_limit"
@@ -131,6 +133,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.vault_full": "This shared vault has reached its storage limit",
   "orgs.secret_limit": "This project has reached its secret limit",
   "orgs.invalid_link": "Invalid repository, branch, environment or key",
+  "orgs.invalid_reader": "Only team members who are not admins can be read only",
+  "orgs.read_only": "You have read-only access to this project",
   "orgs.link_limit": "This project has reached its repository limit",
   "ci.unauthorized": "A valid GitHub Actions OIDC token is required",
   "ci.forbidden": "This repository, branch or environment is not linked to these secrets",

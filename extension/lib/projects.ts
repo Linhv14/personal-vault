@@ -32,6 +32,7 @@ export interface Project {
   createdAt: number;
   secretCount: number;
   updatedAt: number;
+  readers: string[];
 }
 
 export interface Secret extends SecretContent {
@@ -48,6 +49,7 @@ interface ProjectRecord {
   createdAt: number;
   secretCount: number;
   updatedAt: number;
+  readers?: string[];
 }
 
 interface SecretRecord {
@@ -94,6 +96,7 @@ export async function openProjects(
       createdAt: record.createdAt,
       secretCount: record.secretCount,
       updatedAt: record.updatedAt,
+      readers: record.readers ?? [],
     })),
   );
 }
@@ -129,6 +132,17 @@ export async function updateProject(
   await request(`${teamPath(orgId, team.id)}/projects/${project.id}`, {
     method: "PUT",
     body: json({ sealed, generation: project.generation }),
+  });
+}
+
+export async function setProjectReaders(
+  orgId: string,
+  project: Project,
+  readers: string[],
+): Promise<void> {
+  await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/readers`, {
+    method: "PUT",
+    body: json({ readers }),
   });
 }
 

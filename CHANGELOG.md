@@ -13,6 +13,9 @@ version may change the API or storage format; such releases list the steps in
 - Secret history: the console keeps the last five values of each secret, with
   who changed it and when; **History** on a secret's row shows them and
   restores one. Re-keying a team re-encrypts the history too.
+- Read-only access per project: an admin marks team members read only from
+  **Access** in the project's menu. They can still read and run with the
+  secrets; the server refuses their changes.
 
 ## [0.4.1] - 2026-10-19
 

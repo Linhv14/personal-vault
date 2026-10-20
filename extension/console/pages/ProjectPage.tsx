@@ -22,6 +22,7 @@ import {
   noteAccess,
   saveSecret,
   saveSecrets,
+  setProjectReaders,
   upgradeLegacySecrets,
   updateProject,
   type Secret,
@@ -43,6 +44,7 @@ import {
 import { attempt, pending$, toast, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
 import {
+  AccessDialog,
   AddSecretDialog,
   HostsDialog,
   ImportDialog,
@@ -67,6 +69,7 @@ type Modal =
   | { kind: "hosts"; secret: Secret }
   | { kind: "history"; secret: Secret }
   | { kind: "remove-duplicates" }
+  | { kind: "access" }
   | null;
 
 function withHosts(secret: Secret, hosts: string[]) {
@@ -89,7 +92,7 @@ export function ProjectPage({
   environmentId: string | null;
 }) {
   const t = useT();
-  const { detail, identity, projects, team, run, reload, refreshing } = useConsole();
+  const { detail, identity, projects, team, me, run, reload, refreshing } = useConsole();
   const project = projects?.find((entry) => entry.id === projectId);
   const [secrets, setSecrets] = useState<Record<string, Secret[]> | null>(null);
   const [query, setQuery] = useState("");
@@ -143,8 +146,11 @@ export function ProjectPage({
   }
 
   const owner = team(project.teamId);
-  const editable = Boolean(owner && !owner.rekeyNeeded);
-  const canManage = isOrgAdmin(detail.org.role) && editable;
+  const unlocked = Boolean(owner && !owner.rekeyNeeded);
+  const readOnly =
+    !isOrgAdmin(detail.org.role) && Boolean(me && project.readers.includes(me.accountId));
+  const editable = unlocked && !readOnly;
+  const canManage = isOrgAdmin(detail.org.role) && unlocked;
   const { environments } = project.content;
   const environment = environments.find((env) => env.id === environmentId) ?? null;
   const ciTab = environmentId === CI_TAB;
@@ -284,6 +290,13 @@ export function ProjectPage({
               .then(() => toast(t("projects.id_copied")))
           }
         />
+        {canManage && owner && (
+          <MenuItem
+            icon="users"
+            label={t("console.access")}
+            onSelect={() => setModal({ kind: "access" })}
+          />
+        )}
         {canManage && (
           <MenuItem
             icon="pencil"
@@ -344,6 +357,7 @@ export function ProjectPage({
             <span>
               {t("console.secret_count", { count: secrets ? all.length : project.secretCount })}
             </span>
+            {readOnly && <Badge>{t("console.read_only")}</Badge>}
           </>
         }
         actions={actions}
@@ -379,7 +393,7 @@ export function ProjectPage({
           </button>
         </div>
       )}
-      {!editable && (
+      {!unlocked && (
         <p className="alert warn">
           {t("projects.rekey_first")}{" "}
           <a href={href(orgId, { page: "team", teamId: project.teamId })}>
@@ -664,6 +678,21 @@ export function ProjectPage({
             setModal(null);
             removeDuplicates();
           }}
+        />
+      )}
+      {modal?.kind === "access" && owner && (
+        <AccessDialog
+          members={owner.members
+            .map((id) => detail.members.find((member) => member.accountId === id))
+            .filter((member) => member !== undefined)}
+          readers={project.readers}
+          onClose={() => setModal(null)}
+          onSave={(readers) =>
+            void run(async () => {
+              await setProjectReaders(orgId, project, readers);
+              setModal(null);
+            }, "console.access_saved")
+          }
         />
       )}
       {modal?.kind === "history" && (

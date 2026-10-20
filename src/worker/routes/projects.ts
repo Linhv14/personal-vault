@@ -82,6 +82,32 @@ projects.delete(
   ),
 );
 
+const MAX_READERS = 500;
+
+projects.put(
+  "/projects/:projectId/readers",
+  asMember(async (c, member, orgId) => {
+    const { readers } = await readJson(c);
+    if (
+      !Array.isArray(readers) ||
+      readers.length > MAX_READERS ||
+      !readers.every((id) => typeof id === "string" && id.length > 0 && id.length <= 64)
+    ) {
+      return c.json(apiError("orgs.invalid_reader"), 400);
+    }
+    return respond(
+      c,
+      await orgStore(c.env, orgId).setProjectReaders(
+        member,
+        team(c),
+        project(c),
+        readers,
+        clientIp(c),
+      ),
+    );
+  }),
+);
+
 projects.get(
   "/projects/:projectId/environments/:environmentId/secrets",
   asMember(async (c, member, orgId) => {

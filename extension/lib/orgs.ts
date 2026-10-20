@@ -58,6 +58,7 @@ export interface TeamProjects {
     createdAt: number;
     secretCount: number;
     updatedAt: number;
+    readers?: string[];
   }[];
 }
 
