@@ -826,7 +826,6 @@ export const en = {
   "share.views_1": "Once",
   "share.views_unlimited": "Until it expires",
   "share.passphrase": "Link password",
-  "share.passphrase_placeholder": "Leave empty if not needed",
   "share.create": "Create link",
   "share.link": "Link",
   "share.ready": "Your link is ready",
@@ -840,17 +839,13 @@ export const en = {
   "share.access_emails": "Specific emails",
   "share.recipients_label": "Recipient emails",
   "share.recipients_placeholder": "Type an email and press Enter",
-  "share.recipients_hint":
-    "Recipients must enter a code sent to their email to see it. Up to 10 addresses.",
   "share.passphrase_hint":
     "The recipient must enter this password. Send it separately, for example the link by email and the password by text message.",
   "share.contents": "The recipient sees",
   "share.totp_hint": "2FA secret included: codes outlive the link.",
   "share.views_hint":
     "With more than one recipient, the link stays open until it expires so each of them can view it.",
-  "share.protection": "Extra protection",
   "share.protection_emails": "{count, plural, one {# email} other {# emails}}",
-  "share.protection_passphrase": "password",
   "share.recipients_invalid": "Not a valid email: {emails}",
   "share.recipients_full": "That is the limit of 10 recipients.",
   "share.recipients_required": "Add at least one email.",

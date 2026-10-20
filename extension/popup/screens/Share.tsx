@@ -21,62 +21,15 @@ const TTL_CHOICES: [string, MessageKey][] = [
   ["2592000", "share.ttl_30d"],
 ];
 
-type Result = { url: string; note: string; passphrase: boolean };
+const MASK = "••••••••";
 
-function Chip({
-  icon,
-  text,
-  children,
-}: {
-  icon: "check" | "mail";
-  text: string;
-  children?: ComponentChildren;
-}) {
-  return (
-    <span className="chip">
-      <Icon name={icon} />
-      <span className="chip-text">{text}</span>
-      {children}
-    </span>
-  );
-}
-
-function Segmented<T extends string>({
-  name,
-  value,
-  choices,
-  disabled = [],
-  onChange,
-}: {
-  name: string;
-  value: T;
-  choices: [T, string][];
-  disabled?: T[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div className="segmented">
-      {choices.map(([choice, label]) => (
-        <label className="tab" key={choice}>
-          <input
-            type="radio"
-            name={name}
-            value={choice}
-            checked={value === choice}
-            disabled={disabled.includes(choice)}
-            onChange={() => onChange(choice)}
-          />
-          <span>{label}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
+type Result = { url: string; meta: [IconName, string][]; passphrase: boolean };
 
 type SharePart = {
   key: string;
   icon: IconName;
   label: string;
+  value: string;
   apply: (payload: SharePayload) => void;
 };
 
@@ -86,8 +39,9 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
     const url = item.url;
     parts.push({
       key: "url",
-      icon: "link",
-      label: registrableDomain(url) ?? url,
+      icon: "globe",
+      label: t("common.url"),
+      value: registrableDomain(url) ?? url,
       apply: (payload) => (payload.url = url),
     });
   }
@@ -96,7 +50,8 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
     parts.push({
       key: "username",
       icon: "person",
-      label: username,
+      label: t("common.username"),
+      value: username,
       apply: (payload) => (payload.username = username),
     });
   }
@@ -106,6 +61,7 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
       key: "password",
       icon: "key",
       label: t("common.password"),
+      value: MASK,
       apply: (payload) => (payload.password = password),
     });
   }
@@ -113,8 +69,9 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
     const totp = item.totp;
     parts.push({
       key: "totp",
-      icon: "shield",
+      icon: "clock",
       label: t("common.totp"),
+      value: "",
       apply: (payload) => (payload.totp = totp),
     });
   }
@@ -124,6 +81,7 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
       key: `field-${index}`,
       icon: field.hidden ? "lock" : "tag",
       label: field.label || t("common.field"),
+      value: field.hidden ? MASK : field.value,
       apply: (payload) => {
         payload.fields = [
           ...(payload.fields ?? []),
@@ -138,6 +96,7 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
       key: "note",
       icon: "note",
       label: t("common.note"),
+      value: note.split("\n")[0] ?? "",
       apply: (payload) => (payload.note = note),
     });
   }
@@ -150,23 +109,84 @@ export function sharePayload(item: VaultItem, parts: SharePart[]): SharePayload 
   return payload;
 }
 
+function SettingRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: IconName;
+  label: string;
+  children: ComponentChildren;
+}) {
+  return (
+    <label className="setting-row">
+      <Icon name={icon} />
+      <span className="setting-label">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Picker<T extends string>({
+  name,
+  value,
+  choices,
+  disabled = [],
+  title,
+  onChange,
+}: {
+  name: string;
+  value: T;
+  choices: [T, string][];
+  disabled?: T[];
+  title?: string;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <select
+      className="setting-select"
+      name={name}
+      value={value}
+      title={title}
+      onChange={(event) => onChange(event.currentTarget.value as T)}
+    >
+      {choices.map(([choice, text]) => (
+        <option value={choice} key={choice} disabled={disabled.includes(choice)}>
+          {text}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boolean }) {
   const t = useT();
   const entry = useRef<HTMLInputElement>(null);
   const [ttl, setTtl] = useState("86400");
   const [views, setViews] = useState<"1" | "unlimited">("1");
   const [access, setAccess] = useState<"anyone" | "emails">("anyone");
+  const [locked, setLocked] = useState(false);
   const [passphrase, setPassphrase] = useState("");
   const [recipients, setRecipients] = useState<string[]>([]);
   const [recipientsHint, setRecipientsHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set(["note"]));
 
+  const parts = shareParts(item, t);
+  const included = parts.filter((part) => !excluded.has(part.key));
   const restricted = emailAccess && access === "emails";
-  const parts = shareParts(item, t).filter((part) => part.key !== "note");
   const recipientCount = restricted ? recipients.length : 0;
   const allowOnce = singleViewAllowed(recipientCount);
   const maxViews = allowOnce ? views : "unlimited";
+
+  const togglePart = (key: string) =>
+    setExcluded((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const commitEntry = (): { ok: boolean; recipients: string[] } => {
     const input = entry.current;
@@ -198,11 +218,11 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
       }
       shareTo = committed.recipients;
     }
-    const secret = passphrase.trim() || undefined;
+    const secret = (locked && passphrase.trim()) || undefined;
     const viewLimit = maxViews === "1" ? 1 : null;
 
     try {
-      const { sealed, fragment } = await createShare(sharePayload(item, parts), secret);
+      const { sealed, fragment } = await createShare(sharePayload(item, included), secret);
       const created = await api.createShareLink(sealed, {
         ttlSeconds: Number(ttl),
         maxViews: viewLimit,
@@ -224,35 +244,17 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
           revokeToken: created.revokeToken,
         });
       }
-      setResult({
-        url,
-        passphrase: Boolean(secret),
-        note: [
-          t("links.expires", { expiry: formatDate(created.expiresAt) }),
-          t(viewLimit === 1 ? "share.result_once" : "share.result_unlimited"),
-          ...(shareTo.length > 0 ? [t("links.restricted", { count: shareTo.length })] : []),
-        ].join(" · "),
-      });
+      const meta: [IconName, string][] = [
+        ["clock", t("links.expires", { expiry: formatDate(created.expiresAt) })],
+        ["eye", t(viewLimit === 1 ? "share.result_once" : "share.result_unlimited")],
+      ];
+      if (shareTo.length > 0) meta.push(["mail", t("links.restricted", { count: shareTo.length })]);
+      setResult({ url, passphrase: Boolean(secret), meta });
       document.getElementById("screen-share")?.scrollTo({ top: 0 });
     } catch (failure) {
       setError(describeError(failure, t));
     }
   };
-
-  const protections = [
-    ...(restricted && recipientCount > 0
-      ? [t("share.protection_emails", { count: recipientCount })]
-      : []),
-    ...(passphrase.trim() ? [t("share.protection_passphrase")] : []),
-  ];
-
-  const sharedFields = parts.map((part) =>
-    part.key === "url"
-      ? t("common.url")
-      : part.key === "username"
-        ? t("common.username")
-        : part.label,
-  );
 
   return (
     <section id="screen-share" className="screen">
@@ -261,94 +263,90 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
         <ItemIcon item={item} />
         <div className="title-text">
           <h1>{t("share.title")}</h1>
-          <p>
-            {[item.title, item.url ? (registrableDomain(item.url) ?? item.url) : ""]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          <p>{item.title}</p>
         </div>
       </header>
       <form
         id="form-share"
-        className="stack"
+        className="share-form"
         hidden={result !== null}
         onSubmit={(event) => void submit(event)}
       >
-        <section className="share-contents" aria-labelledby="share-contents-label">
-          <span className="field-label" id="share-contents-label">
-            {t("share.contents")}
-          </span>
-          <p className="share-includes" id="share-fields">
-            <Icon name="check" />
-            {sharedFields.join(" · ")}
-          </p>
-          <small className="hint share-note" id="share-totp-hint" hidden={!item.totp}>
-            <Icon name="alert" />
-            {t("share.totp_hint")}
-          </small>
-        </section>
-        <div className="option-row" role="group" aria-labelledby="share-ttl-label">
-          <span className="option-label" id="share-ttl-label">
-            {t("share.expires_in")}
-          </span>
-          <Segmented
-            name="ttl"
-            value={ttl}
-            choices={TTL_CHOICES.map(([value, label]) => [value, t(label)])}
-            onChange={setTtl}
-          />
-        </div>
-        <div className="option-row" role="group" aria-labelledby="share-views-label">
-          <span className="option-label" id="share-views-label">
-            {t("share.max_views")}
-          </span>
-          <Segmented
-            name="maxViews"
-            value={maxViews}
-            choices={[
-              ["1", t("share.views_1")],
-              ["unlimited", t("share.views_unlimited")],
-            ]}
-            disabled={allowOnce ? [] : ["1"]}
-            onChange={setViews}
-          />
-          <small className="hint option-hint" id="share-views-hint" hidden={allowOnce}>
-            {t("share.views_hint")}
-          </small>
-        </div>
-        <details
-          className="disclosure"
-          onToggle={(event) => {
-            const details = event.currentTarget as HTMLDetailsElement;
-            if (details.open) details.scrollIntoView({ block: "start", behavior: "smooth" });
-          }}
+        <div
+          className="share-group"
+          id="share-fields"
+          role="group"
+          aria-label={t("share.contents")}
         >
-          <summary>
-            <span>{t("share.protection")}</span>
-            <span className="disclosure-state">{protections.join(" · ")}</span>
-          </summary>
-          <div className="stack">
-            {emailAccess && (
-              <fieldset className="choice-group">
-                <legend>{t("share.access")}</legend>
-                <Segmented
-                  name="access"
-                  value={access}
-                  choices={[
-                    ["anyone", t("share.access_anyone")],
-                    ["emails", t("share.access_emails")],
-                  ]}
-                  onChange={setAccess}
-                />
-              </fieldset>
-            )}
-            <div className="form-field" id="share-recipients-field" hidden={!restricted}>
-              <span className="field-label">
-                <span>{t("share.recipients_label")}</span>
-                <span className="counter">
-                  {recipients.length}/{MAX_SHARE_RECIPIENTS}
-                </span>
-              </span>
+          {parts.map((part) => {
+            const on = !excluded.has(part.key);
+            return (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={on}
+                key={part.key}
+                className="share-part"
+                onClick={() => togglePart(part.key)}
+              >
+                <Icon name={part.icon} className="share-part-icon" />
+                <span className="share-part-label">{part.label}</span>
+                {part.key === "totp" && (
+                  <span
+                    id="share-totp-hint"
+                    className="share-part-warn"
+                    title={t("share.totp_hint")}
+                  >
+                    <Icon name="alert" />
+                  </span>
+                )}
+                <span className="share-part-value">{part.value}</span>
+                <span className="share-check">{on && <Icon name="check" />}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="share-group">
+          <SettingRow icon="clock" label={t("share.expires_in")}>
+            <Picker
+              name="ttl"
+              value={ttl}
+              choices={TTL_CHOICES.map(([value, label]) => [value, t(label)])}
+              onChange={setTtl}
+            />
+          </SettingRow>
+          <SettingRow icon="eye" label={t("share.max_views")}>
+            <Picker
+              name="maxViews"
+              value={maxViews}
+              title={allowOnce ? undefined : t("share.views_hint")}
+              choices={[
+                ["1", t("share.views_1")],
+                ["unlimited", t("share.views_unlimited")],
+              ]}
+              disabled={allowOnce ? [] : ["1"]}
+              onChange={setViews}
+            />
+          </SettingRow>
+          {emailAccess && (
+            <SettingRow icon="users" label={t("share.access")}>
+              <Picker
+                name="access"
+                value={access}
+                choices={[
+                  ["anyone", t("share.access_anyone")],
+                  ["emails", t("share.access_emails")],
+                ]}
+                onChange={(next) => {
+                  setAccess(next);
+                  if (next === "emails") setTimeout(() => entry.current?.focus());
+                }}
+              />
+            </SettingRow>
+          )}
+          {restricted && (
+            <div className="setting-extra" id="share-recipients-field">
               <div
                 className="chip-input"
                 id="share-recipients"
@@ -358,7 +356,8 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                 }}
               >
                 {recipients.map((email) => (
-                  <Chip icon="mail" text={email} key={email}>
+                  <span className="chip" key={email}>
+                    <span className="chip-text">{email}</span>
                     <IconButton
                       icon="close"
                       label={t("share.remove_recipient", { email })}
@@ -367,7 +366,7 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                         entry.current?.focus();
                       }}
                     />
-                  </Chip>
+                  </span>
                 ))}
                 <input
                   id="share-recipient-entry"
@@ -375,7 +374,6 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                   type="email"
                   autoComplete="off"
                   placeholder={t("share.recipients_placeholder")}
-                  title={t("share.recipients_label")}
                   aria-label={t("share.recipients_label")}
                   disabled={recipients.length >= MAX_SHARE_RECIPIENTS}
                   onKeyDown={(event) => {
@@ -394,26 +392,39 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                   onPaste={() => setTimeout(commitEntry)}
                 />
               </div>
-              <small className={recipientsHint ? "hint warn-text" : "hint"}>
-                {recipientsHint ?? t("share.recipients_hint")}
-              </small>
+              {recipientsHint && <small className="hint warn-text">{recipientsHint}</small>}
             </div>
-            <label>
-              <span>{t("share.passphrase")}</span>
+          )}
+          <SettingRow icon="lock" label={t("share.passphrase")}>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              name="locked"
+              checked={locked}
+              title={t("share.passphrase_hint")}
+              onChange={(event) => setLocked(event.currentTarget.checked)}
+            />
+          </SettingRow>
+          {locked && (
+            <div className="setting-extra">
               <input
                 name="passphrase"
                 type="text"
                 autoComplete="off"
-                placeholder={t("share.passphrase_placeholder")}
+                autoFocus
+                aria-label={t("share.passphrase")}
+                placeholder={t("share.passphrase")}
                 value={passphrase}
                 onInput={(event) => setPassphrase((event.currentTarget as HTMLInputElement).value)}
               />
-              <small className="hint">{t("share.passphrase_hint")}</small>
-            </label>
-          </div>
-        </details>
+            </div>
+          )}
+        </div>
+
         <div className="share-footer">
-          <button className="primary" type="submit">
+          <button className="primary" type="submit" disabled={included.length === 0}>
+            <Icon name="link" />
             {t("share.create")}
           </button>
         </div>
@@ -424,30 +435,41 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
             <Icon name="check" />
           </span>
           <h2>{t("share.ready")}</h2>
-          <p className="hint">{result?.note}</p>
         </div>
-        <input
-          id="share-url"
-          className="link-box"
-          readOnly
-          value={result?.url ?? ""}
-          title={t("share.link")}
-          aria-label={t("share.link")}
-        />
-        <button
-          className="primary"
-          onClick={() => {
-            if (result) void copy(result.url, t("share.link").toLowerCase());
-          }}
-        >
-          {t("share.copy_link")}
-        </button>
-        {result?.passphrase && (
-          <p className="notice">
-            <Icon name="lock" />
-            <span>{t("share.result_note_passphrase")}</span>
-          </p>
-        )}
+        <div className="link-field">
+          <input
+            id="share-url"
+            className="link-box"
+            readOnly
+            value={result?.url ?? ""}
+            aria-label={t("share.link")}
+            onFocus={(event) => event.currentTarget.select()}
+          />
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              if (result) void copy(result.url, t("share.link").toLowerCase());
+            }}
+          >
+            <Icon name="copy" />
+            {t("share.copy_link")}
+          </button>
+        </div>
+        <ul className="link-meta">
+          {result?.meta.map(([icon, text]) => (
+            <li key={text}>
+              <Icon name={icon} />
+              {text}
+            </li>
+          ))}
+          {result?.passphrase && (
+            <li className="warn" title={t("share.result_note_passphrase")}>
+              <Icon name="lock" />
+              {t("share.passphrase")}
+            </li>
+          )}
+        </ul>
         <div className="screen-footer">
           <button type="button" className="link quiet" onClick={() => openSettings("data")}>
             {t("share.manage")}

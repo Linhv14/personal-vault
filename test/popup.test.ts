@@ -428,11 +428,14 @@ describe("extension popup", () => {
     expect(server.received.join("\n")).not.toContain(fragment);
   });
 
-  it("shares the website, username, password and 2FA, never the note", async () => {
+  it("shares the website, username, password and 2FA, and leaves the note out unless picked", async () => {
     await openShareScreen();
     expect(el("share-fields").textContent).toContain("2FA code");
-    expect(el("share-fields").textContent).not.toContain("Note");
-    expect(el("share-totp-hint").hidden).toBe(false);
+    const note = [...el("share-fields").querySelectorAll("[role=checkbox]")].find((row) =>
+      row.textContent?.includes("Note"),
+    );
+    if (note) expect(note.getAttribute("aria-checked")).toBe("false");
+    expect(document.getElementById("share-totp-hint")).not.toBeNull();
 
     server.shareRequests.length = 0;
     el<HTMLFormElement>("form-share").dispatchEvent(
@@ -451,8 +454,10 @@ describe("extension popup", () => {
   it("keeps a link for several recipients open until it expires", async () => {
     server.emailVerification = true;
     await openShareScreen();
-    el("form-share").querySelector<HTMLInputElement>('[name="access"][value="emails"]')!.click();
-    expect(el("share-recipients-field").hidden).toBe(false);
+    const access = el("form-share").querySelector<HTMLSelectElement>('[name="access"]')!;
+    access.value = "emails";
+    access.dispatchEvent(new Event("change", { bubbles: true }));
+    await waitFor(() => document.getElementById("share-recipients-field") !== null, "recipients");
 
     const entry = el<HTMLInputElement>("share-recipient-entry");
     entry.value = "a@example.com, b@example.com not-an-email";
@@ -462,9 +467,9 @@ describe("extension popup", () => {
     expect(entry.value).toBe("not-an-email");
     expect(el("share-recipients").getAttribute("aria-invalid")).toBe("true");
 
-    const once = el("form-share").querySelector<HTMLInputElement>('[name="maxViews"][value="1"]')!;
-    expect(once.disabled).toBe(true);
-    expect(el("share-views-hint").hidden).toBe(false);
+    const views = el("form-share").querySelector<HTMLSelectElement>('[name="maxViews"]')!;
+    expect(views.querySelector<HTMLOptionElement>('option[value="1"]')!.disabled).toBe(true);
+    expect(views.value).toBe("unlimited");
 
     entry.value = "";
     server.shareRequests.length = 0;
