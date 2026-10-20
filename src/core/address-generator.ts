@@ -125,7 +125,6 @@ const VN_GIVEN = [
   "Hương",
   "Khoa",
   "Lan",
-  "Linh",
   "Long",
   "Mai",
   "Nam",
