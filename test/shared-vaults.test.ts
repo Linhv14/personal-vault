@@ -81,7 +81,7 @@ describe("shared vaults", () => {
       expect.objectContaining({
         id: sharedVaultId(ORG, TEAM),
         name: "Home",
-        shared: { orgName: "Family", rekeyNeeded: false },
+        shared: { orgName: "Family", rekeyNeeded: false, viewOnly: false },
       }),
     ]);
     expect(items).toEqual([

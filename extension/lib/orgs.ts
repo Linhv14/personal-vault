@@ -10,6 +10,7 @@ import {
   type AuditEvent,
   type InvitableRole,
   type OrgRole,
+  type TeamAccess,
   type TeamView,
 } from "../../src/core/org-model.js";
 import type { Bytes } from "../../src/core/bytes.js";
@@ -18,7 +19,7 @@ import { request } from "./api.js";
 import { getLocal } from "./storage.js";
 
 export { isOrgAdmin, planLimits } from "../../src/core/org-model.js";
-export type { AuditEvent, OrgRole } from "../../src/core/org-model.js";
+export type { AuditEvent, OrgRole, TeamAccess } from "../../src/core/org-model.js";
 export type Team = TeamView;
 
 export interface OrgSummary {
@@ -58,7 +59,7 @@ export interface TeamProjects {
     createdAt: number;
     secretCount: number;
     updatedAt: number;
-    readers?: string[];
+    protectedEnvironments?: string[];
   }[];
 }
 
@@ -180,6 +181,7 @@ export async function addTeamMember(
   team: Team,
   member: OrgMember,
   me: Identity,
+  access: TeamAccess = "edit",
 ): Promise<void> {
   if (!member.publicKey) throw new Error("member has no key yet");
   const key = await teamKey(team, me);
@@ -190,7 +192,19 @@ export async function addTeamMember(
   );
   await request(`/api/orgs/${orgId}/teams/${team.id}/members/${member.accountId}`, {
     method: "PUT",
-    body: json({ wrappedKey, generation: team.generation }),
+    body: json({ wrappedKey, generation: team.generation, access }),
+  });
+}
+
+export async function setTeamAccess(
+  orgId: string,
+  teamId: string,
+  accountId: string,
+  access: TeamAccess,
+): Promise<void> {
+  await request(`/api/orgs/${orgId}/teams/${teamId}/members/${accountId}/access`, {
+    method: "PUT",
+    body: json({ access }),
   });
 }
 

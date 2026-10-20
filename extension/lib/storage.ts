@@ -56,6 +56,7 @@ export interface CachedSharedVault {
   name: string;
   generation: number;
   rekeyNeeded: boolean;
+  viewOnly?: boolean;
   wrappedKey: { ephemeralPublicKey: string; sealed: SealedData };
   items: { id: string; sealed: SealedData; updatedAt: number; updatedBy: string }[];
 }

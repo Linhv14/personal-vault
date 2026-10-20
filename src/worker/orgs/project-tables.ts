@@ -6,7 +6,7 @@ export interface ProjectRecord {
   createdAt: number;
   secretCount: number;
   updatedAt: number;
-  readers: string[];
+  protectedEnvironments: string[];
 }
 
 export interface SecretRecord {
@@ -83,6 +83,11 @@ export class ProjectTables {
         account_id TEXT NOT NULL,
         PRIMARY KEY (project_id, account_id)
       );
+      CREATE TABLE IF NOT EXISTS protected_environments (
+        project_id TEXT NOT NULL,
+        environment_id TEXT NOT NULL,
+        PRIMARY KEY (project_id, environment_id)
+      );
     `);
   }
 
@@ -98,15 +103,15 @@ export class ProjectTables {
   }
 
   ofTeam(teamId: string): ProjectRecord[] {
-    const readers = new Map<string, string[]>();
+    const guarded = new Map<string, string[]>();
     for (const row of this.sql
-      .exec<{ project_id: string; account_id: string }>(
-        `SELECT r.project_id, r.account_id FROM project_readers r
-           JOIN projects p ON p.id = r.project_id WHERE p.team_id = ?`,
+      .exec<{ project_id: string; environment_id: string }>(
+        `SELECT g.project_id, g.environment_id FROM protected_environments g
+           JOIN projects p ON p.id = g.project_id WHERE p.team_id = ?`,
         teamId,
       )
       .toArray()) {
-      readers.set(row.project_id, [...(readers.get(row.project_id) ?? []), row.account_id]);
+      guarded.set(row.project_id, [...(guarded.get(row.project_id) ?? []), row.environment_id]);
     }
     return this.sql
       .exec<{
@@ -128,44 +133,36 @@ export class ProjectTables {
         createdAt: row.created_at,
         secretCount: row.secret_count,
         updatedAt: Math.max(row.updated_at ?? 0, row.created_at),
-        readers: readers.get(row.id) ?? [],
+        protectedEnvironments: guarded.get(row.id) ?? [],
       }));
   }
 
-  isReader(projectId: string, accountId: string): boolean {
+  isProtected(projectId: string, environmentId: string): boolean {
     return (
       this.sql
         .exec(
-          "SELECT 1 FROM project_readers WHERE project_id = ? AND account_id = ?",
+          "SELECT 1 FROM protected_environments WHERE project_id = ? AND environment_id = ?",
           projectId,
-          accountId,
+          environmentId,
         )
         .toArray().length > 0
     );
   }
 
-  setReaders(projectId: string, accountIds: string[]): void {
-    this.sql.exec("DELETE FROM project_readers WHERE project_id = ?", projectId);
-    for (const accountId of accountIds) {
+  protect(projectId: string, environmentId: string, on: boolean): void {
+    if (on) {
       this.sql.exec(
-        "INSERT INTO project_readers (project_id, account_id) VALUES (?, ?)",
+        "INSERT OR IGNORE INTO protected_environments (project_id, environment_id) VALUES (?, ?)",
         projectId,
-        accountId,
+        environmentId,
+      );
+    } else {
+      this.sql.exec(
+        "DELETE FROM protected_environments WHERE project_id = ? AND environment_id = ?",
+        projectId,
+        environmentId,
       );
     }
-  }
-
-  dropReader(accountId: string, teamId?: string): void {
-    if (teamId === undefined) {
-      this.sql.exec("DELETE FROM project_readers WHERE account_id = ?", accountId);
-      return;
-    }
-    this.sql.exec(
-      `DELETE FROM project_readers WHERE account_id = ?
-         AND project_id IN (SELECT id FROM projects WHERE team_id = ?)`,
-      accountId,
-      teamId,
-    );
   }
 
   insert(teamId: string, id: string, sealed: SealedData, by: string, at: number): void {
@@ -189,7 +186,7 @@ export class ProjectTables {
       id,
     );
     this.sql.exec("DELETE FROM secrets WHERE project_id = ?", id);
-    this.sql.exec("DELETE FROM project_readers WHERE project_id = ?", id);
+    this.sql.exec("DELETE FROM protected_environments WHERE project_id = ?", id);
     this.sql.exec("DELETE FROM projects WHERE id = ?", id);
   }
 
@@ -200,7 +197,7 @@ export class ProjectTables {
       teamId,
     );
     this.sql.exec(
-      "DELETE FROM project_readers WHERE project_id IN (SELECT id FROM projects WHERE team_id = ?)",
+      "DELETE FROM protected_environments WHERE project_id IN (SELECT id FROM projects WHERE team_id = ?)",
       teamId,
     );
     this.sql.exec("DELETE FROM projects WHERE team_id = ?", teamId);

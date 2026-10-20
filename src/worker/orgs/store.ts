@@ -8,6 +8,7 @@ import {
   type AuditEvent,
   type OrgRole,
   type Principal,
+  type TeamAccess,
   type TeamView,
   type WrappedKey,
 } from "../../core/org-model.js";
@@ -79,6 +80,7 @@ export class OrgStore extends DurableObject<Env> {
       );
     `);
     this.addColumn("teams", "key_generation INTEGER NOT NULL DEFAULT 0");
+    this.addColumn("team_members", "access TEXT NOT NULL DEFAULT 'edit'");
     this.projects = new ProjectTables(this.sql);
     this.links = new LinkTables(this.sql);
     this.items = new ItemTables(this.sql);
@@ -147,7 +149,6 @@ export class OrgStore extends DurableObject<Env> {
       }
       this.sql.exec("DELETE FROM team_members WHERE account_id = ?", accountId);
       this.sql.exec("DELETE FROM members WHERE account_id = ?", accountId);
-      this.projects.dropReader(accountId);
     });
     await this.record(actor, "member.removed", accountId, ip);
   }
@@ -164,8 +165,8 @@ export class OrgStore extends DurableObject<Env> {
       )
       .toArray();
     const memberships = this.sql
-      .exec<{ team_id: string; account_id: string; wrapped_key: string }>(
-        "SELECT team_id, account_id, wrapped_key FROM team_members",
+      .exec<{ team_id: string; account_id: string; wrapped_key: string; access: TeamAccess }>(
+        "SELECT team_id, account_id, wrapped_key, access FROM team_members",
       )
       .toArray();
     const visible = teams.filter(
@@ -183,6 +184,9 @@ export class OrgStore extends DurableObject<Env> {
           id: team.id,
           name: team.name,
           members: members.map((entry) => entry.account_id),
+          viewers: members
+            .filter((entry) => entry.access === "view")
+            .map((entry) => entry.account_id),
           generation: team.key_generation,
           rekeyNeeded: team.rekey_needed === 1,
           wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
@@ -275,7 +279,12 @@ export class OrgStore extends DurableObject<Env> {
   async addTeamMember(
     principal: Principal,
     teamId: string,
-    member: { accountId: string; wrappedKey: WrappedKey; generation: number },
+    member: {
+      accountId: string;
+      wrappedKey: WrappedKey;
+      generation: number;
+      access?: TeamAccess;
+    },
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
@@ -289,14 +298,18 @@ export class OrgStore extends DurableObject<Env> {
     if (!this.role(member.accountId)) return fail(404, "orgs.not_found");
     if (member.generation !== generation) return fail(409, "orgs.stale_team_key");
     this.sql.exec(
-      `INSERT INTO team_members (team_id, account_id, wrapped_key, added_by, added_at) VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO team_members (team_id, account_id, wrapped_key, added_by, added_at, access)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(team_id, account_id) DO UPDATE SET wrapped_key = excluded.wrapped_key,
-         added_by = excluded.added_by, added_at = excluded.added_at`,
+         added_by = excluded.added_by, added_at = excluded.added_at,
+         access = CASE WHEN ? IS NULL THEN team_members.access ELSE excluded.access END`,
       teamId,
       member.accountId,
       JSON.stringify(member.wrappedKey),
       principal.accountId,
       now(),
+      member.access ?? "edit",
+      member.access ?? null,
     );
     await this.record(
       principal.accountId,
@@ -323,7 +336,6 @@ export class OrgStore extends DurableObject<Env> {
         teamId,
         accountId,
       );
-      this.projects.dropReader(accountId, teamId);
       this.sql.exec("UPDATE teams SET rekey_needed = 1 WHERE id = ?", teamId);
     });
     await this.record(principal.accountId, "team.member_removed", `${teamId}:${accountId}`, ip);
@@ -439,30 +451,79 @@ export class OrgStore extends DurableObject<Env> {
     return access;
   }
 
-  private readOnly(principal: Principal, projectId: string): boolean {
-    return !isOrgAdmin(principal.role) && this.projects.isReader(projectId, principal.accountId);
+  private viewer(teamId: string, accountId: string): boolean {
+    return (
+      this.sql
+        .exec(
+          "SELECT 1 FROM team_members WHERE team_id = ? AND account_id = ? AND access = 'view'",
+          teamId,
+          accountId,
+        )
+        .toArray().length > 0
+    );
   }
 
-  async setProjectReaders(
+  private refusedEdit(
+    principal: Principal,
+    teamId: string,
+    projectId: string | null,
+    environmentIds: Iterable<string>,
+  ) {
+    if (isOrgAdmin(principal.role)) return null;
+    if (this.viewer(teamId, principal.accountId)) return fail<never>(403, "orgs.read_only");
+    if (projectId === null) return null;
+    for (const environmentId of environmentIds) {
+      if (this.projects.isProtected(projectId, environmentId)) {
+        return fail<never>(403, "orgs.protected_environment");
+      }
+    }
+    return null;
+  }
+
+  async protectEnvironment(
     principal: Principal,
     teamId: string,
     projectId: string,
-    readers: string[],
+    environmentId: string,
+    on: boolean,
     ip: string | null,
-  ): Promise<Result<{ readers: string[] }>> {
+  ): Promise<Result<{ ok: true }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
     if (!access.ok) return access;
-    const unique = [...new Set(readers)];
-    if (
-      !unique.every(
-        (accountId) => this.inTeam(teamId, accountId) && this.role(accountId) === "member",
-      )
-    ) {
-      return fail(400, "orgs.invalid_reader");
+    this.projects.protect(projectId, environmentId, on);
+    await this.record(
+      principal.accountId,
+      on ? "environment.protected" : "environment.unprotected",
+      `${projectId}:${environmentId}`,
+      ip,
+    );
+    return ok({ ok: true as const });
+  }
+
+  async setTeamAccess(
+    principal: Principal,
+    teamId: string,
+    accountId: string,
+    access: TeamAccess,
+    ip: string | null,
+  ): Promise<Result<{ ok: true }>> {
+    if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
     }
-    this.projects.setReaders(projectId, unique);
-    await this.record(principal.accountId, "project.readers_changed", `${teamId}:${projectId}`, ip);
-    return ok({ readers: unique });
+    if (!this.inTeam(teamId, accountId)) return fail(404, "orgs.not_found");
+    this.sql.exec(
+      "UPDATE team_members SET access = ? WHERE team_id = ? AND account_id = ?",
+      access,
+      teamId,
+      accountId,
+    );
+    await this.record(
+      principal.accountId,
+      access === "view" ? "team.member_view_only" : "team.member_can_edit",
+      `${teamId}:${accountId}`,
+      ip,
+    );
+    return ok({ ok: true as const });
   }
 
   async listProjects(
@@ -602,8 +663,14 @@ export class OrgStore extends DurableObject<Env> {
   ): Promise<Result<{ ids: string[] }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
     if (!access.ok) return access;
-    if (this.readOnly(principal, projectId)) return fail(403, "orgs.read_only");
-    const refused = this.writable(access.value, batch.generation);
+    const refused =
+      this.writable(access.value, batch.generation) ??
+      this.refusedEdit(
+        principal,
+        teamId,
+        projectId,
+        new Set(batch.secrets.map((secret) => secret.environmentId)),
+      );
     if (refused) return refused;
     if (new Set(batch.secrets.map((secret) => secret.id)).size !== batch.secrets.length) {
       return fail(400, "orgs.invalid_secret");
@@ -643,11 +710,17 @@ export class OrgStore extends DurableObject<Env> {
   ): Promise<Result<{ deleted: number }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
     if (!access.ok) return access;
-    if (this.readOnly(principal, projectId)) return fail(403, "orgs.read_only");
     const found = ids
       .map((id) => ({ id, location: this.projects.secretLocation(id) }))
       .filter(({ location }) => location?.projectId === projectId);
     if (found.length === 0) return fail(404, "orgs.not_found");
+    const refused = this.refusedEdit(
+      principal,
+      teamId,
+      projectId,
+      new Set(found.map(({ location }) => location!.environmentId)),
+    );
+    if (refused) return refused;
     this.ctx.storage.transactionSync(() => {
       for (const { id } of found) this.projects.deleteSecret(id);
     });
@@ -797,6 +870,7 @@ export class OrgStore extends DurableObject<Env> {
         name: string;
         generation: number;
         rekeyNeeded: boolean;
+        viewOnly: boolean;
         wrappedKey: WrappedKey;
         items: TeamItemRecord[];
       }[]
@@ -810,8 +884,9 @@ export class OrgStore extends DurableObject<Env> {
         key_generation: number;
         rekey_needed: number;
         wrapped_key: string;
+        access: TeamAccess;
       }>(
-        `SELECT t.id, t.name, t.key_generation, t.rekey_needed, m.wrapped_key
+        `SELECT t.id, t.name, t.key_generation, t.rekey_needed, m.wrapped_key, m.access
            FROM teams t JOIN team_members m ON m.team_id = t.id
           WHERE m.account_id = ? ORDER BY t.created_at`,
         principal.accountId,
@@ -823,6 +898,7 @@ export class OrgStore extends DurableObject<Env> {
         name: row.name,
         generation: row.key_generation,
         rekeyNeeded: row.rekey_needed === 1,
+        viewOnly: row.access === "view" && !isOrgAdmin(principal.role),
         wrappedKey: JSON.parse(row.wrapped_key) as WrappedKey,
         items: this.items.ofTeam(row.id),
       })),
@@ -837,7 +913,8 @@ export class OrgStore extends DurableObject<Env> {
   ): Promise<Result<{ updatedAt: number }>> {
     const access = this.teamAccess(principal, teamId, false);
     if (!access.ok) return access;
-    const refused = this.writable(access.value, item.generation);
+    const refused =
+      this.writable(access.value, item.generation) ?? this.refusedEdit(principal, teamId, null, []);
     if (refused) return refused;
     const owner = this.items.teamOf(item.id);
     if (owner !== null && owner !== teamId) return fail(409, "orgs.invalid_item");
@@ -863,6 +940,8 @@ export class OrgStore extends DurableObject<Env> {
     const access = this.teamAccess(principal, teamId, false);
     if (!access.ok) return access;
     if (this.items.teamOf(itemId) !== teamId) return fail(404, "orgs.not_found");
+    const refused = this.refusedEdit(principal, teamId, null, []);
+    if (refused) return refused;
     this.items.remove(itemId);
     await this.record(principal.accountId, "team.item_deleted", teamId, ip);
     return ok({ ok: true as const });

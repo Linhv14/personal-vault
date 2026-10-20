@@ -6,6 +6,7 @@ import {
   isDomainAllowed,
   isInvitableRole,
   isOrgAdmin,
+  isTeamAccess,
   parseDomains,
   planLimits,
 } from "../../core/org-model.js";
@@ -267,14 +268,36 @@ orgs.delete(
 orgs.put(
   "/:orgId/teams/:teamId/members/:accountId",
   asMember(async (c, member, orgId) => {
-    const { wrappedKey, generation = 0 } = await readJson(c);
-    if (!isWrappedKey(wrappedKey) || !isGeneration(generation)) {
+    const { wrappedKey, generation = 0, access } = await readJson(c);
+    if (
+      !isWrappedKey(wrappedKey) ||
+      !isGeneration(generation) ||
+      (access !== undefined && !isTeamAccess(access))
+    ) {
       return c.json(apiError("orgs.invalid_team"), 400);
     }
-    const target = { accountId: param(c, "accountId"), wrappedKey, generation };
+    const target = { accountId: param(c, "accountId"), wrappedKey, generation, access };
     return respond(
       c,
       await orgStore(c.env, orgId).addTeamMember(member, param(c, "teamId"), target, clientIp(c)),
+    );
+  }),
+);
+
+orgs.put(
+  "/:orgId/teams/:teamId/members/:accountId/access",
+  asMember(async (c, member, orgId) => {
+    const { access } = await readJson(c);
+    if (!isTeamAccess(access)) return c.json(apiError("orgs.invalid_team"), 400);
+    return respond(
+      c,
+      await orgStore(c.env, orgId).setTeamAccess(
+        member,
+        param(c, "teamId"),
+        param(c, "accountId"),
+        access,
+        clientIp(c),
+      ),
     );
   }),
 );

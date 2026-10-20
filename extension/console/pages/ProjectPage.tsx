@@ -22,7 +22,7 @@ import {
   noteAccess,
   saveSecret,
   saveSecrets,
-  setProjectReaders,
+  protectEnvironment,
   upgradeLegacySecrets,
   updateProject,
   type Secret,
@@ -44,7 +44,6 @@ import {
 import { attempt, pending$, toast, useConsole } from "../data.js";
 import { href, navigate } from "../router.js";
 import {
-  AccessDialog,
   AddSecretDialog,
   HostsDialog,
   ImportDialog,
@@ -69,7 +68,6 @@ type Modal =
   | { kind: "hosts"; secret: Secret }
   | { kind: "history"; secret: Secret }
   | { kind: "remove-duplicates" }
-  | { kind: "access" }
   | null;
 
 function withHosts(secret: Secret, hosts: string[]) {
@@ -147,11 +145,14 @@ export function ProjectPage({
 
   const owner = team(project.teamId);
   const unlocked = Boolean(owner && !owner.rekeyNeeded);
-  const readOnly =
-    !isOrgAdmin(detail.org.role) && Boolean(me && project.readers.includes(me.accountId));
-  const editable = unlocked && !readOnly;
+  const admin = isOrgAdmin(detail.org.role);
+  const viewer = !admin && Boolean(me && owner?.viewers.includes(me.accountId));
+  const editable = unlocked && !viewer;
+  const guarded = (envId: string) => project.protectedEnvironments.includes(envId);
+  const writable = (envId: string) => editable && (admin || !guarded(envId));
   const canManage = isOrgAdmin(detail.org.role) && unlocked;
   const { environments } = project.content;
+  const writableEnvironments = environments.filter((env) => writable(env.id));
   const environment = environments.find((env) => env.id === environmentId) ?? null;
   const ciTab = environmentId === CI_TAB;
   const tab = (id: string | null) => href(orgId, { page: "project", projectId, environmentId: id });
@@ -218,7 +219,8 @@ export function ProjectPage({
   const duplicates = Object.values(secrets ?? {}).flatMap((list) =>
     [...list]
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .filter((secret, index, sorted) => sorted.findIndex((x) => x.name === secret.name) !== index),
+      .filter((secret, index, sorted) => sorted.findIndex((x) => x.name === secret.name) !== index)
+      .filter((secret) => writable(secret.environmentId)),
   );
   const removeDuplicates = () =>
     void mutate(async () => {
@@ -229,7 +231,13 @@ export function ProjectPage({
       );
     }, "console.duplicates_removed");
   const suggested = all
-    .filter((secret) => !isVariable(secret) && !secret.hosts?.length && secret.value)
+    .filter(
+      (secret) =>
+        writable(secret.environmentId) &&
+        !isVariable(secret) &&
+        !secret.hosts?.length &&
+        secret.value,
+    )
     .map((secret) => ({ secret, hosts: suggestHosts(secret.name, secret.value) }))
     .filter((entry) => entry.hosts.length > 0);
   const suggestedNames = [
@@ -255,7 +263,7 @@ export function ProjectPage({
 
   const actions = (
     <>
-      {editable && (
+      {writableEnvironments.length > 0 && (
         <>
           <button type="button" className="btn" onClick={() => setModal({ kind: "import" })}>
             <Icon name="upload" />
@@ -290,11 +298,24 @@ export function ProjectPage({
               .then(() => toast(t("projects.id_copied")))
           }
         />
-        {canManage && owner && (
+        {canManage && environment && (
           <MenuItem
-            icon="users"
-            label={t("console.access")}
-            onSelect={() => setModal({ kind: "access" })}
+            icon="lock"
+            label={t(
+              guarded(environment.id)
+                ? "console.unprotect_environment"
+                : "console.protect_environment",
+              { env: environment.name },
+            )}
+            onSelect={() =>
+              void run(
+                () => protectEnvironment(orgId, project, environment.id, !guarded(environment.id)),
+                guarded(environment.id)
+                  ? "console.environment_unprotected"
+                  : "console.environment_protected",
+                "org",
+              )
+            }
           />
         )}
         {canManage && (
@@ -357,7 +378,7 @@ export function ProjectPage({
             <span>
               {t("console.secret_count", { count: secrets ? all.length : project.secretCount })}
             </span>
-            {readOnly && <Badge>{t("console.read_only")}</Badge>}
+            {viewer && <Badge>{t("console.access_view")}</Badge>}
           </>
         }
         actions={actions}
@@ -420,6 +441,7 @@ export function ProjectPage({
               aria-selected={environment?.id === env.id}
               key={env.id}
             >
+              {guarded(env.id) && <Icon name="lock" className="tab-lock" />}
               {env.name}
               <span className="tab-count">{secrets?.[env.id]?.length ?? "–"}</span>
               {gap > 0 && (
@@ -473,6 +495,11 @@ export function ProjectPage({
             )}
           </div>
 
+          {environment && guarded(environment.id) && (
+            <p className="alert info">
+              {t(admin ? "console.protected_admin" : "console.protected_member")}
+            </p>
+          )}
           {!secrets ? (
             <SkeletonTable />
           ) : names.length === 0 ? (
@@ -488,7 +515,7 @@ export function ProjectPage({
               <SecretsTable
                 secrets={secrets[environment.id] ?? []}
                 query={query}
-                editable={editable}
+                editable={writable(environment.id)}
                 busyIds={busyIds}
                 onSave={(secret, value, kind) => {
                   setSecrets((current) =>
@@ -537,8 +564,12 @@ export function ProjectPage({
 
       {modal?.kind === "add" && (
         <AddSecretDialog
-          environments={environments}
-          selected={environment ? [environment.id] : environments.map((env) => env.id)}
+          environments={writableEnvironments}
+          selected={
+            environment && writable(environment.id)
+              ? [environment.id]
+              : writableEnvironments.map((env) => env.id)
+          }
           existing={secrets ?? {}}
           onClose={() => setModal(null)}
           onSave={addSecret}
@@ -546,8 +577,12 @@ export function ProjectPage({
       )}
       {modal?.kind === "import" && (
         <ImportDialog
-          environments={environments}
-          environmentId={environment?.id ?? environments[0]?.id ?? ""}
+          environments={writableEnvironments}
+          environmentId={
+            environment && writable(environment.id)
+              ? environment.id
+              : (writableEnvironments[0]?.id ?? "")
+          }
           existing={secrets ?? {}}
           onClose={() => setModal(null)}
           onImport={importText}
@@ -680,27 +715,12 @@ export function ProjectPage({
           }}
         />
       )}
-      {modal?.kind === "access" && owner && (
-        <AccessDialog
-          members={owner.members
-            .map((id) => detail.members.find((member) => member.accountId === id))
-            .filter((member) => member !== undefined)}
-          readers={project.readers}
-          onClose={() => setModal(null)}
-          onSave={(readers) =>
-            void run(async () => {
-              await setProjectReaders(orgId, project, readers);
-              setModal(null);
-            }, "console.access_saved")
-          }
-        />
-      )}
       {modal?.kind === "history" && (
         <SecretHistoryDialog
           orgId={orgId}
           project={project}
           secret={modal.secret}
-          editable={editable}
+          editable={writable(modal.secret.environmentId)}
           onRevealed={() =>
             noteAccess(orgId, project, modal.secret.environmentId, "revealed", modal.secret.id)
           }
@@ -727,13 +747,18 @@ export function ProjectPage({
       {modal?.kind === "hosts" && (
         <HostsDialog
           secret={modal.secret}
-          environmentCount={environments.length}
+          environmentCount={writableEnvironments.length}
           onClose={() => setModal(null)}
           onSave={(hosts, everywhere) => {
             const { secret } = modal;
             setModal(null);
             const targets = everywhere
-              ? all.filter((entry) => entry.name === secret.name && !isVariable(entry))
+              ? all.filter(
+                  (entry) =>
+                    entry.name === secret.name &&
+                    !isVariable(entry) &&
+                    writable(entry.environmentId),
+                )
               : [secret];
             void mutate(
               () =>

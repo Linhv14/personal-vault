@@ -11,10 +11,16 @@ export interface Principal {
   role: OrgRole;
 }
 
+export type TeamAccess = "edit" | "view";
+
+export const isTeamAccess = (value: unknown): value is TeamAccess =>
+  value === "edit" || value === "view";
+
 export interface TeamView {
   id: string;
   name: string;
   members: string[];
+  viewers: string[];
   generation: number;
   rekeyNeeded: boolean;
   wrappedKey: WrappedKey | null;

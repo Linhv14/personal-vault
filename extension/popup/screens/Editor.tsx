@@ -276,7 +276,7 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
                 (org) => (
                   <optgroup label={org} key={org}>
                     {vaults.value
-                      .filter((vault) => vault.shared?.orgName === org)
+                      .filter((vault) => vault.shared?.orgName === org && !vault.shared.viewOnly)
                       .map((vault) => (
                         <option
                           value={vault.id}

@@ -28,7 +28,11 @@ export function sharedVaultDefs(vaults: CachedSharedVault[]): VaultDef[] {
     name: vault.name,
     color: "sky",
     icon: "users",
-    shared: { orgName: vault.orgName, rekeyNeeded: vault.rekeyNeeded },
+    shared: {
+      orgName: vault.orgName,
+      rekeyNeeded: vault.rekeyNeeded,
+      viewOnly: vault.viewOnly === true,
+    },
   }));
 }
 
@@ -43,6 +47,7 @@ function fingerprint(vaults: CachedSharedVault[]): string {
       vault.name,
       vault.generation,
       vault.rekeyNeeded,
+      vault.viewOnly === true,
       vault.items.map((item) => [item.id, item.updatedAt, item.sealed.nonce]),
     ]),
   );

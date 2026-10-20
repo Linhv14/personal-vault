@@ -225,6 +225,26 @@ function Actions({ item }: { item: VaultItem }) {
     );
   }
 
+  const viewOnly = vaults.value.find((vault) => vault.id === vaultOf(item))?.shared?.viewOnly;
+  if (viewOnly) {
+    return (
+      <div className="detail-actions">
+        <button type="button" className="pill" disabled>
+          <Icon name="eye" />
+          {t("vault.view_only")}
+        </button>
+        {itemType(item) === "login" && (
+          <IconButton
+            icon="share"
+            className="pill-icon"
+            label={t("share.title")}
+            onClick={() => void openShare(item)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="detail-actions">
       <button type="button" className="pill" onClick={() => openEditor(item)}>

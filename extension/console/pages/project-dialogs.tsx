@@ -7,10 +7,9 @@ import {
   type SecretKind,
 } from "../../../src/core/projects.js";
 import { suggestHosts } from "../../../src/core/agent-hosts.js";
-import { isOrgAdmin, type OrgMember } from "../../lib/orgs.js";
 import type { Secret } from "../../lib/projects.js";
 import { useT } from "../../ui/i18n.js";
-import { Badge, Dialog, Field } from "../components.js";
+import { Dialog, Field } from "../components.js";
 
 export interface SecretDraft {
   name: string;
@@ -328,58 +327,5 @@ export function KindPicker({
         </button>
       ))}
     </div>
-  );
-}
-
-export function AccessDialog({
-  members,
-  readers,
-  onClose,
-  onSave,
-}: {
-  members: OrgMember[];
-  readers: string[];
-  onClose: () => void;
-  onSave: (readers: string[]) => void;
-}) {
-  const t = useT();
-  const [chosen, setChosen] = useState<string[]>(readers);
-  const toggle = (accountId: string) =>
-    setChosen((current) =>
-      current.includes(accountId)
-        ? current.filter((id) => id !== accountId)
-        : [...current, accountId],
-    );
-  return (
-    <Dialog
-      title={t("console.access_title")}
-      description={t("console.access_hint")}
-      submitLabel={t("projects.save")}
-      onClose={onClose}
-      onSubmit={() => onSave(chosen)}
-    >
-      <ul className="access-list">
-        {members.map((member) => {
-          const admin = isOrgAdmin(member.role);
-          return (
-            <li key={member.accountId}>
-              <span className="access-email">{member.email}</span>
-              {admin ? (
-                <Badge>{t("console.access_admin")}</Badge>
-              ) : (
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={chosen.includes(member.accountId)}
-                    onChange={() => toggle(member.accountId)}
-                  />
-                  {t("console.read_only")}
-                </label>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </Dialog>
   );
 }

@@ -82,26 +82,20 @@ projects.delete(
   ),
 );
 
-const MAX_READERS = 500;
-
 projects.put(
-  "/projects/:projectId/readers",
+  "/projects/:projectId/environments/:environmentId/protection",
   asMember(async (c, member, orgId) => {
-    const { readers } = await readJson(c);
-    if (
-      !Array.isArray(readers) ||
-      readers.length > MAX_READERS ||
-      !readers.every((id) => typeof id === "string" && id.length > 0 && id.length <= 64)
-    ) {
-      return c.json(apiError("orgs.invalid_reader"), 400);
-    }
+    const environmentId = param(c, "environmentId");
+    const { protected: on } = await readJson(c);
+    if (!isEnvironmentId(environmentId) || typeof on !== "boolean") return invalidProject(c);
     return respond(
       c,
-      await orgStore(c.env, orgId).setProjectReaders(
+      await orgStore(c.env, orgId).protectEnvironment(
         member,
         team(c),
         project(c),
-        readers,
+        environmentId,
+        on,
         clientIp(c),
       ),
     );

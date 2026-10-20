@@ -55,17 +55,23 @@ client too old to send them during a re-key makes the server drop the history
 rather than keep values under a key that is being retired. Reading the history
 is written to the activity log; restoring saves the old value as a new change.
 
-### Read-only access
+### View-only members and protected environments
 
-An admin can mark team members read only on a project, from **Access** in the
-project's menu. They still read, copy, export and run with its secrets, and see
-their history, but the Durable Object refuses their writes and deletes with
-`403 orgs.read_only`. Only members can be marked; admins and the owner always
-edit. Leaving the team or the organization clears the mark.
+Each person in a team either **can edit** or **can view**. An admin picks it when
+adding someone to the team and changes it from the team's member list. People
+who can view read, copy, export and run with every secret in the team, see the
+history and use the team vault, but the Durable Object refuses their writes and
+deletes with `403 orgs.read_only`, and the extension shows the team vault as view
+only. The setting belongs to the team, so a large team is managed in one place
+rather than project by project.
 
-This is enforced by the server, not by cryptography: a reader holds the team key
-like everyone else in the team, because reading needs it. Give a project its own
-team when people must not be able to read it at all.
+An admin can also **protect** an environment, usually production, from the
+project's menu. Everyone in the team still reads it; only admins change it, and
+other writes or deletes there fail with `403 orgs.protected_environment`.
+
+Admins and the owner always edit. Both rules are enforced by the server, not by
+cryptography: everyone in a team holds the team key, because reading needs it.
+Put a project in its own team when people must not read it at all.
 
 ### Variables and secrets
 
@@ -148,18 +154,18 @@ invent an item. A team vault holds up to 1,000 items of up to 64 KB each, and
 The Worker and the organization's Durable Object enforce every row; the console
 only hides what a role cannot use.
 
-| Action                                                                 | Owner                | Admin                                                  | Member                                    |
-| ---------------------------------------------------------------------- | -------------------- | ------------------------------------------------------ | ----------------------------------------- |
-| See the organization and its member list                               | yes                  | yes                                                    | yes                                       |
-| See team names                                                         | all                  | all                                                    | own teams                                 |
-| Read and write secrets                                                 | teams they are in    | teams they are in                                      | teams they are in, read only where marked |
-| Read and write team vault items                                        | teams they are in    | teams they are in                                      | teams they are in                         |
-| Create, rename and delete projects and environments, link repositories | teams they are in    | teams they are in                                      | no                                        |
-| Create and delete teams, add and remove team members                   | yes                  | yes (adding needs a seat in the team, to wrap its key) | no                                        |
-| Invite                                                                 | admins and members   | members                                                | no                                        |
-| Remove members                                                         | anyone but the owner | members                                                | themselves (leave)                        |
-| Change roles, transfer ownership, set email domains                    | yes                  | no                                                     | no                                        |
-| Activity log, seat usage, pending invitations                          | yes                  | yes                                                    | no                                        |
+| Action                                                                 | Owner                | Admin                                                  | Member                                                          |
+| ---------------------------------------------------------------------- | -------------------- | ------------------------------------------------------ | --------------------------------------------------------------- |
+| See the organization and its member list                               | yes                  | yes                                                    | yes                                                             |
+| See team names                                                         | all                  | all                                                    | own teams                                                       |
+| Read and write secrets                                                 | teams they are in    | teams they are in                                      | teams they are in, unless view only; protected environments: no |
+| Read and write team vault items                                        | teams they are in    | teams they are in                                      | teams they are in                                               |
+| Create, rename and delete projects and environments, link repositories | teams they are in    | teams they are in                                      | no                                                              |
+| Create and delete teams, add and remove team members                   | yes                  | yes (adding needs a seat in the team, to wrap its key) | no                                                              |
+| Invite                                                                 | admins and members   | members                                                | no                                                              |
+| Remove members                                                         | anyone but the owner | members                                                | themselves (leave)                                              |
+| Change roles, transfer ownership, set email domains                    | yes                  | no                                                     | no                                                              |
+| Activity log, seat usage, pending invitations                          | yes                  | yes                                                    | no                                                              |
 
 Any account can create an organization and owns up to ten
 (`MAX_ORGS_PER_ACCOUNT`). Creating one is an account action, so it sits next to

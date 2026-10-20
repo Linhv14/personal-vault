@@ -35,7 +35,7 @@ export interface VaultDef {
   name: string;
   color: string;
   icon: string;
-  shared?: { orgName: string; rekeyNeeded: boolean };
+  shared?: { orgName: string; rekeyNeeded: boolean; viewOnly?: boolean };
 }
 
 export interface VaultItem {
