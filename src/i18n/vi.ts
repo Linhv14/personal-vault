@@ -104,7 +104,7 @@ export const vi: Catalogue = {
   "setup.mode_create_hint": "Lần đầu dùng 7key? Tạo kho để cất mật khẩu",
   "setup.mode_signin": "Đăng nhập kho có sẵn",
   "setup.mode_signin_hint": "Đã có kho, giờ dùng thêm trên máy này",
-  "setup.hint_create": "Quên mật khẩu chính là không lấy lại được đâu.",
+  "setup.hint_create": "7key không giữ mật khẩu chính. Vào kho rồi nhớ tạo mã khôi phục.",
   "setup.server": "Server",
   "setup.custom_server": "Dùng server riêng",
   "setup.email": "Email",

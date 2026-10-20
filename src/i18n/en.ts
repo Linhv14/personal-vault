@@ -106,7 +106,7 @@ export const en = {
   "setup.mode_create_hint": "First time here: set up where your passwords live",
   "setup.mode_signin": "Sign in to your vault",
   "setup.mode_signin_hint": "Already created one, now using it on this device",
-  "setup.hint_create": "Your master password can't be recovered if you forget it.",
+  "setup.hint_create": "7key never holds your master password. Create a recovery code once you're in.",
   "setup.server": "Server",
   "setup.custom_server": "Use your own server",
   "setup.email": "Email",
