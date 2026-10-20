@@ -6,7 +6,7 @@
  * to maintain.
  */
 
-import { build, type BuildOptions } from "esbuild";
+import { build, transform, type BuildOptions } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.ts";
 import { renderMarkdown } from "./markdown.ts";
 import { pageMarkdown } from "./html-markdown.ts";
@@ -73,6 +73,40 @@ async function logoSvgs(): Promise<{ still: string; animated: string; mark: stri
     logoSvg: (id?: string, animated?: boolean, bare?: boolean) => string;
   };
   return { still: logoSvg(), animated: logoSvg("", true, true), mark: logoSvg("", false, true) };
+}
+
+const assetVersions = new Map<string, string>();
+
+async function assetVersion(file: string): Promise<string> {
+  let version = assetVersions.get(file);
+  if (!version) {
+    const bytes = await readFile(path.join(root, "share", "assets", file));
+    version = createHash("sha256").update(bytes).digest("hex").slice(0, 10);
+    assetVersions.set(file, version);
+  }
+  return version;
+}
+
+async function polishLanding(html: string, lang: "en" | "vi"): Promise<string> {
+  const styled = await replaceAsync(
+    html,
+    /<style>([\s\S]*?)<\/style>/g,
+    async (_, css = "") =>
+      `<style>${(await transform(css, { loader: "css", minify: true })).code.trim()}</style>`,
+  );
+  const versioned = await replaceAsync(
+    styled,
+    /\/assets\/([\w.-]+\.(?:webp|png|jpg|svg|mp4|webm))(?=["'\s)])/g,
+    async (_, file = "") =>
+      existsSync(path.join(root, "share", "assets", file))
+        ? `/assets/${file}?v=${await assetVersion(file)}`
+        : `/assets/${file}`,
+  );
+  const poster = `/assets/demo-poster-${lang}.webp?v=${await assetVersion(`demo-poster-${lang}.webp`)}`;
+  return versioned.replace(
+    "</head>",
+    `  <link rel="preload" as="image" href="${poster}" fetchpriority="high" />\n  </head>`,
+  );
 }
 
 async function iconSvg(): Promise<(name: string) => string> {
@@ -151,7 +185,10 @@ async function buildSharePage() {
   ] as const) {
     await writeFile(
       path.join(outPublic, file),
-      await injectTokens(localizePage(landing, lang), "share/landing.html"),
+      await polishLanding(
+        await injectTokens(localizePage(landing, lang), "share/landing.html"),
+        lang,
+      ),
     );
   }
   await writeFile(

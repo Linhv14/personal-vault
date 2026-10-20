@@ -5,6 +5,7 @@ const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 document.documentElement.classList.add("js");
 pickSystem();
 enableCopy();
+loadVideos();
 
 if (!reduced) {
   revealSections();
@@ -62,15 +63,15 @@ function revealSections(): void {
       ].join(","),
     )
     .filter(belowFold);
-  gsap.set(targets, { autoAlpha: 0, y: 28 });
+  gsap.set(targets, { opacity: 0, y: 28 });
   onView(targets, (batch) =>
-    gsap.to(batch, { autoAlpha: 1, y: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 }),
+    gsap.to(batch, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out", stagger: 0.08 }),
   );
   const chips = gsap.utils.toArray<HTMLElement>(".bento .chip, .bento .mini").filter(belowFold);
-  gsap.set(chips, { autoAlpha: 0, scale: 0.85 });
+  gsap.set(chips, { opacity: 0, scale: 0.85 });
   onView(chips, (batch) =>
     gsap.to(batch, {
-      autoAlpha: 1,
+      opacity: 1,
       scale: 1,
       duration: 0.5,
       delay: 0.35,
@@ -90,13 +91,13 @@ function animateAudienceTabs(): void {
       if (!panel) return;
       gsap.fromTo(
         panel.querySelectorAll(".mock, .benefits li"),
-        { autoAlpha: 0, y: 14 },
-        { autoAlpha: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.05, overwrite: true },
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.05, overwrite: true },
       );
       gsap.fromTo(
         panel.querySelectorAll(".float"),
-        { autoAlpha: 0, scale: 0.9 },
-        { autoAlpha: 1, scale: 1, duration: 0.45, delay: 0.2, ease: "back.out(2)", stagger: 0.1 },
+        { opacity: 0, scale: 0.9 },
+        { opacity: 1, scale: 1, duration: 0.45, delay: 0.2, ease: "back.out(2)", stagger: 0.1 },
       );
     });
   }
@@ -122,6 +123,31 @@ function tickCodes(): void {
       setInterval(step, 1800);
     });
   }
+}
+
+function loadVideos(): void {
+  const videos = [...document.querySelectorAll<HTMLVideoElement>("video[data-lazy-video]")];
+  if (videos.length === 0 || reduced) return;
+  const start = (video: HTMLVideoElement) => {
+    for (const source of video.querySelectorAll<HTMLSourceElement>("source[data-src]")) {
+      source.src = source.dataset.src ?? "";
+      source.removeAttribute("data-src");
+    }
+    video.load();
+    void video.play().catch(() => {});
+  };
+  const watch = () => {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        observer.unobserve(entry.target);
+        start(entry.target as HTMLVideoElement);
+      }
+    });
+    for (const video of videos) observer.observe(video);
+  };
+  if (document.readyState === "complete") watch();
+  else window.addEventListener("load", watch, { once: true });
 }
 
 function animateCounters(): void {
@@ -155,7 +181,7 @@ function typeTerminal(): void {
     .map((line) => `<span class="ln">${line}</span>`)
     .join("\n");
   const lines = gsap.utils.toArray<HTMLElement>(".term .ln");
-  gsap.set(lines, { autoAlpha: 0 });
+  gsap.set(lines, { opacity: 0 });
   const timeline = gsap.timeline({ paused: true, delay: 0.3 });
   for (const line of lines) {
     const command = line.firstElementChild?.classList.contains("t-p") ?? false;
@@ -163,12 +189,12 @@ function typeTerminal(): void {
     if (command && length > 2) {
       timeline.fromTo(
         line,
-        { autoAlpha: 1, clipPath: "inset(0 100% 0 0)" },
+        { opacity: 1, clipPath: "inset(0 100% 0 0)" },
         { clipPath: "inset(0 0% 0 0)", duration: length * 0.018, ease: `steps(${length})` },
         "+=0.15",
       );
     } else {
-      timeline.to(line, { autoAlpha: 1, duration: 0.3, ease: "power1.out" }, "+=0.08");
+      timeline.to(line, { opacity: 1, duration: 0.3, ease: "power1.out" }, "+=0.08");
     }
   }
   onView([code], () => timeline.play(), "0px 0px -20% 0px");

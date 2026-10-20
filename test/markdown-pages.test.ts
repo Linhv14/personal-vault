@@ -47,5 +47,10 @@ describe("markdown negotiation", () => {
     const browser = await worker.fetch("/", { headers: { Accept: "text/html" } });
     expect(browser.headers.get("content-type")).toContain("text/html");
     expect(browser.headers.get("vary")).toContain("Accept");
+    expect(browser.headers.get("content-security-policy")).toContain(
+      "https://static.cloudflareinsights.com",
+    );
+    const share = await worker.fetch("/s/abc");
+    expect(share.headers.get("content-security-policy")).not.toContain("cloudflareinsights");
   });
 });

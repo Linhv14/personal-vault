@@ -8,6 +8,9 @@ export const SHARE_PAGE_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
 };
 
+export const PUBLIC_PAGE_CSP =
+  "default-src 'none'; script-src 'self' https://challenges.cloudflare.com https://static.cloudflareinsights.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; connect-src 'self' https://cloudflareinsights.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 export const DEFAULT_SECURITY_CONTACT = "mailto:security@7key.online";
 export const SECURITY_POLICY_URL =
   "https://github.com/Linhv14/personal-vault/blob/main/SECURITY.md";

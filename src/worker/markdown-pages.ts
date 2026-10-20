@@ -1,9 +1,13 @@
 import type { Context } from "hono";
 import { CONTENT_SIGNAL, MARKDOWN_PAGES, wantsMarkdown } from "./markdown-negotiation.js";
+import { PUBLIC_PAGE_CSP } from "./security-headers.js";
 import type { AppBindings } from "./types.js";
 
 function withVary(response: Response): Response {
   const result = new Response(response.body, response);
+  if (result.headers.get("Content-Type")?.includes("text/html")) {
+    result.headers.set("Content-Security-Policy", PUBLIC_PAGE_CSP);
+  }
   const vary = result.headers.get("Vary");
   if (!vary?.toLowerCase().includes("accept")) {
     result.headers.set("Vary", vary ? `${vary}, Accept` : "Accept");

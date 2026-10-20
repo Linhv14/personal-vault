@@ -2521,18 +2521,28 @@
           <div class="browser">
             <div class="chrome"><i></i><i></i><i></i></div>
             <video
-              autoplay
+              data-lazy-video
               muted
               loop
               playsinline
-              preload="metadata"
+              preload="none"
               poster="/assets/demo-poster-en.webp"
               width="1920"
               height="1080"
               aria-label="7key product demo"
             >
-              <source src="/assets/demo-en.webm" type="video/webm" />
-              <source src="/assets/demo-en.mp4" type="video/mp4" />
+              <source
+                data-src="/assets/demo-en-720.webm"
+                media="(max-width: 900px)"
+                type="video/webm"
+              />
+              <source
+                data-src="/assets/demo-en-720.mp4"
+                media="(max-width: 900px)"
+                type="video/mp4"
+              />
+              <source data-src="/assets/demo-en.webm" type="video/webm" />
+              <source data-src="/assets/demo-en.mp4" type="video/mp4" />
             </video>
           </div>
           <p class="strip">
@@ -3416,18 +3426,28 @@
           <div class="browser">
             <div class="chrome"><i></i><i></i><i></i></div>
             <video
-              autoplay
+              data-lazy-video
               muted
               loop
               playsinline
-              preload="metadata"
+              preload="none"
               poster="/assets/demo-poster-vi.webp"
               width="1920"
               height="1080"
               aria-label="Video demo 7key"
             >
-              <source src="/assets/demo-vi.webm" type="video/webm" />
-              <source src="/assets/demo-vi.mp4" type="video/mp4" />
+              <source
+                data-src="/assets/demo-vi-720.webm"
+                media="(max-width: 900px)"
+                type="video/webm"
+              />
+              <source
+                data-src="/assets/demo-vi-720.mp4"
+                media="(max-width: 900px)"
+                type="video/mp4"
+              />
+              <source data-src="/assets/demo-vi.webm" type="video/webm" />
+              <source data-src="/assets/demo-vi.mp4" type="video/mp4" />
             </video>
           </div>
           <p class="strip">
