@@ -75,7 +75,7 @@ function applyStaticText(): void {
     node.placeholder = t(node.dataset.i18nPlaceholder as MessageKey);
   }
   document.documentElement.lang = locale;
-  document.title = t("view.default_title");
+  document.title = `${t("view.default_title")} · 7KEY`;
 }
 
 const shareId = location.pathname.split("/").filter(Boolean).pop() ?? "";

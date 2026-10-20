@@ -32,7 +32,7 @@ function TransferApp() {
   }, []);
 
   useEffect(() => {
-    document.title = `${t("transfer.title")} · 7key`;
+    document.title = `${t("transfer.title")} · 7KEY`;
     document.documentElement.lang = localeSignal.value;
   }, [t]);
 

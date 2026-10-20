@@ -40,7 +40,7 @@ function ExtensionConsole() {
   const t = useT();
   useEffect(() => watchStorage(), []);
   useEffect(() => {
-    document.title = `${t("settings.title")} · 7key`;
+    document.title = `${t("settings.title")} · 7KEY`;
   }, [t]);
 
   const lockNow = async () => {
