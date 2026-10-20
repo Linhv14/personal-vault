@@ -338,10 +338,7 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                   ["anyone", t("share.access_anyone")],
                   ["emails", t("share.access_emails")],
                 ]}
-                onChange={(next) => {
-                  setAccess(next);
-                  if (next === "emails") setTimeout(() => entry.current?.focus());
-                }}
+                onChange={setAccess}
               />
             </SettingRow>
           )}
@@ -412,7 +409,6 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                 name="passphrase"
                 type="text"
                 autoComplete="off"
-                autoFocus
                 aria-label={t("share.passphrase")}
                 placeholder={t("share.passphrase")}
                 value={passphrase}
