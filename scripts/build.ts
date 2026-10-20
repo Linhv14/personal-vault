@@ -9,6 +9,7 @@
 import { build, type BuildOptions } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.ts";
 import { renderMarkdown } from "./markdown.ts";
+import { pageMarkdown } from "./html-markdown.ts";
 import { localizePage } from "./localize-page.ts";
 import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.ts";
 import { spawnSync } from "node:child_process";
@@ -164,6 +165,10 @@ async function buildSharePage() {
       .map((page) => `  <url><loc>${site}${page}</loc></url>`)
       .join("\n")}\n</urlset>\n`,
   );
+  for (const page of ["index", "vi", "privacy", "security"]) {
+    const html = await readFile(path.join(outPublic, `${page}.html`), "utf8");
+    await writeFile(path.join(outPublic, `${page}.md`), pageMarkdown(html, `${site}/`));
+  }
   await cp(path.join(root, "share", "assets"), path.join(outPublic, "assets"), { recursive: true });
   await writeFile(path.join(outPublic, "favicon.svg"), (await logoSvgs()).still);
   await writeFile(path.join(outPublic, "mark.svg"), (await logoSvgs()).mark);

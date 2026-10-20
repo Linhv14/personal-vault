@@ -124,10 +124,13 @@ export async function startWorker({ mailer = false, vars = {} as Record<string, 
   const env = {
     DB: d1.binding,
     ASSETS: {
-      fetch: async () =>
-        new Response("<!doctype html><title>{{origin}}</title>", {
+      fetch: async (input: Request | URL | string) => {
+        const url = new URL(input instanceof Request ? input.url : String(input));
+        if (url.pathname.endsWith(".md")) return new Response(`# ${url.pathname}\n`);
+        return new Response("<!doctype html><title>{{origin}}</title>", {
           headers: { "Content-Type": "text/html" },
-        }),
+        });
+      },
     },
     ANONYMOUS_RATE_LIMITER: allow,
     REGISTRATION_RATE_LIMITER: allow,

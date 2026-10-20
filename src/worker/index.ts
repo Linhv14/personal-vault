@@ -18,6 +18,7 @@ import { clientIp, isOpenRegistration } from "./request.js";
 import { resolveSession, SESSION_IDLE_SECONDS } from "./session.js";
 import { securityTxt, SHARE_PAGE_HEADERS, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import { PAIR_MEMORY_SECONDS } from "./throttle-policy.js";
+import { MARKDOWN_PAGES, servePage } from "./markdown-pages.js";
 import {
   requireHuman,
   TURNSTILE_HEADER,
@@ -198,6 +199,8 @@ app.get("/turnstile", (c) => {
     headers: turnstileFrameHeaders(nonce),
   });
 });
+
+for (const page of Object.keys(MARKDOWN_PAGES)) app.get(page, servePage);
 
 app.get("/.well-known/security.txt", (c) => {
   const url = new URL(c.req.url);
