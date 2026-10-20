@@ -32,6 +32,7 @@ export interface LocalState {
   items?: CachedItem[];
   lastSync?: number;
   unboundItemsMigrated?: boolean;
+  aadBoundAccounts?: string[];
   autofillPromoDismissed?: boolean;
   sharedLinks?: SealedData;
   autoLockMinutes?: number;
@@ -123,6 +124,7 @@ const DEVICE_PREFERENCES = [
   "locale",
   "autoLockMinutes",
   "autofillPromoDismissed",
+  "aadBoundAccounts",
 ] as const satisfies readonly (keyof LocalState)[];
 
 export async function clearAccountData(): Promise<void> {

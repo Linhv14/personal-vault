@@ -8,7 +8,7 @@
  */
 
 import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
-import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
+import { fromBase64, toBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
 import type { StoredPasskey } from "./passkey/authenticator.js";
 import {
@@ -119,8 +119,34 @@ async function openItem(
     };
   } catch (error) {
     if (!allowUnbound) throw error;
-    return { item: await openJson<VaultItem>(key, sealed), unbound: true };
+    const item = await openJson<VaultItem>(key, sealed);
+    if (item.id !== undefined && item.id !== row.id) throw error;
+    return { item, unbound: true };
   }
+}
+
+async function accountTag(apiUrl: string, email: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    utf8Encode(`personal-vault/aad-bound/${apiUrl.replace(/\/+$/, "")}/${email.toLowerCase()}`),
+  );
+  return toBase64(new Uint8Array(digest));
+}
+
+async function unboundItemsAllowed(): Promise<boolean> {
+  const { unboundItemsMigrated = false, aadBoundAccounts = [], apiUrl, email } = await getLocal();
+  if (unboundItemsMigrated) return false;
+  if (!email) return true;
+  if (!aadBoundAccounts.includes(await accountTag(apiUrl ?? "", email))) return true;
+  await setLocal({ unboundItemsMigrated: true });
+  return false;
+}
+
+async function markAccountBound(): Promise<void> {
+  const { aadBoundAccounts = [], apiUrl, email } = await getLocal();
+  const tags = new Set(aadBoundAccounts);
+  if (email) tags.add(await accountTag(apiUrl ?? "", email));
+  await setLocal({ unboundItemsMigrated: true, aadBoundAccounts: [...tags] });
 }
 
 function isLive(row: CachedItem): row is CachedItem & { ciphertext: string; nonce: string } {
@@ -154,14 +180,15 @@ export async function decryptEverything(
   includeTrashed = false,
   includeShared = false,
 ): Promise<{ items: VaultItem[]; system: VaultItem[]; shared: VaultDef[] }> {
-  const { items = [], unboundItemsMigrated = false } = await getLocal();
+  const { items = [] } = await getLocal();
+  const allowUnbound = await unboundItemsAllowed();
   const output: VaultItem[] = [];
   const system: VaultItem[] = [];
 
   for (const row of items) {
     if (!isLive(row)) continue;
     try {
-      const { item } = await openItem(key, row, !unboundItemsMigrated);
+      const { item } = await openItem(key, row, allowUnbound);
       const resolved = { ...item, id: row.id, updatedAt: row.updatedAt };
       if (resolved.system) system.push(resolved);
       else if (!resolved.trashedAt || includeTrashed) output.push(resolved);
@@ -415,9 +442,18 @@ export async function removeItem(id: string, source?: { vault?: string }): Promi
   await removeFrom(source ? locationOf(source.vault) : ((await locate(id)) ?? "personal"), id);
 }
 
-export async function migrateUnboundItems(key: CryptoKey): Promise<number> {
-  const { items = [], unboundItemsMigrated = false } = await getLocal();
-  if (unboundItemsMigrated) return 0;
+let migration: Promise<number> | null = null;
+
+export function migrateUnboundItems(key: CryptoKey): Promise<number> {
+  migration ??= rewriteUnboundItems(key).finally(() => {
+    migration = null;
+  });
+  return migration;
+}
+
+async function rewriteUnboundItems(key: CryptoKey): Promise<number> {
+  if (!(await unboundItemsAllowed())) return 0;
+  const { items = [] } = await getLocal();
 
   let migrated = 0;
   for (const row of items) {
@@ -434,7 +470,7 @@ export async function migrateUnboundItems(key: CryptoKey): Promise<number> {
     migrated++;
   }
 
-  await setLocal({ unboundItemsMigrated: true });
+  await markAccountBound();
   return migrated;
 }
 

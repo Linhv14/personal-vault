@@ -44,6 +44,7 @@ vi.stubGlobal(
 
 const { decryptAll, migrateUnboundItems, saveItem, saveItemPatiently } =
   await import("../extension/lib/vault.js");
+const { clearAccountData } = await import("../extension/lib/storage.js");
 
 const ID_A = "00000000-0000-4000-8000-00000000000a";
 const ID_B = "00000000-0000-4000-8000-00000000000b";
@@ -99,6 +100,43 @@ describe("item binding to its id", () => {
     localArea.set("items", [{ id: ID_A, ...legacy, updatedAt: 3, deletedAt: null }]);
     expect(await decryptAll(key)).toEqual([]);
     expect(await migrateUnboundItems(key)).toBe(0);
+  });
+
+  it("refuses a legacy item whose sealed id is not the id it is stored under", async () => {
+    const legacy = await sealJson(key, { id: ID_A, title: "Old", createdAt: 1, updatedAt: 1 });
+    localArea.set("items", [{ id: ID_B, ...legacy, updatedAt: 1, deletedAt: null }]);
+    expect(await decryptAll(key)).toEqual([]);
+    expect(await migrateUnboundItems(key)).toBe(0);
+    expect(puts).toEqual([]);
+  });
+
+  it("remembers a migrated account after sign-out so the fallback stays off", async () => {
+    localArea.set("email", "me@example.com");
+    const legacy = await sealJson(key, { id: ID_A, title: "Old", createdAt: 1, updatedAt: 1 });
+    localArea.set("items", [{ id: ID_A, ...legacy, updatedAt: 1, deletedAt: null }]);
+    expect(await migrateUnboundItems(key)).toBe(1);
+
+    await clearAccountData();
+    expect(localArea.get("unboundItemsMigrated")).toBeUndefined();
+    localArea.set("apiUrl", "https://vault.test");
+    localArea.set("email", "Me@Example.com");
+    localArea.set("items", [{ id: ID_A, ...legacy, updatedAt: 3, deletedAt: null }]);
+    expect(await decryptAll(key)).toEqual([]);
+    expect(await migrateUnboundItems(key)).toBe(0);
+    expect(localArea.get("unboundItemsMigrated")).toBe(true);
+
+    localArea.set("email", "someone-else@example.com");
+    localArea.delete("unboundItemsMigrated");
+    expect((await decryptAll(key)).map((item) => item.title)).toEqual(["Old"]);
+  });
+
+  it("runs one migration at a time", async () => {
+    const legacy = await sealJson(key, { id: ID_A, title: "Old", createdAt: 1, updatedAt: 1 });
+    localArea.set("items", [{ id: ID_A, ...legacy, updatedAt: 1, deletedAt: null }]);
+    const [first, second] = await Promise.all([migrateUnboundItems(key), migrateUnboundItems(key)]);
+    expect(first).toBe(1);
+    expect(second).toBe(1);
+    expect(puts.map((put) => put.id)).toEqual([ID_A]);
   });
 
   it("keeps trashed items out of normal reads but exposes them for recovery", async () => {
