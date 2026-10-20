@@ -271,6 +271,7 @@ describe("cards typed inside payment frames", () => {
   const frameSender = (frameId: number) => ({
     id: EXTENSION_ID,
     frameId,
+    documentId: `doc-${frameId}`,
     url: "https://js.stripe.com/v3/elements-inner-card.html",
     tab: { id: 7, url: SHOP } as chrome.tabs.Tab,
   });
