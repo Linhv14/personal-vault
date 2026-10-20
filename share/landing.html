@@ -2380,19 +2380,22 @@
             <div class="card term">
               <div class="term-top"><i></i><i></i><i></i><span>~/payments-api</span></div>
               <pre><code><span class="t-p">$ </span>7key link
-<span class="t-o">✓ Acme · payments-api · development</span>
+<span class="t-o">Linked to Acme / Payments API / Development (.7key.json).</span>
+<span class="t-o">.7key.json holds no secrets and can be committed.</span>
 
 <span class="t-p">$ </span>7key run <span class="t-f">--env</span> production <span class="t-f">--</span> npm start
-<span class="t-o">✓ production secrets, for this process only</span>
+<span class="t-o">7key: 3 values from Payments API / Production</span>
+<span class="t-o">&gt; payments-api@1.4.0 start</span>
+<span class="t-o">Listening on :3000</span>
 
 <span class="t-p">$ </span>7key inject <span class="t-f">-i</span> config.tpl <span class="t-f">-o</span> config.yml
-<span class="t-o">  api_key: </span><span class="t-s">{{ 7key:STRIPE_KEY }}</span><span class="t-o"> → real value</span>
-
-<span class="t-p">$ </span>7key secrets
-<span class="t-o">  DATABASE_URL  REDIS_URL  STRIPE_KEY</span>
+<span class="t-o">7key: injected 2 references into config.yml</span>
 
 <span class="t-p">$ </span>7key agent <span class="t-f">--</span> claude
-<span class="t-o">✓ the agent sees placeholders, never values</span>
+<span class="t-o">7key: Payments API / Development for claude</span>
+<span class="t-o">  STRIPE_KEY  → api.stripe.com</span>
+<span class="t-o">Allow? [y/N] </span><span class="t-k">y</span>
+<span class="t-o">7key: used STRIPE_KEY for api.stripe.com</span>
 <span class="t-p">$ </span><span class="cursor"></span></code></pre>
               <div class="term-foot">
                 <span>Install</span><code>npm install -g @7key/cli</code
@@ -3111,19 +3114,22 @@
             <div class="card term">
               <div class="term-top"><i></i><i></i><i></i><span>~/payments-api</span></div>
               <pre><code><span class="t-p">$ </span>7key link
-<span class="t-o">✓ Acme · payments-api · development</span>
+<span class="t-o">Linked to Acme / Payments API / Development (.7key.json).</span>
+<span class="t-o">.7key.json holds no secrets and can be committed.</span>
 
 <span class="t-p">$ </span>7key run <span class="t-f">--env</span> production <span class="t-f">--</span> npm start
-<span class="t-o">✓ secret production, chỉ cho process này</span>
+<span class="t-o">7key: 3 values from Payments API / Production</span>
+<span class="t-o">&gt; payments-api@1.4.0 start</span>
+<span class="t-o">Listening on :3000</span>
 
 <span class="t-p">$ </span>7key inject <span class="t-f">-i</span> config.tpl <span class="t-f">-o</span> config.yml
-<span class="t-o">  api_key: </span><span class="t-s">{{ 7key:STRIPE_KEY }}</span><span class="t-o"> → giá trị thật</span>
-
-<span class="t-p">$ </span>7key secrets
-<span class="t-o">  DATABASE_URL  REDIS_URL  STRIPE_KEY</span>
+<span class="t-o">7key: injected 2 references into config.yml</span>
 
 <span class="t-p">$ </span>7key agent <span class="t-f">--</span> claude
-<span class="t-o">✓ agent chỉ thấy placeholder, không thấy giá trị</span>
+<span class="t-o">7key: Payments API / Development for claude</span>
+<span class="t-o">  STRIPE_KEY  → api.stripe.com</span>
+<span class="t-o">Allow? [y/N] </span><span class="t-k">y</span>
+<span class="t-o">7key: used STRIPE_KEY for api.stripe.com</span>
 <span class="t-p">$ </span><span class="cursor"></span></code></pre>
               <div class="term-foot">
                 <span>Cài đặt</span><code>npm install -g @7key/cli</code
