@@ -1,11 +1,20 @@
 import type { ComponentChildren, JSX } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import type { IconName } from "../../src/ui/icons.js";
 import type { OrgRole } from "../../src/core/org-model.js";
 import { Fingerprint } from "../ui/components/Fingerprint.js";
 import { Icon } from "../ui/components/Icon.js";
 import { localeSignal, useT } from "../ui/i18n.js";
-import { dismissToast, failure$, pending$, refreshing$, toasts$, type ToastKind } from "./data.js";
+import {
+  ConsoleContext,
+  dismissToast,
+  failure$,
+  pending$,
+  refreshing$,
+  toasts$,
+  type ToastKind,
+} from "./data.js";
+import { href as routeHref, location$ } from "./router.js";
 import { ROLE_LABEL } from "./labels.js";
 
 export function Spinner({ size = "sm" }: { size?: "sm" | "md" }) {
@@ -133,7 +142,7 @@ export function PageSkeleton() {
 }
 
 export interface Crumb {
-  label: string;
+  label: ComponentChildren;
   href?: string;
 }
 
@@ -148,11 +157,30 @@ export function PageHeader({
   meta?: ComponentChildren;
   actions?: ComponentChildren;
 }) {
+  const data = useContext(ConsoleContext);
+  const { page } = location$.value.route;
+  const org = data && page !== "invite" && page !== "me" ? data.detail.org : null;
+  const trail: Crumb[] = org
+    ? [
+        {
+          label: (
+            <span className="crumb-org">
+              <span className="org-mark" aria-hidden="true">
+                {[...org.name.trim()][0]?.toUpperCase() ?? "?"}
+              </span>
+              {org.name}
+            </span>
+          ),
+          href: routeHref(org.id, { page: "projects" }),
+        },
+        ...crumbs,
+      ]
+    : crumbs;
   return (
     <header className="page-header">
-      {crumbs.length > 0 && (
+      {trail.length > 0 && (
         <nav className="crumbs" aria-label="Breadcrumb">
-          {crumbs.map((crumb, index) => (
+          {trail.map((crumb, index) => (
             <span key={index}>
               {crumb.href ? <a href={crumb.href}>{crumb.label}</a> : crumb.label}
               <Icon name="chevron" className="crumb-sep" />

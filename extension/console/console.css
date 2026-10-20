@@ -326,7 +326,28 @@ input.mono {
 .crumbs a {
   color: var(--muted);
 }
-.crumbs span {
+.crumbs a:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+.crumb-org {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.org-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.crumbs > span {
   display: inline-flex;
   align-items: center;
 }

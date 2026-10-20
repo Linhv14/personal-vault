@@ -19,7 +19,7 @@ export function SettingsPage() {
 
   return (
     <>
-      <PageHeader title={t("console.settings")} meta={org.name} />
+      <PageHeader title={t("console.settings")} />
 
       {isOrgAdmin(org.role) && (
         <section className="panel">
