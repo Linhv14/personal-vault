@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { htmlToMarkdown, pageMarkdown } from "../scripts/html-markdown.js";
-import { wantsMarkdown } from "../src/worker/markdown-pages.js";
+import { wantsMarkdown } from "../src/worker/markdown-negotiation.js";
 import { startWorker } from "./worker-harness.js";
 
 describe("html to markdown", () => {
