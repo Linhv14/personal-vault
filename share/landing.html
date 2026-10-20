@@ -1052,6 +1052,88 @@
         color: var(--l-muted);
         font-size: 14.5px;
       }
+      .codes-demo {
+        display: block;
+        margin-top: 12px;
+        padding: 10px;
+        border: 1px solid var(--l-line);
+        border-radius: 12px;
+        background: #12100f;
+      }
+      .cd-head {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 8px;
+        color: var(--l-text);
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .cd-head svg {
+        width: 14px;
+        height: 14px;
+        color: var(--l-accent);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+      }
+      .cd-head b {
+        margin-left: auto;
+        color: var(--l-muted);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .cd-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .cd {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        background: rgb(255 255 255 / 0.04);
+        color: var(--l-text);
+        font: 500 12px/1.2 var(--l-mono);
+        transition:
+          color 0.3s,
+          opacity 0.3s;
+      }
+      .cd i {
+        display: grid;
+        place-items: center;
+        flex: none;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--l-line2);
+        border-radius: 50%;
+        color: transparent;
+        transition:
+          background 0.25s,
+          border-color 0.25s,
+          color 0.25s,
+          transform 0.25s;
+      }
+      .cd i svg {
+        width: 10px;
+        height: 10px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 3;
+      }
+      .cd.used {
+        color: var(--l-dim);
+        text-decoration: line-through;
+      }
+      .cd.used i {
+        border-color: var(--l-accent);
+        background: var(--l-accent);
+        color: #1a0d07;
+        transform: scale(1.1);
+      }
       .matrix {
         width: 100%;
         border-collapse: collapse;
@@ -2549,6 +2631,36 @@
                     ></span
                   >
                 </li>
+                <li>
+                  <span class="ic">{{icon:life-buoy}}</span
+                  ><span
+                    ><strong>Backup codes that keep count</strong
+                    ><span
+                      >Save a site&rsquo;s recovery codes, tick each one off as you use it.</span
+                    ><span class="codes-demo" aria-hidden="true"
+                      ><span class="cd-head"
+                        >{{icon:life-buoy}}GitHub<b
+                          ><span data-codes-left>10</span>/10 left</b
+                        ></span
+                      ><span class="cd-grid"
+                        ><span class="cd">4F7K-9QX2<i>{{icon:check}}</i></span
+                        ><span class="cd">M2JD-8RTA<i>{{icon:check}}</i></span
+                        ><span class="cd">Z6PW-3LNE<i>{{icon:check}}</i></span
+                        ><span class="cd">H9CV-5YBQ<i>{{icon:check}}</i></span></span
+                      ></span
+                    ></span
+                  >
+                </li>
+                <li>
+                  <span class="ic">{{icon:mail}}</span
+                  ><span
+                    ><strong>A separate email for each site</strong
+                    ><span
+                      >Sign up as you+shop@gmail.com in one click and see who leaks your
+                      address.</span
+                    ></span
+                  >
+                </li>
               </ul>
             </div>
             <div class="panel" id="p-team" role="region" aria-label="For your team">
@@ -3414,6 +3526,35 @@
                     ><span
                       >Link tự hết hạn, có thể đặt mật khẩu mở link hoặc giới hạn email người
                       nhận.</span
+                    ></span
+                  >
+                </li>
+                <li>
+                  <span class="ic">{{icon:life-buoy}}</span
+                  ><span
+                    ><strong>Mã khôi phục, biết còn bao nhiêu</strong
+                    ><span>Lưu mã dự phòng của từng trang, dùng mã nào thì đánh dấu mã đó.</span
+                    ><span class="codes-demo" aria-hidden="true"
+                      ><span class="cd-head"
+                        >{{icon:life-buoy}}GitHub<b
+                          ><span data-codes-left>10</span>/10 còn lại</b
+                        ></span
+                      ><span class="cd-grid"
+                        ><span class="cd">4F7K-9QX2<i>{{icon:check}}</i></span
+                        ><span class="cd">M2JD-8RTA<i>{{icon:check}}</i></span
+                        ><span class="cd">Z6PW-3LNE<i>{{icon:check}}</i></span
+                        ><span class="cd">H9CV-5YBQ<i>{{icon:check}}</i></span></span
+                      ></span
+                    ></span
+                  >
+                </li>
+                <li>
+                  <span class="ic">{{icon:mail}}</span
+                  ><span
+                    ><strong>Mỗi trang một email riêng</strong
+                    ><span
+                      >Đăng ký bằng ban+shop@gmail.com chỉ với một lần bấm, biết ngay trang nào làm
+                      lộ email.</span
                     ></span
                   >
                 </li>

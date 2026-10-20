@@ -13,6 +13,7 @@ if (!reduced) {
   typeTerminal();
   travelPacket();
   followCursor();
+  tickCodes();
 }
 
 function belowFold(element: Element): boolean {
@@ -97,6 +98,28 @@ function animateAudienceTabs(): void {
         { autoAlpha: 0, scale: 0.9 },
         { autoAlpha: 1, scale: 1, duration: 0.45, delay: 0.2, ease: "back.out(2)", stagger: 0.1 },
       );
+    });
+  }
+}
+
+function tickCodes(): void {
+  for (const demo of document.querySelectorAll<HTMLElement>(".codes-demo")) {
+    const cells = [...demo.querySelectorAll<HTMLElement>(".cd")];
+    const left = demo.querySelector<HTMLElement>("[data-codes-left]");
+    let used = 0;
+    const step = () => {
+      if (used === 2) {
+        used = 0;
+        for (const cell of cells) cell.classList.remove("used");
+      } else {
+        cells[used]?.classList.add("used");
+        used++;
+      }
+      if (left) left.textContent = String(10 - used);
+    };
+    onView([demo], () => {
+      setTimeout(step, 900);
+      setInterval(step, 1800);
     });
   }
 }
