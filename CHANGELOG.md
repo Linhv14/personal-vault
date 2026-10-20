@@ -10,6 +10,18 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Card autofill: payment forms get the 7key menu with your cards shown by brand
+  and last four digits. Picking one fills the name, number, security code and
+  expiry, including separate month and year fields and combined `MM/YY`
+  fields. Fields are recognised from `autocomplete` and from English and
+  Vietnamese labels.
+- Address autofill: address forms fill from address items, matching country,
+  state and province selects by code or name. Address items gain a
+  **Ward or commune** field.
+- Random addresses: the generator's new **Address** mode makes a realistic US
+  or Vietnamese name, address and phone number, with an optional email, to copy
+  field by field or save as an address item. Address forms also offer
+  **Random address** in the autofill menu.
 - Secret history: the console keeps the last five values of each secret, with
   who changed it and when; **History** on a secret's row shows them and
   restores one. Re-keying a team re-encrypts the history too.

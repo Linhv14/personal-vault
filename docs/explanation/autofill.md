@@ -2,9 +2,10 @@
 
 "Autofill and passkeys on websites" adds an icon to login forms, fills a saved
 login on click, generates passwords in sign-up forms, offers to save what you
-type, and handles passkeys (see [Passkeys](passkeys.md)). It is off by default,
-because it is the one feature that runs code inside the pages you visit. Only
-login items take part; cards, addresses and the other types are never offered
+type, and handles passkeys (see [Passkeys](passkeys.md)). It also fills payment
+forms from card items and address forms from address items. It is off by
+default, because it is the one feature that runs code inside the pages you
+visit. Logins, cards and addresses take part; the other types are never offered
 to a page.
 
 ## Picking a login
@@ -128,6 +129,70 @@ already done. A secret that is already saved is not offered again.
 Reading QR codes needs `BarcodeDetector`, which Chrome ships on macOS, ChromeOS
 and Android; elsewhere the link and setup-key paths still work, and the popup's
 scan button remains.
+
+## Cards
+
+A field is a card field when its `autocomplete` token says so (`cc-name`,
+`cc-number`, `cc-exp`, `cc-exp-month`, `cc-exp-year`, `cc-csc`, `cc-type`,
+with or without `section-*`, `billing` or `shipping` in front). Without a
+token, its name, id, label, `aria-label` and placeholder are read in English
+and Vietnamese: "card number" and "số thẻ", "CVV", "CVC" and "mã bảo mật",
+"MM/YY", "expiry" and "ngày hết hạn", "name on card" and "tên chủ thẻ". Plain
+"month" and "year" fields, and selects whose options are 1 to 12 or years,
+count only in a form that already has a card number. A form needs a card
+number before any of its fields is treated as a card field, so a security
+code on a card form is not mistaken for a 2FA code.
+
+The menu lists every card with its brand mark and `•••• 4242`, most recently
+used first. The service worker sends only the item title, brand and last four
+digits; the number, expiry and security code leave it only for the card that
+was clicked. Card numbers and security codes are never logged.
+
+Filling covers the name (split into given and family name when the form asks),
+the number as digits, the security code, the brand on a card-type select, and
+the expiry in whatever shape the form uses: separate month and year inputs or
+selects, two- or four-digit years, or one combined field formatted after its
+placeholder (`MM/YY`, `MM / YY`, `MM/YYYY`, `MM-YY`) and its `maxlength`.
+
+## Addresses
+
+Address fields are recognised the same way, from `name`, `given-name`,
+`family-name`, `email`, `tel`, `organization`, `street-address`,
+`address-line1`, `address-line2`, `address-level1`, `address-level2`,
+`address-level3`, `postal-code`, `country` and `country-name`, or from wording
+such as "địa chỉ", "tỉnh/thành phố", "quận/huyện", "phường/xã", "mã bưu chính"
+and "số điện thoại". The menu appears on a form with at least three such
+fields, one of them part of the postal address, so a newsletter box with only
+an email does not get it. A login form's username field stays a login field.
+
+An address item fills inputs and selects: countries match by code or by name in
+English or Vietnamese, US states by code or name, and Vietnamese provinces,
+districts and wards with or without their "Tỉnh", "Thành phố", "Quận" or
+"Phường" prefix. The first line of the street goes to `address-line1` and the
+rest to `address-line2`; with no ward field, the ward is added to the street.
+Vietnamese names split family name first.
+
+**Random address** at the end of the menu fills a made-up US or Vietnamese
+identity, picked from the country the form already shows, a `.vn` site or a
+Vietnamese page, and otherwise the US. It is generated in the extension and
+works while the vault is locked.
+
+Cards, addresses and random addresses follow the same rules as logins: top
+frame only, https only except on localhost, never on the vault's own server,
+and only on a real click.
+
+## Random addresses in the popup
+
+The generator's **Address** mode makes a realistic identity for sign-ups that
+should not get your real one. A US one has a street number and name, a city, a
+two-letter state, a five-digit ZIP and a `(555)` phone number; a Vietnamese one
+has a house number and street, ward, district, province, a six-digit postal
+code and a `09x xxx xxxx` phone number. Names, streets and places come from
+small lists built into the extension, chosen with `crypto.getRandomValues`;
+nothing is fetched. The email is optional, with a random local part at
+`example.com` or a domain you type. Each row copies on click, the refresh
+button draws a new one, and **Save as address** opens the address editor
+filled in.
 
 ## Replacing the browser's password manager
 

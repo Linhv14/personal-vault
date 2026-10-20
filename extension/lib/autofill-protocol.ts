@@ -1,3 +1,5 @@
+import type { CardBrand } from "./item-types.js";
+
 export const AUTOFILL_SCRIPT_ID = "personal-vault-autofill";
 export const PASSKEY_PAGE_SCRIPT_ID = "personal-vault-passkey-page";
 export const PASSKEY_BRIDGE_SCRIPT_ID = "personal-vault-passkey-bridge";
@@ -8,6 +10,43 @@ export interface Suggestion {
   title: string;
   username?: string;
   vault?: string;
+}
+
+export interface CardSuggestion {
+  id: string;
+  title: string;
+  brand: CardBrand;
+  last4: string;
+  vault?: string;
+}
+
+export interface IdentitySuggestion {
+  id: string;
+  title: string;
+  detail?: string;
+  country?: string;
+  vault?: string;
+}
+
+export interface CardData {
+  cardholder?: string;
+  number: string;
+  expiry?: string;
+  cvv?: string;
+  brand: CardBrand;
+}
+
+export interface AddressData {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  address?: string;
+  ward?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
 }
 
 export interface PendingPrompt {
@@ -38,7 +77,12 @@ export type AutofillRequest =
   | { type: "autofill:totp-found"; text: string }
   | { type: "autofill:totp-save" }
   | { type: "autofill:totp-dismiss" }
-  | { type: "autofill:qr-image"; url: string };
+  | { type: "autofill:qr-image"; url: string }
+  | { type: "autofill:cards" }
+  | { type: "autofill:card"; id: string }
+  | { type: "autofill:identities" }
+  | { type: "autofill:identity"; id: string }
+  | { type: "autofill:random-address"; country: string };
 
 export type AutofillResponse =
   | { ok: true; locked: true }
@@ -50,6 +94,10 @@ export type AutofillResponse =
   | { ok: true; code: string }
   | { ok: true; totp: TotpPrompt | null }
   | { ok: true; image: string | null }
+  | { ok: true; locked: false; cards: CardSuggestion[] }
+  | { ok: true; card: CardData }
+  | { ok: true; locked: false; identities: IdentitySuggestion[] }
+  | { ok: true; identity: AddressData }
   | { ok: false; error: string };
 
 export function isAutofillRequest(message: unknown): message is AutofillRequest {

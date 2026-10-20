@@ -227,6 +227,134 @@ describe("suggest and fill", () => {
   });
 });
 
+const CARD = {
+  id: "00000000-0000-4000-8000-0000000000c1",
+  type: "card" as const,
+  title: "Everyday Visa",
+  cardholder: "Jane Doe",
+  cardNumber: "4242424242424242",
+  cardExpiry: "08/29",
+  cardCvv: "123",
+};
+const HOME = {
+  id: "00000000-0000-4000-8000-0000000000a1",
+  type: "identity" as const,
+  title: "Home",
+  fullName: "Nguyễn Văn An",
+  phone: "090 123 4567",
+  address: "12 Nguyễn Huệ",
+  ward: "Phường Bến Nghé",
+  city: "Quận 1",
+  region: "TP. Hồ Chí Minh",
+  postalCode: "700000",
+  country: "Việt Nam",
+};
+
+describe("cards and addresses", () => {
+  it("suggests cards by brand and last four digits only", async () => {
+    await unlockWith([CARD, GITHUB]);
+    const response = await handleAutofill(
+      { type: "autofill:cards" },
+      sender("https://shop.example/checkout")!,
+    );
+    expect(response).toEqual({
+      ok: true,
+      locked: false,
+      cards: [{ id: CARD.id, title: CARD.title, brand: "visa", last4: "4242" }],
+    });
+    expect(JSON.stringify(response)).not.toContain("424242424242");
+    expect(JSON.stringify(response)).not.toContain("123");
+  });
+
+  it("hands over the full card only when one is picked", async () => {
+    await unlockWith([CARD]);
+    const response = await handleAutofill(
+      { type: "autofill:card", id: CARD.id },
+      sender("https://shop.example/checkout")!,
+    );
+    expect(response).toEqual({
+      ok: true,
+      card: {
+        number: CARD.cardNumber,
+        brand: "visa",
+        cardholder: "Jane Doe",
+        expiry: "08/29",
+        cvv: "123",
+      },
+    });
+  });
+
+  it("never treats a login as a card or an identity", async () => {
+    await unlockWith([GITHUB]);
+    const page = sender("https://github.com/checkout")!;
+    expect(await handleAutofill({ type: "autofill:card", id: GITHUB.id }, page)).toEqual({
+      ok: false,
+      error: "no_match",
+    });
+    expect(await handleAutofill({ type: "autofill:identity", id: GITHUB.id }, page)).toEqual({
+      ok: false,
+      error: "no_match",
+    });
+  });
+
+  it("offers nothing on plain http pages or the vault's own server", async () => {
+    await unlockWith([CARD]);
+    expect(sender("http://shop.example/checkout")).toBeNull();
+    const vaultPage = await handleAutofill(
+      { type: "autofill:cards" },
+      sender("https://vault.test/")!,
+    );
+    expect(vaultPage).toEqual({ ok: true, locked: false, cards: [] });
+    const local = await handleAutofill(
+      { type: "autofill:cards" },
+      sender("http://localhost:5173/pay")!,
+    );
+    expect(local).toMatchObject({ cards: [{ id: CARD.id }] });
+  });
+
+  it("suggests identities without their address and fills on pick", async () => {
+    await unlockWith([HOME]);
+    const page = sender("https://shop.example/address")!;
+    expect(await handleAutofill({ type: "autofill:identities" }, page)).toEqual({
+      ok: true,
+      locked: false,
+      identities: [{ id: HOME.id, title: "Home", detail: "Nguyễn Văn An · Quận 1", country: "VN" }],
+    });
+    expect(await handleAutofill({ type: "autofill:identity", id: HOME.id }, page)).toEqual({
+      ok: true,
+      identity: {
+        fullName: HOME.fullName,
+        phone: HOME.phone,
+        address: HOME.address,
+        ward: HOME.ward,
+        city: HOME.city,
+        region: HOME.region,
+        postalCode: HOME.postalCode,
+        country: HOME.country,
+      },
+    });
+  });
+
+  it("reports a locked vault for cards", async () => {
+    const response = await handleAutofill(
+      { type: "autofill:cards" },
+      sender("https://shop.example/")!,
+    );
+    expect(response).toEqual({ ok: true, locked: true });
+  });
+
+  it("makes up a random address in the requested format, even while locked", async () => {
+    const response = await handleAutofill(
+      { type: "autofill:random-address", country: "VN" },
+      sender("https://shop.example/")!,
+    );
+    expect(response).toMatchObject({
+      ok: true,
+      identity: { country: "Việt Nam", postalCode: expect.stringMatching(/^\d{6}$/) },
+    });
+  });
+});
+
 describe("last used", () => {
   const WORK = {
     id: "00000000-0000-4000-8000-000000000004",

@@ -64,6 +64,7 @@ export interface VaultItem {
   phone?: string;
   company?: string;
   address?: string;
+  ward?: string;
   city?: string;
   region?: string;
   postalCode?: string;

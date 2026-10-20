@@ -1,9 +1,14 @@
+import { countryOf } from "../../src/core/address-data.js";
+import { generateAddress } from "../../src/core/address-generator.js";
 import { generatePassword } from "../../src/core/generator.js";
 import { generateTotp, parseTotpInput, type TotpConfig } from "../../src/core/totp.js";
-import { withPasswordHistory } from "./item-types.js";
+import { cardBrand, cardDigits, itemType, lastFour, withPasswordHistory } from "./item-types.js";
 import type {
+  AddressData,
   AutofillRequest,
   AutofillResponse,
+  CardSuggestion,
+  IdentitySuggestion,
   PendingPrompt,
   Suggestion,
   TotpPrompt,
@@ -90,6 +95,60 @@ function suggestionOf(item: VaultItem, vault: OpenVault): Suggestion {
     username: item.username,
     ...(shared ? { vault: shared } : {}),
   };
+}
+
+const MIN_CARD_DIGITS = 12;
+
+function isCard(item: VaultItem): boolean {
+  return itemType(item) === "card" && cardDigits(item.cardNumber).length >= MIN_CARD_DIGITS;
+}
+
+function isIdentity(item: VaultItem): boolean {
+  return itemType(item) === "identity";
+}
+
+function cardSuggestionOf(item: VaultItem, vault: OpenVault): CardSuggestion {
+  const shared = vault.sharedName(item);
+  return {
+    id: item.id,
+    title: item.title,
+    brand: cardBrand(item.cardNumber),
+    last4: lastFour(item.cardNumber),
+    ...(shared ? { vault: shared } : {}),
+  };
+}
+
+function identitySuggestionOf(item: VaultItem, vault: OpenVault): IdentitySuggestion {
+  const shared = vault.sharedName(item);
+  const detail = [item.fullName, item.city].filter(Boolean).join(" · ");
+  const country = countryOf(item.country)?.code;
+  return {
+    id: item.id,
+    title: item.title,
+    ...(detail ? { detail } : {}),
+    ...(country ? { country } : {}),
+    ...(shared ? { vault: shared } : {}),
+  };
+}
+
+function addressDataOf(item: Partial<VaultItem>): AddressData {
+  const keys = [
+    "fullName",
+    "email",
+    "phone",
+    "company",
+    "address",
+    "ward",
+    "city",
+    "region",
+    "postalCode",
+    "country",
+  ] as const;
+  return Object.fromEntries(keys.flatMap((key) => (item[key] ? [[key, item[key]]] : [])));
+}
+
+async function formsAllowed(sender: TrustedSender): Promise<boolean> {
+  return isFillableUrl(new URL(sender.url)) && !(await isVaultServer(sender.url));
 }
 
 function totpTarget(items: VaultItem[], pageUrl: string): VaultItem | undefined {
@@ -375,6 +434,63 @@ export async function handleAutofill(
 
     case "autofill:qr-image":
       return { ok: true, image: await fetchQrImage(request.url) };
+
+    case "autofill:cards": {
+      if (!(await formsAllowed(sender))) return { ok: true, locked: false, cards: [] };
+      const vault = await openVault();
+      if (!vault) return { ok: true, locked: true };
+      const cards = vault.items
+        .filter(isCard)
+        .sort(byLastUsed)
+        .map((item) => cardSuggestionOf(item, vault));
+      return { ok: true, locked: false, cards };
+    }
+
+    case "autofill:card": {
+      if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
+      const vault = await openVault();
+      if (!vault) return { ok: true, locked: true };
+      const item = vault.items.find((candidate) => candidate.id === request.id);
+      if (!item || !isCard(item)) return { ok: false, error: "no_match" };
+      void markUsed(vault.key, item).catch(() => {});
+      return {
+        ok: true,
+        card: {
+          number: cardDigits(item.cardNumber),
+          brand: cardBrand(item.cardNumber),
+          ...(item.cardholder ? { cardholder: item.cardholder } : {}),
+          ...(item.cardExpiry ? { expiry: item.cardExpiry } : {}),
+          ...(item.cardCvv ? { cvv: item.cardCvv } : {}),
+        },
+      };
+    }
+
+    case "autofill:identities": {
+      if (!(await formsAllowed(sender))) return { ok: true, locked: false, identities: [] };
+      const vault = await openVault();
+      if (!vault) return { ok: true, locked: true };
+      const identities = vault.items
+        .filter(isIdentity)
+        .sort(byLastUsed)
+        .map((item) => identitySuggestionOf(item, vault));
+      return { ok: true, locked: false, identities };
+    }
+
+    case "autofill:identity": {
+      if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
+      const vault = await openVault();
+      if (!vault) return { ok: true, locked: true };
+      const item = vault.items.find((candidate) => candidate.id === request.id);
+      if (!item || !isIdentity(item)) return { ok: false, error: "no_match" };
+      void markUsed(vault.key, item).catch(() => {});
+      return { ok: true, identity: addressDataOf(item) };
+    }
+
+    case "autofill:random-address": {
+      if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
+      const country = request.country === "VN" ? "VN" : "US";
+      return { ok: true, identity: addressDataOf(generateAddress({ country, email: true })) };
+    }
 
     case "autofill:open-popup":
       await chrome.action.openPopup?.().catch(() => {});

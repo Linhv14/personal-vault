@@ -1,17 +1,28 @@
 import { createTranslator, resolveLocale, type Translate } from "../../src/i18n/index.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
 import type {
+  AddressData,
   AutofillRequest,
   AutofillResponse,
   PendingPrompt,
   Suggestion,
   TotpPrompt,
 } from "../lib/autofill-protocol.js";
-import { icon } from "../../src/ui/icons.js";
+import { icon, type IconName } from "../../src/ui/icons.js";
 import { logo, wordmark } from "../../src/ui/logo.js";
+import { brandMark, flagMark } from "../../src/ui/marks.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
+import {
+  countryHint,
+  detectFields,
+  fillAddress,
+  fillCard,
+  formKindOf,
+  setFieldValue as setValue,
+  type FormKind,
+} from "./forms.js";
 import {
   fillCode,
   findOneTimeCodeField,
@@ -135,17 +146,23 @@ function wantsPasskey(input: HTMLInputElement): boolean {
   );
 }
 
-function isDecoratable(input: HTMLInputElement): boolean {
-  if (input.type === "password" || wantsPasskey(input) || isOneTimeCodeField(input)) return true;
-  return findPasswordFor(input) !== null && findUsernameField(findPasswordFor(input)!) === input;
+function isLoginUsername(input: HTMLInputElement): boolean {
+  const password = findPasswordFor(input);
+  return input.type !== "password" && password !== null && findUsernameField(password) === input;
 }
 
-function setValue(input: HTMLInputElement, value: string): void {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-  input.focus();
-  setter.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-  input.dispatchEvent(new Event("change", { bubbles: true }));
+function formKind(input: HTMLInputElement): FormKind | null {
+  if (input.type === "password" || wantsPasskey(input) || isLoginUsername(input)) return null;
+  return formKindOf(input, detectFields(scopeOf(input)));
+}
+
+function isCodeField(input: HTMLInputElement): boolean {
+  return isOneTimeCodeField(input) && formKind(input) !== "card";
+}
+
+function isDecoratable(input: HTMLInputElement): boolean {
+  if (input.type === "password" || wantsPasskey(input) || isCodeField(input)) return true;
+  return isLoginUsername(input) || formKind(input) !== null;
 }
 
 function placeTrigger(): void {
@@ -204,7 +221,7 @@ function avatar(title: string): HTMLElement {
   return node;
 }
 
-function badge(name: "lock" | "wand" | "key" | "clock"): HTMLElement {
+function badge(name: IconName): HTMLElement {
   const node = document.createElement("span");
   node.className = "badge";
   node.append(icon(name));
@@ -291,10 +308,99 @@ async function openCodeMenu(input: HTMLInputElement, onlyIfUseful: boolean): Pro
   placeTrigger();
 }
 
+function showMenu(): void {
+  menu.hidden = false;
+  placeTrigger();
+}
+
+async function fillCardItem(id: string, input: HTMLInputElement): Promise<void> {
+  const response = await send({ type: "autofill:card", id });
+  closeMenu();
+  if (!response.ok || !("card" in response)) return;
+  fillCard(detectFields(scopeOf(input)), response.card, setValue);
+}
+
+async function fillAddressFrom(request: AutofillRequest, input: HTMLInputElement): Promise<void> {
+  const response = await send(request);
+  closeMenu();
+  if (!response.ok || !("identity" in response)) return;
+  const data: AddressData = response.identity;
+  fillAddress(detectFields(scopeOf(input)), data, setValue);
+}
+
+async function openCardMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
+  const response = await send({ type: "autofill:cards" });
+  if (activeInput !== input) return;
+  const empty = response.ok && "cards" in response && response.cards.length === 0;
+  if (onlyIfUseful && (!response.ok || empty)) return;
+  menu.replaceChildren(menuHeading());
+  if (!response.ok) {
+    menu.append(note(t("autofill.unavailable")));
+  } else if ("locked" in response && response.locked) {
+    menu.append(lockedRow());
+  } else if ("cards" in response) {
+    for (const card of response.cards) {
+      menu.append(
+        menuRow(
+          `•••• ${card.last4}`,
+          [card.title, card.vault].filter(Boolean).join(" · ") || undefined,
+          card.brand === "card" ? badge("card") : brandMark(card.brand),
+          () => void fillCardItem(card.id, input),
+        ),
+      );
+    }
+    if (response.cards.length === 0) menu.append(note(t("autofill.no_cards")));
+  }
+  showMenu();
+}
+
+async function openAddressMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
+  const response = await send({ type: "autofill:identities" });
+  if (activeInput !== input) return;
+  const empty = response.ok && "identities" in response && response.identities.length === 0;
+  if (onlyIfUseful && (!response.ok || empty)) return;
+  menu.replaceChildren(menuHeading());
+  if (!response.ok) {
+    menu.append(note(t("autofill.unavailable")));
+    showMenu();
+    return;
+  }
+  if ("locked" in response && response.locked) menu.append(lockedRow());
+  if ("identities" in response) {
+    for (const identity of response.identities) {
+      menu.append(
+        menuRow(
+          identity.title,
+          [identity.detail, identity.vault].filter(Boolean).join(" · ") || undefined,
+          identity.country ? flagMark(identity.country) : badge("person"),
+          () => void fillAddressFrom({ type: "autofill:identity", id: identity.id }, input),
+        ),
+      );
+    }
+  }
+  const country = countryHint(
+    detectFields(scopeOf(input)),
+    location.hostname,
+    document.documentElement.lang,
+  );
+  menu.append(
+    menuRow(
+      t("autofill.random_address"),
+      t("autofill.random_address_hint"),
+      flagMark(country),
+      () => fillAddressFrom({ type: "autofill:random-address", country }, input),
+    ),
+  );
+  showMenu();
+}
+
 async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<void> {
   if (!activeInput) return;
   const input = activeInput;
-  if (isOneTimeCodeField(input)) return openCodeMenu(input, onlyIfUseful);
+  if (isCodeField(input)) return openCodeMenu(input, onlyIfUseful);
+  const kind = formKind(input);
+  if (kind === "card") return openCardMenu(input, onlyIfUseful);
+  if (kind === "address") return openAddressMenu(input, onlyIfUseful);
   const password = findPasswordFor(input) ?? input;
   const [response, passkeys] = await Promise.all([
     send({ type: "autofill:suggest" }),
@@ -552,7 +658,7 @@ function onFocusIn(event: FocusEvent): void {
   activeInput = target;
   placeTrigger();
   const offersPassword = target.type === "password" && !target.value && wantsNewPassword(target);
-  if (menu.hidden && (offersPassword || (isOneTimeCodeField(target) && !target.value))) {
+  if (menu.hidden && (offersPassword || (isCodeField(target) && !target.value))) {
     void openMenu({ onlyIfUseful: true });
   }
 }

@@ -131,6 +131,16 @@ describe("content script", () => {
     expect(sent.map((request) => request.type)).toContain("autofill:suggest");
   });
 
+  it("treats a card's security code as part of the card, not as a 2FA code", async () => {
+    document.body.innerHTML = `
+      <form><input name="cardnumber" placeholder="Card number">
+      <input id="cvc" name="security_code" maxlength="4" inputmode="numeric"></form>`;
+    await load();
+    document.querySelector<HTMLInputElement>("#cvc")!.focus();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sent.map((request) => request.type)).not.toContain("autofill:codes");
+  });
+
   it("does not open the menu on a sign-in form", async () => {
     document.body.innerHTML = `
       <form><input type="email" name="email"><input type="password" name="pw" id="pw" autocomplete="current-password">

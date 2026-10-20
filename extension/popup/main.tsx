@@ -50,7 +50,7 @@ function App() {
         <Vault
           pane={
             current === "edit" ? (
-              <Editor key={edit.session} item={edit.item} type={edit.type} />
+              <Editor key={edit.session} item={edit.item} type={edit.type} draft={edit.draft} />
             ) : current === "vault" ? (
               <VaultEditor key={editingVault.value.session} vault={editingVault.value.vault} />
             ) : current === "generator" ? (

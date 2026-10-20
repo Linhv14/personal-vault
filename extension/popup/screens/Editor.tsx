@@ -173,7 +173,16 @@ function storedVault(id: string): string | undefined {
   return id === DEFAULT_VAULT_ID ? undefined : id;
 }
 
-export function Editor({ item, type }: { item: VaultItem | null; type: ItemType }) {
+export function Editor({
+  item,
+  type,
+  draft,
+}: {
+  item: VaultItem | null;
+  type: ItemType;
+  draft?: Partial<VaultItem>;
+}) {
+  const source = item ?? (draft ? ({ ...draft } as VaultItem) : null);
   const t = useT();
   const form = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -259,7 +268,7 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
       <form id="form-edit" className="stack" ref={form} onSubmit={(event) => void submit(event)}>
         <label>
           <span>{t("edit.name")}</span>
-          <input name="title" required autoComplete="off" defaultValue={item?.title ?? ""} />
+          <input name="title" required autoComplete="off" defaultValue={source?.title ?? ""} />
         </label>
         {vaults.value.length > 1 && (
           <label>
@@ -300,7 +309,7 @@ export function Editor({ item, type }: { item: VaultItem | null; type: ItemType 
               )}
               <EditField
                 spec={spec}
-                item={item}
+                item={source}
                 type={type}
                 onScanned={(issuer) => {
                   const title = titleField();

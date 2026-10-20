@@ -85,6 +85,7 @@ export const TYPE_FIELDS: Record<ItemType, FieldSpec[]> = {
     { key: "phone", label: "field.phone", kind: "tel" },
     { key: "company", label: "field.company", kind: "text" },
     { key: "address", label: "field.address", kind: "multiline" },
+    { key: "ward", label: "field.ward", kind: "text" },
     { key: "city", label: "field.city", kind: "text" },
     { key: "region", label: "field.region", kind: "text" },
     { key: "postalCode", label: "field.postal_code", kind: "text" },
@@ -215,6 +216,33 @@ export function cardDigits(number: string | undefined): string {
 
 export function formatCardNumber(number: string): string {
   return cardDigits(number).replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+
+export type CardBrand =
+  "visa" | "mastercard" | "amex" | "discover" | "jcb" | "unionpay" | "diners" | "card";
+
+export const CARD_BRAND_NAMES: Record<CardBrand, string> = {
+  visa: "Visa",
+  mastercard: "Mastercard",
+  amex: "American Express",
+  discover: "Discover",
+  jcb: "JCB",
+  unionpay: "UnionPay",
+  diners: "Diners Club",
+  card: "",
+};
+
+export function cardBrand(number: string | undefined): CardBrand {
+  const digits = cardDigits(number);
+  const prefix = (length: number) => Number(digits.slice(0, length));
+  if (/^4/.test(digits)) return "visa";
+  if (/^3[47]/.test(digits)) return "amex";
+  if (/^5[1-5]/.test(digits) || (prefix(4) >= 2221 && prefix(4) <= 2720)) return "mastercard";
+  if (/^(6011|65|64[4-9])/.test(digits)) return "discover";
+  if (prefix(4) >= 3528 && prefix(4) <= 3589) return "jcb";
+  if (/^62/.test(digits)) return "unionpay";
+  if (/^(36|38|30[0-5])/.test(digits)) return "diners";
+  return "card";
 }
 
 export function lastFour(number: string | undefined): string {
