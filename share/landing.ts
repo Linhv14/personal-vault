@@ -8,6 +8,7 @@ if (!reduced) {
   animateCounters();
   typeTerminal();
   travelPacket();
+  followCursor();
 }
 
 function belowFold(element: Element): boolean {
@@ -216,4 +217,32 @@ function travelPacket(): void {
     window.clearTimeout(resize);
     resize = window.setTimeout(() => timeline.invalidate(), 150);
   });
+}
+
+function followCursor(): void {
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  for (const card of gsap.utils.toArray<HTMLElement>(".card")) {
+    const glow = { x: 0, y: 0 };
+    const paint = () => {
+      card.style.setProperty("--glow-x", `${glow.x}px`);
+      card.style.setProperty("--glow-y", `${glow.y}px`);
+    };
+    const moveX = gsap.quickTo(glow, "x", { duration: 0.45, ease: "power3.out", onUpdate: paint });
+    const moveY = gsap.quickTo(glow, "y", { duration: 0.45, ease: "power3.out", onUpdate: paint });
+    const local = (event: PointerEvent) => {
+      const box = card.getBoundingClientRect();
+      return { x: event.clientX - box.left, y: event.clientY - box.top };
+    };
+    card.addEventListener("pointerenter", (event) => {
+      Object.assign(glow, local(event));
+      paint();
+      card.classList.add("glowing");
+    });
+    card.addEventListener("pointermove", (event) => {
+      const point = local(event);
+      moveX(point.x);
+      moveY(point.y);
+    });
+    card.addEventListener("pointerleave", () => card.classList.remove("glowing"));
+  }
 }

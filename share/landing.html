@@ -171,34 +171,34 @@
     </script>
     <!-- /lang -->
     <!-- lang:vi -->
-    <title>7key · Mật khẩu, 2FA và secret của team, mã hoá</title>
+    <title>7key · Mật khẩu, 2FA và secret của nhóm, mã hoá</title>
     <meta
       name="description"
-      content="Quản lý mật khẩu zero-knowledge: mã 2FA, tự điền, secret của team, CLI, CI và AI agent. Miễn phí cho team đến 5 thành viên."
+      content="Quản lý mật khẩu zero-knowledge: mã 2FA, tự điền, secret của nhóm, CLI, CI và AI agent. Miễn phí cho nhóm đến 5 thành viên."
     />
     <link rel="canonical" href="{{site}}/vi" />
     <meta property="og:locale" content="vi_VN" />
     <meta property="og:locale:alternate" content="en_US" />
-    <meta property="og:title" content="7key · Mật khẩu, mã 2FA và secret của team trong một kho" />
+    <meta property="og:title" content="7key · Mật khẩu, mã 2FA và secret của nhóm trong một kho" />
     <meta
       property="og:description"
-      content="Một kho mã hoá đầu-cuối cho bạn, cho team và cho từng lần deploy: tự điền và 2FA, secret theo môi trường, CLI, CI và AI agent."
+      content="Một kho mã hoá đầu-cuối cho bạn, cho nhóm và cho từng lần deploy: tự điền và 2FA, secret theo môi trường, CLI, CI và AI agent."
     />
     <meta property="og:url" content="{{site}}/vi" />
     <meta property="og:image" content="{{site}}/assets/og-vi.png" />
     <meta
       property="og:image:alt"
-      content="7key: mật khẩu, mã 2FA và secret của team trong một kho mã hoá"
+      content="7key: mật khẩu, mã 2FA và secret của nhóm trong một kho mã hoá"
     />
-    <meta name="twitter:title" content="7key · Mật khẩu, mã 2FA và secret của team trong một kho" />
+    <meta name="twitter:title" content="7key · Mật khẩu, mã 2FA và secret của nhóm trong một kho" />
     <meta
       name="twitter:description"
-      content="Một kho mã hoá đầu-cuối cho bạn, cho team và cho từng lần deploy: tự điền và 2FA, secret theo môi trường, CLI, CI và AI agent."
+      content="Một kho mã hoá đầu-cuối cho bạn, cho nhóm và cho từng lần deploy: tự điền và 2FA, secret theo môi trường, CLI, CI và AI agent."
     />
     <meta name="twitter:image" content="{{site}}/assets/og-vi.png" />
     <meta
       name="twitter:image:alt"
-      content="7key: mật khẩu, mã 2FA và secret của team trong một kho mã hoá"
+      content="7key: mật khẩu, mã 2FA và secret của nhóm trong một kho mã hoá"
     />
     <script type="application/ld+json">
       {
@@ -228,7 +228,7 @@
             "url": "{{site}}/vi",
             "applicationCategory": "SecurityApplication",
             "operatingSystem": "Chrome, Edge, Brave",
-            "description": "Trình quản lý mật khẩu mã hoá đầu-cuối cho Chrome, có mã 2FA, secret của team theo môi trường, CLI, GitHub Actions và AI agent.",
+            "description": "Trình quản lý mật khẩu mã hoá đầu-cuối cho Chrome, có mã 2FA, secret của nhóm theo môi trường, CLI, GitHub Actions và AI agent.",
             "inLanguage": "vi",
             "publisher": {
               "@id": "{{site}}/#organization"
@@ -237,7 +237,7 @@
               { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
               {
                 "@type": "Offer",
-                "name": "Team",
+                "name": "Nhóm",
                 "price": "3",
                 "priceCurrency": "USD",
                 "priceSpecification": {
@@ -311,18 +311,18 @@
               },
               {
                 "@type": "Question",
-                "name": "Có người rời team thì sao?",
+                "name": "Có người rời nhóm thì sao?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Team được cấp khoá mới và mọi secret được mã hoá lại, nên những gì người đó còn giữ không mở được dữ liệu ghi sau này."
+                  "text": "Nhóm được cấp khoá mới và mọi secret được mã hoá lại, nên những gì người đó còn giữ không mở được dữ liệu ghi sau này."
                 }
               },
               {
                 "@type": "Question",
-                "name": "Team tự chạy server riêng được không?",
+                "name": "Nhóm tự chạy server riêng được không?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Được. Team có thể tự chạy server 7key trên domain của mình. Liên hệ hello@7key.online."
+                  "text": "Được. Nhóm có thể tự chạy server 7key trên domain của mình. Liên hệ hello@7key.online."
                 }
               }
             ]
@@ -1631,8 +1631,29 @@
       .plan.hot {
         border-color: rgb(255 106 61 / 0.4);
         background:
-          radial-gradient(120% 80% at 100% 0%, rgb(255 106 61 / 0.14), transparent 60%),
+          radial-gradient(
+            120% 80% at var(--glow-x, 100%) var(--glow-y, 0%),
+            rgb(255 106 61 / 0.16),
+            transparent 60%
+          ),
           linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.01));
+      }
+      .card::after {
+        position: absolute;
+        inset: 0;
+        content: "";
+        border-radius: inherit;
+        background: radial-gradient(
+          420px circle at var(--glow-x, 50%) var(--glow-y, 0%),
+          rgb(255 106 61 / 0.12),
+          transparent 45%
+        );
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+      }
+      .card.glowing::after {
+        opacity: 1;
       }
       .plan-top {
         display: flex;
@@ -2685,9 +2706,9 @@
                 <div><b>∞</b><span>projects</span></div>
               </div>
               <ul class="checks">
-                <li>Personal vault with 2FA, passkeys and autofill</li>
-                <li>Teams, projects, CLI, CI and AI agents</li>
-                <li>Share links, import and encrypted export</li>
+                <li>Vault, 2FA, passkeys and autofill</li>
+                <li>Teams, projects, CLI, CI, AI agents</li>
+                <li>Sharing, import and export</li>
               </ul>
               <div class="ctas"><a class="btn" href="#install">Add to Chrome</a></div>
             </div>
@@ -2702,12 +2723,11 @@
               <ul class="checks">
                 <li>Everything in Free</li>
                 <li>Unlimited members</li>
-                <li>Priced per member, never per project</li>
-                <li>Add or remove members at any time</li>
+                <li>Priced per member</li>
+                <li>Add or remove members anytime</li>
               </ul>
               <p class="plan-note">
-                Billing isn't open yet. Until it is, teams of more than 5 members use Team for free,
-                with 30 days' notice before any charge.
+                Billing isn't open yet. Teams over 5 use it free, with 30 days' notice.
               </p>
               <div class="ctas">
                 <a class="btn primary" href="mailto:hello@7key.online?subject=Team%20plan"
@@ -2721,11 +2741,11 @@
                 <span class="chip">Your server</span>
               </div>
               <div class="price">$0</div>
-              <p>Run the 7key server yourself, on your own Cloudflare account.</p>
+              <p>Run the 7key server on your own Cloudflare.</p>
               <ul class="checks">
-                <li>Every feature, unlimited members</li>
+                <li>Every feature, no limits</li>
                 <li>Your domain, your backups</li>
-                <li>The same end-to-end encryption</li>
+                <li>Same end-to-end encryption</li>
               </ul>
               <div class="ctas">
                 <a class="btn" href="mailto:hello@7key.online?subject=Self-hosting%207key"
@@ -2839,15 +2859,15 @@
           <a class="pill" href="#developers"
             ><span>Mới</span>AI agent dùng key mà không nhìn thấy key</a
           >
-          <h1>Mật khẩu, 2FA và secret của team. <span class="grad">Gọn trong một kho.</span></h1>
-          <p class="sub">Mã hoá đầu-cuối, cho bạn, cho team và cho từng lần deploy.</p>
+          <h1>Mật khẩu, 2FA và secret của nhóm. <span class="grad">Gọn trong một kho.</span></h1>
+          <p class="sub">Mã hoá đầu-cuối, cho bạn, cho nhóm và cho từng lần deploy.</p>
           <div class="ctas">
             <a class="btn primary" href="#install">Thêm vào Chrome</a
             ><a class="btn" href="#product">Xem cách hoạt động</a>
           </div>
           <div class="trust">
             <span>AES-256 ngay trên máy</span><span>Server không đọc được gì</span
-            ><span>Miễn phí cho team đến 5 thành viên</span>
+            ><span>Miễn phí cho nhóm đến 5 thành viên</span>
           </div>
           <div class="browser">
             <div class="chrome"><i></i><i></i><i></i></div>
@@ -2878,7 +2898,7 @@
       <section id="product">
         <div class="wrap">
           <span class="kicker">Dành cho ai</span>
-          <h2>Cho bạn, cho team và cho từng lần deploy.</h2>
+          <h2>Cho bạn, cho nhóm và cho từng lần deploy.</h2>
           <p class="lede">Một kho, ba cách dùng.</p>
           <div class="aud">
             <input type="radio" name="aud" id="aud-you" aria-controls="p-you" checked /><input
@@ -2888,7 +2908,7 @@
               aria-controls="p-team"
             /><input type="radio" name="aud" id="aud-dev" aria-controls="p-dev" />
             <div class="seg" role="group" aria-label="Chọn đối tượng">
-              <label for="aud-you">Cá nhân</label><label for="aud-team">Team</label
+              <label for="aud-you">Cá nhân</label><label for="aud-team">Nhóm</label
               ><label for="aud-dev">Developer</label>
             </div>
             <div class="panel" id="p-you" role="region" aria-label="Cho cá nhân">
@@ -2966,14 +2986,14 @@
                 </li>
               </ul>
             </div>
-            <div class="panel" id="p-team" role="region" aria-label="Cho team">
+            <div class="panel" id="p-team" role="region" aria-label="Cho nhóm">
               <div class="card stage" aria-hidden="true">
                 <div class="mock">
                   <div class="mock-top">
                     <span class="mark">{{mark}}</span
                     ><span
                       >Acme <span class="t-o">/</span>
-                      <b style="color: var(--l-text); font-weight: 600">Team Platform</b></span
+                      <b style="color: var(--l-text); font-weight: 600">Nhóm Platform</b></span
                     >
                   </div>
                   <div class="rows">
@@ -2997,7 +3017,7 @@
                     <span>Development</span><span>Staging</span
                     ><span class="cur">Production{{icon:lock}}</span>
                   </div>
-                  <div class="banner">{{icon:lock}}Chỉ admin được sửa. Cả team vẫn đọc được.</div>
+                  <div class="banner">{{icon:lock}}Chỉ admin được sửa. Cả nhóm vẫn đọc được.</div>
                   <div class="float f-br">
                     <span class="lk">{{icon:mail}}</span
                     ><span>Đã mời jo@acme.dev<small>Chờ cấp khoá</small></span>
@@ -3009,29 +3029,29 @@
                   <span class="ic">{{icon:users}}</span
                   ><span
                     ><strong>Phân quyền theo từng người</strong
-                    ><span>Được sửa hoặc chỉ xem, theo từng team. Mời thẳng vào team.</span></span
+                    ><span>Được sửa hoặc chỉ xem, theo từng nhóm. Mời thẳng vào nhóm.</span></span
                   >
                 </li>
                 <li>
                   <span class="ic">{{icon:lock}}</span
                   ><span
                     ><strong>Production luôn được bảo vệ</strong
-                    ><span>Cả team đọc được, chỉ admin được sửa.</span></span
+                    ><span>Cả nhóm đọc được, chỉ admin được sửa.</span></span
                   >
                 </li>
                 <li>
                   <span class="ic">{{icon:key}}</span
                   ><span
-                    ><strong>Kho chung của team</strong
+                    ><strong>Kho chung của nhóm</strong
                     ><span
-                      >Tài khoản cả team dùng chung, mã hoá riêng cho từng thành viên.</span
+                      >Tài khoản cả nhóm dùng chung, mã hoá riêng cho từng thành viên.</span
                     ></span
                   >
                 </li>
                 <li>
                   <span class="ic">{{icon:refresh}}</span
                   ><span
-                    ><strong>Có người rời team, khoá đổi luôn</strong
+                    ><strong>Có người rời nhóm, khoá đổi luôn</strong
                     ><span
                       >Tạo khoá mới, mã hoá lại toàn bộ. Khoá cũ không mở được gì mới.</span
                     ></span
@@ -3087,7 +3107,7 @@
                   ><span
                     ><strong>Secret theo môi trường</strong
                     ><span
-                      >Dev, staging, production. Biết ngay thiếu biến nào trước khi deploy
+                      >Dev, staging, production. Biết ngay thiếu secret nào trước khi deploy
                       lỗi.</span
                     ></span
                   >
@@ -3239,13 +3259,13 @@
 
       <section id="teams">
         <div class="wrap">
-          <span class="kicker">Team</span>
+          <span class="kicker">Nhóm</span>
           <h2>Chia quyền truy cập, không chia mật khẩu.</h2>
           <p class="lede">Ai được sửa, ai chỉ xem, cái gì đã đổi và đổi lúc nào.</p>
           <div class="bento">
             <div class="tile s4">
               <h3>Production được bảo vệ</h3>
-              <p>Cả team đọc được. Chỉ admin được sửa.</p>
+              <p>Cả nhóm đọc được. Chỉ admin được sửa.</p>
               <div class="visual panel-box" aria-hidden="true">
                 <div class="tabs" style="border-bottom: 0">
                   <span>Development</span><span>Staging</span
@@ -3261,14 +3281,14 @@
                 </div>
                 <div class="sec">
                   <span>LOG_LEVEL</span><span class="dots" style="color: var(--l-muted)">info</span
-                  ><span class="chip">Biến</span>
+                  ><span class="chip">Variable</span>
                 </div>
                 <div class="banner">{{icon:lock}}Đã bảo vệ: chỉ admin được sửa Production</div>
               </div>
             </div>
             <div class="tile s2">
               <h3>Được sửa, chỉ xem</h3>
-              <p>Đặt cho từng người, trong từng team.</p>
+              <p>Đặt cho từng người, trong từng nhóm.</p>
               <div class="visual people" aria-hidden="true">
                 <div class="row">
                   <span class="av round a3">A</span
@@ -3381,7 +3401,7 @@
                   <td><span class="d" aria-label="Không">—</span></td>
                 </tr>
                 <tr>
-                  <th scope="row">Secret của team theo môi trường</th>
+                  <th scope="row">Secret của nhóm theo môi trường</th>
                   <td class="me"><span class="y" aria-label="Có">✓</span></td>
                   <td><span class="d" aria-label="Không">—</span></td>
                   <td><span class="y" aria-label="Có">✓</span></td>
@@ -3438,16 +3458,16 @@
                 <span class="chip">Bắt đầu</span>
               </div>
               <div class="price">0đ</div>
-              <p>Cho cá nhân và team đến 5 thành viên.</p>
+              <p>Cho cá nhân và nhóm đến 5 thành viên.</p>
               <div class="limits">
                 <div><b data-count="5">5</b><span>thành viên</span></div>
-                <div><b>∞</b><span>team</span></div>
-                <div><b>∞</b><span>project</span></div>
+                <div><b>∞</b><span>nhóm</span></div>
+                <div><b>∞</b><span>dự án</span></div>
               </div>
               <ul class="checks">
-                <li>Kho cá nhân với 2FA, passkey và tự điền</li>
-                <li>Team, project, CLI, CI và AI agent</li>
-                <li>Link chia sẻ, nhập dữ liệu và xuất bản mã hoá</li>
+                <li>Kho, 2FA, passkey và tự điền</li>
+                <li>Nhóm, dự án, CLI, CI và AI agent</li>
+                <li>Chia sẻ, nhập và xuất dữ liệu</li>
               </ul>
               <div class="ctas"><a class="btn" href="#install">Thêm vào Chrome</a></div>
             </div>
@@ -3458,16 +3478,15 @@
               </div>
               <div class="price">$3<span class="per">/ người / tháng</span></div>
               <p class="billed">trả theo năm, hoặc $3.5 theo tháng</p>
-              <p>Cho team từ 6 thành viên trở lên.</p>
+              <p>Cho nhóm từ 6 thành viên trở lên.</p>
               <ul class="checks">
                 <li>Mọi thứ của gói Miễn phí</li>
                 <li>Không giới hạn thành viên</li>
-                <li>Tính phí theo thành viên, không theo project</li>
-                <li>Thêm hoặc bớt thành viên bất cứ lúc nào</li>
+                <li>Tính phí theo thành viên</li>
+                <li>Thêm, bớt thành viên tuỳ ý</li>
               </ul>
               <p class="plan-note">
-                Thanh toán chưa mở. Trong thời gian này, team trên 5 thành viên dùng gói Team miễn
-                phí và được thông báo trước 30 ngày khi bắt đầu tính phí.
+                Chưa mở thanh toán. Nhóm trên 5 thành viên dùng miễn phí và được báo trước 30 ngày.
               </p>
               <div class="ctas">
                 <a class="btn primary" href="mailto:hello@7key.online?subject=G%C3%B3i%20Team"
@@ -3481,11 +3500,11 @@
                 <span class="chip">Server riêng</span>
               </div>
               <div class="price">0đ</div>
-              <p>Tự chạy server 7key trên tài khoản Cloudflare của team.</p>
+              <p>Tự chạy server 7key trên Cloudflare của nhóm.</p>
               <ul class="checks">
-                <li>Đầy đủ tính năng, không giới hạn thành viên</li>
-                <li>Domain và bản sao lưu là của bạn</li>
-                <li>Vẫn mã hoá đầu-cuối như bản gốc</li>
+                <li>Đủ tính năng, không giới hạn</li>
+                <li>Domain, sao lưu do bạn giữ</li>
+                <li>Mã hoá đầu-cuối như bản gốc</li>
               </ul>
               <div class="ctas">
                 <a class="btn" href="mailto:hello@7key.online?subject=T%E1%BB%B1%20host%207key"
@@ -3563,16 +3582,16 @@
             </p>
           </details>
           <details>
-            <summary>Có người rời team thì sao?</summary>
+            <summary>Có người rời nhóm thì sao?</summary>
             <p>
-              Team được cấp khoá mới và mọi secret được mã hoá lại, nên những gì người đó còn giữ
+              Nhóm được cấp khoá mới và mọi secret được mã hoá lại, nên những gì người đó còn giữ
               không mở được dữ liệu ghi sau này.
             </p>
           </details>
           <details>
-            <summary>Team tự chạy server riêng được không?</summary>
+            <summary>Nhóm tự chạy server riêng được không?</summary>
             <p>
-              Được. Team có thể tự chạy server 7key trên domain của mình. Liên hệ
+              Được. Nhóm có thể tự chạy server 7key trên domain của mình. Liên hệ
               <a href="mailto:hello@7key.online">hello@7key.online</a>.
             </p>
           </details>
@@ -3582,7 +3601,7 @@
       <div class="final">
         <div class="wrap">
           <h2>Một kho cho mọi chìa khoá.</h2>
-          <p>Miễn phí cho cá nhân và team đến 5 thành viên. Cài xong trong một phút.</p>
+          <p>Miễn phí cho cá nhân và nhóm đến 5 thành viên. Cài xong trong một phút.</p>
           <div class="ctas">
             <a class="btn primary" href="#install">Thêm vào Chrome</a
             ><a class="btn" href="mailto:hello@7key.online">Liên hệ</a>
