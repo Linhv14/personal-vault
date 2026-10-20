@@ -181,9 +181,13 @@ describe("what kind of form it is", () => {
     expect(formKindOf(document.querySelector("#c")!, fields)).toBeNull();
   });
 
-  it("needs several address fields, one of them a place", () => {
+  it("needs a place for an address form, and a name or phone for a profile form", () => {
     document.body.innerHTML =
       '<form><input id="e" type="email" name="email"><input name="phone"></form>';
+    expect(formKindOf(document.querySelector("#e")!, detectFields(document.forms[0]!))).toBe(
+      "profile",
+    );
+    document.body.innerHTML = '<form><input id="e" type="email" name="email"></form>';
     expect(formKindOf(document.querySelector("#e")!, detectFields(document.forms[0]!))).toBeNull();
     document.body.innerHTML =
       '<form><input id="e" type="email" name="email"><input name="phone"><input name="city"></form>';

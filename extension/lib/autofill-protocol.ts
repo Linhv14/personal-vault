@@ -82,7 +82,8 @@ export type AutofillRequest =
   | { type: "autofill:card"; id: string }
   | { type: "autofill:identities" }
   | { type: "autofill:identity"; id: string }
-  | { type: "autofill:random-address"; country: string };
+  | { type: "autofill:random-address"; country: string }
+  | { type: "autofill:aliases" };
 
 export type AutofillResponse =
   | { ok: true; locked: true }
@@ -98,6 +99,7 @@ export type AutofillResponse =
   | { ok: true; card: CardData }
   | { ok: true; locked: false; identities: IdentitySuggestion[] }
   | { ok: true; identity: AddressData }
+  | { ok: true; aliases: string[]; site: string }
   | { ok: false; error: string };
 
 export function isAutofillRequest(message: unknown): message is AutofillRequest {

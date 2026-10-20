@@ -59,7 +59,12 @@ export function ActivityPage() {
     }
     if (!target || target === actor) return "";
     const [first = "", second] = target.split(":");
-    if (action.startsWith("secret") || action.startsWith("ci.") || action.startsWith("link.")) {
+    if (
+      action.startsWith("secret") ||
+      action.startsWith("ci.") ||
+      action.startsWith("link.") ||
+      action.startsWith("environment.")
+    ) {
       return projectLabel(first, second);
     }
     if (action.startsWith("project.")) {

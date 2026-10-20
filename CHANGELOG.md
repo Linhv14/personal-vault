@@ -16,6 +16,11 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- Email aliases: on sign-up forms, the email field offers an address just for
+  that site, such as `you+shopify@gmail.com`, for Gmail, Outlook, iCloud,
+  Fastmail, Proton and Zoho addresses.
+- Sign-up and contact forms with a name, email or phone now offer your saved
+  address items, or made-up details, even when they ask for no street address.
 - **Settings → Trash** lists deleted items with when each was deleted and how
   long until it is purged. Restore or delete forever one item, a selection, or
   empty the whole trash; search filters by title.

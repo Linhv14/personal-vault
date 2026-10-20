@@ -1,5 +1,6 @@
 import { countryOf } from "../../src/core/address-data.js";
 import { generateAddress } from "../../src/core/address-generator.js";
+import { aliasTag, emailAliases } from "../../src/core/email-alias.js";
 import { generatePassword } from "../../src/core/generator.js";
 import { generateTotp, parseTotpInput, type TotpConfig } from "../../src/core/totp.js";
 import { cardBrand, cardDigits, itemType, lastFour, withPasswordHistory } from "./item-types.js";
@@ -490,6 +491,22 @@ export async function handleAutofill(
       if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
       const country = request.country === "VN" ? "VN" : "US";
       return { ok: true, identity: addressDataOf(generateAddress({ country, email: true })) };
+    }
+
+    case "autofill:aliases": {
+      if (!(await formsAllowed(sender))) return { ok: true, aliases: [], site: "" };
+      const site = registrableDomain(sender.url) ?? sender.domain;
+      const tag = aliasTag(site);
+      const { email } = await getLocal();
+      const vault = await openVault();
+      const known = vault
+        ? vault.items.filter(isIdentity).flatMap((item) => (item.email ? [item.email] : []))
+        : [];
+      return {
+        ok: true,
+        aliases: emailAliases([...(email ? [email] : []), ...known], tag),
+        site: tag,
+      };
     }
 
     case "autofill:open-popup":

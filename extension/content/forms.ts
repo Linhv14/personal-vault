@@ -38,7 +38,7 @@ export type AddressFieldKind =
 
 export type FormFieldKind = CardFieldKind | AddressFieldKind;
 export type FormField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
-export type FormKind = "card" | "address";
+export type FormKind = "card" | "address" | "profile";
 
 export interface DetectedField {
   element: FormField;
@@ -145,6 +145,8 @@ const ADDRESS_RULES: readonly (readonly [AddressFieldKind, RegExp])[] = [
   ["family-name", /\b(last ?name|surname|family ?name|lname|ho)\b/],
   ["name", /\b(name|recipient|nguoi nhan)\b/],
 ];
+
+const PROFILE_KINDS = new Set<FormFieldKind>(["name", "given-name", "family-name", "email", "tel"]);
 
 const PLACE_KINDS = new Set<FormFieldKind>([
   "street-address",
@@ -307,7 +309,9 @@ export function formKindOf(element: FormField, fields: DetectedField[]): FormKin
   }
   const kinds = new Set(fields.map((field) => field.kind).filter((kind) => !isCardKind(kind)));
   const places = [...kinds].filter((kind) => PLACE_KINDS.has(kind));
-  return kinds.size >= 3 && places.length > 0 ? "address" : null;
+  if (kinds.size >= 3 && places.length > 0) return "address";
+  const profile = [...kinds].filter((kind) => PROFILE_KINDS.has(kind));
+  return profile.length >= 2 && profile.some((kind) => kind !== "email") ? "profile" : null;
 }
 
 export function setFieldValue(element: FormField, value: string): void {

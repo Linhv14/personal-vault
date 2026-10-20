@@ -354,10 +354,39 @@ async function openCardMenu(input: HTMLInputElement, onlyIfUseful: boolean): Pro
   showMenu();
 }
 
-async function openAddressMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
-  const response = await send({ type: "autofill:identities" });
+function isEmailInput(input: HTMLInputElement): boolean {
+  return (
+    input.type === "email" || /e-?mail/i.test(`${input.autocomplete} ${input.name} ${input.id}`)
+  );
+}
+
+async function aliasRows(input: HTMLInputElement): Promise<HTMLElement[]> {
+  if (!isEmailInput(input)) return [];
+  const response = await send({ type: "autofill:aliases" });
+  if (!response.ok || !("aliases" in response)) return [];
+  return response.aliases.map((alias) =>
+    menuRow(t("autofill.alias", { site: response.site }), alias, badge("mail"), () => {
+      closeMenu();
+      setValue(input, alias);
+    }),
+  );
+}
+
+async function openAddressMenu(
+  input: HTMLInputElement,
+  onlyIfUseful: boolean,
+  profile = false,
+): Promise<void> {
+  const [response, aliases] = await Promise.all([
+    send({ type: "autofill:identities" }),
+    aliasRows(input),
+  ]);
   if (activeInput !== input) return;
-  const empty = response.ok && "identities" in response && response.identities.length === 0;
+  const empty =
+    response.ok &&
+    "identities" in response &&
+    response.identities.length === 0 &&
+    aliases.length === 0;
   if (onlyIfUseful && (!response.ok || empty)) return;
   menu.replaceChildren(menuHeading());
   if (!response.ok) {
@@ -378,6 +407,7 @@ async function openAddressMenu(input: HTMLInputElement, onlyIfUseful: boolean): 
       );
     }
   }
+  menu.append(...aliases);
   const country = countryHint(
     detectFields(scopeOf(input)),
     location.hostname,
@@ -385,8 +415,8 @@ async function openAddressMenu(input: HTMLInputElement, onlyIfUseful: boolean): 
   );
   menu.append(
     menuRow(
-      t("autofill.random_address"),
-      t("autofill.random_address_hint"),
+      t(profile ? "autofill.random_profile" : "autofill.random_address"),
+      t(profile ? "autofill.random_profile_hint" : "autofill.random_address_hint"),
       flagMark(country),
       () => fillAddressFrom({ type: "autofill:random-address", country }, input),
     ),
@@ -401,10 +431,13 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
   const kind = formKind(input);
   if (kind === "card") return openCardMenu(input, onlyIfUseful);
   if (kind === "address") return openAddressMenu(input, onlyIfUseful);
+  if (kind === "profile") return openAddressMenu(input, onlyIfUseful, true);
   const password = findPasswordFor(input) ?? input;
-  const [response, passkeys] = await Promise.all([
+  const signUp = wantsNewPassword(password);
+  const [response, passkeys, aliases] = await Promise.all([
     send({ type: "autofill:suggest" }),
     offeredPasskeys(input),
+    signUp && input !== password ? aliasRows(input) : Promise.resolve([]),
   ]);
   if (activeInput !== input) return;
   const nothingToOffer =
@@ -441,6 +474,7 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
         ),
       );
     }
+    menu.append(...aliases);
     if (wantsNewPassword(password)) {
       menu.append(
         menuRow(t("autofill.generate"), t("autofill.generate_hint"), badge("wand"), () =>
