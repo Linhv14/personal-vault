@@ -258,42 +258,43 @@ function websiteUrl(raw: string): URL | null {
   }
 }
 
-function siteLink(raw: string): HTMLElement | null {
+function websiteField(raw: string): HTMLElement {
   const url = websiteUrl(raw);
-  if (!url) return null;
-  const row = document.createElement("div");
-  row.className = "site";
+  if (!url) return textField(t("common.url"), raw);
+  const { wrap, body } = field(t("common.url"));
+  const valueNode = document.createElement("div");
+  valueNode.className = "value";
   const anchor = document.createElement("a");
-  anchor.className = "site-link";
+  anchor.className = "site";
   anchor.href = url.href;
   anchor.target = "_blank";
   anchor.rel = "noopener noreferrer";
   anchor.title = url.href;
-  const text = document.createElement("span");
-  text.className = "site-text";
-  text.textContent = `${url.host}${url.pathname}${url.search}`.replace(/\/$/, "");
-  anchor.append(text, icon("external"));
-  row.append(anchor, copyButton(url.href.replace(/\/$/, "")).element);
-  return row;
-}
-
-function breakable(text: string): (string | HTMLElement)[] {
-  return text
-    .replace(/-/g, "\u2011")
-    .split(/(?=[./])/)
-    .flatMap((part, index) => (index === 0 ? [part] : [document.createElement("wbr"), part]));
+  const host = document.createElement("span");
+  host.className = "site-host";
+  host.textContent = url.host;
+  const rest = `${url.pathname}${url.search}`.replace(/^\/$/, "");
+  anchor.append(host);
+  if (rest) {
+    const path = document.createElement("span");
+    path.className = "site-path";
+    path.textContent = rest;
+    anchor.append(path);
+  }
+  valueNode.append(anchor);
+  body.append(valueNode);
+  wrap.append(copyButton(url.href.replace(/\/$/, "")).element);
+  return wrap;
 }
 
 function render(payload: SharePayload): void {
   const title = payload.title?.trim() || t("view.default_title");
-  el("title").replaceChildren(...breakable(title));
+  el("title").textContent = title;
   el("avatar").textContent = [...title][0]?.toUpperCase() ?? "?";
-  const site = payload.url ? siteLink(payload.url) : null;
-  el("site").replaceChildren(...(site ? [site] : []));
 
   const fields = el("fields");
   fields.replaceChildren();
-  if (payload.url && !site) fields.append(textField(t("common.url"), payload.url));
+  if (payload.url) fields.append(websiteField(payload.url));
   if (payload.username) fields.append(textField(t("common.username"), payload.username));
   if (payload.password) fields.append(passwordField(payload.password));
   if (payload.totp) fields.append(totpField(payload.totp));
@@ -314,7 +315,6 @@ function render(payload: SharePayload): void {
 
 function renderBanner(share: ShareResponse | null): void {
   const banner = el("banner");
-  const meta = el("meta");
   if (!share || share.viewsLeft === 0) {
     const title = document.createElement("strong");
     title.textContent = t("view.last_view_title");
@@ -322,12 +322,6 @@ function renderBanner(share: ShareResponse | null): void {
     text.append(title, t("view.last_view"));
     banner.className = "banner last";
     banner.replaceChildren(icon("alert"), text);
-    banner.hidden = false;
-  } else {
-    banner.hidden = true;
-  }
-  if (!share) {
-    meta.hidden = true;
     return;
   }
   const until = new Date(share.expiresAt * 1000).toLocaleString(locale, {
@@ -339,22 +333,15 @@ function renderBanner(share: ShareResponse | null): void {
   });
   const text = [
     t("view.available_until", { time: until }),
-    ...(share.viewsLeft === null || share.viewsLeft === 0
-      ? []
-      : [t("view.views_left", { count: share.viewsLeft })]),
+    ...(share.viewsLeft === null ? [] : [t("view.views_left", { count: share.viewsLeft })]),
   ].join(" · ");
-  meta.replaceChildren(icon("clock"), text);
-  meta.hidden = false;
+  banner.className = "banner";
+  banner.replaceChildren(icon("clock"), text);
 }
 
 function field(label: string): { wrap: HTMLElement; body: HTMLElement } {
   const wrap = document.createElement("div");
   wrap.className = "field";
-  wrap.addEventListener("click", (event) => {
-    if ((event.target as HTMLElement).closest("button, a")) return;
-    if (getSelection()?.toString()) return;
-    wrap.querySelector<HTMLButtonElement>("button.copy")?.click();
-  });
   const body = document.createElement("div");
   body.className = "field-body";
   const labelNode = document.createElement("div");
@@ -526,7 +513,6 @@ function copyButton(initial: string): {
       button.classList.remove("done");
     }, 1500);
   });
-  button.classList.add("copy");
 
   return {
     element: button,
