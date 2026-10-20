@@ -45,9 +45,34 @@ stays the same when the project is renamed.
 | `7key run -- <command>`       | Run a command with the linked secrets          |
 | `7key dotenv > .env`          | Write them to a `.env` file                    |
 | `7key secrets`                | List the names, without values                 |
+| `7key read <reference>`       | Print one value                                |
+| `7key inject -i <template>`   | Fill a template with values                    |
 | `--env production`            | Use another environment of the linked project  |
 | `--project <ref> --env <ref>` | Use a project without linking the folder       |
 | `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke |
+
+### Read one value or fill a template
+
+```bash
+7key read STRIPE_KEY                                  # from the linked project and environment
+7key read 7key://payments-api/production/STRIPE_KEY   # <project>/<env>/<NAME>, by handle or id
+export STRIPE_KEY="$(7key read STRIPE_KEY)"
+```
+
+`7key read` prints the bare value when piped, with no trailing newline.
+`7key inject` replaces `{{ 7key:NAME }}` (the linked project and environment)
+and `{{ 7key://<project>/<env>/<NAME> }}` in a template:
+
+```bash
+cat config.yml.tpl
+# api_key: {{ 7key:STRIPE_KEY }}
+# live_key: {{ 7key://payments-api/production/STRIPE_KEY }}
+7key inject -i config.yml.tpl -o config.yml   # or: 7key inject < config.yml.tpl
+```
+
+If any reference is unknown, 7key lists them all and writes nothing. `-o`
+creates the file readable only by you and will not replace an existing file
+unless you pass `--force`.
 
 The session lasts 30 days. On macOS it lives in the Keychain, on Linux in the
 Secret Service keyring (`secret-tool`), elsewhere in a file only you can read.

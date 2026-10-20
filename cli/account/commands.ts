@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { formatDotenv, handleOf, refersTo } from "../../src/core/projects.js";
 import { DEFAULT_SERVER } from "../../src/core/brand.js";
 import { remember, remembered } from "../agent/config.js";
@@ -25,6 +27,7 @@ import {
   type Keyring,
 } from "./credentials.js";
 import { findLink, LINK_FILE, writeLink } from "./link.js";
+import { injectTemplate, parseReference, type Scope } from "./reference.js";
 
 export interface Flags {
   email?: string;
@@ -32,6 +35,10 @@ export interface Flags {
   org?: string;
   project?: string;
   environment?: string;
+  input?: string;
+  output?: string;
+  force?: boolean;
+  positional?: string[];
   command: string[];
 }
 
@@ -45,6 +52,14 @@ export interface Context {
   ask: (question: string) => Promise<string>;
   askPassword: (question: string) => Promise<string>;
   choose: (title: string, options: string[]) => Promise<number>;
+  isTTY?: boolean;
+  readInput?: () => Promise<string>;
+}
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 export function defaultContext(env: NodeJS.ProcessEnv): Context {
@@ -58,10 +73,12 @@ export function defaultContext(env: NodeJS.ProcessEnv): Context {
     ask,
     askPassword: askHidden,
     choose,
+    isTTY: process.stdout.isTTY === true,
+    readInput: readStdin,
   };
 }
 
-export function parseFlags(argv: string[]): Flags {
+export function parseFlags(argv: string[], options: { positional?: boolean } = {}): Flags {
   const flags: Flags = { command: [] };
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]!;
@@ -79,7 +96,12 @@ export function parseFlags(argv: string[]): Flags {
     else if (arg === "--org") flags.org = value();
     else if (arg === "--project") flags.project = value();
     else if (arg === "--env") flags.environment = value();
-    else throw new AgentError(`Unexpected argument: ${arg}`);
+    else if (arg === "-i" || arg === "--in") flags.input = value();
+    else if (arg === "-o" || arg === "--out") flags.output = value();
+    else if (arg === "--force") flags.force = true;
+    else if (options.positional && !arg.startsWith("-")) {
+      flags.positional = [...(flags.positional ?? []), arg];
+    } else throw new AgentError(`Unexpected argument: ${arg}`);
   }
   return flags;
 }
@@ -292,5 +314,75 @@ export async function listSecrets(flags: Flags, context: Context): Promise<numbe
     const hosts = secret.hosts?.length ? `  agent: ${secret.hosts.join(", ")}` : "";
     context.out(`  ${secret.name}  (${kind})${hosts}\n`);
   }
+  return 0;
+}
+
+async function selectScope(
+  flags: Flags,
+  context: Context,
+  session: Session,
+  scope: Scope,
+): Promise<Selected> {
+  return resolveSelection(
+    scope.project ? { ...flags, project: scope.project, environment: scope.environment } : flags,
+    context,
+    session,
+  );
+}
+
+export async function readSecret(flags: Flags, context: Context): Promise<number> {
+  const [text, ...extra] = flags.positional ?? [];
+  if (!text || extra.length) {
+    throw new AgentError("Usage: 7key read <NAME | 7key://project/env/NAME>");
+  }
+  const reference = parseReference(text);
+  const session = requireSession(context);
+  const selected = await selectScope(flags, context, session, reference);
+  const secret = selected.secrets.find((entry) => entry.name === reference.name);
+  if (!secret) {
+    throw new AgentError(
+      `No secret "${reference.name}" in ${selected.projectName} / ${selected.environment.name}`,
+    );
+  }
+  await noteAccess(session, selected, "revealed");
+  context.out(context.isTTY ? `${secret.value}\n` : secret.value);
+  return 0;
+}
+
+export async function inject(flags: Flags, context: Context): Promise<number> {
+  const target = flags.output ? path.resolve(context.cwd, flags.output) : undefined;
+  if (target && !flags.force && existsSync(target)) {
+    throw new AgentError(`${flags.output} already exists; pass --force to overwrite it`);
+  }
+  const session = requireSession(context);
+  const template = flags.input
+    ? readFileSync(path.resolve(context.cwd, flags.input), "utf8")
+    : await (context.readInput ?? readStdin)();
+  const result = await injectTemplate(template, (scope) =>
+    selectScope(flags, context, session, scope),
+  );
+  if (result.missing.length) {
+    const plural = result.missing.length === 1 ? "reference" : "references";
+    throw new AgentError(
+      `${result.missing.length} ${plural} not found, nothing written:\n${result.missing.map((entry) => `  ${entry}`).join("\n")}`,
+    );
+  }
+  await Promise.all(result.loaded.map((selected) => noteAccess(session, selected, "injected")));
+  if (target) {
+    try {
+      writeFileSync(target, result.text, { mode: 0o600, flag: flags.force ? "w" : "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        throw new AgentError(`${flags.output} already exists; pass --force to overwrite it`);
+      }
+      throw error;
+    }
+    chmodSync(target, 0o600);
+  } else {
+    context.out(result.text);
+  }
+  context.log(
+    `7key: injected ${result.count} ${result.count === 1 ? "reference" : "references"}${target ? ` into ${flags.output}` : ""}`,
+  );
   return 0;
 }
