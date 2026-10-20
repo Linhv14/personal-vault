@@ -528,7 +528,10 @@ describe("extension popup", () => {
   });
 
   it("favorites, tags and trashes an item, then restores or deletes it", async () => {
-    detailButton("Add to favorites").click();
+    detailButton("More").click();
+    [...document.querySelectorAll<HTMLButtonElement>(".more .menu-item")]
+      .find((item) => item.textContent === "Add to favorites")!
+      .click();
     await waitFor(() => scopes().includes("Favorites1"), "the favorite count");
     expect(rows("all-list")[0]!.querySelector(".favorite-mark")).not.toBeNull();
 

@@ -262,13 +262,6 @@ function Actions({ item }: { item: VaultItem }) {
           onClick={() => void openShare(item)}
         />
       )}
-      <IconButton
-        icon="star"
-        className="pill-icon favorite-toggle"
-        label={t(item.favorite ? "list.unfavorite" : "list.favorite")}
-        aria-pressed={item.favorite === true}
-        onClick={() => void setFavorite(item, !item.favorite)}
-      />
       <div className="more">
         <IconButton
           icon="more"
@@ -282,6 +275,12 @@ function Actions({ item }: { item: VaultItem }) {
             align="right"
             onClose={() => setMore(false)}
             entries={[
+              {
+                key: "favorite",
+                label: t(item.favorite ? "list.unfavorite" : "list.favorite"),
+                icon: "star",
+                onSelect: () => void run(() => setFavorite(item, !item.favorite)),
+              },
               {
                 key: "trash",
                 label: t("edit.move_to_trash"),
