@@ -75,7 +75,9 @@ describe("creating a vault", () => {
     render(h(Setup, { apiUrl: "", defaultServer: HOSTED, signup: null }));
     await waitFor(() => expect(serverConfig).toHaveBeenCalled());
     fireEvent.click(document.querySelector<HTMLButtonElement>(".choice")!);
-    await waitFor(() => expect(document.querySelector<HTMLElement>("#setup-choice")!.hidden).toBe(true));
+    await waitFor(() =>
+      expect(document.querySelector<HTMLElement>("#setup-choice")!.hidden).toBe(true),
+    );
   }
 
   function fill(name: string, value: string) {
