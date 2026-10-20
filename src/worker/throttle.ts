@@ -7,7 +7,7 @@ import {
   ACCOUNT_WINDOW_SECONDS,
 } from "./throttle-policy.js";
 
-export type ThrottleScope = "login" | "recovery";
+export type ThrottleScope = "login" | "recovery" | "two_factor";
 
 interface Row {
   key: string;

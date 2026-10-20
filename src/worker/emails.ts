@@ -92,6 +92,24 @@ const STRINGS = {
         "If it wasn't you, change your master password right away and sign out the other devices under Settings → Account.",
       unknown: "an unrecognized device",
     },
+    twoFactorOn: {
+      subject: `Two-factor authentication is on for your ${APP_NAME} vault`,
+      preheader: "Signing in now needs a code from your authenticator app.",
+      heading: "Two-factor authentication is on",
+      intro: `Signing in to your ${APP_NAME} vault now needs your master password and a code from your authenticator app. Every other device was signed out.`,
+      ignore:
+        "If this wasn't you, someone knows your master password. Change it right away and turn two-factor authentication off and on again under Settings → Security.",
+    },
+    twoFactorOff: {
+      subject: `Two-factor authentication was turned off for your ${APP_NAME} vault`,
+      preheader: "Signing in now needs only your master password.",
+      heading: "Two-factor authentication is off",
+      intro: `Signing in to your ${APP_NAME} vault now needs only your master password.`,
+      recovered:
+        "It was turned off because your recovery code was used. Turn it back on under Settings → Security.",
+      ignore:
+        "If this wasn't you, change your master password right away and turn two-factor authentication back on.",
+    },
   },
   vi: {
     code: {
@@ -171,6 +189,23 @@ const STRINGS = {
       ignore:
         "Nếu không phải bạn, hãy đổi mật khẩu chính ngay và đăng xuất các thiết bị khác trong Cài đặt → Tài khoản.",
       unknown: "một thiết bị không xác định",
+    },
+    twoFactorOn: {
+      subject: `Đã bật xác thực hai lớp cho kho ${APP_NAME}`,
+      preheader: "Từ giờ đăng nhập cần thêm mã từ ứng dụng xác thực.",
+      heading: "Đã bật xác thực hai lớp",
+      intro: `Từ giờ đăng nhập kho ${APP_NAME} cần mật khẩu chính và mã từ ứng dụng xác thực. Mọi thiết bị khác đã bị đăng xuất.`,
+      ignore:
+        "Nếu không phải bạn, có người đang biết mật khẩu chính của bạn. Hãy đổi mật khẩu chính ngay, rồi tắt và bật lại xác thực hai lớp trong Cài đặt → Bảo mật.",
+    },
+    twoFactorOff: {
+      subject: `Đã tắt xác thực hai lớp cho kho ${APP_NAME}`,
+      preheader: "Từ giờ đăng nhập chỉ cần mật khẩu chính.",
+      heading: "Đã tắt xác thực hai lớp",
+      intro: `Từ giờ đăng nhập kho ${APP_NAME} chỉ cần mật khẩu chính.`,
+      recovered:
+        "Xác thực hai lớp bị tắt vì mã khôi phục vừa được dùng. Hãy bật lại trong Cài đặt → Bảo mật.",
+      ignore: "Nếu không phải bạn, hãy đổi mật khẩu chính ngay và bật lại xác thực hai lớp.",
     },
   },
 } as const;
@@ -306,6 +341,36 @@ export function newSignInEmail(
     blocks: [
       { kind: "text", text: strings.intro(device, formatDate(details.at, context.locale)) },
       { kind: "text", text: strings.next, tone: "muted" },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
+}
+
+export function twoFactorEnabledEmail(context: EmailContext): RenderedEmail {
+  const strings = STRINGS[context.locale].twoFactorOn;
+  return renderEmail(context, {
+    subject: strings.subject,
+    preheader: strings.preheader,
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
+}
+
+export function twoFactorDisabledEmail(
+  context: EmailContext,
+  { byRecovery = false }: { byRecovery?: boolean } = {},
+): RenderedEmail {
+  const strings = STRINGS[context.locale].twoFactorOff;
+  return renderEmail(context, {
+    subject: strings.subject,
+    preheader: strings.preheader,
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro },
+      ...(byRecovery ? [{ kind: "text" as const, text: strings.recovered }] : []),
       { kind: "text", text: strings.ignore, tone: "small" },
     ],
   });

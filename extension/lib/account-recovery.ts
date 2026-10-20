@@ -54,7 +54,7 @@ export async function recoverAccount(
   newPassword: string,
   locale: string,
   emailCode?: string,
-): Promise<string> {
+): Promise<{ code: string; twoFactorDisabled: boolean }> {
   assertMasterPasswordPolicy(newPassword, email);
   const authKey = await recoveryAuthKey(code);
   const { wrappedVaultKey } = await request<{ wrappedVaultKey: SealedData }>(
@@ -77,7 +77,7 @@ export async function recoverAccount(
     rewrapVaultKey(email, newPassword, vaultKeyRaw),
     sealForRecovery(nextCode, vaultKeyRaw),
   ]);
-  await request("/api/auth/recover/finish", {
+  const finished = await request<{ twoFactorDisabled?: boolean }>("/api/auth/recover/finish", {
     method: "POST",
     auth: false,
     body: JSON.stringify({
@@ -89,7 +89,7 @@ export async function recoverAccount(
       locale,
     }),
   });
-  return nextCode;
+  return { code: nextCode, twoFactorDisabled: finished?.twoFactorDisabled === true };
 }
 
 export function recoveryKitText(details: {
@@ -113,11 +113,11 @@ export function recoveryKitText(details: {
   ].join("\n");
 }
 
-export function downloadRecoveryKit(text: string): void {
+export function downloadRecoveryKit(text: string, filename = "7key-recovery-code.txt"): void {
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "7key-recovery-code.txt";
+  link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

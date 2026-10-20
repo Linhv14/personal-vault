@@ -22,6 +22,27 @@ import {
 
 export class AgentError extends Error {}
 
+export class ServerRefusal extends AgentError {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string | undefined,
+    readonly params: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}
+
+interface LoginAnswer {
+  token?: string;
+  expiresAt?: number;
+  wrappedVaultKey?: SealedData;
+  twoFactor?: string;
+  challenge?: string;
+}
+
+const CODE_ATTEMPTS = 3;
+
 export interface Session {
   server: string;
   token: string;
@@ -54,12 +75,21 @@ async function call<T>(
   } catch {
     throw new AgentError(`Cannot reach ${server}`);
   }
-  const body = (await response.json().catch(() => ({}))) as T & { error?: string };
+  const body = (await response.json().catch(() => ({}))) as T & {
+    error?: string;
+    code?: string;
+    params?: Record<string, unknown>;
+  };
   if (response.status === 401 && init.token) {
     throw new AgentError("Your 7key session has expired. Run: 7key login");
   }
   if (!response.ok) {
-    throw new AgentError(`${server} refused ${path} (${response.status}): ${body.error ?? ""}`);
+    throw new ServerRefusal(
+      `${server} refused ${path} (${response.status}): ${body.error ?? ""}`,
+      response.status,
+      body.code,
+      body.params ?? {},
+    );
   }
   return body;
 }
@@ -69,6 +99,7 @@ export async function signIn(
   email: string,
   password: string,
   request: typeof fetch = fetch,
+  askCode?: (question: string) => Promise<string>,
 ): Promise<Session> {
   const origin = new URL(server).origin;
   const { kdf } = await call<{ kdf: KdfParams }>(request, origin, "/api/auth/prelogin", {
@@ -77,14 +108,25 @@ export async function signIn(
   });
   const masterKey = await deriveMasterKey(email, password, kdf);
   const authKey = toBase64(await deriveAuthKey(masterKey));
-  const login = await call<{ token: string; expiresAt: number; wrappedVaultKey: SealedData }>(
-    request,
-    origin,
-    "/api/auth/login",
-    { method: "POST", body: JSON.stringify({ email, authKey }) },
-  ).catch((error: unknown) => {
-    throw error instanceof AgentError ? new AgentError("Wrong email or master password") : error;
+  let login = await call<LoginAnswer>(request, origin, "/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, authKey }),
+  }).catch((error: unknown) => {
+    throw error instanceof AgentError
+      ? signInError(error, "Wrong email or master password")
+      : error;
   });
+  if (login.twoFactor === "required" && login.challenge) {
+    if (!askCode) {
+      throw new AgentError("This account uses two-factor authentication. Run 7key login first");
+    }
+    login = await secondFactor(request, origin, login.challenge, askCode);
+  }
+  if (!login.token || !login.wrappedVaultKey) {
+    throw new AgentError(
+      "The server asked for a sign-in step this 7key does not know. Update 7key",
+    );
+  }
   const vaultKey = await importVaultKey(
     await open(await deriveWrappingKey(masterKey), login.wrappedVaultKey),
   );
@@ -108,6 +150,41 @@ export async function signIn(
       ),
     },
   };
+}
+
+function signInError(error: AgentError, fallback: string): AgentError {
+  if (error instanceof ServerRefusal && error.status === 429) {
+    return new AgentError(
+      `Too many attempts. Try again in ${String(error.params.seconds)} seconds`,
+    );
+  }
+  if (error instanceof ServerRefusal && error.code === "auth.two_factor_expired") {
+    return new AgentError("The sign-in timed out. Run 7key login again");
+  }
+  return error instanceof ServerRefusal ? new AgentError(fallback) : error;
+}
+
+async function secondFactor(
+  request: typeof fetch,
+  origin: string,
+  challenge: string,
+  askCode: (question: string) => Promise<string>,
+): Promise<LoginAnswer> {
+  for (let attempt = 1; ; attempt++) {
+    const question = attempt === 1 ? "2FA code (or backup code): " : "Wrong code. 2FA code: ";
+    const code = (await askCode(question)).trim();
+    try {
+      return await call<LoginAnswer>(request, origin, "/api/auth/login/2fa", {
+        method: "POST",
+        body: JSON.stringify({ challenge, code }),
+      });
+    } catch (error) {
+      const wrong = error instanceof ServerRefusal && error.code === "auth.invalid_2fa";
+      if (!wrong || attempt >= CODE_ATTEMPTS) {
+        throw error instanceof AgentError ? signInError(error, "Wrong 2FA code") : error;
+      }
+    }
+  }
 }
 
 export async function signOut(session: Session): Promise<void> {

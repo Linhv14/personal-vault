@@ -10,7 +10,8 @@ import { Wordmark } from "../extension/ui/components/Logo.js";
 import { describeError } from "../src/i18n/index.js";
 import { logoSvg } from "../src/ui/logo.js";
 import { localeSignal, useT } from "../extension/ui/i18n.js";
-import { registerFromInvite, signIn } from "./session.js";
+import { TwoFactorStep } from "../extension/ui/components/TwoFactorStep.js";
+import { registerFromInvite, signIn, signInWithCode, type PendingSignIn } from "./session.js";
 
 type Mode = "sign-in" | "register";
 
@@ -30,6 +31,7 @@ export function SignIn() {
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
+  const [secondFactor, setSecondFactor] = useState<PendingSignIn | null>(null);
 
   useEffect(() => {
     if (!inviteId) return;
@@ -88,7 +90,7 @@ export function SignIn() {
     setWorking(true);
     try {
       if (field) field.value = "";
-      await signIn(email, password);
+      setSecondFactor(await signIn(email, password));
     } catch (failure) {
       setError(describeError(failure, t));
       field?.focus();
@@ -101,6 +103,26 @@ export function SignIn() {
     return (
       <main className="sign-in">
         <span className="spinner" />
+      </main>
+    );
+  }
+
+  if (secondFactor) {
+    return (
+      <main className="sign-in">
+        <div className="panel sign-in-card">
+          <TwoFactorStep
+            email={secondFactor.email}
+            verify={(code) => signInWithCode(secondFactor, code)}
+            onCancel={(message) => {
+              setSecondFactor(null);
+              setError(message ?? null);
+            }}
+            buttonClass="btn primary"
+            linkClass="link"
+            errorClass="form-error"
+          />
+        </div>
       </main>
     );
   }

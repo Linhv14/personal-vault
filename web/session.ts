@@ -5,6 +5,7 @@ import {
   deriveWrappingKey,
   open,
   unlockVault,
+  type KdfParams,
 } from "../src/core/crypto.js";
 import { toBase64 } from "../src/core/bytes.js";
 import { signal } from "@preact/signals";
@@ -13,6 +14,7 @@ import { upgradeKdf } from "../extension/lib/kdf-upgrade.js";
 import { assertMasterPasswordPolicy } from "../extension/lib/master-password.js";
 import { memoryArea, usePlatform } from "../extension/lib/platform.js";
 import { getUnlocked, lock, setLocal, touch, unlock } from "../extension/lib/storage.js";
+import { localeSignal } from "../extension/ui/i18n.js";
 import { refreshSession, vaultKeySignal } from "../extension/ui/store/session.js";
 
 export const IDLE_MINUTES = 15;
@@ -45,20 +47,47 @@ export function startWebSession(): void {
   }, CHECK_INTERVAL_MS);
 }
 
-export async function signIn(email: string, password: string): Promise<void> {
-  let kdf = await api.prelogin(email);
+export interface PendingSignIn {
+  email: string;
+  password: string;
+  kdf: KdfParams;
+  authKey: string;
+  challenge: string;
+}
+
+export async function signIn(email: string, password: string): Promise<PendingSignIn | null> {
+  const kdf = await api.prelogin(email);
   const masterKey = await deriveMasterKey(email, password, kdf);
   const authKey = toBase64(await deriveAuthKey(masterKey));
-  const login = await api.login(email, authKey);
+  const login = await api.login(email, authKey, localeSignal.value);
+  if (api.needsSecondFactor(login)) {
+    return { email, password, kdf, authKey, challenge: login.challenge };
+  }
+  await openSession(email, password, kdf, authKey, login);
+  return null;
+}
+
+export async function signInWithCode(pending: PendingSignIn, code: string): Promise<void> {
+  const login = await api.loginSecondFactor(pending.challenge, code);
+  await openSession(pending.email, pending.password, pending.kdf, pending.authKey, login);
+}
+
+async function openSession(
+  email: string,
+  password: string,
+  kdf: KdfParams,
+  authKey: string,
+  login: api.LoginSuccess,
+): Promise<void> {
+  const masterKey = await deriveMasterKey(email, password, kdf);
   let { wrappedVaultKey } = login;
   const vaultKeyRaw = await open(await deriveWrappingKey(masterKey), wrappedVaultKey);
   if (login.upgradeKdf) {
     const upgraded = await upgradeKdf(email, password, vaultKeyRaw, authKey, login.token);
     if (upgraded) ({ kdf, wrappedVaultKey } = upgraded);
   }
-  const { token } = login;
   await setLocal({ email, kdf, wrappedVaultKey });
-  await unlock(toBase64(vaultKeyRaw), token);
+  await unlock(toBase64(vaultKeyRaw), login.token);
   accountEmail.value = email;
   await refreshSession();
 }

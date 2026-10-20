@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { DEFAULT_KDF_ITERATIONS } from "../../core/crypto.js";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
 import {
@@ -20,7 +20,7 @@ import { keyedHash, keyedHashBytes } from "../keyed-hash.js";
 import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../one-time-code.js";
 import { normalizeEmail } from "../email-address.js";
 import { createMailer } from "../mailer.js";
-import { accountRecoveredEmail, newSignInEmail } from "../emails.js";
+import { accountRecoveredEmail, newSignInEmail, twoFactorDisabledEmail } from "../emails.js";
 import { deviceKind, deviceLabel } from "../device-label.js";
 import {
   checkRecoveryEmailCode,
@@ -41,6 +41,14 @@ import {
   sessionResumeKey,
 } from "../session.js";
 import { throttle } from "../throttle.js";
+import {
+  consumeChallenge,
+  disableStatements,
+  findChallenge,
+  issueChallenge,
+  noteChallengeFailure,
+  verifySecondFactor,
+} from "../two-factor.js";
 import type { AppBindings, Env } from "../types.js";
 import { isBase64, isUuid } from "../validate.js";
 import { OrgDirectory } from "../orgs/directory.js";
@@ -262,16 +270,14 @@ auth.post("/login", async (c) => {
   await guard.slowDown();
 
   const row = await c.env.DB.prepare(
-    `SELECT id, auth_key_hash, wrapped_vault_key, wrap_nonce, kdf_iterations
-       FROM accounts WHERE email = ?`,
+    "SELECT id, auth_key_hash, wrapped_vault_key, totp_enabled_at FROM accounts WHERE email = ?",
   )
     .bind(email)
     .first<{
       id: string;
       auth_key_hash: string;
       wrapped_vault_key: string;
-      wrap_nonce: string;
-      kdf_iterations: number;
+      totp_enabled_at: number | null;
     }>();
 
   // Compare in constant time, and run the comparison even when no account
@@ -285,7 +291,6 @@ auth.post("/login", async (c) => {
     return c.json(apiError("auth.invalid_credentials"), 401);
   }
 
-  await guard.clear();
   const wrapped = await revealWrappedKey(c.env, row.id, row.wrapped_vault_key);
   if (verification.needsUpgrade || wrapped.needsUpgrade) {
     await c.env.DB.prepare(
@@ -299,25 +304,81 @@ auth.post("/login", async (c) => {
       )
       .run();
   }
+  const locale = requestLocale(c, (body as Record<string, unknown>).locale);
+  if (row.totp_enabled_at !== null) {
+    c.header("Cache-Control", "no-store");
+    return c.json({
+      twoFactor: "required",
+      ...(await issueChallenge(c.env, row.id, timestamp, locale)),
+    });
+  }
+  await guard.clear();
+  return c.json(await signedIn(c, row.id, email, locale, timestamp));
+});
+
+async function signedIn(
+  c: Context<AppBindings>,
+  accountId: string,
+  email: string,
+  locale: "en" | "vi",
+  timestamp: number,
+) {
+  const row = await c.env.DB.prepare(
+    "SELECT wrapped_vault_key, wrap_nonce, kdf_iterations FROM accounts WHERE id = ?",
+  )
+    .bind(accountId)
+    .first<{ wrapped_vault_key: string; wrap_nonce: string; kdf_iterations: number }>();
+  if (!row) throw new Error("Account vanished during sign-in");
+  const wrapped = await revealWrappedKey(c.env, accountId, row.wrapped_vault_key);
   const label = deviceLabel(c.req.header("User-Agent"));
-  const session = await createSession(c.env, row.id, timestamp, label);
+  const session = await createSession(c.env, accountId, timestamp, label);
   const mailer = createMailer(c.env);
-  if ((await noteDevice(c.env, row.id, label, timestamp)) === "new" && mailer) {
+  if ((await noteDevice(c.env, accountId, label, timestamp)) === "new" && mailer) {
     const message = newSignInEmail(
-      {
-        locale: requestLocale(c, (body as Record<string, unknown>).locale),
-        siteUrl: new URL(c.req.url).origin,
-      },
+      { locale, siteUrl: new URL(c.req.url).origin },
       { device: label, at: timestamp },
     );
     inBackground(c, "new_sign_in_email_failed", () => mailer.send({ to: email, ...message }));
   }
-
-  return c.json({
+  return {
     ...session,
     wrappedVaultKey: { ciphertext: wrapped.ciphertext, nonce: row.wrap_nonce },
     ...(row.kdf_iterations < MIN_KDF_ITERATIONS ? { upgradeKdf: true } : {}),
-  });
+  };
+}
+
+auth.post("/login/2fa", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const { challenge: token, code } = body ?? {};
+  if (typeof token !== "string" || token.length > 128) {
+    return c.json(apiError("auth.two_factor_expired"), 401);
+  }
+  const timestamp = now();
+  const challenge = await findChallenge(c.env, token, timestamp);
+  if (!challenge) return c.json(apiError("auth.two_factor_expired"), 401);
+  const account = await c.env.DB.prepare("SELECT email FROM accounts WHERE id = ?")
+    .bind(challenge.accountId)
+    .first<{ email: string }>();
+  if (!account) return c.json(apiError("auth.two_factor_expired"), 401);
+
+  const guard = await throttle(c.env, "login", account.email, clientIp(c), timestamp);
+  if (guard.retryAfter) {
+    return c.json(apiError("auth.rate_limited", { seconds: guard.retryAfter }), 429);
+  }
+  await guard.slowDown();
+
+  const factor = await verifySecondFactor(c.env, challenge.accountId, code, timestamp);
+  if (!factor) {
+    await guard.fail();
+    await noteChallengeFailure(c.env, challenge);
+    return c.json(apiError("auth.invalid_2fa"), 401);
+  }
+  if (!(await consumeChallenge(c.env, challenge))) {
+    return c.json(apiError("auth.two_factor_expired"), 401);
+  }
+  await guard.clear();
+  const locale = challenge.locale === "vi" ? "vi" : "en";
+  return c.json(await signedIn(c, challenge.accountId, account.email, locale, timestamp));
 });
 
 auth.post("/delete-account", async (c) => {
@@ -341,6 +402,8 @@ auth.post("/delete-account", async (c) => {
     c.env.DB.prepare("DELETE FROM items WHERE account_id = ?").bind(accountId),
     c.env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(accountId),
     c.env.DB.prepare("DELETE FROM login_attempts WHERE email = ?").bind(row.email),
+    c.env.DB.prepare("DELETE FROM two_factor_backup_codes WHERE account_id = ?").bind(accountId),
+    c.env.DB.prepare("DELETE FROM two_factor_challenges WHERE account_id = ?").bind(accountId),
     c.env.DB.prepare("DELETE FROM accounts WHERE id = ?").bind(accountId),
   ]);
   return c.json({ ok: true });
@@ -409,6 +472,7 @@ auth.post("/change-password", async (c) => {
 
 interface RecoveryRow {
   id: string;
+  totp_enabled_at: number | null;
   recovery_auth_hash: string | null;
   recovery_wrapped_key: string | null;
   recovery_nonce: string | null;
@@ -425,7 +489,7 @@ async function checkRecovery(
   if (guard.retryAfter) return { retryAfter: guard.retryAfter };
   await guard.slowDown();
   const row = await env.DB.prepare(
-    `SELECT id, recovery_auth_hash, recovery_wrapped_key, recovery_nonce
+    `SELECT id, recovery_auth_hash, recovery_wrapped_key, recovery_nonce, totp_enabled_at
        FROM accounts WHERE email = ?`,
   )
     .bind(email)
@@ -552,18 +616,25 @@ auth.post("/recover/finish", async (c) => {
     .run();
   if (!result.meta.changes) return c.json(apiError("auth.invalid_recovery_code"), 401);
 
+  const twoFactorDisabled = row.totp_enabled_at !== null;
+  if (twoFactorDisabled) await c.env.DB.batch(disableStatements(c.env, row.id));
   await revokeAllSessions(c.env, row.id);
   await (await throttle(c.env, "login", email, clientIp(c), timestamp)).clear();
   await clearRecoveryEmailCode(c.env, row.id);
   const mailer = createMailer(c.env);
   if (mailer) {
-    const message = accountRecoveredEmail({
-      locale: body?.locale === "vi" ? "vi" : "en",
+    const context = {
+      locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
       siteUrl: new URL(c.req.url).origin,
-    });
+    };
+    const message = accountRecoveredEmail(context);
     inBackground(c, "recovery_email_failed", () => mailer.send({ to: email, ...message }));
+    if (twoFactorDisabled) {
+      const notice = twoFactorDisabledEmail(context, { byRecovery: true });
+      inBackground(c, "two_factor_email_failed", () => mailer.send({ to: email, ...notice }));
+    }
   }
-  return c.json({ ok: true });
+  return c.json({ ok: true, ...(twoFactorDisabled ? { twoFactorDisabled: true } : {}) });
 });
 
 async function claimRegistrationSlot(env: Env, ip: string, timestamp: number): Promise<boolean> {

@@ -11,7 +11,7 @@ import { RecoveryCodeView } from "../../ui/components/RecoveryCodeView.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { signIn } from "../auth.js";
 import { AuthLayout } from "../components/AuthLayout.js";
-import { toast } from "../state.js";
+import { openSettings, toast } from "../state.js";
 
 export interface RecoverProps {
   email: string;
@@ -30,7 +30,12 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [proven, setProven] = useState<Proven | null>(null);
-  const [done, setDone] = useState<{ email: string; password: string; code: string } | null>(null);
+  const [done, setDone] = useState<{
+    email: string;
+    password: string;
+    code: string;
+    twoFactorDisabled: boolean;
+  } | null>(null);
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
 
   const withServer = async <T,>(email: string, action: () => Promise<T>): Promise<T> => {
@@ -102,7 +107,7 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
       const next = await withServer(proven.email, () =>
         recoverAccount(proven.email, proven.code, password, localeSignal.value, emailCode),
       );
-      setDone({ email: proven.email, password, code: next });
+      setDone({ email: proven.email, password, ...next });
     });
   };
 
@@ -133,6 +138,15 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
       {done ? (
         <>
           <p className="hint">{t("recovery.new_hint")}</p>
+          {done.twoFactorDisabled && (
+            <div className="notice-line warn two-factor-off" id="two-factor-off">
+              <Icon name="shield" />
+              <span>{t("twofa.recovered_off")}</span>
+              <button type="button" className="link" onClick={() => openSettings("security")}>
+                {t("twofa.turn_back_on")}
+              </button>
+            </div>
+          )}
           <RecoveryCodeView
             code={done.code}
             email={done.email}

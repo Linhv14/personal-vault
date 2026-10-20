@@ -6,6 +6,7 @@ const EMAIL = "admin@example.com";
 const PASSWORD = "correct horse battery staple";
 const calls: string[] = [];
 let account: Awaited<ReturnType<typeof createAccount>>;
+const server = { twoFactor: false, bareLogin: false };
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -23,16 +24,24 @@ vi.stubGlobal(
     if (url.pathname === "/api/auth/prelogin") return json({ kdf: record.kdf });
     if (url.pathname === "/api/auth/login") {
       const body = JSON.parse(String(init?.body));
-      return body.authKey === record.authKey
-        ? json({ token: "web-token", wrappedVaultKey: record.wrappedVaultKey })
-        : json({ code: "auth.invalid_credentials" }, 401);
+      if (body.authKey !== record.authKey) return json({ code: "auth.invalid_credentials" }, 401);
+      if (server.bareLogin) return json({ next: "something new" });
+      return server.twoFactor
+        ? json({ twoFactor: "required", challenge: "challenge-1", expiresAt: 0 })
+        : json({ token: "web-token", wrappedVaultKey: record.wrappedVaultKey });
+    }
+    if (url.pathname === "/api/auth/login/2fa") {
+      const body = JSON.parse(String(init?.body));
+      return body.challenge === "challenge-1" && body.code === "246810"
+        ? json({ token: "web-token-2fa", wrappedVaultKey: record.wrappedVaultKey })
+        : json({ code: "auth.invalid_2fa" }, 401);
     }
     if (url.pathname === "/api/auth/logout") return json({ ok: true });
     return json({ code: "server.not_found" }, 404);
   }),
 );
 
-const { IDLE_MINUTES, accountEmail, signIn, signOut, startWebSession } =
+const { IDLE_MINUTES, accountEmail, signIn, signInWithCode, signOut, startWebSession } =
   await import("../web/session.js");
 const { getLocal, getUnlocked } = await import("../extension/lib/storage.js");
 const { vaultKeySignal } = await import("../extension/ui/store/session.js");
@@ -45,6 +54,7 @@ beforeAll(async () => {
 afterEach(() => {
   vi.useRealTimers();
   calls.length = 0;
+  Object.assign(server, { twoFactor: false, bareLogin: false });
 });
 
 describe("web dashboard session", () => {
@@ -78,5 +88,31 @@ describe("web dashboard session", () => {
     expect(calls).toContain(`POST ${location.origin}/api/auth/logout`);
     expect(vaultKeySignal.value).toBeNull();
     expect(await getUnlocked()).toBeNull();
+  });
+
+  it("holds the vault shut until the second factor checks out", async () => {
+    server.twoFactor = true;
+    const pending = await signIn(EMAIL, PASSWORD);
+    expect(pending).toMatchObject({ email: EMAIL, challenge: "challenge-1" });
+    expect(vaultKeySignal.value).toBeNull();
+    expect(await getUnlocked()).toBeNull();
+
+    await expect(signInWithCode(pending!, "135790")).rejects.toMatchObject({
+      messageKey: "error.auth.invalid_2fa",
+    });
+    expect(vaultKeySignal.value).toBeNull();
+
+    await signInWithCode(pending!, "246810");
+    expect(vaultKeySignal.value).not.toBeNull();
+    expect((await getUnlocked())?.token).toBe("web-token-2fa");
+    await signOut();
+  });
+
+  it("fails closed on a sign-in answer it does not understand", async () => {
+    server.bareLogin = true;
+    await expect(signIn(EMAIL, PASSWORD)).rejects.toMatchObject({
+      messageKey: "error.auth.client_outdated",
+    });
+    expect(vaultKeySignal.value).toBeNull();
   });
 });

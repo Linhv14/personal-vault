@@ -2216,3 +2216,14 @@ input[aria-invalid="true"] {
 .turnstile-frame.interactive {
   height: 65px;
 }
+.notice-line.two-factor-off {
+  border: 0;
+  border-radius: 10px;
+}
+.notice-line.two-factor-off span {
+  flex: 1;
+}
+.notice-line.two-factor-off .link {
+  color: inherit;
+  font-weight: 600;
+}

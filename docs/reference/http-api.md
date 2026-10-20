@@ -138,6 +138,30 @@ same on every call, so the response does not reveal whether an account exists.
 | 401    | `auth.invalid_credentials` (wrong email or key; the two are not distinguished) |
 | 429    | `auth.rate_limited` with `params.seconds` until the lock ends                  |
 
+When the account has two-factor authentication on, a correct `authKey` returns
+`200 { "twoFactor": "required", "challenge": string, "expiresAt": number }`
+instead, with no token and no wrapped key. A client that does not know this
+field finds no `token` and fails closed. Wrong credentials answer exactly as
+above, so the response never reveals whether 2FA is on before the password is
+right.
+
+### `POST /api/auth/login/2fa`
+
+Unauthenticated, rate-limited like `login`, and counted against the same
+throttle. Request `{ "challenge": string, "code": string }`, where `code` is a
+6-digit TOTP code (RFC 6238, SHA-1, 30 s, ±1 step) or a backup code
+(`xxxxx-xxxxx`; case, spaces and dashes are ignored). A TOTP code is accepted
+once; a backup code once ever.
+
+| Status | Body / code                                                                   |
+| ------ | ----------------------------------------------------------------------------- |
+| 200    | The normal `login` response                                                   |
+| 401    | `auth.invalid_2fa` (wrong code) or `auth.two_factor_expired` (challenge gone) |
+| 429    | `auth.rate_limited` with `params.seconds`                                     |
+
+A challenge lasts five minutes, is single use, and is dropped after five wrong
+codes.
+
 ### `GET /api/auth/resume-key`
 
 Authenticated. Returns `{ "resumeKey": "<base64>" }`, a random 32-byte key that
@@ -292,7 +316,44 @@ send email. The code used stops working.
 | `recovery`        | object | `{ authKey, wrappedVaultKey }` for the new code |
 | `locale`          | string | Optional, `en` or `vi`, for the notification    |
 
-Returns `{ "ok": true }`, or the errors of `recover/start`.
+Returns `{ "ok": true }`, or the errors of `recover/start`. When the account had
+two-factor authentication on, the recovery code bypasses it, turns it off and
+deletes the backup codes; the response adds `"twoFactorDisabled": true` and the
+owner gets a separate email.
+
+## Two-factor authentication
+
+The TOTP secret is stored encrypted under a key derived from `AT_REST_SECRET`;
+backup codes are stored as keyed hashes. Every request below is authenticated
+and needs `currentAuthKey`; `locale` (`en` or `vi`) is optional.
+
+### `GET /api/account/2fa`
+
+Returns `{ "enabled": boolean, "enabledAt": number | null, "backupCodesLeft": number }`.
+
+### `POST /api/account/2fa/setup`
+
+Request `{ "currentAuthKey" }`. Returns `{ "secret": string, "uri": string }`,
+the base32 secret and its `otpauth://` URI. The secret waits 15 minutes for
+`enable`. `409 two_factor.already_enabled` when it is already on.
+
+### `POST /api/account/2fa/enable`
+
+Request `{ "currentAuthKey", "code" }` with a current code from the new secret.
+Returns `{ "enabledAt": number, "backupCodes": string[] }` (ten codes, shown
+once), signs out every other session and emails the owner. Errors:
+`400 auth.invalid_2fa`, `400 two_factor.setup_expired`.
+
+### `POST /api/account/2fa/disable`
+
+Request `{ "currentAuthKey", "code" }`, where `code` is a TOTP or backup code.
+Returns `{ "ok": true }` and emails the owner. Wrong codes answer
+`401 auth.invalid_2fa` and are throttled per address and network.
+
+### `POST /api/account/2fa/backup-codes`
+
+Request `{ "currentAuthKey", "code" }`. Returns `{ "backupCodes": string[] }`;
+every earlier backup code stops working.
 
 ## Account key pair
 

@@ -9,7 +9,7 @@ import { pauseLogin } from "../account/credentials.js";
 import { remember, remembered } from "./config.js";
 import { runAgent } from "./run.js";
 import { AgentError } from "./session.js";
-import { askHidden, confirm } from "./terminal.js";
+import { ask, askHidden, confirm } from "./terminal.js";
 
 export const AGENT_USAGE = `Usage: 7key agent [options] -- <command…>
 
@@ -123,6 +123,7 @@ export async function agentMain(argv: string[], env: NodeJS.ProcessEnv): Promise
     command: args.command,
     env,
     askPassword: askHidden,
+    askCode: ask,
     confirm,
     log: (line) => console.error(line),
   });

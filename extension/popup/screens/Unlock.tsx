@@ -10,7 +10,8 @@ import {
 } from "../../lib/biometric.js";
 import { clearAccountData, getLocal, getUnlocked, lock } from "../../lib/storage.js";
 import { useT } from "../../ui/i18n.js";
-import { signIn } from "../auth.js";
+import { SecondFactorRequired, signIn, signInWithCode, type PendingSignIn } from "../auth.js";
+import { TwoFactorStep } from "../../ui/components/TwoFactorStep.js";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { enterVault } from "../state.js";
@@ -25,6 +26,7 @@ export function Unlock({ email }: { email: string }) {
 
   const [biometric, setBiometric] = useState(false);
   const [recovering, setRecovering] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingSignIn | null>(null);
   const method = t(biometricLabel());
 
   useEffect(() => {
@@ -95,7 +97,8 @@ export function Unlock({ email }: { email: string }) {
         String(new FormData(event.currentTarget as HTMLFormElement).get("password")),
       );
     } catch (failure) {
-      setError(describeError(failure, t));
+      if (failure instanceof SecondFactorRequired) setPending(failure.pending);
+      else setError(describeError(failure, t));
     } finally {
       setWorking(false);
     }
@@ -107,6 +110,21 @@ export function Unlock({ email }: { email: string }) {
     await lock();
     location.reload();
   };
+
+  if (pending) {
+    return (
+      <AuthLayout id="screen-two-factor">
+        <TwoFactorStep
+          email={pending.email}
+          verify={(code) => signInWithCode(pending, code)}
+          onCancel={(message) => {
+            setPending(null);
+            setError(message ?? null);
+          }}
+        />
+      </AuthLayout>
+    );
+  }
 
   if (recovering !== null) {
     return <Recover email={email} server={recovering} onCancel={() => setRecovering(null)} />;

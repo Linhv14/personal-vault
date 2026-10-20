@@ -16,7 +16,14 @@ import { isDefaultServer } from "../../lib/server.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { MasterPasswordInput } from "../../ui/components/MasterPasswordInput.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
-import { finishUnlock, signIn } from "../auth.js";
+import {
+  finishUnlock,
+  SecondFactorRequired,
+  signIn,
+  signInWithCode,
+  type PendingSignIn,
+} from "../auth.js";
+import { TwoFactorStep } from "../../ui/components/TwoFactorStep.js";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { toast } from "../state.js";
 import { Recover } from "./Recover.js";
@@ -57,6 +64,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const [recovering, setRecovering] = useState<{ email: string; server: string } | null>(null);
   const [email, setEmail] = useState(signup?.email ?? "");
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
+  const [secondFactor, setSecondFactor] = useState<PendingSignIn | null>(null);
 
   const registering = mode === "register";
   const codeStep = registering && verificationRequired && codeSentTo !== null;
@@ -161,6 +169,10 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
         await signIn(email, password);
       }
     } catch (failure) {
+      if (failure instanceof SecondFactorRequired) {
+        setSecondFactor(failure.pending);
+        return;
+      }
       if (!(await getLocal()).wrappedVaultKey) await chrome.storage.local.remove("email");
       setError(describeError(failure, t));
     } finally {
@@ -183,6 +195,24 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
       setError(describeError(failure, t));
     }
   };
+
+  if (secondFactor) {
+    return (
+      <AuthLayout id="screen-two-factor">
+        <TwoFactorStep
+          email={secondFactor.email}
+          verify={(code) => signInWithCode(secondFactor, code)}
+          onCancel={(message) => {
+            setSecondFactor(null);
+            setError(message ?? null);
+            void getLocal().then(async (local) => {
+              if (!local.wrappedVaultKey) await chrome.storage.local.remove("email");
+            });
+          }}
+        />
+      </AuthLayout>
+    );
+  }
 
   if (recovering) {
     return (
@@ -252,7 +282,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
               name="email"
               type="email"
               autoComplete="username"
-              defaultValue={signup?.email ?? ""}
+              defaultValue={email}
               required={!codeStep}
               onInput={(event) => setEmail(event.currentTarget.value)}
             />

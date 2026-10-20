@@ -157,15 +157,60 @@ export async function prelogin(email: string): Promise<KdfParams> {
   return result.kdf;
 }
 
+export interface LoginSuccess {
+  token: string;
+  expiresAt: number;
+  wrappedVaultKey: SealedData;
+  upgradeKdf?: boolean;
+}
+
+export interface TwoFactorChallenge {
+  twoFactor: "required";
+  challenge: string;
+  expiresAt: number;
+}
+
+export function needsSecondFactor(
+  result: LoginSuccess | TwoFactorChallenge,
+): result is TwoFactorChallenge {
+  return "twoFactor" in result && result.twoFactor === "required";
+}
+
+function checkedLogin(result: unknown): LoginSuccess | TwoFactorChallenge {
+  const body = (result ?? {}) as Partial<LoginSuccess & TwoFactorChallenge>;
+  if (body.twoFactor === "required" && typeof body.challenge === "string") {
+    return body as TwoFactorChallenge;
+  }
+  if (typeof body.token !== "string" || !body.wrappedVaultKey) {
+    throw new ApiError("error.auth.client_outdated", 200);
+  }
+  return body as LoginSuccess;
+}
+
 export async function login(
   email: string,
   authKey: string,
-): Promise<{ token: string; wrappedVaultKey: SealedData; upgradeKdf?: boolean }> {
-  return request("/api/auth/login", {
-    method: "POST",
-    auth: false,
-    body: JSON.stringify({ email, authKey }),
-  });
+  locale?: string,
+): Promise<LoginSuccess | TwoFactorChallenge> {
+  return checkedLogin(
+    await request("/api/auth/login", {
+      method: "POST",
+      auth: false,
+      body: JSON.stringify({ email, authKey, locale }),
+    }),
+  );
+}
+
+export async function loginSecondFactor(challenge: string, code: string): Promise<LoginSuccess> {
+  const result = checkedLogin(
+    await request("/api/auth/login/2fa", {
+      method: "POST",
+      auth: false,
+      body: JSON.stringify({ challenge, code }),
+    }),
+  );
+  if (needsSecondFactor(result)) throw new ApiError("error.auth.client_outdated", 200);
+  return result;
 }
 
 export async function logout(): Promise<void> {
