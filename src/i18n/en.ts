@@ -839,6 +839,9 @@ export const en = {
 
   // --- Settings ------------------------------------------------------------
   "share.ttl_30d": "30 days",
+  "share.ttl_option": "Expires in {ttl}",
+  "share.views_once_option": "Opens once",
+  "share.views_unlimited_option": "Opens until it expires",
   "share.access": "Who can open",
   "share.access_anyone": "Anyone with the link",
   "share.access_emails": "Specific emails",

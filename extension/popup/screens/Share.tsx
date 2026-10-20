@@ -41,38 +41,6 @@ function Chip({
   );
 }
 
-function Segmented<T extends string>({
-  name,
-  value,
-  choices,
-  disabled = [],
-  onChange,
-}: {
-  name: string;
-  value: T;
-  choices: [T, string][];
-  disabled?: T[];
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div className="segmented">
-      {choices.map(([choice, label]) => (
-        <label className="tab" key={choice}>
-          <input
-            type="radio"
-            name={name}
-            value={choice}
-            checked={value === choice}
-            disabled={disabled.includes(choice)}
-            onChange={() => onChange(choice)}
-          />
-          <span>{label}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
 type SharePart = {
   key: string;
   icon: IconName;
@@ -308,36 +276,42 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
             </small>
           )}
         </section>
-        <section className="share-block share-options">
-          <div className="share-option" role="group" aria-labelledby="share-ttl-label">
-            <span className="option-label" id="share-ttl-label">
-              <Icon name="clock" />
-              {t("share.expires_in")}
-            </span>
-            <Segmented
+        <div className="share-limits">
+          <label className="limit-pill" title={t("share.expires_in")}>
+            <Icon name="clock" />
+            <select
               name="ttl"
               value={ttl}
-              choices={TTL_CHOICES.map(([value, label]) => [value, t(label)])}
-              onChange={setTtl}
-            />
-          </div>
-          <div className="share-option" role="group" aria-labelledby="share-views-label">
-            <span className="option-label" id="share-views-label">
-              <Icon name="eye" />
-              {t("share.max_views")}
-            </span>
-            <Segmented
+              aria-label={t("share.expires_in")}
+              onChange={(event) => setTtl(event.currentTarget.value)}
+            >
+              {TTL_CHOICES.map(([value, label]) => (
+                <option value={value} key={value}>
+                  {t("share.ttl_option", { ttl: t(label) })}
+                </option>
+              ))}
+            </select>
+            <Icon name="chevron" className="limit-chevron" />
+          </label>
+          <label
+            className="limit-pill"
+            title={allowOnce ? t("share.max_views") : t("share.views_hint")}
+          >
+            <Icon name="eye" />
+            <select
               name="maxViews"
               value={maxViews}
-              choices={[
-                ["1", t("share.views_1")],
-                ["unlimited", t("share.views_unlimited")],
-              ]}
-              disabled={allowOnce ? [] : ["1"]}
-              onChange={setViews}
-            />
-          </div>
-        </section>
+              aria-label={t("share.max_views")}
+              onChange={(event) => setViews(event.currentTarget.value as "1" | "unlimited")}
+            >
+              <option value="1" disabled={!allowOnce}>
+                {t("share.views_once_option")}
+              </option>
+              <option value="unlimited">{t("share.views_unlimited_option")}</option>
+            </select>
+            <Icon name="chevron" className="limit-chevron" />
+          </label>
+        </div>
         <section className="share-block">
           <div className="share-guards">
             {emailAccess && (

@@ -831,6 +831,9 @@ export const vi: Catalogue = {
 
   // --- Settings ------------------------------------------------------------
   "share.ttl_30d": "30 ngày",
+  "share.ttl_option": "Hết hạn sau {ttl}",
+  "share.views_once_option": "Mở được 1 lần",
+  "share.views_unlimited_option": "Mở đến khi hết hạn",
   "share.access": "Ai được mở",
   "share.access_anyone": "Ai có link",
   "share.access_emails": "Email chỉ định",

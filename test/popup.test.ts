@@ -465,10 +465,9 @@ describe("extension popup", () => {
     expect(entry.value).toBe("not-an-email");
     expect(el("share-recipients").getAttribute("aria-invalid")).toBe("true");
 
-    const views = (value: string) =>
-      el("form-share").querySelector<HTMLInputElement>(`[name="maxViews"][value="${value}"]`)!;
-    expect(views("1").disabled).toBe(true);
-    expect(views("unlimited").checked).toBe(true);
+    const views = el("form-share").querySelector<HTMLSelectElement>('[name="maxViews"]')!;
+    expect(views.querySelector<HTMLOptionElement>('option[value="1"]')!.disabled).toBe(true);
+    expect(views.value).toBe("unlimited");
 
     entry.value = "";
     server.shareRequests.length = 0;
