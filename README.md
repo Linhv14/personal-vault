@@ -91,7 +91,7 @@ Everything is indexed in [`docs/README.md`](docs/README.md).
 
 ## License
 
-Copyright (C) 2026 linhv14. Licensed under the [GNU AGPL-3.0](LICENSE), without
+Copyright (C) 2026 Linh BE. Licensed under the [GNU AGPL-3.0](LICENSE), without
 warranty, except files in a `commercial/` directory, which fall under the
 [7key Commercial License](LICENSE_COMMERCIAL.md) (none exist yet). See the
 [licensing FAQ](LICENSE_FAQ.md) and the [trademark guidelines](TRADEMARKS.md).

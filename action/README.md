@@ -58,4 +58,4 @@ source on each release.
 
 ## License
 
-Copyright (C) 2026 linhv14. Licensed under the [GNU AGPL-3.0](LICENSE). "7key" is a trademark of linhv14.
+Copyright (C) 2026 Linh BE. Licensed under the [GNU AGPL-3.0](LICENSE). "7key" is a trademark of Linh BE.

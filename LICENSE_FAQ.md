@@ -58,4 +58,4 @@ license, while you keep the copyright in your contribution.
 
 ## Who owns 7key?
 
-7key is written and maintained by linhv14, who holds the copyright and the trademarks.
+7key is written and maintained by Linh BE, who holds the copyright and the trademarks.

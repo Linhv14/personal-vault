@@ -1,6 +1,6 @@
 # 7key Trademark Guidelines
 
-"7key", "7KEY" and the 7key logo are trademarks of linhv14. The code is open source; the
+"7key", "7KEY" and the 7key logo are trademarks of Linh BE. The code is open source; the
 name and logo are not. These guidelines say how you may use them.
 
 ## You may, without asking

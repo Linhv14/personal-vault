@@ -6,8 +6,8 @@ Thank you for contributing to 7key. This agreement makes clear the rights you gr
 submit a contribution. You keep the copyright in your contribution; you give the maintainer
 permission to use it.
 
-"Maintainer" means linhv14, the copyright holder of 7key, and any legal entity to which
-linhv14 assigns the 7key project. "You" means the person or legal entity submitting a
+"Maintainer" means Linh BE, the copyright holder of 7key, and any legal entity to which
+Linh BE assigns the 7key project. "You" means the person or legal entity submitting a
 Contribution. "Contribution" means any code, documentation or other material you submit to
 the 7key project, for example through a pull request, a patch or an issue.
 

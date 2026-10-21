@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Copyright (C) 2026 linhv14 ("Licensor")
+Copyright (C) 2026 Linh BE ("Licensor")
 
 This license applies only to files inside a directory named `commercial/` anywhere in this
 repository ("Commercial Code"). Everything else in this repository is licensed under the GNU
