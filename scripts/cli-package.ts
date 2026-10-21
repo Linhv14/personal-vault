@@ -15,7 +15,7 @@ export function packageJson(release: string): string {
       license: "AGPL-3.0-only",
       keywords: ["secrets", "password-manager", "ai-agents", "claude", "github-actions", "cli"],
       bin: { [BIN]: "7key.mjs" },
-      files: ["7key.mjs", "README.md", "LICENSE"],
+      files: ["7key.mjs", "README.md", "LICENSE", "NOTICE"],
       engines: { node: ">=20" },
     },
     null,

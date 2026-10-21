@@ -8,7 +8,7 @@ describe("CLI packages", () => {
       name: "@7key/cli",
       version: "1.4.0",
       bin: { "7key": "7key.mjs" },
-      files: ["7key.mjs", "README.md", "LICENSE"],
+      files: ["7key.mjs", "README.md", "LICENSE", "NOTICE"],
       engines: { node: ">=20" },
       license: "AGPL-3.0-only",
     });

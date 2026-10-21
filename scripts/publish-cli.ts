@@ -101,6 +101,7 @@ try {
   cpSync(path.join(root, "dist", "cli", "7key.mjs"), path.join(stage, "7key.mjs"));
   cpSync(path.join(root, "cli", "README.md"), path.join(stage, "README.md"));
   cpSync(path.join(root, "LICENSE"), path.join(stage, "LICENSE"));
+  cpSync(path.join(root, "NOTICE"), path.join(stage, "NOTICE"));
   writeFileSync(path.join(stage, "package.json"), packageJson(version));
 
   const tarball = path.join(stage, run("npm", ["pack", "--silent"], stage).split("\n").at(-1)!);
