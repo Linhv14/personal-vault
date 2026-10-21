@@ -11,3 +11,4 @@ backups/
 !action/dist/
 .7key.json
 e2e-browser/.artifacts/
+todo.md
