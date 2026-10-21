@@ -8,6 +8,13 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Changed
+
+- 7key is now licensed under the GNU AGPL-3.0 instead of the MIT License; releases
+  before this one stay under MIT. Future enterprise-only modules may live in a
+  `commercial/` directory under the source-available 7key Commercial License. See
+  `LICENSE_FAQ.md`, `TRADEMARKS.md` and the contributor agreement in `CLA.md`.
+
 ### Fixed
 
 - Random US phone numbers use real area codes instead of 555, and Vietnamese
