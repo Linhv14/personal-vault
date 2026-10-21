@@ -12,7 +12,7 @@ export function packageJson(release: string): string {
       homepage: "https://7key.online",
       repository: { type: "git", url: "git+https://github.com/Linhv14/7key-action.git" },
       bugs: { url: "https://github.com/Linhv14/7key-action/issues" },
-      license: "MIT",
+      license: "AGPL-3.0-only",
       keywords: ["secrets", "password-manager", "ai-agents", "claude", "github-actions", "cli"],
       bin: { [BIN]: "7key.mjs" },
       files: ["7key.mjs", "README.md", "LICENSE"],
@@ -34,7 +34,7 @@ export function formula(release: string, sha256: string): string {
   homepage "https://7key.online"
   url "${tarballUrl(release)}"
   sha256 "${sha256}"
-  license "MIT"
+  license "AGPL-3.0-only"
 
   depends_on "node"
 

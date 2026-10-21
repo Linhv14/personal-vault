@@ -1,7 +1,7 @@
 # 7key
 
 [![CI](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 **[7key.online](https://7key.online)** · An end-to-end encrypted password manager with built-in 2FA codes, as a browser
 extension backed by a Cloudflare Worker you deploy yourself. The server stores
@@ -91,5 +91,9 @@ Everything is indexed in [`docs/README.md`](docs/README.md).
 
 ## License
 
-[MIT](LICENSE), without warranty. 7key has not had an independent security
-audit yet.
+Copyright (C) 2026 linhv14. Licensed under the [GNU AGPL-3.0](LICENSE), without
+warranty, except files in a `commercial/` directory, which fall under the
+[7key Commercial License](LICENSE_COMMERCIAL.md) (none exist yet). See the
+[licensing FAQ](LICENSE_FAQ.md) and the [trademark guidelines](TRADEMARKS.md).
+Contributions are accepted under the [CLA](CLA.md). 7key has not had an
+independent security audit yet.

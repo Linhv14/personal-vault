@@ -10,7 +10,7 @@ describe("CLI packages", () => {
       bin: { "7key": "7key.mjs" },
       files: ["7key.mjs", "README.md", "LICENSE"],
       engines: { node: ">=20" },
-      license: "MIT",
+      license: "AGPL-3.0-only",
     });
     expect(manifest.dependencies).toBeUndefined();
   });

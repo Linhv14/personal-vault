@@ -73,3 +73,9 @@ in the same pull request:
 ## Project layout
 
 See [Architecture](docs/explanation/architecture.md#code-layout).
+
+## License and CLA
+
+7key is licensed under the AGPL-3.0 (see [`LICENSE_FAQ.md`](LICENSE_FAQ.md)). By opening a
+pull request you agree to the [Contributor License Agreement](CLA.md): add the line it asks
+for to the description of your first pull request.
