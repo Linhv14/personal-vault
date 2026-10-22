@@ -1,23 +1,12 @@
 import { createTranslator, resolveLocale } from "../../src/i18n/index.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
-import type {
-  AddressData,
-  AutofillRequest,
-  FormPrompt,
-  PendingPrompt,
-  Suggestion,
-  TotpPrompt,
-} from "../lib/autofill-protocol.js";
-import { icon, type IconName } from "../../src/ui/icons.js";
+import type { AddressData, AutofillRequest, Suggestion } from "../lib/autofill-protocol.js";
 import { fromBase64 } from "../../src/core/bytes.js";
-import { logo, wordmark } from "../../src/ui/logo.js";
 import { brandMark, flagMark } from "../../src/ui/marks.js";
 import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
 import type { LookalikeMatch } from "../../src/core/lookalike.js";
-import { CARD_BRAND_NAMES } from "../lib/item-types.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
-import { CONTENT_STYLES } from "./styles.js";
 import {
   findPasswordFor,
   findUsernameField,
@@ -40,142 +29,28 @@ import { fillState, isSubmitLike, readAddress, readCard } from "./form-capture.j
 import { send } from "./send.js";
 import { filled, state, t } from "./state.js";
 import { setRandomValue, setValue } from "./track.js";
+import { fillCode, findSetupQr, findSetupText, mentionsSetup } from "./two-factor.js";
+import { showChip } from "./ui/chip.js";
+import { showFormBanner } from "./ui/form-banner.js";
 import {
-  fillCode,
-  findOneTimeCodeField,
-  findSetupQr,
-  findSetupText,
-  mentionsSetup,
-} from "./two-factor.js";
+  avatar,
+  badge,
+  closeMenu,
+  lockedRow,
+  menuHeading,
+  menuRow,
+  menuRows,
+  note,
+  showMenu,
+} from "./ui/menu.js";
+import { banner, host, menu, shadow, trigger } from "./ui/root.js";
+import { showBanner } from "./ui/save-banner.js";
+import { showTotpBanner } from "./ui/totp-banner.js";
+import { fillFrom, placeTrigger } from "./ui/trigger.js";
 
 const OUTCOME_WAIT_MS = 10_000;
 const OUTCOME_STABLE_MS = 1_000;
 const OUTCOME_POLL_MS = 250;
-
-const host = document.createElement("div");
-host.style.cssText =
-  "all: initial !important; position: absolute !important; inset: 0 auto auto 0 !important; width: 0 !important; height: 0 !important; z-index: 2147483647 !important;";
-const shadow = host.attachShadow({ mode: "closed" });
-const style = document.createElement("style");
-style.textContent = CONTENT_STYLES;
-const trigger = document.createElement("button");
-trigger.className = "trigger";
-trigger.type = "button";
-trigger.append(logo(24));
-trigger.hidden = true;
-const menu = document.createElement("div");
-menu.className = "menu";
-menu.hidden = true;
-const banner = document.createElement("div");
-banner.className = "banner";
-banner.hidden = true;
-const chip = document.createElement("div");
-chip.className = "chip";
-chip.hidden = true;
-shadow.append(style, trigger, menu, banner, chip);
-
-function pageRect(element: Element): DOMRect {
-  const rect = element.getBoundingClientRect();
-  return new DOMRect(
-    rect.left + window.scrollX,
-    rect.top + window.scrollY,
-    rect.width,
-    rect.height,
-  );
-}
-
-function fillFrom(origin: HTMLInputElement, fill: () => void): void {
-  state.filling = true;
-  try {
-    fill();
-  } finally {
-    state.filling = false;
-  }
-  state.activeInput = origin;
-  placeTrigger();
-}
-
-function followAnchor(): void {
-  if (trigger.hidden) {
-    state.following = false;
-    return;
-  }
-  placeTrigger();
-  requestAnimationFrame(followAnchor);
-}
-
-function placeTrigger(): void {
-  const anchor = state.activeInput ?? state.cardFrame;
-  if (!anchor || !anchor.isConnected || !isVisible(anchor)) {
-    trigger.hidden = true;
-    return;
-  }
-  if (!state.following) {
-    state.following = true;
-    requestAnimationFrame(followAnchor);
-  }
-  const rect = pageRect(anchor);
-  const size = Math.min(24, Math.max(18, rect.height - 10));
-  trigger.style.width = trigger.style.height = `${size}px`;
-  trigger.style.left = `${rect.right - size - 6}px`;
-  trigger.style.top = `${rect.top + (rect.height - size) / 2}px`;
-  trigger.hidden = false;
-  if (!menu.hidden) {
-    menu.style.left = `${Math.max(window.scrollX + 8, rect.right - 280)}px`;
-    menu.style.top = `${rect.bottom + 6}px`;
-  }
-}
-
-function closeMenu(): void {
-  menu.hidden = true;
-  menu.replaceChildren();
-}
-
-function menuRow(
-  label: string,
-  detail: string | undefined,
-  leading: HTMLElement,
-  onPick: () => void,
-): HTMLButtonElement {
-  const row = document.createElement("button");
-  row.type = "button";
-  row.className = "row";
-  const text = document.createElement("span");
-  text.className = "text";
-  const strong = document.createElement("strong");
-  strong.textContent = label;
-  text.append(strong);
-  if (detail) {
-    const small = document.createElement("small");
-    small.textContent = detail;
-    text.append(small);
-  }
-  row.append(leading, text);
-  row.addEventListener("click", (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    if (state.siteWarning && !row.dataset.armed) {
-      return armRow(row);
-    }
-    onPick();
-  });
-  return row;
-}
-
-function avatar(title: string): HTMLElement {
-  const node = document.createElement("span");
-  node.className = "avatar";
-  node.textContent = [...title.trim()][0]?.toUpperCase() ?? "?";
-  return node;
-}
-
-function badge(name: IconName): HTMLElement {
-  const node = document.createElement("span");
-  node.className = "badge";
-  node.append(icon(name));
-  return node;
-}
 
 async function fillSuggestion(suggestion: Suggestion, password: HTMLInputElement): Promise<void> {
   const response = await send({ type: "autofill:fill", id: suggestion.id });
@@ -224,25 +99,6 @@ async function fillOneTimeCode(suggestion: Suggestion, input: HTMLInputElement):
   }
 }
 
-function menuHeading(): HTMLElement {
-  if (state.siteWarning) {
-    return warningHeading(state.siteWarning);
-  }
-  const heading = document.createElement("div");
-  heading.className = "heading";
-  heading.append(logo(16), wordmark());
-  return heading;
-}
-
-function lockedRow(): HTMLButtonElement {
-  const row = menuRow(t("autofill.locked"), t("autofill.locked_hint"), badge("lock"), () => {
-    void send({ type: "autofill:open-popup" });
-    closeMenu();
-  });
-  row.dataset.armed = "1";
-  return row;
-}
-
 async function openCodeMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
   const response = await send({ type: "autofill:codes" });
   if (state.activeInput !== input) {
@@ -272,11 +128,6 @@ async function openCodeMenu(input: HTMLInputElement, onlyIfUseful: boolean): Pro
       menu.append(note(t("autofill.no_codes", { domain: response.domain })));
     }
   }
-  menu.hidden = false;
-  placeTrigger();
-}
-
-function showMenu(): void {
   menu.hidden = false;
   placeTrigger();
 }
@@ -551,174 +402,7 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
   placeTrigger();
 }
 
-function note(text: string): HTMLElement {
-  const node = document.createElement("p");
-  node.className = "note";
-  node.textContent = text;
-  return node;
-}
-
-function bannerField(label: string, input: HTMLInputElement, extra?: HTMLElement): HTMLElement {
-  const row = document.createElement("label");
-  row.className = "field";
-  const caption = document.createElement("span");
-  caption.textContent = label;
-  const box = document.createElement("span");
-  box.className = "field-box";
-  box.append(input);
-  if (extra) {
-    box.append(extra);
-  }
-  row.append(caption, box);
-  return row;
-}
-
-function showBanner(prompt: PendingPrompt): void {
-  banner.replaceChildren();
-  const title = document.createElement("strong");
-  title.textContent = t(prompt.update ? "autofill.update_title" : "autofill.save_title", {
-    domain: prompt.domain,
-  });
-  const detail = document.createElement("small");
-  detail.hidden = true;
-
-  const username = document.createElement("input");
-  username.type = "text";
-  username.autocomplete = "off";
-  username.spellcheck = false;
-  username.value = prompt.username ?? "";
-  const password = document.createElement("input");
-  password.type = "password";
-  password.autocomplete = "off";
-  password.spellcheck = false;
-  password.value = prompt.password;
-  const reveal = document.createElement("button");
-  reveal.type = "button";
-  reveal.className = "reveal";
-  const showReveal = () => {
-    const hidden = password.type === "password";
-    reveal.replaceChildren(icon(hidden ? "eye" : "eye-off"));
-    reveal.setAttribute("aria-label", t(hidden ? "common.show" : "common.hide"));
-  };
-  showReveal();
-  reveal.addEventListener("click", (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    password.type = password.type === "password" ? "text" : "password";
-    showReveal();
-  });
-  const fields = document.createElement("div");
-  fields.className = "fields";
-  fields.append(
-    bannerField(t("common.username"), username),
-    bannerField(t("common.password"), password, reveal),
-  );
-
-  const save = document.createElement("button");
-  save.type = "button";
-  save.className = "primary";
-  save.textContent = t(prompt.update ? "autofill.update" : "autofill.save");
-  const dismiss = document.createElement("button");
-  dismiss.type = "button";
-  dismiss.textContent = t("autofill.not_now");
-  password.addEventListener("input", () => (save.disabled = !password.value));
-
-  save.addEventListener("click", async (event) => {
-    if (!event.isTrusted || !password.value) {
-      return;
-    }
-    const response = await send({
-      type: "autofill:save",
-      username: username.value,
-      password: password.value,
-    });
-    if (response.ok && "saved" in response && response.saved) {
-      banner.replaceChildren(logo(28), t("autofill.saved"));
-      setTimeout(() => (banner.hidden = true), 2000);
-      return;
-    }
-    detail.hidden = false;
-    detail.textContent =
-      response.ok && "locked" in response && response.locked
-        ? t("autofill.unlock_to_save")
-        : t("autofill.save_failed");
-  });
-  dismiss.addEventListener("click", (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    void send({ type: "autofill:dismiss" });
-    banner.hidden = true;
-  });
-
-  const text = document.createElement("div");
-  text.className = "text";
-  text.append(title, detail);
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.append(dismiss, save);
-  banner.append(logo(28), text, fields, actions);
-  banner.hidden = false;
-}
-
 const MAX_SETUP_SCANS = 20;
-
-function showTotpBanner(prompt: TotpPrompt): void {
-  banner.replaceChildren();
-  const title = document.createElement("strong");
-  title.textContent = t("autofill.totp_title", { domain: prompt.domain });
-  const detail = document.createElement("small");
-  detail.textContent = prompt.target
-    ? t(prompt.replace ? "autofill.totp_replace" : "autofill.totp_add", { title: prompt.target })
-    : t("autofill.totp_new");
-
-  const save = document.createElement("button");
-  save.type = "button";
-  save.className = "primary";
-  save.textContent = t("autofill.save");
-  const dismiss = document.createElement("button");
-  dismiss.type = "button";
-  dismiss.textContent = t("autofill.not_now");
-
-  save.addEventListener("click", async (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    const response = await send({ type: "autofill:totp-save" });
-    if (response.ok && "saved" in response && response.saved) {
-      const field = findOneTimeCodeField();
-      if (field && response.code) {
-        fillCode(field, response.code, setValue);
-      }
-      banner.replaceChildren(
-        logo(24),
-        t(field && response.code ? "autofill.totp_saved_filled" : "autofill.saved"),
-      );
-      setTimeout(() => (banner.hidden = true), 2500);
-    } else if (response.ok && "locked" in response && response.locked) {
-      detail.textContent = t("autofill.unlock_to_save");
-    } else {
-      detail.textContent = t("autofill.save_failed");
-    }
-  });
-  dismiss.addEventListener("click", (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    void send({ type: "autofill:totp-dismiss" });
-    banner.hidden = true;
-  });
-
-  const text = document.createElement("div");
-  text.className = "text";
-  text.append(title, detail);
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.append(dismiss, save);
-  banner.append(logo(28), text, actions);
-  banner.hidden = false;
-}
 
 async function scanForSetup(): Promise<void> {
   if (state.setupScans >= MAX_SETUP_SCANS || !banner.hidden) {
@@ -875,10 +559,6 @@ trigger.addEventListener("click", (event) => {
   }
 });
 
-function menuRows(): HTMLButtonElement[] {
-  return [...menu.querySelectorAll<HTMLButtonElement>("button.row")];
-}
-
 menu.addEventListener("keydown", (event) => {
   const rows = menuRows();
   const index = rows.indexOf(shadow.activeElement as HTMLButtonElement);
@@ -986,30 +666,6 @@ document.addEventListener(
 window.addEventListener("scroll", placeTrigger, true);
 window.addEventListener("resize", placeTrigger);
 
-function warningHeading(warning: LookalikeMatch): HTMLElement {
-  const heading = document.createElement("div");
-  heading.className = "heading warning";
-  const title = document.createElement("strong");
-  title.textContent = t("autofill.lookalike_title", { domain: warning.target });
-  heading.append(icon("alert"), title);
-  return heading;
-}
-
-function armRow(row: HTMLButtonElement): void {
-  row.dataset.armed = "1";
-  row.classList.add("armed");
-  const text = row.querySelector(".text");
-  let detail = text?.querySelector("small");
-  if (text && !detail) {
-    detail = document.createElement("small");
-    text.append(detail);
-  }
-  if (detail) {
-    detail.textContent = t("autofill.fill_anyway");
-  }
-  row.focus();
-}
-
 async function checkSite(): Promise<LookalikeMatch | null> {
   if (location.protocol !== "https:") {
     return null;
@@ -1022,116 +678,6 @@ async function checkSite(): Promise<LookalikeMatch | null> {
     menu.querySelector(".heading")?.replaceWith(menuHeading());
   }
   return warning;
-}
-
-function showChip(field: HTMLInputElement, warning: LookalikeMatch): void {
-  const rect = pageRect(field);
-  chip.replaceChildren(icon("alert"), t("autofill.lookalike_title", { domain: warning.target }));
-  chip.style.left = `${Math.max(window.scrollX + 8, rect.left)}px`;
-  chip.style.top = `${rect.bottom + 6}px`;
-  chip.hidden = false;
-  const hide = () => (chip.hidden = true);
-  field.addEventListener("blur", hide, { once: true });
-  setTimeout(hide, 8000);
-}
-
-function formLeading(prompt: FormPrompt): HTMLElement {
-  if (prompt.kind === "card") {
-    return prompt.brand && prompt.brand !== "card" ? brandMark(prompt.brand) : badge("card");
-  }
-  if (prompt.country) {
-    return flagMark(prompt.country);
-  }
-  return badge(prompt.random ? "globe" : "map-pin");
-}
-
-function formTitle(prompt: FormPrompt): string {
-  if (prompt.kind === "card") {
-    return t(prompt.update ? "autofill.update_card_title" : "autofill.save_card_title", {
-      last4: prompt.last4 ?? "",
-    });
-  }
-  if (prompt.random && !prompt.update) {
-    return t("autofill.keep_identity_title", { domain: prompt.domain });
-  }
-  return t(prompt.update ? "autofill.update_address_title" : "autofill.save_address_title");
-}
-
-function formDetail(prompt: FormPrompt): string {
-  if (prompt.kind === "address") {
-    return prompt.preview ?? "";
-  }
-  const brand = prompt.brand ? CARD_BRAND_NAMES[prompt.brand] : "";
-  return [brand, prompt.expiry].filter(Boolean).join(" · ");
-}
-
-function showFormBanner(prompt: FormPrompt): void {
-  banner.replaceChildren();
-  const title = document.createElement("strong");
-  title.textContent = formTitle(prompt);
-  const detail = document.createElement("small");
-  detail.textContent = formDetail(prompt);
-  const text = document.createElement("div");
-  text.className = "text";
-  text.append(title, detail);
-
-  const cvv = document.createElement("input");
-  cvv.type = "checkbox";
-  if (prompt.kind === "card" && prompt.hasCvv) {
-    const label = document.createElement("label");
-    label.className = "check";
-    label.append(cvv, t("autofill.save_cvv"));
-    text.append(label);
-  }
-
-  const never = document.createElement("button");
-  never.type = "button";
-  never.className = "link";
-  never.textContent = t("autofill.never_here");
-  text.append(never);
-
-  const save = document.createElement("button");
-  save.type = "button";
-  save.className = "primary";
-  save.textContent = t(prompt.update ? "autofill.update" : "autofill.save");
-  const dismiss = document.createElement("button");
-  dismiss.type = "button";
-  dismiss.textContent = t("autofill.skip");
-
-  save.addEventListener("click", async (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    const response = await send({ type: "autofill:form-save", cvv: cvv.checked });
-    if (response.ok && "saved" in response && response.saved) {
-      banner.replaceChildren(logo(24), t("autofill.saved"));
-      setTimeout(() => (banner.hidden = true), 2000);
-    } else if (response.ok && "locked" in response && response.locked) {
-      detail.textContent = t("autofill.unlock_to_save");
-    } else {
-      detail.textContent = t("autofill.save_failed");
-    }
-  });
-  dismiss.addEventListener("click", (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    void send({ type: "autofill:form-dismiss" });
-    banner.hidden = true;
-  });
-  never.addEventListener("click", (event) => {
-    if (!event.isTrusted) {
-      return;
-    }
-    void send({ type: "autofill:form-dismiss", never: true });
-    banner.hidden = true;
-  });
-
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.append(dismiss, save);
-  banner.append(formLeading(prompt), text, actions);
-  banner.hidden = false;
 }
 
 async function captureForm(scope: ParentNode): Promise<void> {
