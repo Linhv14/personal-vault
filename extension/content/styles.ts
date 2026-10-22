@@ -53,19 +53,24 @@ export const CONTENT_STYLES = `${TOKENS}
 .note { margin: 0; padding: 8px; color: var(--muted); font-size: 12px; }
 
 .banner {
-  top: 16px; right: 16px; width: 340px; display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-  border-radius: 12px; border: 1px solid var(--border); background: var(--card);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.2);
+  top: 16px; right: 16px; width: min(360px, calc(100vw - 32px)); display: grid;
+  grid-template-columns: 28px minmax(0, 1fr); align-items: center; gap: 14px 12px; padding: 16px;
+  border-radius: 16px; border: 1px solid var(--border); background: var(--card);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.22); font-size: 14px; line-height: 1.45;
+  animation: enter 160ms ease-out;
 }
+@keyframes enter { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .banner { animation: none; } }
 
-.banner .text { flex: 1; min-width: 0; }
-.banner .text strong, .banner .text small { white-space: normal; }
-.actions { display: flex; gap: 6px; }
+.banner .text { gap: 1px; }
+.banner .text strong { font-size: 15px; font-weight: 650; white-space: normal; overflow-wrap: anywhere; }
+.banner .text small { font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+.actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
 .actions button {
-  padding: 6px 10px; border-radius: 8px; border: none; cursor: pointer; font: inherit; font-size: 12.5px;
-  background: var(--surface); color: var(--text);
+  min-height: 38px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--border);
+  cursor: pointer; font: inherit; font-weight: 600; background: var(--card); color: var(--text);
 }
-.actions button.primary { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.actions button.primary { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
 .actions button.primary:hover { background: var(--accent-hover); }
 .actions button:not(.primary):hover { background: var(--surface-hover); }
 button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
@@ -80,12 +85,12 @@ button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px
 .row.armed .text small { color: var(--danger); font-weight: 600; }
 
 .banner .check {
-  display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--text); cursor: pointer;
+  display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--text); cursor: pointer;
 }
 .banner .check input { margin: 0; accent-color: var(--accent); }
 .banner .link {
   align-self: flex-start; margin-top: 4px; padding: 0; border: none; background: none; cursor: pointer;
-  font: inherit; font-size: 11.5px; color: var(--muted); text-align: left;
+  font: inherit; font-size: 13px; color: var(--muted); text-align: left;
 }
 .banner .link:hover { color: var(--text); text-decoration: underline; }
 

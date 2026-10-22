@@ -690,7 +690,7 @@ function showBanner(prompt: PendingPrompt): void {
     }
     const response = await send({ type: "autofill:save" });
     if (response.ok && "saved" in response && response.saved) {
-      banner.replaceChildren(logo(24), t("autofill.saved"));
+      banner.replaceChildren(logo(28), t("autofill.saved"));
       setTimeout(() => (banner.hidden = true), 2000);
     } else if (response.ok && "locked" in response && response.locked) {
       detail.textContent = t("autofill.unlock_to_save");

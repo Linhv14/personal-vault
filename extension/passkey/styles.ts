@@ -20,15 +20,16 @@ export const PASSKEY_STYLES = `${TOKENS}
 .title { font-size: 15px; font-weight: 650; }
 .subtitle { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .close {
-  align-self: flex-start; width: 28px; height: 28px; padding: 0; border: none; border-radius: 8px;
-  background: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer;
+  display: grid; place-items: center; align-self: flex-start; width: 28px; height: 28px; padding: 0;
+  border: none; border-radius: 8px; background: none; color: var(--muted); cursor: pointer;
 }
+.icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .close:hover { background: var(--surface); color: var(--text); }
 .body { display: flex; flex-direction: column; gap: 12px; }
 .hint { margin: 0; color: var(--muted); }
 .actions { display: flex; flex-direction: column; gap: 8px; }
 .button {
-  min-height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius);
+  min-height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--card); color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
 }
 .button:hover { background: var(--surface-hover); }

@@ -4,6 +4,7 @@ import {
   type LocalePreference,
   type Translate,
 } from "../../src/i18n/index.js";
+import { icon } from "../../src/ui/icons.js";
 import { logo } from "../../src/ui/logo.js";
 import {
   PAGE_ABORT,
@@ -95,7 +96,8 @@ function dialog(title: string, subtitle: string, onDismiss: () => void): HTMLEle
   const head = element("div", "head");
   const heading = element("div", "heading");
   heading.append(element("strong", "title", title), element("span", "subtitle", subtitle));
-  const close = element("button", "close", "×");
+  const close = element("button", "close");
+  close.append(icon("close"));
   close.setAttribute("aria-label", t("common.close"));
   head.append(logo(28), heading, close);
   const body = element("div", "body");
