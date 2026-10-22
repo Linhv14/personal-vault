@@ -6,7 +6,7 @@ import { cors } from "hono/cors";
 import { apiError } from "./errors.js";
 import { InvalidBodyError } from "./http.js";
 import account from "./routes/account.js";
-import auth from "./routes/auth.js";
+import auth from "./routes/auth/index.js";
 import deviceUnlock from "./routes/device-unlock.js";
 import items from "./routes/items.js";
 import orgs, { invites } from "./routes/orgs.js";
