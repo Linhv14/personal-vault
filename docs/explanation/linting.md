@@ -38,6 +38,16 @@ that mounts the settings pages inside the console. `extension/lib` does not
 import UI modules, so background and content code never pull in Preact or the
 DOM helpers by accident.
 
+## Import paths
+
+Imports that cross from one area to another, or climb more than one folder, use
+the subpath aliases declared under `imports` in `package.json`: `#core/*`,
+`#ui/*`, `#i18n/*`, `#worker/*` and `#ext/*`. Node, TypeScript, esbuild,
+Wrangler and Vitest all read that one table, so there is no second alias list to
+keep in sync. `src/core` keeps plain relative imports, because it must stay
+loadable by scripts that run under Node without a bundler. ESLint rejects a new
+`../../` import anywhere else.
+
 ## One place for cryptography
 
 `crypto.subtle` may only be called from `src/core/` and from a short list of
