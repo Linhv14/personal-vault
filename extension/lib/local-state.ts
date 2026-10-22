@@ -9,7 +9,7 @@ import {
   isStringArray,
 } from "#core/json.js";
 import type { LocalePreference } from "#i18n/index.js";
-import type { CachedItem, CachedSharedVault, LocalState } from "./storage.js";
+import type { CachedItem, CachedSharedVault, LocalState } from "./local-state-types.js";
 
 type Guard<T> = (value: unknown) => value is T;
 
