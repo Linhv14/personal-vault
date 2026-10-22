@@ -106,7 +106,8 @@ export const en = {
   "setup.mode_create_hint": "First time here: set up where your passwords live",
   "setup.mode_signin": "Sign in to your vault",
   "setup.mode_signin_hint": "Already created one, now using it on this device",
-  "setup.hint_create": "7key never holds your master password. Create a recovery code once you're in.",
+  "setup.hint_create":
+    "7key never holds your master password. Create a recovery code once you're in.",
   "setup.server": "Server",
   "setup.custom_server": "Use your own server",
   "setup.email": "Email",
@@ -1123,6 +1124,8 @@ export const en = {
   "settings.default_manager_other":
     "Another extension controls this setting. Turn it off there first.",
   "settings.autofill": "Autofill and passkeys on websites",
+  "settings.browser_passwords_restore_failed":
+    "Could not turn the browser's own password manager back on. Turn it on in the browser's settings.",
   "settings.autofill_enabled": "On. Reload open pages to start.",
   "passkey.save_title": "Save a passkey for {site}?",
   "passkey.save_action": "Save in 7key",

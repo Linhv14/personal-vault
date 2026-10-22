@@ -1105,6 +1105,8 @@ export const vi: Catalogue = {
   "settings.default_manager_other":
     "Một extension khác đang giữ cài đặt này. Tắt ở extension đó trước nhé.",
   "settings.autofill": "Tự điền và passkey trên trang web",
+  "settings.browser_passwords_restore_failed":
+    "Không bật lại được trình quản lý mật khẩu của trình duyệt. Hãy bật lại trong cài đặt trình duyệt.",
   "settings.autofill_enabled": "Đã bật. Tải lại các trang đang mở để bắt đầu.",
   "passkey.save_title": "Lưu passkey cho {site}?",
   "passkey.save_action": "Lưu vào 7key",

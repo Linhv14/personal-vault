@@ -35,16 +35,24 @@ import { useT } from "../../ui/i18n.js";
 import { localState, reloadLocal, showToast } from "../state.js";
 
 function lockLabel(minutes: number, t: Translate): string {
-  if (minutes === LOCK_ON_BROWSER_CLOSE) return t("settings.lock_on_close");
-  if (minutes === LOCK_NEVER) return t("settings.lock_never");
+  if (minutes === LOCK_ON_BROWSER_CLOSE) {
+    return t("settings.lock_on_close");
+  }
+  if (minutes === LOCK_NEVER) {
+    return t("settings.lock_never");
+  }
   return minutes % 60 === 0
     ? t("settings.hours", { count: minutes / 60 })
     : t("settings.minutes", { count: minutes });
 }
 
 function lockOrder(minutes: number): number {
-  if (minutes === LOCK_ON_BROWSER_CLOSE) return Number.MAX_SAFE_INTEGER - 1;
-  if (minutes === LOCK_NEVER) return Number.MAX_SAFE_INTEGER;
+  if (minutes === LOCK_ON_BROWSER_CLOSE) {
+    return Number.MAX_SAFE_INTEGER - 1;
+  }
+  if (minutes === LOCK_NEVER) {
+    return Number.MAX_SAFE_INTEGER;
+  }
   return minutes;
 }
 
@@ -56,7 +64,9 @@ export function General() {
 
   useEffect(() => {
     void isAutofillEnabled().then(setAutofill);
-    if (browserPasswordsSupported()) void browserPasswordsState().then(setBrowser);
+    if (browserPasswordsSupported()) {
+      void browserPasswordsState().then(setBrowser);
+    }
   }, []);
 
   const handleBrowserPasswords = async (enabled: boolean) => {
@@ -67,7 +77,9 @@ export function General() {
     }
     const next = await takeOverBrowserPasswords();
     setBrowser(next);
-    if (next === "ours") showToast(t("settings.default_manager_on"));
+    if (next === "ours") {
+      showToast(t("settings.default_manager_on"));
+    }
   };
 
   const handleLocale = async (value: string) => {
@@ -79,7 +91,9 @@ export function General() {
     await setLocal({ autoLockMinutes: Number(value) });
     await touch();
     const session = await getUnlocked();
-    if (session) await rememberUnlock(session.vaultKeyRaw, session.token);
+    if (session) {
+      await rememberUnlock(session.vaultKeyRaw, session.token);
+    }
     await reloadLocal();
     showToast(t("settings.saved"));
   };
@@ -91,9 +105,12 @@ export function General() {
 
   const handleAutofill = async (enabled: boolean) => {
     if (!enabled) {
-      await disableAutofill();
+      const { browserRestored } = await disableAutofill();
       setAutofill(false);
-      setBrowser("browser");
+      setBrowser(browserRestored ? "browser" : await browserPasswordsState());
+      if (!browserRestored) {
+        showToast(t("settings.browser_passwords_restore_failed"));
+      }
       return;
     }
     const next = await enableAutofill();
@@ -117,9 +134,7 @@ export function General() {
           <span className="row-text">{t("settings.language")}</span>
           <select
             value={local.locale ?? "auto"}
-            onChange={(event) =>
-              void handleLocale((event.currentTarget as HTMLSelectElement).value)
-            }
+            onChange={(event) => void handleLocale(event.currentTarget.value)}
           >
             <option value="auto">{t("settings.language_auto")}</option>
             {LOCALES.map((code) => (
@@ -136,9 +151,7 @@ export function General() {
           </span>
           <select
             value={String(minutes)}
-            onChange={(event) =>
-              void handleAutoLock((event.currentTarget as HTMLSelectElement).value)
-            }
+            onChange={(event) => void handleAutoLock(event.currentTarget.value)}
           >
             {choices.map((choice) => (
               <option value={choice} key={choice}>
@@ -156,9 +169,7 @@ export function General() {
             className="switch"
             type="checkbox"
             checked={local.showLogos !== false}
-            onChange={(event) =>
-              void handleLogos((event.currentTarget as HTMLInputElement).checked)
-            }
+            onChange={(event) => void handleLogos(event.currentTarget.checked)}
           />
         </label>
         {autofillSupported() && (
@@ -210,9 +221,7 @@ export function General() {
               className="switch"
               type="checkbox"
               checked={autofill}
-              onChange={(event) =>
-                void handleAutofill((event.currentTarget as HTMLInputElement).checked)
-              }
+              onChange={(event) => void handleAutofill(event.currentTarget.checked)}
             />
           </label>
         )}

@@ -48,7 +48,9 @@ export function autofillSupported(): boolean {
 }
 
 async function registeredIds(): Promise<Set<string>> {
-  if (!autofillSupported()) return new Set();
+  if (!autofillSupported()) {
+    return new Set();
+  }
   const registered = await chrome.scripting.getRegisteredContentScripts({
     ids: SCRIPTS.map(({ id }) => id),
   });
@@ -64,19 +66,27 @@ export function revokesAutofill(permissions: chrome.permissions.Permissions): bo
 }
 
 export async function registerAutofillScript(): Promise<void> {
-  if (!autofillSupported()) return;
+  if (!autofillSupported()) {
+    return;
+  }
   const present = await registeredIds();
   const missing = SCRIPTS.filter(({ id }) => !present.has(id));
-  if (missing.length > 0) await chrome.scripting.registerContentScripts(missing);
+  if (missing.length > 0) {
+    await chrome.scripting.registerContentScripts(missing);
+  }
 }
 
 export async function unregisterAutofillScript(): Promise<void> {
   const present = [...(await registeredIds())];
-  if (present.length > 0) await chrome.scripting.unregisterContentScripts({ ids: present });
+  if (present.length > 0) {
+    await chrome.scripting.unregisterContentScripts({ ids: present });
+  }
 }
 
 export async function isAutofillEnabled(): Promise<boolean> {
-  if (!autofillSupported()) return false;
+  if (!autofillSupported()) {
+    return false;
+  }
   const [registered, granted] = await Promise.all([
     registeredIds().then((ids) => ids.has(AUTOFILL_SCRIPT_ID)),
     chrome.permissions.contains({ origins: AUTOFILL_ORIGINS }),
@@ -85,19 +95,27 @@ export async function isAutofillEnabled(): Promise<boolean> {
 }
 
 export async function enableAutofill(): Promise<boolean> {
-  if (!autofillSupported()) return false;
+  if (!autofillSupported()) {
+    return false;
+  }
   const granted = await chrome.permissions.request({
     origins: AUTOFILL_ORIGINS,
     permissions: ["privacy"],
   });
-  if (!granted) return false;
+  if (!granted) {
+    return false;
+  }
   await registerAutofillScript();
   await takeOverBrowserPasswords().catch(() => null);
   return true;
 }
 
-export async function disableAutofill(): Promise<void> {
+export async function disableAutofill(): Promise<{ browserRestored: boolean }> {
   await unregisterAutofillScript();
-  await giveBackBrowserPasswords().catch(() => {});
+  const browserRestored = await giveBackBrowserPasswords().then(
+    () => true,
+    () => false,
+  );
   await chrome.permissions.remove({ origins: AUTOFILL_ORIGINS });
+  return { browserRestored };
 }
