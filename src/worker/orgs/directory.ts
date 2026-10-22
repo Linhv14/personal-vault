@@ -1,6 +1,6 @@
 import { isDomainAllowed, type InvitableRole, type OrgRole } from "#core/org-model.js";
 import { isStringArray, parseJsonAs } from "#core/json.js";
-import { now } from "../http.js";
+import { now } from "../clock.js";
 
 export const MAX_ORGS_PER_ACCOUNT = 10;
 export const INVITE_TTL_SECONDS = 14 * 24 * 60 * 60;

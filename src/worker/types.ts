@@ -1,8 +1,8 @@
 import type { OrgStore } from "./orgs/org-object.js";
+import type { StoreEnv } from "./store-env.js";
 import type { UserStore } from "./user-vault-object.js";
 
-export interface Env {
-  DB: D1Database;
+export interface Env extends StoreEnv {
   USER_STORE: DurableObjectNamespace<UserStore>;
   ORG_STORE: DurableObjectNamespace<OrgStore>;
   ASSETS: Fetcher;

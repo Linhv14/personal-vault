@@ -1,7 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
-import { fail, now, ok, type Result } from "./http.js";
+import { now } from "./clock.js";
+import { fail, ok, type Result } from "./result.js";
 import { dumpStore, restoreStore, type StoreDump } from "./migration.js";
-import type { Env } from "./types.js";
+import type { StoreEnv } from "./store-env.js";
 
 export const MAX_ITEMS_PER_ACCOUNT = 5_000;
 const UPDATED_AT_RESOLUTION_SECONDS = 1;
@@ -22,10 +23,10 @@ type Row = {
   deleted_at: number | null;
 };
 
-export class UserStore extends DurableObject<Env> {
+export class UserStore extends DurableObject<StoreEnv> {
   private readonly sql: SqlStorage;
 
-  constructor(ctx: DurableObjectState, env: Env) {
+  constructor(ctx: DurableObjectState, env: StoreEnv) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
     this.sql.exec(`

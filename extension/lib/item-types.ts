@@ -1,20 +1,8 @@
 import type { MessageKey } from "#i18n/index.js";
-import type { VaultItem } from "./vault/types.js";
+import type { CustomField, ItemType, PasswordChange, VaultItem } from "./vault/types.js";
 
-export const ITEM_TYPES = [
-  "login",
-  "note",
-  "card",
-  "identity",
-  "recovery",
-  "wifi",
-  "api",
-  "ssh",
-  "bank",
-  "document",
-  "license",
-] as const;
-export type ItemType = (typeof ITEM_TYPES)[number];
+export { ITEM_TYPES } from "./vault/types.js";
+export type { CustomField, ItemType, PasswordChange } from "./vault/types.js";
 
 export type FieldKind =
   | "text"
@@ -44,17 +32,6 @@ export interface FieldSpec {
   key: FieldKey;
   label: MessageKey;
   kind: FieldKind;
-}
-
-export interface CustomField {
-  label: string;
-  value: string;
-  hidden?: boolean;
-}
-
-export interface PasswordChange {
-  password: string;
-  changedAt: number;
 }
 
 export const PASSWORD_HISTORY_LIMIT = 10;

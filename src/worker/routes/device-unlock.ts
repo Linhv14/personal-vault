@@ -8,7 +8,8 @@ import {
   setBiometric,
 } from "../biometric.js";
 import { apiError } from "../errors.js";
-import { now, readJson } from "../http.js";
+import { now } from "../clock.js";
+import { readJson } from "../http.js";
 import { checkPin, clearPin, isVerifier, setPin, verifierHash } from "../pin.js";
 import type { AppBindings } from "../types.js";
 

@@ -1,6 +1,31 @@
 import type { TotpConfig } from "#core/totp.js";
 import type { StoredPasskey } from "../passkey/authenticator.js";
-import type { CustomField, ItemType, PasswordChange } from "../item-types.js";
+
+export const ITEM_TYPES = [
+  "login",
+  "note",
+  "card",
+  "identity",
+  "recovery",
+  "wifi",
+  "api",
+  "ssh",
+  "bank",
+  "document",
+  "license",
+] as const;
+export type ItemType = (typeof ITEM_TYPES)[number];
+
+export interface CustomField {
+  label: string;
+  value: string;
+  hidden?: boolean;
+}
+
+export interface PasswordChange {
+  password: string;
+  changedAt: number;
+}
 
 export interface VaultDef {
   id: string;

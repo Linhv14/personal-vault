@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { deviceKind } from "#worker/device-label.js";
 import { apiError } from "#worker/errors.js";
-import { now } from "#worker/http.js";
+import { now } from "#worker/clock.js";
 import {
   listSessions,
   revokeOtherSessions,

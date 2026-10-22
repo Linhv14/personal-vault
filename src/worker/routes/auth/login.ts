@@ -9,7 +9,8 @@ import {
 } from "#worker/at-rest.js";
 import { normalizeEmail } from "#worker/email-address.js";
 import { apiError } from "#worker/errors.js";
-import { now, readJson } from "#worker/http.js";
+import { now } from "#worker/clock.js";
+import { readJson } from "#worker/http.js";
 import { keyedHashBytes } from "#worker/keyed-hash.js";
 import { clientIp, requestLocale } from "#worker/request.js";
 import { signedIn } from "#worker/sign-in.js";

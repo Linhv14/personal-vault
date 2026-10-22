@@ -10,7 +10,8 @@ import {
   verificationCodeError,
 } from "#worker/email-verification.js";
 import { apiError } from "#worker/errors.js";
-import { inBackground, now, readJson } from "#worker/http.js";
+import { now } from "#worker/clock.js";
+import { inBackground, readJson } from "#worker/http.js";
 import { keyedHash } from "#worker/keyed-hash.js";
 import { createMailer } from "#worker/mailer.js";
 import { CODE_RESEND_COOLDOWN_SECONDS } from "#worker/one-time-code.js";

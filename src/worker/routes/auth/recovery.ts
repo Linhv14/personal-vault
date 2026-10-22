@@ -11,7 +11,8 @@ import {
 import { normalizeEmail } from "#worker/email-address.js";
 import { accountRecoveredEmail, twoFactorDisabledEmail } from "#worker/emails.js";
 import { apiError } from "#worker/errors.js";
-import { inBackground, now, readJson } from "#worker/http.js";
+import { now } from "#worker/clock.js";
+import { inBackground, readJson } from "#worker/http.js";
 import { createMailer } from "#worker/mailer.js";
 import { CODE_RESEND_COOLDOWN_SECONDS } from "#worker/one-time-code.js";
 import {

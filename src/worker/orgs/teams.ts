@@ -8,7 +8,8 @@ import {
   type TeamView,
   type WrappedKey,
 } from "#core/org-model.js";
-import { fail, now, ok, type Result } from "../http.js";
+import { now } from "../clock.js";
+import { fail, ok, type Result } from "../result.js";
 import { confirmed, confirmedAdmin, type OrgContext } from "./context.js";
 
 function sameKeys(ids: string[], map: Record<string, unknown>): boolean {

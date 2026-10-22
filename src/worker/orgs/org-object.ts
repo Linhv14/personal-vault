@@ -1,8 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import type { AuditEvent, Principal } from "#core/org-model.js";
-import { fail, ok, type Result } from "../http.js";
+import { fail, ok, type Result } from "../result.js";
 import { dumpStore, restoreStore, type StoreDump } from "../migration.js";
-import type { Env } from "../types.js";
+import type { StoreEnv } from "../store-env.js";
 import { AuditLog } from "./audit.js";
 import { confirmedAdmin, type OrgContext } from "./context.js";
 import { ItemTables } from "./item-tables.js";
@@ -19,10 +19,10 @@ import * as teams from "./teams.js";
 
 type Args<F> = F extends (org: OrgContext, ...args: infer A) => unknown ? A : never;
 
-export class OrgStore extends DurableObject<Env> {
+export class OrgStore extends DurableObject<StoreEnv> {
   private readonly org: OrgContext;
 
-  constructor(ctx: DurableObjectState, env: Env) {
+  constructor(ctx: DurableObjectState, env: StoreEnv) {
     super(ctx, env);
     const sql = ctx.storage.sql;
     createOrgSchema(sql);
