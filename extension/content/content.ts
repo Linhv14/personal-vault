@@ -1,9 +1,8 @@
-import { createTranslator, resolveLocale, type Translate } from "../../src/i18n/index.js";
+import { createTranslator, resolveLocale } from "../../src/i18n/index.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
 import type {
   AddressData,
   AutofillRequest,
-  AutofillResponse,
   FormPrompt,
   PendingPrompt,
   Suggestion,
@@ -20,45 +19,34 @@ import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
 import {
-  detectFields,
-  formKindOf,
-  isCardKind,
-  type FormField,
-  type FormKind,
-} from "./forms/classify.js";
-import { fillAddress, fillCard, setFieldValue } from "./forms/fill.js";
+  findPasswordFor,
+  findUsernameField,
+  formKind,
+  hasPaymentFrames,
+  isCodeField,
+  isDecoratable,
+  isEmailInput,
+  isVisible,
+  namesAccount,
+  passwordFields,
+  scopeOf,
+  USERNAME_INPUTS,
+  wantsNewPassword,
+} from "./detect.js";
+import { detectFields, formKindOf, isCardKind } from "./forms/classify.js";
+import { fillAddress, fillCard } from "./forms/fill.js";
 import { countryHint } from "./forms/values.js";
-import {
-  fillState,
-  isSubmitLike,
-  readAddress,
-  readCard,
-  type FilledFields,
-} from "./form-capture.js";
+import { fillState, isSubmitLike, readAddress, readCard } from "./form-capture.js";
+import { send } from "./send.js";
+import { filled, state, t } from "./state.js";
+import { setRandomValue, setValue } from "./track.js";
 import {
   fillCode,
   findOneTimeCodeField,
   findSetupQr,
   findSetupText,
-  isOneTimeCodeField,
   mentionsSetup,
 } from "./two-factor.js";
-
-const USERNAME_HINT = /user|email|login|account|phone|mobile|identifier/i;
-const NEW_PASSWORD_HINT = /new|confirm|repeat|register|signup|sign-up|sign_up|create|join/i;
-const SIGN_UP_BUTTON =
-  /sign\s?up|create( an)? account|register|join|get started|đăng ký|tạo tài khoản/i;
-
-let t: Translate = createTranslator("en");
-let activeInput: HTMLInputElement | null = null;
-let cardFrame: HTMLIFrameElement | null = null;
-let filling = false;
-let following = false;
-let lastCapture = { password: "", at: 0 };
-let outcomeTimer: ReturnType<typeof setInterval> | undefined;
-let siteWarning: LookalikeMatch | null = null;
-let lastFormCapture = { key: "", at: 0 };
-const filled: FilledFields = new WeakMap();
 
 const OUTCOME_WAIT_MS = 10_000;
 const OUTCOME_STABLE_MS = 1_000;
@@ -86,143 +74,6 @@ chip.className = "chip";
 chip.hidden = true;
 shadow.append(style, trigger, menu, banner, chip);
 
-function trackValue(element: FormField, value: string, random: boolean): void {
-  setFieldValue(element, value);
-  if (!(element instanceof HTMLInputElement && element.type === "password")) {
-    filled.set(element, { value: element.value, random });
-  }
-}
-
-function setValue(element: FormField, value: string): void {
-  trackValue(element, value, false);
-}
-
-function setRandomValue(element: FormField, value: string): void {
-  trackValue(element, value, true);
-}
-
-async function send(request: AutofillRequest): Promise<AutofillResponse> {
-  try {
-    return await chrome.runtime.sendMessage<AutofillRequest, AutofillResponse>(request);
-  } catch {
-    return { ok: false, error: "unavailable" };
-  }
-}
-
-function isVisible(input: HTMLElement): boolean {
-  const rect = input.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0 && getComputedStyle(input).visibility !== "hidden";
-}
-
-function passwordFields(scope: ParentNode = document): HTMLInputElement[] {
-  return [...scope.querySelectorAll<HTMLInputElement>('input[type="password"]')].filter(isVisible);
-}
-
-function scopeOf(input: HTMLInputElement): ParentNode {
-  return input.form ?? document;
-}
-
-function describe(input: HTMLInputElement): string {
-  return [input.name, input.id, input.autocomplete, input.getAttribute("aria-label") ?? ""].join(
-    " ",
-  );
-}
-
-const USERNAME_INPUTS =
-  'input[type="email"], input[type="text"], input[type="tel"], input:not([type])';
-
-function namesAccount(input: HTMLInputElement): boolean {
-  return /username|email/.test(input.autocomplete) || USERNAME_HINT.test(describe(input));
-}
-
-function findUsernameField(password: HTMLInputElement): HTMLInputElement | null {
-  const candidates = [
-    ...scopeOf(password).querySelectorAll<HTMLInputElement>(USERNAME_INPUTS),
-  ].filter(
-    (input) =>
-      isVisible(input) &&
-      password.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_PRECEDING,
-  );
-  const nearestFirst = candidates.reverse();
-  return (
-    nearestFirst.find((input) => /username|email/.test(input.autocomplete)) ??
-    nearestFirst.find(namesAccount) ??
-    nearestFirst[0] ??
-    null
-  );
-}
-
-function findPasswordFor(input: HTMLInputElement): HTMLInputElement | null {
-  if (input.type === "password") {
-    return input;
-  }
-  return (
-    passwordFields(scopeOf(input)).find(
-      (field) => input.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ) ?? null
-  );
-}
-
-function wantsNewPassword(password: HTMLInputElement): boolean {
-  if (password.autocomplete === "new-password") {
-    return true;
-  }
-  if (passwordFields(scopeOf(password)).length >= 2) {
-    return true;
-  }
-  if (password.autocomplete === "current-password") {
-    return false;
-  }
-  const formAction = password.form?.getAttribute("action") ?? "";
-  if (NEW_PASSWORD_HINT.test(`${describe(password)} ${formAction} ${location.pathname}`)) {
-    return true;
-  }
-  const buttons = [
-    ...scopeOf(password).querySelectorAll<HTMLElement>(
-      'button, input[type="submit"], [role="button"]',
-    ),
-  ];
-  return buttons.some((button) =>
-    SIGN_UP_BUTTON.test(button.textContent || (button as HTMLInputElement).value || ""),
-  );
-}
-
-function wantsPasskey(input: HTMLInputElement): boolean {
-  return (
-    conditionalPasskeys() !== null &&
-    input.type !== "password" &&
-    input.autocomplete.split(/\s+/).includes("webauthn")
-  );
-}
-
-function isLoginUsername(input: HTMLInputElement): boolean {
-  const password = findPasswordFor(input);
-  return input.type !== "password" && password !== null && findUsernameField(password) === input;
-}
-
-function formKind(input: HTMLInputElement): FormKind | null {
-  if (input.type === "password" || wantsPasskey(input) || isLoginUsername(input)) {
-    return null;
-  }
-  return formKindOf(input, detectFields(scopeOf(input)));
-}
-
-function isCodeField(input: HTMLInputElement): boolean {
-  return isOneTimeCodeField(input) && formKind(input) !== "card";
-}
-
-const TEXT_INPUT_TYPES = new Set(["text", "email", "tel", "password", "search", "url", "number"]);
-
-function isDecoratable(input: HTMLInputElement): boolean {
-  if (filling || !TEXT_INPUT_TYPES.has(input.type)) {
-    return false;
-  }
-  if (input.type === "password" || wantsPasskey(input) || isCodeField(input)) {
-    return true;
-  }
-  return isLoginUsername(input) || formKind(input) !== null;
-}
-
 function pageRect(element: Element): DOMRect {
   const rect = element.getBoundingClientRect();
   return new DOMRect(
@@ -234,19 +85,19 @@ function pageRect(element: Element): DOMRect {
 }
 
 function fillFrom(origin: HTMLInputElement, fill: () => void): void {
-  filling = true;
+  state.filling = true;
   try {
     fill();
   } finally {
-    filling = false;
+    state.filling = false;
   }
-  activeInput = origin;
+  state.activeInput = origin;
   placeTrigger();
 }
 
 function followAnchor(): void {
   if (trigger.hidden) {
-    following = false;
+    state.following = false;
     return;
   }
   placeTrigger();
@@ -254,13 +105,13 @@ function followAnchor(): void {
 }
 
 function placeTrigger(): void {
-  const anchor = activeInput ?? cardFrame;
+  const anchor = state.activeInput ?? state.cardFrame;
   if (!anchor || !anchor.isConnected || !isVisible(anchor)) {
     trigger.hidden = true;
     return;
   }
-  if (!following) {
-    following = true;
+  if (!state.following) {
+    state.following = true;
     requestAnimationFrame(followAnchor);
   }
   const rect = pageRect(anchor);
@@ -304,7 +155,7 @@ function menuRow(
     if (!event.isTrusted) {
       return;
     }
-    if (siteWarning && !row.dataset.armed) {
+    if (state.siteWarning && !row.dataset.armed) {
       return armRow(row);
     }
     onPick();
@@ -374,8 +225,8 @@ async function fillOneTimeCode(suggestion: Suggestion, input: HTMLInputElement):
 }
 
 function menuHeading(): HTMLElement {
-  if (siteWarning) {
-    return warningHeading(siteWarning);
+  if (state.siteWarning) {
+    return warningHeading(state.siteWarning);
   }
   const heading = document.createElement("div");
   heading.className = "heading";
@@ -394,7 +245,7 @@ function lockedRow(): HTMLButtonElement {
 
 async function openCodeMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
   const response = await send({ type: "autofill:codes" });
-  if (activeInput !== input) {
+  if (state.activeInput !== input) {
     return;
   }
   const empty = response.ok && "suggestions" in response && response.suggestions.length === 0;
@@ -454,7 +305,7 @@ async function fillAddressFrom(request: AutofillRequest, input: HTMLInputElement
 
 async function openFrameCardMenu(frame: HTMLIFrameElement, onlyIfUseful: boolean): Promise<void> {
   const response = await send({ type: "autofill:cards" });
-  if (cardFrame !== frame) {
+  if (state.cardFrame !== frame) {
     return;
   }
   const empty = response.ok && "cards" in response && response.cards.length === 0;
@@ -499,11 +350,11 @@ function onWindowBlur(): void {
     if (!(focused instanceof HTMLIFrameElement) || !isPaymentFrameUrl(focused.src)) {
       return;
     }
-    if (cardFrame !== focused) {
+    if (state.cardFrame !== focused) {
       closeMenu();
     }
-    activeInput = null;
-    cardFrame = focused;
+    state.activeInput = null;
+    state.cardFrame = focused;
     placeTrigger();
     void checkSite();
     if (menu.hidden) {
@@ -514,7 +365,7 @@ function onWindowBlur(): void {
 
 async function openCardMenu(input: HTMLInputElement, onlyIfUseful: boolean): Promise<void> {
   const response = await send({ type: "autofill:cards" });
-  if (activeInput !== input) {
+  if (state.activeInput !== input) {
     return;
   }
   const empty = response.ok && "cards" in response && response.cards.length === 0;
@@ -544,12 +395,6 @@ async function openCardMenu(input: HTMLInputElement, onlyIfUseful: boolean): Pro
   showMenu();
 }
 
-function isEmailInput(input: HTMLInputElement): boolean {
-  return (
-    input.type === "email" || /e-?mail/i.test(`${input.autocomplete} ${input.name} ${input.id}`)
-  );
-}
-
 async function aliasRows(input: HTMLInputElement): Promise<HTMLElement[]> {
   if (!isEmailInput(input)) {
     return [];
@@ -575,7 +420,7 @@ async function openAddressMenu(
     send({ type: "autofill:identities" }),
     aliasRows(input),
   ]);
-  if (activeInput !== input) {
+  if (state.activeInput !== input) {
     return;
   }
   const empty =
@@ -627,10 +472,10 @@ async function openAddressMenu(
 }
 
 async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<void> {
-  if (!activeInput) {
+  if (!state.activeInput) {
     return;
   }
-  const input = activeInput;
+  const input = state.activeInput;
   if (isCodeField(input)) {
     return openCodeMenu(input, onlyIfUseful);
   }
@@ -651,7 +496,7 @@ async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Promise<vo
     offeredPasskeys(input),
     signUp && input !== password ? aliasRows(input) : Promise.resolve([]),
   ]);
-  if (activeInput !== input) {
+  if (state.activeInput !== input) {
     return;
   }
   const nothingToOffer =
@@ -817,9 +662,6 @@ function showBanner(prompt: PendingPrompt): void {
   banner.hidden = false;
 }
 
-let totpSeen = "";
-let setupScans = 0;
-let setupTimer: ReturnType<typeof setTimeout> | undefined;
 const MAX_SETUP_SCANS = 20;
 
 function showTotpBanner(prompt: TotpPrompt): void {
@@ -879,13 +721,13 @@ function showTotpBanner(prompt: TotpPrompt): void {
 }
 
 async function scanForSetup(): Promise<void> {
-  if (setupScans >= MAX_SETUP_SCANS || !banner.hidden) {
+  if (state.setupScans >= MAX_SETUP_SCANS || !banner.hidden) {
     return;
   }
   if (!mentionsSetup(document.body?.textContent ?? "")) {
     return;
   }
-  setupScans++;
+  state.setupScans++;
   const found =
     findSetupText() ??
     (await findSetupQr(document, async (url) => {
@@ -896,10 +738,10 @@ async function scanForSetup(): Promise<void> {
       const [header = "", data = ""] = response.image.split(",");
       return new Blob([fromBase64(data)], { type: header.slice(5).split(";")[0] });
     }));
-  if (!found || found === totpSeen) {
+  if (!found || found === state.totpSeen) {
     return;
   }
-  totpSeen = found;
+  state.totpSeen = found;
   const response = await send({ type: "autofill:totp-found", text: found });
   if (response.ok && "totp" in response && response.totp) {
     showTotpBanner(response.totp);
@@ -907,8 +749,8 @@ async function scanForSetup(): Promise<void> {
 }
 
 function scheduleSetupScan(): void {
-  clearTimeout(setupTimer);
-  setupTimer = setTimeout(() => void scanForSetup(), 800);
+  clearTimeout(state.setupTimer);
+  state.setupTimer = setTimeout(() => void scanForSetup(), 800);
 }
 
 function capturedPassword(scope: ParentNode): string {
@@ -940,10 +782,10 @@ async function capture(scope: ParentNode): Promise<void> {
   if (!password) {
     return;
   }
-  if (password === lastCapture.password && Date.now() - lastCapture.at < 3000) {
+  if (password === state.lastCapture.password && Date.now() - state.lastCapture.at < 3000) {
     return;
   }
-  lastCapture = { password, at: Date.now() };
+  state.lastCapture = { password, at: Date.now() };
 
   const username = findUsernameField(fields[0]!)?.value.trim() || undefined;
   const response = await send({ type: "autofill:capture", username, password });
@@ -967,12 +809,12 @@ function loginFormShown(fields: HTMLInputElement[]): boolean {
 }
 
 function watchOutcome(fields: HTMLInputElement[]): void {
-  clearInterval(outcomeTimer);
+  clearInterval(state.outcomeTimer);
   const deadline = Date.now() + OUTCOME_WAIT_MS;
   let goneSince = 0;
   const stop = (outcome: "confirm" | "dismiss") => {
-    clearInterval(outcomeTimer);
-    outcomeTimer = undefined;
+    clearInterval(state.outcomeTimer);
+    state.outcomeTimer = undefined;
     if (outcome === "dismiss") {
       void send({ type: "autofill:dismiss" });
       return;
@@ -983,7 +825,7 @@ function watchOutcome(fields: HTMLInputElement[]): void {
       }
     });
   };
-  outcomeTimer = setInterval(() => {
+  state.outcomeTimer = setInterval(() => {
     if (loginRejected(fields)) {
       return stop("dismiss");
     }
@@ -1003,14 +845,14 @@ function watchOutcome(fields: HTMLInputElement[]): void {
 
 function onFocusIn(event: FocusEvent): void {
   const target = event.target;
-  if (!(target instanceof HTMLInputElement) || !isDecoratable(target)) {
+  if (!(target instanceof HTMLInputElement) || state.filling || !isDecoratable(target)) {
     return;
   }
-  if (activeInput !== target) {
+  if (state.activeInput !== target) {
     closeMenu();
   }
-  activeInput = target;
-  cardFrame = null;
+  state.activeInput = target;
+  state.cardFrame = null;
   placeTrigger();
   void checkSite();
   const offersPassword = target.type === "password" && !target.value && wantsNewPassword(target);
@@ -1026,8 +868,8 @@ trigger.addEventListener("click", (event) => {
   }
   if (!menu.hidden) {
     closeMenu();
-  } else if (!activeInput && cardFrame) {
-    void openFrameCardMenu(cardFrame, false);
+  } else if (!state.activeInput && state.cardFrame) {
+    void openFrameCardMenu(state.cardFrame, false);
   } else {
     void openMenu({ onlyIfUseful: false });
   }
@@ -1046,7 +888,7 @@ menu.addEventListener("keydown", (event) => {
     rows[(index + step + rows.length) % rows.length]?.focus();
   } else if (event.key === "Escape") {
     closeMenu();
-    activeInput?.focus();
+    state.activeInput?.focus();
   }
 });
 
@@ -1054,10 +896,15 @@ document.addEventListener(
   "click",
   (event) => {
     const target = event.target;
-    if (!event.isTrusted || !(target instanceof HTMLInputElement) || !isDecoratable(target)) {
+    if (
+      !event.isTrusted ||
+      !(target instanceof HTMLInputElement) ||
+      state.filling ||
+      !isDecoratable(target)
+    ) {
       return;
     }
-    activeInput = target;
+    state.activeInput = target;
     placeTrigger();
     if (menu.hidden) {
       void openMenu({ onlyIfUseful: true });
@@ -1068,7 +915,7 @@ document.addEventListener(
 document.addEventListener(
   "input",
   (event) => {
-    if (event.isTrusted && event.target === activeInput) {
+    if (event.isTrusted && event.target === state.activeInput) {
       closeMenu();
     }
   },
@@ -1084,9 +931,9 @@ document.addEventListener(
       return;
     }
     closeMenu();
-    if (event.target !== activeInput) {
-      activeInput = null;
-      cardFrame = null;
+    if (event.target !== state.activeInput) {
+      state.activeInput = null;
+      state.cardFrame = null;
       trigger.hidden = true;
     }
   },
@@ -1096,7 +943,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeMenu();
   }
-  if (event.key === "ArrowDown" && event.target === activeInput && !menu.hidden) {
+  if (event.key === "ArrowDown" && event.target === state.activeInput && !menu.hidden) {
     event.preventDefault();
     menuRows()[0]?.focus();
   }
@@ -1169,8 +1016,8 @@ async function checkSite(): Promise<LookalikeMatch | null> {
   }
   const response = await send({ type: "autofill:site-check" });
   const warning = response.ok && "lookalike" in response ? response.lookalike : null;
-  const changed = warning?.target !== siteWarning?.target;
-  siteWarning = warning;
+  const changed = warning?.target !== state.siteWarning?.target;
+  state.siteWarning = warning;
   if (changed && !menu.hidden) {
     menu.querySelector(".heading")?.replaceWith(menuHeading());
   }
@@ -1186,10 +1033,6 @@ function showChip(field: HTMLInputElement, warning: LookalikeMatch): void {
   const hide = () => (chip.hidden = true);
   field.addEventListener("blur", hide, { once: true });
   setTimeout(hide, 8000);
-}
-
-function hasPaymentFrames(scope: ParentNode): boolean {
-  return [...scope.querySelectorAll("iframe")].some((frame) => isPaymentFrameUrl(frame.src));
 }
 
 function formLeading(prompt: FormPrompt): HTMLElement {
@@ -1313,10 +1156,10 @@ async function captureForm(scope: ParentNode): Promise<void> {
     return;
   }
   const key = JSON.stringify([card, address]);
-  if (key === lastFormCapture.key && Date.now() - lastFormCapture.at < 3000) {
+  if (key === state.lastFormCapture.key && Date.now() - state.lastFormCapture.at < 3000) {
     return;
   }
-  lastFormCapture = { key, at: Date.now() };
+  state.lastFormCapture = { key, at: Date.now() };
   const response = await send({
     type: "autofill:form-capture",
     ...(card ? { card, untouched: !cardState.typed } : {}),
@@ -1372,7 +1215,7 @@ chrome.runtime.onMessage?.addListener((message: unknown) => {
 
 async function start(): Promise<void> {
   const { locale } = await chrome.storage.local.get<{ locale?: LocalePreference }>("locale");
-  t = createTranslator(resolveLocale(locale));
+  state.translate = createTranslator(resolveLocale(locale));
   trigger.title = t("autofill.trigger");
   trigger.setAttribute("aria-label", trigger.title);
   document.documentElement.append(host);
