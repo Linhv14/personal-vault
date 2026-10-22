@@ -57,6 +57,17 @@ describe("taking over the browser's password manager", () => {
     expect(await browserPasswordsState()).toBe("browser");
   });
 
+  it("reports a failed hand-back instead of pretending it worked", async () => {
+    expect(await takeOverBrowserPasswords()).toBe("ours");
+    const failing = chrome as unknown as {
+      runtime?: { lastError?: { message: string } };
+      privacy: { services: { passwordSavingEnabled: { clear: unknown } } };
+    };
+    failing.runtime = { lastError: { message: "controlled by policy" } };
+    await expect(giveBackBrowserPasswords()).rejects.toThrow("controlled by policy");
+    failing.runtime = {};
+  });
+
   it("changes nothing when the permission is refused", async () => {
     grant = false;
     expect(await takeOverBrowserPasswords()).toBe("browser");

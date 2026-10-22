@@ -11,10 +11,21 @@ function setting(): Setting | null {
 
 const read = (current: Setting) =>
   new Promise<Details>((resolve) => current.get({}, (details) => resolve(details)));
+function settled(resolve: () => void, reject: (error: Error) => void): () => void {
+  return () => {
+    const failure = chrome.runtime?.lastError;
+    if (failure) {
+      reject(new Error(failure.message ?? "Chrome setting change failed"));
+    } else {
+      resolve();
+    }
+  };
+}
+
 const write = (current: Setting, value: boolean) =>
-  new Promise<void>((resolve) => current.set({ value }, () => resolve()));
+  new Promise<void>((resolve, reject) => current.set({ value }, settled(resolve, reject)));
 const reset = (current: Setting) =>
-  new Promise<void>((resolve) => current.clear({}, () => resolve()));
+  new Promise<void>((resolve, reject) => current.clear({}, settled(resolve, reject)));
 
 export function browserPasswordsSupported(): boolean {
   return typeof chrome.permissions?.request === "function";
@@ -56,7 +67,7 @@ export async function takeOverBrowserPasswords(): Promise<BrowserPasswordsState>
   if (levelOfControl === "controlled_by_other_extensions") {
     return "other_extension";
   }
-  await write(current, false);
+  await write(current, false).catch(() => undefined);
   return browserPasswordsState();
 }
 

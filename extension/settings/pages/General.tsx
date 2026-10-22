@@ -71,8 +71,14 @@ export function General() {
 
   const handleBrowserPasswords = async (enabled: boolean) => {
     if (!enabled) {
-      await giveBackBrowserPasswords();
-      setBrowser("browser");
+      const restored = await giveBackBrowserPasswords().then(
+        () => true,
+        () => false,
+      );
+      setBrowser(restored ? "browser" : await browserPasswordsState());
+      if (!restored) {
+        showToast(t("settings.browser_passwords_restore_failed"));
+      }
       return;
     }
     const next = await takeOverBrowserPasswords();
