@@ -16,7 +16,9 @@ export function formatRelative(epochSeconds: number, locale: string, now = Date.
   const delta = epochSeconds - Math.floor(now / 1000);
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   for (const [unit, seconds] of RELATIVE_STEPS) {
-    if (Math.abs(delta) >= seconds) return format.format(Math.round(delta / seconds), unit);
+    if (Math.abs(delta) >= seconds) {
+      return format.format(Math.round(delta / seconds), unit);
+    }
   }
   return format.format(0, "second");
 }

@@ -35,9 +35,13 @@ items.get("/", async (c) => {
 
 items.put("/:id", async (c) => {
   const id = c.req.param("id");
-  if (!isUuid(id)) return c.json(apiError("items.invalid_id"), 400);
+  if (!isUuid(id)) {
+    return c.json(apiError("items.invalid_id"), 400);
+  }
   const body = await readJson(c);
-  if (!isSealedItem(body)) return c.json(apiError("items.invalid_payload"), 400);
+  if (!isSealedItem(body)) {
+    return c.json(apiError("items.invalid_payload"), 400);
+  }
 
   const condition = c.req.query("ifUpdatedAt");
   const ifUpdatedAt = condition === undefined ? undefined : Number(condition);
@@ -55,8 +59,12 @@ items.post("/batch", async (c) => {
     return c.json(apiError("items.invalid_payload"), 400);
   }
   const rows = batch as Partial<SealedRow>[];
-  if (rows.some((row) => !isUuid(row?.id))) return c.json(apiError("items.invalid_id"), 400);
-  if (!rows.every(isSealedItem)) return c.json(apiError("items.invalid_payload"), 400);
+  if (rows.some((row) => !isUuid(row?.id))) {
+    return c.json(apiError("items.invalid_id"), 400);
+  }
+  if (!rows.every(isSealedItem)) {
+    return c.json(apiError("items.invalid_payload"), 400);
+  }
 
   const { accountId } = c.get("session");
   const sealed = (rows as SealedRow[]).map(({ id, ciphertext, nonce }) => ({
@@ -69,7 +77,9 @@ items.post("/batch", async (c) => {
 
 items.delete("/:id", async (c) => {
   const id = c.req.param("id");
-  if (!isUuid(id)) return c.json(apiError("items.invalid_id"), 400);
+  if (!isUuid(id)) {
+    return c.json(apiError("items.invalid_id"), 400);
+  }
   const { accountId } = c.get("session");
   return respond(c, await userStore(c.env, accountId).remove(accountId, id));
 });

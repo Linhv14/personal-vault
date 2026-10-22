@@ -98,6 +98,8 @@ async function boot(): Promise<void> {
 
 setHumanCheck((apiUrl) => frameTurnstileToken(apiUrl));
 const root = document.getElementById("app");
-if (!root) throw new Error("Missing #app");
+if (!root) {
+  throw new Error("Missing #app");
+}
 render(<App />, root);
 void boot();

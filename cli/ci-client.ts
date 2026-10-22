@@ -30,16 +30,22 @@ export async function githubIdToken(
   const target = new URL(url);
   target.searchParams.set("audience", audience);
   const response = await request(target, { headers: { Authorization: `Bearer ${bearer}` } });
-  if (!response.ok) throw new CiError(`GitHub refused an OIDC token (${response.status})`);
+  if (!response.ok) {
+    throw new CiError(`GitHub refused an OIDC token (${response.status})`);
+  }
   const { value } = (await response.json()) as { value?: string };
-  if (!value) throw new CiError("GitHub returned an empty OIDC token");
+  if (!value) {
+    throw new CiError("GitHub returned an empty OIDC token");
+  }
   return value;
 }
 
 export async function fetchSecrets(options: FetchOptions): Promise<SecretContent[]> {
   const request = options.fetch ?? fetch;
   const reference = parseLinkReference(options.link);
-  if (!reference) throw new CiError("The link should look like <organization>.<link>");
+  if (!reference) {
+    throw new CiError("The link should look like <organization>.<link>");
+  }
   const server = new URL(options.server).origin;
   const token = await githubIdToken(server, options.env, request);
   const response = await request(`${server}/api/ci/secrets`, {
@@ -77,7 +83,11 @@ export async function exportToGithubEnv(
   write: (line: string) => void = (line) => console.log(line),
 ): Promise<void> {
   const file = env.GITHUB_ENV;
-  if (!file) throw new CiError("GITHUB_ENV is not set; this only works inside GitHub Actions");
-  for (const command of maskCommands(secrets)) write(command);
+  if (!file) {
+    throw new CiError("GITHUB_ENV is not set; this only works inside GitHub Actions");
+  }
+  for (const command of maskCommands(secrets)) {
+    write(command);
+  }
   await appendFile(file, githubEnvBlock(secrets));
 }

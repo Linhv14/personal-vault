@@ -52,9 +52,15 @@ const SECTIONS: {
 ];
 
 function sectionOf(route: Route): Section | null {
-  if (route.page === "me" || route.page === "invite") return null;
-  if (route.page === "project") return "projects";
-  if (route.page === "team") return "teams";
+  if (route.page === "me" || route.page === "invite") {
+    return null;
+  }
+  if (route.page === "project") {
+    return "projects";
+  }
+  if (route.page === "team") {
+    return "teams";
+  }
   return route.page;
 }
 
@@ -84,7 +90,9 @@ function OrgSwitcher({ orgs, current }: { orgs: OrgSummary[]; current: ConsoleDa
 
 function Invitations({ data }: { data: Pick<ConsoleData, "invites" | "run"> }) {
   const t = useT();
-  if (data.invites.length === 0) return null;
+  if (data.invites.length === 0) {
+    return null;
+  }
   return (
     <div className="invite-banner">
       {data.invites.map((invite) => (
@@ -161,7 +169,9 @@ export function ConsoleApp({
   useEffect(() => {
     const flush = () => void flushAccess(true);
     const onHide = () => {
-      if (document.visibilityState === "hidden") flush();
+      if (document.visibilityState === "hidden") {
+        flush();
+      }
     };
     addEventListener("visibilitychange", onHide);
     addEventListener("pagehide", flush);

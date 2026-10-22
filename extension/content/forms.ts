@@ -190,11 +190,17 @@ export function isCardKind(kind: FormFieldKind): kind is CardFieldKind {
 }
 
 function isFillable(element: FormField): boolean {
-  if (element.disabled) return false;
-  if (element instanceof HTMLInputElement) {
-    if (element.readOnly || SKIPPED_TYPES.has(element.type)) return false;
+  if (element.disabled) {
+    return false;
   }
-  if (element instanceof HTMLTextAreaElement && element.readOnly) return false;
+  if (element instanceof HTMLInputElement) {
+    if (element.readOnly || SKIPPED_TYPES.has(element.type)) {
+      return false;
+    }
+  }
+  if (element instanceof HTMLTextAreaElement && element.readOnly) {
+    return false;
+  }
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== "hidden";
 }
@@ -203,7 +209,9 @@ function autocompleteKind(element: FormField): FormFieldKind | null {
   const tokens = (element.getAttribute("autocomplete") ?? "").toLowerCase().split(/\s+/);
   for (const token of tokens.reverse()) {
     const kind = TOKENS[token];
-    if (kind) return kind;
+    if (kind) {
+      return kind;
+    }
   }
   return null;
 }
@@ -211,9 +219,13 @@ function autocompleteKind(element: FormField): FormFieldKind | null {
 function labelText(element: FormField): string {
   const labels = [...(element.labels ?? [])].map((label) => label.textContent ?? "");
   const wrapping = element.closest("label");
-  if (wrapping && labels.length === 0) labels.push(wrapping.textContent ?? "");
+  if (wrapping && labels.length === 0) {
+    labels.push(wrapping.textContent ?? "");
+  }
   for (const id of (element.getAttribute("aria-labelledby") ?? "").split(/\s+/)) {
-    if (id) labels.push(element.ownerDocument.getElementById(id)?.textContent ?? "");
+    if (id) {
+      labels.push(element.ownerDocument.getElementById(id)?.textContent ?? "");
+    }
   }
   if (labels.length === 0) {
     const previous = element.previousElementSibling;
@@ -224,7 +236,9 @@ function labelText(element: FormField): string {
       previous && !labelsOther && !previous.matches("input, select, textarea")
         ? previous.textContent
         : "";
-    if (text && text.trim().length <= 40) labels.push(text);
+    if (text && text.trim().length <= 40) {
+      labels.push(text);
+    }
   }
   return labels.join(" ");
 }
@@ -249,8 +263,12 @@ function optionShape(select: HTMLSelectElement): "month" | "year" | null {
   const numbers = [...select.options]
     .map((option) => Number(option.value.trim() || option.text.trim()))
     .filter((value) => Number.isInteger(value));
-  if (numbers.length < 3) return null;
-  if (numbers.every((value) => value >= 1 && value <= 12) && numbers.length <= 13) return "month";
+  if (numbers.length < 3) {
+    return null;
+  }
+  if (numbers.every((value) => value >= 1 && value <= 12) && numbers.length <= 13) {
+    return "month";
+  }
   if (numbers.every((value) => (value >= 2000 && value <= 2100) || (value >= 0 && value <= 99))) {
     return "year";
   }
@@ -258,36 +276,70 @@ function optionShape(select: HTMLSelectElement): "month" | "year" | null {
 }
 
 function expiryKind(text: string): CardFieldKind {
-  if (EXPIRY_BOTH.test(text)) return "cc-exp";
-  if (MONTH.test(text)) return "cc-exp-month";
-  if (YEAR.test(text)) return "cc-exp-year";
+  if (EXPIRY_BOTH.test(text)) {
+    return "cc-exp";
+  }
+  if (MONTH.test(text)) {
+    return "cc-exp-month";
+  }
+  if (YEAR.test(text)) {
+    return "cc-exp-year";
+  }
   return "cc-exp";
 }
 
 export function classifyField(element: FormField, cardContext = false): FormFieldKind | null {
-  if (!isFillable(element)) return null;
+  if (!isFillable(element)) {
+    return null;
+  }
   const token = autocompleteKind(element);
-  if (token) return token;
+  if (token) {
+    return token;
+  }
   const text = describeField(element);
-  if (EXCLUDED.test(text)) return null;
-  for (const [kind, pattern] of CARD_RULES) if (pattern.test(text)) return kind;
-  if (EXPIRY.test(text)) return expiryKind(text);
+  if (EXCLUDED.test(text)) {
+    return null;
+  }
+  for (const [kind, pattern] of CARD_RULES) {
+    if (pattern.test(text)) {
+      return kind;
+    }
+  }
+  if (EXPIRY.test(text)) {
+    return expiryKind(text);
+  }
   if (cardContext) {
-    if (EXPIRY_BOTH.test(text)) return "cc-exp";
-    if (MONTH.test(text)) return "cc-exp-month";
-    if (YEAR.test(text)) return "cc-exp-year";
+    if (EXPIRY_BOTH.test(text)) {
+      return "cc-exp";
+    }
+    if (MONTH.test(text)) {
+      return "cc-exp-month";
+    }
+    if (YEAR.test(text)) {
+      return "cc-exp-year";
+    }
     if (element instanceof HTMLSelectElement) {
       const shape = optionShape(element);
-      if (shape) return shape === "month" ? "cc-exp-month" : "cc-exp-year";
+      if (shape) {
+        return shape === "month" ? "cc-exp-month" : "cc-exp-year";
+      }
     }
   }
   for (const [kind, pattern] of ADDRESS_RULES) {
-    if (!pattern.test(text)) continue;
-    if (kind === "address-line1" && element instanceof HTMLTextAreaElement) return "street-address";
+    if (!pattern.test(text)) {
+      continue;
+    }
+    if (kind === "address-line1" && element instanceof HTMLTextAreaElement) {
+      return "street-address";
+    }
     return kind;
   }
-  if (element instanceof HTMLInputElement && element.type === "email") return "email";
-  if (element instanceof HTMLInputElement && element.type === "tel") return "tel";
+  if (element instanceof HTMLInputElement && element.type === "email") {
+    return "email";
+  }
+  if (element instanceof HTMLInputElement && element.type === "tel") {
+    return "tel";
+  }
   return null;
 }
 
@@ -303,13 +355,17 @@ export function detectFields(scope: ParentNode): DetectedField[] {
 
 export function formKindOf(element: FormField, fields: DetectedField[]): FormKind | null {
   const own = fields.find((field) => field.element === element);
-  if (!own) return null;
+  if (!own) {
+    return null;
+  }
   if (isCardKind(own.kind)) {
     return fields.some((field) => field.kind === "cc-number") ? "card" : null;
   }
   const kinds = new Set(fields.map((field) => field.kind).filter((kind) => !isCardKind(kind)));
   const places = [...kinds].filter((kind) => PLACE_KINDS.has(kind));
-  if (kinds.size >= 3 && places.length > 0) return "address";
+  if (kinds.size >= 3 && places.length > 0) {
+    return "address";
+  }
   const profile = [...kinds].filter((kind) => PROFILE_KINDS.has(kind));
   return profile.length >= 2 && profile.some((kind) => kind !== "email") ? "profile" : null;
 }
@@ -321,9 +377,8 @@ export function setFieldValue(element: FormField, value: string): void {
       : element instanceof HTMLTextAreaElement
         ? HTMLTextAreaElement.prototype
         : HTMLInputElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(prototype, "value")!.set!;
   element.focus();
-  setter.call(element, value);
+  Reflect.set(prototype, "value", value, element);
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
 }
@@ -334,17 +389,23 @@ function options(select: HTMLSelectElement): HTMLOptionElement[] {
 
 export function chooseOption(select: HTMLSelectElement, wanted: string[]): string | null {
   const targets = [...new Set(wanted.map(foldText).filter(Boolean))];
-  if (targets.length === 0) return null;
+  if (targets.length === 0) {
+    return null;
+  }
   const choices = options(select).map((option) => ({
     option,
     keys: [foldText(option.value), foldText(option.text)].filter(Boolean),
   }));
   const exact = choices.find((choice) => choice.keys.some((key) => targets.includes(key)));
-  if (exact) return exact.option.value;
+  if (exact) {
+    return exact.option.value;
+  }
   const loose = choices.find((choice) =>
     choice.keys.some((key) => targets.some((target) => bareRegion(key) === bareRegion(target))),
   );
-  if (loose) return loose.option.value;
+  if (loose) {
+    return loose.option.value;
+  }
   const partial = choices.find((choice) =>
     choice.keys.some((key) =>
       targets.some(
@@ -366,9 +427,13 @@ function chooseNumber(select: HTMLSelectElement, matches: (value: number) => boo
 
 export function splitExpiry(expiry: string | undefined): { month: number; year: number } | null {
   const match = /^\s*(\d{1,2})\s*[/.\- ]\s*(\d{2}|\d{4})\s*$/.exec(expiry ?? "");
-  if (!match?.[1] || !match[2]) return null;
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
   const month = Number(match[1]);
-  if (month < 1 || month > 12) return null;
+  if (month < 1 || month > 12) {
+    return null;
+  }
   const year = match[2].length === 2 ? 2000 + Number(match[2]) : Number(match[2]);
   return { month, year };
 }
@@ -425,8 +490,12 @@ function yearValue(element: FormField, year: number): string | null {
 }
 
 function selectOrText(element: FormField, value: string | undefined, wanted?: string[]) {
-  if (!value) return null;
-  if (element instanceof HTMLSelectElement) return chooseOption(element, wanted ?? [value]);
+  if (!value) {
+    return null;
+  }
+  if (element instanceof HTMLSelectElement) {
+    return chooseOption(element, wanted ?? [value]);
+  }
   return value;
 }
 
@@ -435,7 +504,9 @@ export function splitName(
   country?: string,
 ): { given: string; family: string } {
   const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return { given: parts[0] ?? "", family: "" };
+  if (parts.length < 2) {
+    return { given: parts[0] ?? "", family: "" };
+  }
   if (countryOf(country)?.code === "VN") {
     return { given: parts.slice(1).join(" "), family: parts[0]! };
   }
@@ -457,7 +528,9 @@ function cardValue(field: DetectedField, card: CardData): string | null {
     case "cc-csc":
       return selectOrText(element, card.cvv);
     case "cc-exp":
-      if (!expiry) return null;
+      if (!expiry) {
+        return null;
+      }
       if (element instanceof HTMLSelectElement) {
         const two = String(expiry.year % 100).padStart(2, "0");
         const mm = String(expiry.month).padStart(2, "0");
@@ -478,9 +551,13 @@ function cardValue(field: DetectedField, card: CardData): string | null {
 export function fillCard(fields: DetectedField[], card: CardData, set: Setter): number {
   let filled = 0;
   for (const field of fields) {
-    if (!isCardKind(field.kind)) continue;
+    if (!isCardKind(field.kind)) {
+      continue;
+    }
     const value = cardValue(field, card);
-    if (value === null || value === "") continue;
+    if (value === null || value === "") {
+      continue;
+    }
     set(field.element, value);
     filled++;
   }
@@ -494,7 +571,9 @@ function streetLines(data: AddressData, fields: DetectedField[]): [string[], str
     .filter(Boolean);
   const hasWardField = fields.some((field) => field.kind === "address-level3");
   const rest = lines.slice(1);
-  if (data.ward && !hasWardField) rest.push(data.ward);
+  if (data.ward && !hasWardField) {
+    rest.push(data.ward);
+  }
   return [lines.slice(0, 1), rest];
 }
 
@@ -504,16 +583,24 @@ function countryValue(field: DetectedField, data: AddressData): string | null {
   if (element instanceof HTMLSelectElement) {
     return chooseOption(element, country ? [country.code, ...country.names] : [data.country ?? ""]);
   }
-  if (!country) return data.country ?? null;
+  if (!country) {
+    return data.country ?? null;
+  }
   const wantsCode = field.kind === "country" || (element.maxLength > 0 && element.maxLength <= 3);
   return wantsCode ? country.code : (country.names[0] ?? null);
 }
 
 function regionValue(element: FormField, region: string | undefined): string | null {
-  if (!region) return null;
-  if (element instanceof HTMLSelectElement) return chooseOption(element, regionNames(region));
+  if (!region) {
+    return null;
+  }
+  if (element instanceof HTMLSelectElement) {
+    return chooseOption(element, regionNames(region));
+  }
   const state = US_STATES.find(([code, name]) => code === region || name === region);
-  if (state && element.maxLength === 2) return state[0];
+  if (state && element.maxLength === 2) {
+    return state[0];
+  }
   return region;
 }
 
@@ -569,9 +656,13 @@ export function fillAddress(fields: DetectedField[], data: AddressData, set: Set
     (a, b) => Number(b.kind.startsWith("country")) - Number(a.kind.startsWith("country")),
   );
   for (const field of ordered) {
-    if (isCardKind(field.kind)) continue;
+    if (isCardKind(field.kind)) {
+      continue;
+    }
     const value = addressValue(field, data, fields);
-    if (value === null || value === "") continue;
+    if (value === null || value === "") {
+      continue;
+    }
     set(field.element, value);
     filled++;
   }
@@ -580,9 +671,13 @@ export function fillAddress(fields: DetectedField[], data: AddressData, set: Set
 
 export function countryHint(fields: DetectedField[], hostname: string, lang: string): "US" | "VN" {
   for (const field of fields) {
-    if (!field.kind.startsWith("country")) continue;
+    if (!field.kind.startsWith("country")) {
+      continue;
+    }
     const code = countryOf(field.element.value)?.code;
-    if (code === "VN" || code === "US") return code;
+    if (code === "VN" || code === "US") {
+      return code;
+    }
   }
   return hostname.endsWith(".vn") || lang.toLowerCase().startsWith("vi") ? "VN" : "US";
 }

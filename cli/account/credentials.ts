@@ -47,7 +47,9 @@ function macKeychain(): Keyring {
         ["-i"],
         `add-generic-password -U -s ${SERVICE} -a ${ACCOUNT} -l 7key -w ${value}\n`,
       );
-      if (result.status !== 0) throw new Error(`Keychain refused the session: ${result.stderr}`);
+      if (result.status !== 0) {
+        throw new Error(`Keychain refused the session: ${result.stderr}`);
+      }
     },
     remove() {
       run("security", ["delete-generic-password", "-s", SERVICE, "-a", ACCOUNT]);
@@ -65,7 +67,9 @@ function secretService(): Keyring {
     },
     write(value) {
       const result = run("secret-tool", ["store", "--label=7key", ...attributes], value);
-      if (result.status !== 0) throw new Error(`The keyring refused the session: ${result.stderr}`);
+      if (result.status !== 0) {
+        throw new Error(`The keyring refused the session: ${result.stderr}`);
+      }
     },
     remove() {
       run("secret-tool", ["clear", ...attributes]);
@@ -104,11 +108,11 @@ function refusingKeyring(env: NodeJS.ProcessEnv): Keyring {
   return {
     name: "no keyring",
     unavailable: NO_KEYRING_MESSAGE,
-    read: legacy.read,
+    read: (...args) => legacy.read(...args),
     write() {
       throw new AgentError(NO_KEYRING_MESSAGE);
     },
-    remove: legacy.remove,
+    remove: (...args) => legacy.remove(...args),
   };
 }
 
@@ -138,9 +142,15 @@ export function systemKeyring(
   const platform = options.platform ?? process.platform;
   const has = options.has ?? available;
   const insecure = insecureFileStoreAllowed(env, options);
-  if (env.SEVENKEY_KEYRING === "file") return fileKeyring(env);
-  if (platform === "darwin" && has("security")) return macKeychain();
-  if (platform === "linux" && has("secret-tool")) return secretService();
+  if (env.SEVENKEY_KEYRING === "file") {
+    return fileKeyring(env);
+  }
+  if (platform === "darwin" && has("security")) {
+    return macKeychain();
+  }
+  if (platform === "linux" && has("secret-tool")) {
+    return secretService();
+  }
   return insecure ? fileKeyring(env) : refusingKeyring(env);
 }
 
@@ -150,7 +160,9 @@ export function saveLogin(keyring: Keyring, login: StoredLogin): void {
 
 export function loadLogin(keyring: Keyring, now = Date.now() / 1000): StoredLogin | null {
   const raw = keyring.read();
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   try {
     const login = JSON.parse(Buffer.from(raw, "base64").toString("utf8")) as StoredLogin;
     return login.token && login.expiresAt > now ? login : null;
@@ -185,7 +197,9 @@ function pauseFile(env: NodeJS.ProcessEnv): string {
 
 export function pausedBy(env: NodeJS.ProcessEnv): number | null {
   const file = pauseFile(env);
-  if (!existsSync(file)) return null;
+  if (!existsSync(file)) {
+    return null;
+  }
   const pid = Number(readFileSync(file, "utf8"));
   try {
     process.kill(pid, 0);
@@ -197,13 +211,17 @@ export function pausedBy(env: NodeJS.ProcessEnv): number | null {
 
 export function pauseLogin(env: NodeJS.ProcessEnv, keyring: Keyring): () => void {
   const raw = keyring.read();
-  if (!raw) return () => {};
+  if (!raw) {
+    return () => {};
+  }
   const file = pauseFile(env);
   mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   writeFileSync(file, String(process.pid), { mode: 0o600 });
   keyring.remove();
   return () => {
-    if (!keyring.read()) keyring.write(raw);
+    if (!keyring.read()) {
+      keyring.write(raw);
+    }
     rmSync(file, { force: true });
   };
 }

@@ -84,7 +84,7 @@ describe("checkNewMasterPassword", () => {
   it("sends only the five-character hash prefix and matches the suffix", async () => {
     const password = "correct horse battery";
     const hash = await sha1Hex(password);
-    const fetchRange = vi.fn(async (prefix: string) =>
+    const fetchRange = vi.fn(async (_prefix: string) =>
       [`${"0".repeat(35)}:0`, `${hash.slice(5)}:42`, `${"F".repeat(35)}:7`].join("\r\n"),
     );
     expect(await checkNewMasterPassword(password, EMAIL, fetchRange)).toEqual({

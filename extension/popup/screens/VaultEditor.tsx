@@ -23,7 +23,9 @@ export function VaultEditor({ vault }: { vault: VaultDef | null }) {
   const submit = async (event: Event) => {
     event.preventDefault();
     const title = name.current?.value.trim() ?? "";
-    if (!title) return;
+    if (!title) {
+      return;
+    }
     setWorking(true);
     setError(null);
     try {
@@ -36,7 +38,9 @@ export function VaultEditor({ vault }: { vault: VaultDef | null }) {
   };
 
   const remove = async () => {
-    if (!vault) return;
+    if (!vault) {
+      return;
+    }
     try {
       await deleteVault(vault);
     } catch (failure) {

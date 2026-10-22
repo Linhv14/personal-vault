@@ -53,7 +53,9 @@ export async function signIn(email: string, password: string): Promise<void> {
     ({ kdf, wrapped, token } = await keepLogin(email, password, kdf, authKey, result));
   } catch (error) {
     const networkFailure = error instanceof api.ApiError && error.status === 0;
-    if (!networkFailure || !kdf || !wrapped) throw error;
+    if (!networkFailure || !kdf || !wrapped) {
+      throw error;
+    }
     toast(translator()("unlock.offline"));
   }
 
@@ -79,7 +81,9 @@ async function keepLogin(
     const masterKey = await deriveMasterKey(email, password, kdf);
     const raw = await openSealed(await deriveWrappingKey(masterKey), wrapped);
     const upgraded = await upgradeKdf(email, password, raw, authKey, result.token);
-    if (upgraded) ({ kdf, wrappedVaultKey: wrapped } = upgraded);
+    if (upgraded) {
+      ({ kdf, wrappedVaultKey: wrapped } = upgraded);
+    }
   }
   await setLocal({ kdf, wrappedVaultKey: wrapped });
   return { kdf, wrapped, token: result.token };

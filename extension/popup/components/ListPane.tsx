@@ -44,11 +44,15 @@ export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
   const type = typeFilter.value;
 
   useEffect(() => {
-    if (currentScope !== scope.value) scope.value = "all";
+    if (currentScope !== scope.value) {
+      scope.value = "all";
+    }
   }, [currentScope]);
 
   useEffect(() => {
-    if (selected?.id !== selectedId.value) selectedId.value = selected?.id ?? null;
+    if (selected?.id !== selectedId.value) {
+      selectedId.value = selected?.id ?? null;
+    }
   }, [selected?.id]);
 
   const emptyVault = live(all).length === 0 && currentScope !== "trash";

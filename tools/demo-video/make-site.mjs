@@ -9,11 +9,16 @@ mkdirSync(SITE, { recursive: true });
 for (const name of readdirSync(path.join(here, "static"))) {
   cpSync(path.join(here, "static", name), path.join(SITE, name));
 }
-for (const name of ["main.js", "popup.css"]) cpSync(path.join(popup, name), path.join(SITE, name));
+for (const name of ["main.js", "popup.css"]) {
+  cpSync(path.join(popup, name), path.join(SITE, name));
+}
 cpSync(path.join(here, "../../dist/public/favicon.svg"), path.join(SITE, "logo.svg"));
 cpSync(path.join(here, "../../dist/public/mark.svg"), path.join(SITE, "mark.svg"));
 const accounts = Object.fromEntries(
-  Object.entries(ACCOUNTS).map(([role, { password: _password, ...rest }]) => [role, rest]),
+  Object.entries(ACCOUNTS).map(([role, account]) => [
+    role,
+    Object.fromEntries(Object.entries(account).filter(([key]) => key !== "password")),
+  ]),
 );
 const template = readFileSync(path.join(here, "static/popup.html"), "utf8");
 writeFileSync(

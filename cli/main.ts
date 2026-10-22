@@ -82,10 +82,15 @@ export function parseArgs(argv: string[], env: NodeJS.ProcessEnv): Parsed {
       parsed.rest = argv.slice(index + 1);
       break;
     }
-    if (arg === "--link") parsed.link = argv[++index];
-    else if (arg === "--server") parsed.server = argv[++index] ?? parsed.server;
-    else if (!parsed.command) parsed.command = arg;
-    else throw new CiError(`Unexpected argument: ${arg}`);
+    if (arg === "--link") {
+      parsed.link = argv[++index];
+    } else if (arg === "--server") {
+      parsed.server = argv[++index] ?? parsed.server;
+    } else if (!parsed.command) {
+      parsed.command = arg;
+    } else {
+      throw new CiError(`Unexpected argument: ${arg}`);
+    }
   }
   return parsed;
 }
@@ -94,8 +99,14 @@ function ciMode(argv: string[], env: NodeJS.ProcessEnv): boolean {
   return argv.includes("--link") || Boolean(env.SEVENKEY_LINK) || Boolean(env.SEVENKEY_KEY);
 }
 
-export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<number> {
-  if (argv[0] === "agent") return agentMain(argv.slice(1), env);
+export async function main(
+  argv: string[],
+  env: NodeJS.ProcessEnv,
+  write: (line: string) => void = (line) => console.log(line),
+): Promise<number> {
+  if (argv[0] === "agent") {
+    return agentMain(argv.slice(1), env);
+  }
   const local = argv[0] ? LOCAL[argv[0]] : undefined;
   const ciCommand = argv[0] === "run" || argv[0] === "dotenv";
   if (local && !(ciCommand && ciMode(argv, env))) {
@@ -107,9 +118,13 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<numb
     console.log(USAGE);
     return command ? 0 : 1;
   }
-  if (!link) throw new CiError("Pass --link or set SEVENKEY_LINK");
+  if (!link) {
+    throw new CiError("Pass --link or set SEVENKEY_LINK");
+  }
   const repoKey = env.SEVENKEY_KEY;
-  if (!repoKey) throw new CiError("Set SEVENKEY_KEY to the repository key from the 7key console");
+  if (!repoKey) {
+    throw new CiError("Set SEVENKEY_KEY to the repository key from the 7key console");
+  }
   const secrets = await fetchSecrets({ server, link, repoKey, env });
 
   switch (command) {
@@ -117,15 +132,19 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv): Promise<numb
       process.stdout.write(formatDotenv(secrets));
       return 0;
     case "env":
-      await exportToGithubEnv(secrets, env);
-      console.log(`7key: exported ${secrets.length} values`);
+      await exportToGithubEnv(secrets, env, write);
+      write(`7key: exported ${secrets.length} values`);
       return 0;
     case "run": {
       const [program, ...args] = rest;
-      if (!program) throw new CiError("Nothing to run: add -- <command>");
+      if (!program) {
+        throw new CiError("Nothing to run: add -- <command>");
+      }
       const childEnv = { ...env };
       delete childEnv.SEVENKEY_KEY;
-      for (const { name, value } of secrets) childEnv[name] = value;
+      for (const { name, value } of secrets) {
+        childEnv[name] = value;
+      }
       return new Promise((resolve) => {
         const child = spawn(program, args, { stdio: "inherit", env: childEnv });
         child.on("close", (code) => resolve(code ?? 1));

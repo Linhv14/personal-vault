@@ -17,7 +17,9 @@ export function decodeMsgpack(input: Uint8Array): MsgpackValue {
   let offset = 0;
 
   const take = (length: number): Uint8Array => {
-    if (offset + length > bytes.length) throw new MsgpackError("Truncated MessagePack data");
+    if (offset + length > bytes.length) {
+      throw new MsgpackError("Truncated MessagePack data");
+    }
     const slice = bytes.subarray(offset, offset + length);
     offset += length;
     return slice;
@@ -37,19 +39,37 @@ export function decodeMsgpack(input: Uint8Array): MsgpackValue {
     const out: { [key: string]: MsgpackValue } = {};
     for (let index = 0; index < length; index++) {
       const key = read();
-      out[typeof key === "string" ? key : String(key)] = read();
+      out[
+        typeof key === "string"
+          ? key
+          : typeof key === "number" || typeof key === "boolean" || key === null
+            ? String(key)
+            : JSON.stringify(key)
+      ] = read();
     }
     return out;
   };
 
   function read(): MsgpackValue {
-    if (offset >= bytes.length) throw new MsgpackError("Truncated MessagePack data");
+    if (offset >= bytes.length) {
+      throw new MsgpackError("Truncated MessagePack data");
+    }
     const type = view.getUint8(offset++);
-    if (type <= 0x7f) return type;
-    if (type >= 0xe0) return type - 0x100;
-    if (type >= 0x80 && type <= 0x8f) return map(type & 0x0f);
-    if (type >= 0x90 && type <= 0x9f) return array(type & 0x0f);
-    if (type >= 0xa0 && type <= 0xbf) return text.decode(take(type & 0x1f));
+    if (type <= 0x7f) {
+      return type;
+    }
+    if (type >= 0xe0) {
+      return type - 0x100;
+    }
+    if (type >= 0x80 && type <= 0x8f) {
+      return map(type & 0x0f);
+    }
+    if (type >= 0x90 && type <= 0x9f) {
+      return array(type & 0x0f);
+    }
+    if (type >= 0xa0 && type <= 0xbf) {
+      return text.decode(take(type & 0x1f));
+    }
     switch (type) {
       case 0xc0:
         return null;
@@ -124,6 +144,8 @@ export function decodeMsgpack(input: Uint8Array): MsgpackValue {
   }
 
   const value = read();
-  if (offset !== bytes.length) throw new MsgpackError("Trailing bytes after MessagePack value");
+  if (offset !== bytes.length) {
+    throw new MsgpackError("Trailing bytes after MessagePack value");
+  }
   return value;
 }

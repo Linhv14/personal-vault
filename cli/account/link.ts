@@ -23,7 +23,9 @@ export function findLink(from: string): { file: string; link: ProjectLink } | nu
       }
     }
     const parent = path.dirname(directory);
-    if (parent === directory) return null;
+    if (parent === directory) {
+      return null;
+    }
     directory = parent;
   }
 }

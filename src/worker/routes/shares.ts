@@ -49,7 +49,9 @@ async function claimView(
   )
     .bind(id, timestamp)
     .first<ClaimedShare>();
-  if (!row) return c.json(apiError("shares.gone"), 404);
+  if (!row) {
+    return c.json(apiError("shares.gone"), 404);
+  }
 
   const remaining = viewsLeft(row);
   if (remaining === 0) {
@@ -66,15 +68,21 @@ async function claimView(
 }
 
 function parseRecipients(value: unknown): string[] | null {
-  if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > MAX_RECIPIENTS) return null;
-  const emails = value.map(normalizeEmail);
-  if (emails.some((email) => email === null)) return null;
-  return [...new Set(emails as string[])];
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || value.length > MAX_RECIPIENTS) {
+    return null;
+  }
+  const emails = value.map((entry: unknown) => normalizeEmail(entry));
+  if (emails.some((email) => email === null)) {
+    return null;
+  }
+  return [...new Set(emails.filter((email): email is string => email !== null))];
 }
 
 shares.post("/", async (c) => {
-  const body = await c.req.json().catch(() => null);
+  const body: unknown = await c.req.json().catch(() => null);
   const { ciphertext, nonce, ttlSeconds, maxViews, recipients } = (body ?? {}) as Record<
     string,
     unknown
@@ -95,7 +103,9 @@ shares.post("/", async (c) => {
     return c.json(apiError("shares.invalid_max_views"), 400);
   }
   const allowed = parseRecipients(recipients);
-  if (!allowed) return c.json(apiError("shares.invalid_recipients"), 400);
+  if (!allowed) {
+    return c.json(apiError("shares.invalid_recipients"), 400);
+  }
   if (allowed.length > 0 && !createMailer(c.env)) {
     return c.json(apiError("shares.email_unavailable"), 400);
   }
@@ -146,7 +156,9 @@ shares.post("/status", async (c) => {
   const statuses = await Promise.all(
     requested.map(async (entry: unknown) => {
       const { id, revokeToken } = (entry ?? {}) as Record<string, unknown>;
-      if (typeof id !== "string" || typeof revokeToken !== "string") return null;
+      if (typeof id !== "string" || typeof revokeToken !== "string") {
+        return null;
+      }
       const row = await c.env.DB.prepare(
         "SELECT revoke_hash, expires_at, max_views, view_count FROM shares WHERE id = ?",
       )
@@ -183,7 +195,9 @@ shares.delete("/:id", async (c) => {
   const owned =
     row?.revoke_hash &&
     timingSafeEqual(utf8Encode(await hashToken(revokeToken)), utf8Encode(row.revoke_hash));
-  if (!owned) return c.json(apiError("shares.gone"), 404);
+  if (!owned) {
+    return c.json(apiError("shares.gone"), 404);
+  }
 
   await c.env.DB.prepare("DELETE FROM shares WHERE id = ?").bind(id).run();
   return c.json({ ok: true });
@@ -198,8 +212,12 @@ shares.get("/:id", async (c) => {
   )
     .bind(id, timestamp)
     .first<{ restricted: number }>();
-  if (!share) return c.json(apiError("shares.gone"), 404);
-  if (share.restricted) return c.json(apiError("shares.email_required"), 403);
+  if (!share) {
+    return c.json(apiError("shares.gone"), 404);
+  }
+  if (share.restricted) {
+    return c.json(apiError("shares.email_required"), 403);
+  }
 
   return claimView(c, id, timestamp);
 });
@@ -207,7 +225,9 @@ shares.get("/:id", async (c) => {
 shares.post("/:id/code", async (c) => {
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const email = normalizeEmail(body?.email);
-  if (!email) return c.json(apiError("auth.invalid_email"), 400);
+  if (!email) {
+    return c.json(apiError("auth.invalid_email"), 400);
+  }
 
   const mailer = createMailer(c.env);
   if (mailer) {
@@ -229,12 +249,18 @@ shares.post("/:id/open", async (c) => {
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const email = normalizeEmail(body?.email);
-  if (!email || !isCode(body?.code)) return c.json(apiError("shares.invalid_code"), 400);
+  if (!email || !isCode(body?.code)) {
+    return c.json(apiError("shares.invalid_code"), 400);
+  }
 
   const timestamp = now();
-  const result = await consumeShareCode(c.env, id, email, body.code as string, timestamp);
-  if (result === "invalid") return c.json(apiError("shares.invalid_code"), 400);
-  if (result === "expired") return c.json(apiError("shares.code_expired"), 400);
+  const result = await consumeShareCode(c.env, id, email, body.code, timestamp);
+  if (result === "invalid") {
+    return c.json(apiError("shares.invalid_code"), 400);
+  }
+  if (result === "expired") {
+    return c.json(apiError("shares.code_expired"), 400);
+  }
   return claimView(c, id, timestamp);
 });
 

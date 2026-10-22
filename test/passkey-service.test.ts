@@ -8,12 +8,16 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     },
     set: async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     },
     remove: async (key: string) => void store.delete(key),
     clear: async () => store.clear(),
@@ -159,8 +163,9 @@ describe("passkey service", () => {
       },
       page,
     );
-    for (let round = 0; round < 50; round += 1)
+    for (let round = 0; round < 50; round += 1) {
       await new Promise((resolve) => setTimeout(resolve, 1));
+    }
     const query = await handlePasskey(
       { type: "passkey:query", rpId: "example.com", allowCredentialIds: [] },
       page,

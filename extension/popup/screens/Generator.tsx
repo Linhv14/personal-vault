@@ -85,7 +85,7 @@ export function Generator() {
         min={min}
         max={max}
         value={options[key]}
-        onInput={(event) => set(key, Number((event.currentTarget as HTMLInputElement).value))}
+        onInput={(event) => set(key, Number(event.currentTarget.value))}
       />
       <output>{options[key]}</output>
     </label>
@@ -100,7 +100,7 @@ export function Generator() {
       <input
         type="checkbox"
         checked={options[key]}
-        onChange={(event) => set(key, (event.currentTarget as HTMLInputElement).checked)}
+        onChange={(event) => set(key, event.currentTarget.checked)}
       />
     </label>
   );
@@ -171,7 +171,9 @@ export function Generator() {
             icon="copy"
             label={t("common.copy")}
             onClick={() => {
-              if (!failed) void copy(result.value, t("common.password").toLowerCase());
+              if (!failed) {
+                void copy(result.value, t("common.password").toLowerCase());
+              }
             }}
           />
         </div>

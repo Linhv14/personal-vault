@@ -91,8 +91,11 @@ export function HostChips({
               }
             }}
             onBlur={() => {
-              if (text.trim()) add(text);
-              else setAdding(false);
+              if (text.trim()) {
+                add(text);
+              } else {
+                setAdding(false);
+              }
             }}
           />
         ) : (

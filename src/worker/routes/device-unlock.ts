@@ -21,7 +21,9 @@ deviceUnlock.use("*", async (c, next) => {
 
 deviceUnlock.put("/pin", async (c) => {
   const { verifier } = await readJson(c);
-  if (!isVerifier(verifier)) return c.json(apiError("auth.invalid_body"), 400);
+  if (!isVerifier(verifier)) {
+    return c.json(apiError("auth.invalid_body"), 400);
+  }
   const pinKey = await setPin(
     c.env,
     c.get("session").tokenHash,
@@ -37,20 +39,28 @@ deviceUnlock.delete("/pin", async (c) => {
 
 deviceUnlock.post("/pin/unlock", async (c) => {
   const { verifier } = await readJson(c);
-  if (!isVerifier(verifier)) return c.json(apiError("auth.invalid_body"), 400);
+  if (!isVerifier(verifier)) {
+    return c.json(apiError("auth.invalid_body"), 400);
+  }
   const result = await checkPin(
     c.env,
     c.get("session").tokenHash,
     await verifierHash(c.env, verifier),
   );
-  if (result.ok) return c.json({ pinKey: result.pinKey });
-  if (result.attemptsLeft === 0) return c.json(apiError("auth.pin_off"), 410);
+  if (result.ok) {
+    return c.json({ pinKey: result.pinKey });
+  }
+  if (result.attemptsLeft === 0) {
+    return c.json(apiError("auth.pin_off"), 410);
+  }
   return c.json(apiError("auth.pin_wrong", { count: result.attemptsLeft }), 403);
 });
 
 deviceUnlock.put("/biometric", async (c) => {
   const body = await readJson(c);
-  if (!isRegistration(body)) return c.json(apiError("auth.invalid_body"), 400);
+  if (!isRegistration(body)) {
+    return c.json(apiError("auth.invalid_body"), 400);
+  }
   return c.json({ bioKey: await setBiometric(c.env, c.get("session").tokenHash, body) });
 });
 
@@ -66,7 +76,9 @@ deviceUnlock.post("/biometric/challenge", async (c) => {
 
 deviceUnlock.post("/biometric/unlock", async (c) => {
   const body = await readJson(c);
-  if (!isAssertion(body)) return c.json(apiError("auth.invalid_body"), 400);
+  if (!isAssertion(body)) {
+    return c.json(apiError("auth.invalid_body"), 400);
+  }
   const bioKey = await checkBiometric(c.env, c.get("session").tokenHash, body, now());
   return bioKey ? c.json({ bioKey }) : c.json(apiError("auth.biometric_failed"), 403);
 });

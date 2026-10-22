@@ -57,7 +57,9 @@ function SecretRow({
               const value = draft;
               setDraft(null);
               void onSave(value, kind).then((saved) => {
-                if (!saved) setDraft(value);
+                if (!saved) {
+                  setDraft(value);
+                }
               });
             }}
           >
@@ -70,7 +72,9 @@ function SecretRow({
               aria-label={secret.name}
               onInput={(event) => setDraft(event.currentTarget.value)}
               onKeyDown={(event) => {
-                if (event.key === "Escape") setDraft(null);
+                if (event.key === "Escape") {
+                  setDraft(null);
+                }
                 if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                   event.currentTarget.form?.requestSubmit();
                 }
@@ -96,7 +100,9 @@ function SecretRow({
             className={shown ? "value-toggle shown" : "value-toggle"}
             title={t(shown ? "projects.hide" : "projects.reveal")}
             onClick={() => {
-              if (!shown) onAccess("revealed");
+              if (!shown) {
+                onAccess("revealed");
+              }
               setShown(!shown);
             }}
           >
@@ -128,7 +134,9 @@ function SecretRow({
             icon="copy"
             label={t("projects.copy")}
             onClick={() => {
-              if (!variable) onAccess("copied");
+              if (!variable) {
+                onAccess("copied");
+              }
               copy(secret.value, t("console.copied_name", { name: secret.name }));
             }}
           />
@@ -139,7 +147,9 @@ function SecretRow({
                 icon="pencil"
                 label={t("projects.edit")}
                 onClick={() => {
-                  if (!variable) onAccess("revealed");
+                  if (!variable) {
+                    onAccess("revealed");
+                  }
                   setKind(secret.kind ?? "secret");
                   setDraft(secret.value);
                 }}
@@ -182,7 +192,9 @@ export function SecretsTable({
   const t = useT();
   const needle = query.trim().toLowerCase();
   const visible = secrets.filter((secret) => secret.name.toLowerCase().includes(needle));
-  if (secrets.length === 0) return null;
+  if (secrets.length === 0) {
+    return null;
+  }
   return (
     <>
       <table className="table secrets-table">

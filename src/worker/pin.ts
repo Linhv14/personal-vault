@@ -48,7 +48,9 @@ export async function checkPin(
     return { ok: true, pinKey: row.pin_key };
   }
   const attemptsLeft = PIN_MAX_ATTEMPTS - row.pin_attempts;
-  if (attemptsLeft <= 0) await clearPin(env, tokenHash);
+  if (attemptsLeft <= 0) {
+    await clearPin(env, tokenHash);
+  }
   return { ok: false, attemptsLeft };
 }
 

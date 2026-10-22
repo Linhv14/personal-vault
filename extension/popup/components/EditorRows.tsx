@@ -16,7 +16,9 @@ export function WebsitesEditor({ item }: { item: VaultItem | null }) {
   const list = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (focusKey === null) return;
+    if (focusKey === null) {
+      return;
+    }
     list.current?.querySelector<HTMLInputElement>(`[data-row="${focusKey}"]`)?.focus();
   }, [focusKey]);
 
@@ -79,7 +81,9 @@ export function CustomFieldsEditor({
   const list = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (focusKey === null) return;
+    if (focusKey === null) {
+      return;
+    }
     list.current?.querySelector<HTMLInputElement>(`[data-row="${focusKey}"]`)?.focus();
   }, [focusKey]);
 

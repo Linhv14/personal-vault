@@ -36,8 +36,9 @@ export function renderMarkdown(markdown: string): string {
     } else if (line.startsWith("```")) {
       const code: string[] = [];
       index += 1;
-      while (index < lines.length && !lines.at(index).startsWith("```"))
+      while (index < lines.length && !lines.at(index).startsWith("```")) {
         code.push(lines.at(index++));
+      }
       index += 1;
       html.push(`<pre><code>${escape(code.join("\n"))}</code></pre>`);
     } else if (/^#{1,6} /.test(line)) {
@@ -46,7 +47,9 @@ export function renderMarkdown(markdown: string): string {
       index += 1;
     } else if (line.startsWith("|")) {
       const rows: string[] = [];
-      while (index < lines.length && lines.at(index).startsWith("|")) rows.push(lines.at(index++));
+      while (index < lines.length && lines.at(index).startsWith("|")) {
+        rows.push(lines.at(index++));
+      }
       const [header, , ...body] = rows;
       html.push(
         '<div class="table"><table><thead><tr>' +
@@ -70,16 +73,18 @@ export function renderMarkdown(markdown: string): string {
       while (index < lines.length && /^(- |\d+\. )/.test(lines.at(index))) {
         const parts = [lines.at(index).replace(/^(- |\d+\. )/, "")];
         index += 1;
-        while (index < lines.length && /^\s{2,}\S/.test(lines.at(index)))
+        while (index < lines.length && /^\s{2,}\S/.test(lines.at(index))) {
           parts.push(lines.at(index++).trim());
+        }
         items.push(`<li>${inline(parts.join(" "))}</li>`);
       }
       const tag = ordered ? "ol" : "ul";
       html.push(`<${tag}>${items.join("")}</${tag}>`);
     } else {
       const parts: string[] = [];
-      while (index < lines.length && !isBlockStart(lines.at(index)))
+      while (index < lines.length && !isBlockStart(lines.at(index))) {
         parts.push(lines.at(index++).trim());
+      }
       html.push(`<p>${inline(parts.join(" "))}</p>`);
     }
   }

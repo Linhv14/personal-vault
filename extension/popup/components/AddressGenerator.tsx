@@ -35,7 +35,9 @@ const ROWS: readonly (readonly [keyof RandomAddress, MessageKey, IconName])[] = 
 
 export function Flag({ code }: { code: string }) {
   const markup = flagMarkup(code);
-  if (!markup) return <span className="flag">{code}</span>;
+  if (!markup) {
+    return <span className="flag">{code}</span>;
+  }
   return (
     <svg
       className="flag"
@@ -69,7 +71,9 @@ export function AddressGenerator({ modes }: { modes: ComponentChildren }) {
         <div className="group">
           {ROWS.map(([key, label, icon]) => {
             const value = address[key];
-            if (!value) return null;
+            if (!value) {
+              return null;
+            }
             return (
               <CopyRow
                 key={key}
@@ -120,7 +124,7 @@ export function AddressGenerator({ modes }: { modes: ComponentChildren }) {
           <input
             type="checkbox"
             checked={withEmail}
-            onChange={(event) => setWithEmail((event.currentTarget as HTMLInputElement).checked)}
+            onChange={(event) => setWithEmail(event.currentTarget.checked)}
           />
         </label>
         {withEmail && (
@@ -133,7 +137,7 @@ export function AddressGenerator({ modes }: { modes: ComponentChildren }) {
               aria-label={t("gen.email_domain")}
               placeholder={DEFAULT_EMAIL_DOMAIN}
               value={domain}
-              onInput={(event) => setDomain((event.currentTarget as HTMLInputElement).value)}
+              onInput={(event) => setDomain(event.currentTarget.value)}
             />
           </label>
         )}

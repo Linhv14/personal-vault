@@ -24,12 +24,16 @@ export async function sendInvitation(
   },
 ): Promise<boolean> {
   const mailer = createMailer(env);
-  if (!mailer) return false;
+  if (!mailer) {
+    return false;
+  }
   const [org, inviter] = await Promise.all([
     directory.org(invite.orgId),
     directory.emailOf(invite.invitedBy),
   ]);
-  if (!org || !inviter) return false;
+  if (!org || !inviter) {
+    return false;
+  }
   const message = orgInviteEmail(
     { locale: invite.locale, siteUrl: invite.siteUrl },
     {
@@ -53,9 +57,11 @@ export async function joinFromInvite(
   env: Env,
   directory: OrgDirectory,
   invite: { id: string; email: string; accountId: string; ip: string | null },
-): Promise<string | "domain" | null> {
+): Promise<string | null> {
   const accepted = await directory.accept(invite.id, invite.email, invite.accountId);
-  if (!accepted || accepted === "domain") return accepted;
+  if (!accepted || accepted === "domain") {
+    return accepted;
+  }
   await orgStore(env, accepted.orgId).setMember(
     invite.accountId,
     { accountId: invite.accountId, role: accepted.role },
@@ -72,13 +78,17 @@ export async function notifyNewOwner(
   transfer: { orgId: string; from: string; to: string; locale: "en" | "vi"; siteUrl: string },
 ): Promise<void> {
   const mailer = createMailer(env);
-  if (!mailer) return;
+  if (!mailer) {
+    return;
+  }
   const [org, previous, recipient] = await Promise.all([
     directory.org(transfer.orgId),
     directory.emailOf(transfer.from),
     directory.emailOf(transfer.to),
   ]);
-  if (!org || !previous || !recipient) return;
+  if (!org || !previous || !recipient) {
+    return;
+  }
   const message = ownershipEmail(
     { locale: transfer.locale, siteUrl: transfer.siteUrl },
     {

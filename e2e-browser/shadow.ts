@@ -19,28 +19,42 @@ export interface ShadowElement {
 function attribute(node: DomNode, name: string): string | null {
   const attributes = node.attributes ?? [];
   for (let index = 0; index < attributes.length; index += 2) {
-    if (attributes[index] === name) return attributes[index + 1] ?? "";
+    if (attributes[index] === name) {
+      return attributes[index + 1] ?? "";
+    }
   }
   return null;
 }
 
 function textOf(node: DomNode): string {
-  if (node.nodeType === 3) return node.nodeValue;
-  if (node.nodeName === "STYLE") return "";
+  if (node.nodeType === 3) {
+    return node.nodeValue;
+  }
+  if (node.nodeName === "STYLE") {
+    return "";
+  }
   return (node.children ?? []).map(textOf).join(" ");
 }
 
 function collect(node: DomNode, match: (node: DomNode) => boolean, found: DomNode[]): DomNode[] {
-  if (match(node)) found.push(node);
-  for (const child of node.children ?? []) collect(child, match, found);
+  if (match(node)) {
+    found.push(node);
+  }
+  for (const child of node.children ?? []) {
+    collect(child, match, found);
+  }
   return found;
 }
 
 function closedRoots(node: DomNode, found: DomNode[] = []): DomNode[] {
   for (const root of node.shadowRoots ?? []) {
-    if (root.shadowRootType === "closed") found.push(root);
+    if (root.shadowRootType === "closed") {
+      found.push(root);
+    }
   }
-  for (const child of node.children ?? []) closedRoots(child, found);
+  for (const child of node.children ?? []) {
+    closedRoots(child, found);
+  }
   return found;
 }
 
@@ -59,9 +73,7 @@ export class ClosedShadow {
       const { root } = (await session.send("DOM.getDocument", { depth: -1, pierce: true })) as {
         root: DomNode;
       };
-      return await use(root, (method, params) =>
-        session.send(method as "DOM.getBoxModel", params as { nodeId: number }),
-      );
+      return await use(root, (method, params) => session.send(method as "DOM.getBoxModel", params));
     } finally {
       await session.detach();
     }
@@ -104,7 +116,9 @@ export class ClosedShadow {
             (typeof text === "string" ? label === text : text.test(label))
           );
         });
-      if (!target) throw new Error(`No ${className} element matching ${String(text)}`);
+      if (!target) {
+        throw new Error(`No ${className} element matching ${String(text)}`);
+      }
       const { model } = (await send("DOM.getBoxModel", { nodeId: target.nodeId })) as {
         model: { content: number[] };
       };

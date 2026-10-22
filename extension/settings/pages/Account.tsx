@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { describeError } from "../../../src/i18n/index.js";
 import * as api from "../../lib/api.js";
 import { isDefaultServer } from "../../lib/server.js";
@@ -19,7 +20,9 @@ export function Account() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleLogout = async () => {
-    if (!confirm(t("settings.logout_confirm"))) return;
+    if (!confirm(t("settings.logout_confirm"))) {
+      return;
+    }
     await api.logout().catch(() => null);
     await clearAccountData();
     await lock();
@@ -30,13 +33,15 @@ export function Account() {
     event.preventDefault();
     setDeleteError(null);
     const form = event.currentTarget as HTMLFormElement;
-    const authKey = await currentAuthKey(String(new FormData(form).get("current")));
+    const authKey = await currentAuthKey(formText(new FormData(form), "current"));
     const { email } = await getLocal();
     if (!authKey) {
       setDeleteError(t("settings.wrong_current"));
       return;
     }
-    if (!confirm(t("settings.delete_confirm", { email: email ?? "" }))) return;
+    if (!confirm(t("settings.delete_confirm", { email: email ?? "" }))) {
+      return;
+    }
     try {
       await api.deleteAccount(authKey);
       await clearAccountData();

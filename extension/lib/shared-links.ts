@@ -19,7 +19,9 @@ const ASSOCIATED_DATA = utf8Encode("personal-vault/shared-links");
 
 export async function loadSharedLinks(key: CryptoKey): Promise<SharedLink[]> {
   const { sharedLinks } = await getLocal();
-  if (!sharedLinks) return [];
+  if (!sharedLinks) {
+    return [];
+  }
   return openJson<SharedLink[]>(key, sharedLinks, ASSOCIATED_DATA);
 }
 

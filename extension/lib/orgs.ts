@@ -171,7 +171,9 @@ export async function createTeam(orgId: string, name: string, me: Identity): Pro
 }
 
 export async function teamKey(team: Team, me: Identity): Promise<Bytes> {
-  if (!team.wrappedKey) throw new Error("not in team");
+  if (!team.wrappedKey) {
+    throw new Error("not in team");
+  }
   return new Uint8Array(
     await unwrapForRecipient(me, team.wrappedKey, teamKeyContext(team.id, team.generation)),
   );
@@ -184,7 +186,9 @@ export async function addTeamMember(
   me: Identity,
   access: TeamAccess = "edit",
 ): Promise<void> {
-  if (!member.publicKey) throw new Error("member has no key yet");
+  if (!member.publicKey) {
+    throw new Error("member has no key yet");
+  }
   const key = await teamKey(team, me);
   const wrappedKey = await wrapForRecipient(
     member.publicKey,

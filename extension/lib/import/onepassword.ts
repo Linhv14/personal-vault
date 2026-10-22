@@ -70,7 +70,9 @@ function sectionFields(details: JsonObject): Field[] {
       const field = object(raw);
       const value = object(field.value);
       const [kind] = Object.keys(value);
-      if (!kind) return [];
+      if (!kind) {
+        return [];
+      }
       const read = fieldValue(kind, value[kind]);
       return read.trim()
         ? [
@@ -139,7 +141,9 @@ function loginDraft(item: JsonObject, details: JsonObject, fields: Field[]): Ite
   const totpCandidates = fields.filter(
     (field) => field.kind === "totp" || field.id.startsWith("TOTP_"),
   );
-  for (const candidate of totpCandidates) fields.splice(fields.indexOf(candidate), 1);
+  for (const candidate of totpCandidates) {
+    fields.splice(fields.indexOf(candidate), 1);
+  }
   const { totp, unreadable } = firstTotp(
     totpCandidates.map((field) => field.value),
     title,
@@ -204,10 +208,13 @@ function itemDraft(item: JsonObject): ItemDraft | null {
   const documentKind = ID_DOCUMENTS[category];
 
   let draft: ItemDraft;
-  if (LOGIN_LIKE.has(category)) draft = loginDraft(item, details, fields);
-  else if (category === CREDIT_CARD) draft = cardDraft(title, fields);
-  else if (category === IDENTITY) draft = identityDraft(title, fields);
-  else if (category === WIRELESS_ROUTER) {
+  if (LOGIN_LIKE.has(category)) {
+    draft = loginDraft(item, details, fields);
+  } else if (category === CREDIT_CARD) {
+    draft = cardDraft(title, fields);
+  } else if (category === IDENTITY) {
+    draft = identityDraft(title, fields);
+  } else if (category === WIRELESS_ROUTER) {
     draft = {
       type: "wifi",
       title: title || "Wi-Fi",
@@ -273,8 +280,11 @@ function itemDraft(item: JsonObject): ItemDraft | null {
       sshFingerprint: text(metadata.fingerprint) || undefined,
       fields: rest(fields),
     };
-  } else if (category === DOCUMENT_FILE) return null;
-  else draft = { type: "note", title: title || "Note", fields: rest(fields) };
+  } else if (category === DOCUMENT_FILE) {
+    return null;
+  } else {
+    draft = { type: "note", title: title || "Note", fields: rest(fields) };
+  }
 
   return {
     ...draft,
@@ -290,8 +300,11 @@ export function onePasswordFromExport(parsed: JsonObject): ImportSource {
   );
   for (const item of items) {
     const draft = itemDraft(item);
-    if (draft) source.drafts.push(draft);
-    else countSkip(source.skipped, "other");
+    if (draft) {
+      source.drafts.push(draft);
+    } else {
+      countSkip(source.skipped, "other");
+    }
   }
   return source;
 }

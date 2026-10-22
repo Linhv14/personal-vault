@@ -12,7 +12,9 @@ const types = {
 };
 async function forward(req, res) {
   const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
+  for await (const chunk of req) {
+    chunks.push(chunk);
+  }
   const upstream = await fetch(`http://127.0.0.1:8787${req.url}`, {
     method: req.method,
     headers: { ...req.headers, host: "127.0.0.1:8787" },
@@ -28,15 +30,18 @@ async function forward(req, res) {
         "content-security-policy",
         "x-frame-options",
       ].includes(k)
-    )
+    ) {
       headers[k] = v;
+    }
   });
   res.writeHead(upstream.status, headers);
   res.end(Buffer.from(await upstream.arrayBuffer()));
 }
 http
   .createServer(async (req, res) => {
-    if (req.url.startsWith("/api/") || req.url.startsWith("/app")) return forward(req, res);
+    if (req.url.startsWith("/api/") || req.url.startsWith("/app")) {
+      return forward(req, res);
+    }
     try {
       const file = path.join(staticRoot, decodeURIComponent(req.url.split("?")[0]));
       const body = await readFile(file);

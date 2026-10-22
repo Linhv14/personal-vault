@@ -47,7 +47,9 @@ export function randomInt(max: number): number {
   if (!Number.isInteger(max) || max <= 0) {
     throw new VaultError("generator.invalid_max", {}, `max must be a positive integer, got ${max}`);
   }
-  if (max === 1) return 0;
+  if (max === 1) {
+    return 0;
+  }
 
   const limit = Math.floor(0x1_0000_0000 / max) * max;
   const buffer = new Uint32Array(1);
@@ -82,10 +84,18 @@ export function buildAlphabet(options: PasswordOptions = {}): string {
   } = options;
 
   let alphabet = "";
-  if (lowercase) alphabet += LOWERCASE;
-  if (uppercase) alphabet += UPPERCASE;
-  if (digits) alphabet += DIGITS;
-  if (symbols) alphabet += SYMBOLS;
+  if (lowercase) {
+    alphabet += LOWERCASE;
+  }
+  if (uppercase) {
+    alphabet += UPPERCASE;
+  }
+  if (digits) {
+    alphabet += DIGITS;
+  }
+  if (symbols) {
+    alphabet += SYMBOLS;
+  }
 
   if (excludeAmbiguous) {
     alphabet = [...alphabet].filter((c) => !AMBIGUOUS.has(c)).join("");
@@ -122,7 +132,9 @@ export function generatePassword(options: PasswordOptions = {}): GeneratedSecret
   }
 
   const chars = requiredSets.map((set) => pick([...set]));
-  while (chars.length < length) chars.push(pick([...alphabet]));
+  while (chars.length < length) {
+    chars.push(pick([...alphabet]));
+  }
 
   return {
     value: shuffle(chars).join(""),
@@ -145,10 +157,18 @@ function activeSets(options: PasswordOptions): string[] {
     excludeAmbiguous ? [...set].filter((c) => !AMBIGUOUS.has(c)).join("") : set;
 
   const sets: string[] = [];
-  if (lowercase) sets.push(filter(LOWERCASE));
-  if (uppercase) sets.push(filter(UPPERCASE));
-  if (digits) sets.push(filter(DIGITS));
-  if (symbols) sets.push(filter(SYMBOLS));
+  if (lowercase) {
+    sets.push(filter(LOWERCASE));
+  }
+  if (uppercase) {
+    sets.push(filter(UPPERCASE));
+  }
+  if (digits) {
+    sets.push(filter(DIGITS));
+  }
+  if (symbols) {
+    sets.push(filter(SYMBOLS));
+  }
   return sets.filter((s) => s.length > 0);
 }
 
@@ -227,10 +247,18 @@ export type Strength = "very_weak" | "weak" | "fair" | "strong" | "very_strong";
  * 75 bits up is beyond the reach of present-day offline brute force.
  */
 export function rateStrength(entropyBits: number): Strength {
-  if (entropyBits < 40) return "very_weak";
-  if (entropyBits < 60) return "weak";
-  if (entropyBits < 75) return "fair";
-  if (entropyBits < 100) return "strong";
+  if (entropyBits < 40) {
+    return "very_weak";
+  }
+  if (entropyBits < 60) {
+    return "weak";
+  }
+  if (entropyBits < 75) {
+    return "fair";
+  }
+  if (entropyBits < 100) {
+    return "strong";
+  }
   return "very_strong";
 }
 

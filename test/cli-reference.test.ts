@@ -18,7 +18,9 @@ function loader() {
   return vi.fn(async (scope: Scope) => {
     const key = scope.project ? `${scope.project}\n${scope.environment}` : "";
     const values = environments[key];
-    if (!values) throw new AgentError(`No project "${scope.project}" in your teams`);
+    if (!values) {
+      throw new AgentError(`No project "${scope.project}" in your teams`);
+    }
     return { secrets: Object.entries(values).map(([name, value]) => ({ name, value })) };
   });
 }

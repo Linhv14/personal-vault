@@ -18,7 +18,9 @@ function App() {
   }, [locale, t]);
 
   const vaultKey = vaultKeySignal.value;
-  if (!vaultKey) return <SignIn />;
+  if (!vaultKey) {
+    return <SignIn />;
+  }
   return (
     <ConsoleHost
       vaultKey={vaultKey}
@@ -37,5 +39,7 @@ startWebSession();
 setHumanCheck((_apiUrl, siteKey) => turnstileToken(siteKey));
 setUiLocale(undefined);
 const root = document.getElementById("app");
-if (!root) throw new Error("Missing #app");
+if (!root) {
+  throw new Error("Missing #app");
+}
 render(<App />, root);

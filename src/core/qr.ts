@@ -63,7 +63,9 @@ function rawDataModules(version: number): number {
   if (version >= 2) {
     const alignments = Math.floor(version / 7) + 2;
     result -= (25 * alignments - 10) * alignments - 55;
-    if (version >= 7) result -= 36;
+    if (version >= 7) {
+      result -= 36;
+    }
   }
   return result;
 }
@@ -95,7 +97,9 @@ export function reedSolomonDivisor(degree: number): number[] {
   for (let i = 0; i < degree; i++) {
     for (let j = 0; j < result.length; j++) {
       result[j] = gfMultiply(result[j]!, root);
-      if (j + 1 < result.length) result[j]! ^= result[j + 1]!;
+      if (j + 1 < result.length) {
+        result[j]! ^= result[j + 1]!;
+      }
     }
     root = gfMultiply(root, 0x02);
   }
@@ -130,13 +134,17 @@ function interleave(data: number[], version: number, level: QrErrorLevel): numbe
     const chunk = data.slice(offset, offset + length);
     offset += length;
     const ecc = reedSolomonRemainder(chunk, divisor);
-    if (index < shortBlocks) chunk.push(0);
+    if (index < shortBlocks) {
+      chunk.push(0);
+    }
     all.push(chunk.concat(ecc));
   }
   const result: number[] = [];
   for (let i = 0; i < all[0]!.length; i++) {
     all.forEach((block, j) => {
-      if (i !== shortLength - eccLength || j >= shortBlocks) result.push(block[i]!);
+      if (i !== shortLength - eccLength || j >= shortBlocks) {
+        result.push(block[i]!);
+      }
     });
   }
   return result;
@@ -145,15 +153,21 @@ function interleave(data: number[], version: number, level: QrErrorLevel): numbe
 function encodeData(bytes: Uint8Array, version: number, level: QrErrorLevel): number[] {
   const bits: number[] = [];
   const append = (value: number, length: number) => {
-    for (let i = length - 1; i >= 0; i--) bits.push((value >>> i) & 1);
+    for (let i = length - 1; i >= 0; i--) {
+      bits.push((value >>> i) & 1);
+    }
   };
   append(0b0100, 4);
   append(bytes.length, countBits(version));
-  for (const byte of bytes) append(byte, 8);
+  for (const byte of bytes) {
+    append(byte, 8);
+  }
   const capacity = dataCodewords(version, level) * 8;
   append(0, Math.min(4, capacity - bits.length));
   append(0, (8 - (bits.length % 8)) % 8);
-  for (let pad = 0xec; bits.length < capacity; pad ^= 0xec ^ 0x11) append(pad, 8);
+  for (let pad = 0xec; bits.length < capacity; pad ^= 0xec ^ 0x11) {
+    append(pad, 8);
+  }
   const codewords: number[] = [];
   for (let i = 0; i < bits.length; i += 8) {
     codewords.push(bits.slice(i, i + 8).reduce((byte, value) => (byte << 1) | value, 0));
@@ -162,7 +176,9 @@ function encodeData(bytes: Uint8Array, version: number, level: QrErrorLevel): nu
 }
 
 function alignmentPositions(version: number, size: number): number[] {
-  if (version === 1) return [];
+  if (version === 1) {
+    return [];
+  }
   const count = Math.floor(version / 7) + 2;
   const step = Math.floor((version * 8 + count * 3 + 5) / (count * 4 - 4)) * 2;
   const result = [6];
@@ -213,7 +229,9 @@ function drawFunctionPatterns(matrix: Matrix, version: number): void {
   const last = positions.length - 1;
   positions.forEach((cx, i) => {
     positions.forEach((cy, j) => {
-      if ((i === 0 && j === 0) || (i === 0 && j === last) || (i === last && j === 0)) return;
+      if ((i === 0 && j === 0) || (i === 0 && j === last) || (i === last && j === 0)) {
+        return;
+      }
       for (let dy = -2; dy <= 2; dy++) {
         for (let dx = -2; dx <= 2; dx++) {
           matrix.fixed(cx + dx, cy + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
@@ -224,7 +242,9 @@ function drawFunctionPatterns(matrix: Matrix, version: number): void {
   drawFormatBits(matrix, "L", 0);
   if (version >= 7) {
     let remainder = version;
-    for (let i = 0; i < 12; i++) remainder = (remainder << 1) ^ ((remainder >>> 11) * 0x1f25);
+    for (let i = 0; i < 12; i++) {
+      remainder = (remainder << 1) ^ ((remainder >>> 11) * 0x1f25);
+    }
     const bits = (version << 12) | remainder;
     for (let i = 0; i < 18; i++) {
       const a = size - 11 + (i % 3);
@@ -238,20 +258,30 @@ function drawFunctionPatterns(matrix: Matrix, version: number): void {
 export function formatBits(level: QrErrorLevel, mask: number): number {
   const data = (FORMAT_BITS[level] << 3) | mask;
   let remainder = data;
-  for (let i = 0; i < 10; i++) remainder = (remainder << 1) ^ ((remainder >>> 9) * 0x537);
+  for (let i = 0; i < 10; i++) {
+    remainder = (remainder << 1) ^ ((remainder >>> 9) * 0x537);
+  }
   return ((data << 10) | remainder) ^ 0x5412;
 }
 
 function drawFormatBits(matrix: Matrix, level: QrErrorLevel, mask: number): void {
   const { size } = matrix;
   const bits = formatBits(level, mask);
-  for (let i = 0; i <= 5; i++) matrix.fixed(8, i, bit(bits, i));
+  for (let i = 0; i <= 5; i++) {
+    matrix.fixed(8, i, bit(bits, i));
+  }
   matrix.fixed(8, 7, bit(bits, 6));
   matrix.fixed(8, 8, bit(bits, 7));
   matrix.fixed(7, 8, bit(bits, 8));
-  for (let i = 9; i < 15; i++) matrix.fixed(14 - i, 8, bit(bits, i));
-  for (let i = 0; i < 8; i++) matrix.fixed(size - 1 - i, 8, bit(bits, i));
-  for (let i = 8; i < 15; i++) matrix.fixed(8, size - 15 + i, bit(bits, i));
+  for (let i = 9; i < 15; i++) {
+    matrix.fixed(14 - i, 8, bit(bits, i));
+  }
+  for (let i = 0; i < 8; i++) {
+    matrix.fixed(size - 1 - i, 8, bit(bits, i));
+  }
+  for (let i = 8; i < 15; i++) {
+    matrix.fixed(8, size - 15 + i, bit(bits, i));
+  }
   matrix.fixed(8, size - 8, true);
 }
 
@@ -259,7 +289,9 @@ function drawCodewords(matrix: Matrix, codewords: number[]): void {
   const { size, modules, reserved } = matrix;
   let index = 0;
   for (let right = size - 1; right >= 1; right -= 2) {
-    if (right === 6) right = 5;
+    if (right === 6) {
+      right = 5;
+    }
     for (let vertical = 0; vertical < size; vertical++) {
       for (let j = 0; j < 2; j++) {
         const x = right - j;
@@ -289,7 +321,9 @@ function applyMask(matrix: Matrix, mask: number): void {
   const invert = MASKS[mask]!;
   for (let y = 0; y < matrix.size; y++) {
     for (let x = 0; x < matrix.size; x++) {
-      if (!matrix.reserved[y]![x] && invert(x, y)) matrix.modules[y]![x] = !matrix.modules[y]![x];
+      if (!matrix.reserved[y]![x] && invert(x, y)) {
+        matrix.modules[y]![x] = !matrix.modules[y]![x];
+      }
     }
   }
 }
@@ -298,7 +332,9 @@ function penalty(modules: boolean[][]): number {
   const size = modules.length;
   let result = 0;
   const addHistory = (length: number, history: number[]) => {
-    if (history[0] === 0) length += size;
+    if (history[0] === 0) {
+      length += size;
+    }
     history.pop();
     history.unshift(length);
   };
@@ -318,11 +354,16 @@ function penalty(modules: boolean[][]): number {
     for (let i = 0; i < size; i++) {
       if (get(i) === color) {
         run++;
-        if (run === 5) result += PENALTY_N1;
-        else if (run > 5) result++;
+        if (run === 5) {
+          result += PENALTY_N1;
+        } else if (run > 5) {
+          result++;
+        }
       } else {
         addHistory(run, history);
-        if (!color) result += finderLike(history) * PENALTY_N3;
+        if (!color) {
+          result += finderLike(history) * PENALTY_N3;
+        }
         color = get(i);
         run = 1;
       }
@@ -334,8 +375,12 @@ function penalty(modules: boolean[][]): number {
     addHistory(run + size, history);
     result += finderLike(history) * PENALTY_N3;
   };
-  for (let y = 0; y < size; y++) line((x) => modules[y]![x]!);
-  for (let x = 0; x < size; x++) line((y) => modules[y]![x]!);
+  for (let y = 0; y < size; y++) {
+    line((x) => modules[y]![x]!);
+  }
+  for (let x = 0; x < size; x++) {
+    line((y) => modules[y]![x]!);
+  }
   for (let y = 0; y < size - 1; y++) {
     for (let x = 0; x < size - 1; x++) {
       const color = modules[y]![x];
@@ -397,7 +442,9 @@ export function qrPath(code: QrCode, margin = 4): string {
   let path = "";
   code.modules.forEach((row, y) => {
     row.forEach((dark, x) => {
-      if (dark) path += `M${x + margin} ${y + margin}h1v1h-1z`;
+      if (dark) {
+        path += `M${x + margin} ${y + margin}h1v1h-1z`;
+      }
     });
   });
   return path;

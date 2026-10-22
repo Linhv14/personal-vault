@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { createAccount } from "../../../src/core/crypto.js";
 import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
 import { describeError } from "../../../src/i18n/index.js";
@@ -85,12 +86,16 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
 
   useEffect(() => {
     void applyServerConfig().then(() => {
-      if (signup) setFocusTarget("verificationCode");
+      if (signup) {
+        setFocusTarget("verificationCode");
+      }
     });
   }, []);
 
   useEffect(() => {
-    if (!focusTarget) return;
+    if (!focusTarget) {
+      return;
+    }
     field(focusTarget)?.focus();
     setFocusTarget(null);
   }, [focusTarget]);
@@ -124,14 +129,16 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
     let required = verificationRequired;
     if (!codeSentTo) {
       required = await applyServerConfig();
-      if (required !== verificationRequired) return;
+      if (required !== verificationRequired) {
+        return;
+      }
     }
 
-    const server = String(data.get("apiUrl")).trim().replace(/\/$/, "");
-    const email = String(data.get("email")).trim().toLowerCase();
-    const password = String(data.get("password"));
+    const server = formText(data, "apiUrl").trim().replace(/\/$/, "");
+    const email = formText(data, "email").trim().toLowerCase();
+    const password = formText(data, "password");
 
-    if (registering && password !== String(data.get("confirm"))) {
+    if (registering && password !== formText(data, "confirm")) {
       setError(t("setup.password_mismatch"));
       return;
     }
@@ -140,7 +147,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
     try {
       if (registering && required && !codeSentTo) {
         await api.requestVerificationCode(server, email, localeSignal.value);
-        const registrationToken = String(data.get("registrationToken") ?? "");
+        const registrationToken = formText(data, "registrationToken");
         await savePendingSignup({ apiUrl: server, email, registrationToken, sentAt: Date.now() });
         setCodeSentTo(email);
         setFocusTarget("verificationCode");
@@ -159,8 +166,8 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
         const { token } = await api.register(
           email,
           record,
-          String(data.get("registrationToken")),
-          required ? String(data.get("verificationCode")).trim() : undefined,
+          formText(data, "registrationToken"),
+          required ? formText(data, "verificationCode").trim() : undefined,
         );
         await setLocal({ kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
         await clearPendingSignup();
@@ -173,7 +180,9 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
         setSecondFactor(failure.pending);
         return;
       }
-      if (!(await getLocal()).wrappedVaultKey) await chrome.storage.local.remove("email");
+      if (!(await getLocal()).wrappedVaultKey) {
+        await chrome.storage.local.remove("email");
+      }
       setError(describeError(failure, t));
     } finally {
       setWorking(false);
@@ -206,7 +215,9 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             setSecondFactor(null);
             setError(message ?? null);
             void getLocal().then(async (local) => {
-              if (!local.wrappedVaultKey) await chrome.storage.local.remove("email");
+              if (!local.wrappedVaultKey) {
+                await chrome.storage.local.remove("email");
+              }
             });
           }}
         />

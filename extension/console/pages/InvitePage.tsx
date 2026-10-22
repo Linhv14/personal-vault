@@ -35,7 +35,9 @@ export function InvitePage({
     );
   }, [inviteId]);
 
-  if (!state) return <PageSkeleton />;
+  if (!state) {
+    return <PageSkeleton />;
+  }
   const { invite, preview } = state;
   const home = (
     <a className="btn" href="#/">

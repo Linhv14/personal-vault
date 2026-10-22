@@ -27,7 +27,9 @@ const DOM_GLOBALS = {
   Event: page.Event,
   getComputedStyle: page.getComputedStyle.bind(page),
 };
-for (const [name, value] of Object.entries(DOM_GLOBALS)) vi.stubGlobal(name, value);
+for (const [name, value] of Object.entries(DOM_GLOBALS)) {
+  vi.stubGlobal(name, value);
+}
 Object.defineProperty(page.HTMLElement.prototype, "getBoundingClientRect", {
   value(this: HTMLElement) {
     const shown = this.isConnected && !this.closest("[hidden]");

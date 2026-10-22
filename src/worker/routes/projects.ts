@@ -20,6 +20,10 @@ import { asMember, isGeneration, limitsOf, param, type Ctx } from "./org-access.
 
 const projects = new Hono<AppBindings>();
 
+function isSecretAccess(value: unknown): value is SecretAccess {
+  return SECRET_ACCESS.some((access) => access === value);
+}
+
 const team = (c: Ctx) => param(c, "teamId");
 const project = (c: Ctx) => param(c, "projectId");
 const invalidProject = (c: Ctx) => c.json(apiError("orgs.invalid_project"), 400);
@@ -58,7 +62,9 @@ projects.put(
   "/projects/:projectId",
   asMember(async (c, member, orgId) => {
     const { sealed, generation } = await readJson(c);
-    if (!isSealedProject(sealed) || !isGeneration(generation)) return invalidProject(c);
+    if (!isSealedProject(sealed) || !isGeneration(generation)) {
+      return invalidProject(c);
+    }
     return respond(
       c,
       await orgStore(c.env, orgId).updateProject(
@@ -87,7 +93,9 @@ projects.put(
   asMember(async (c, member, orgId) => {
     const environmentId = param(c, "environmentId");
     const { protected: on } = await readJson(c);
-    if (!isEnvironmentId(environmentId) || typeof on !== "boolean") return invalidProject(c);
+    if (!isEnvironmentId(environmentId) || typeof on !== "boolean") {
+      return invalidProject(c);
+    }
     return respond(
       c,
       await orgStore(c.env, orgId).protectEnvironment(
@@ -106,7 +114,9 @@ projects.get(
   "/projects/:projectId/environments/:environmentId/secrets",
   asMember(async (c, member, orgId) => {
     const environmentId = param(c, "environmentId");
-    if (!isEnvironmentId(environmentId)) return invalidSecret(c);
+    if (!isEnvironmentId(environmentId)) {
+      return invalidSecret(c);
+    }
     return respond(
       c,
       await orgStore(c.env, orgId).readSecrets(
@@ -126,7 +136,9 @@ const MAX_ACCESS_EVENTS = 100;
 function secretEntry(
   value: unknown,
 ): { id: string; environmentId: string; sealed: SealedData } | null {
-  if (typeof value !== "object" || value === null) return null;
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
   const { id, environmentId, sealed } = value as Record<string, unknown>;
   return isUuid(id) && isEnvironmentId(environmentId) && isSealedSecret(sealed)
     ? { id, environmentId, sealed }
@@ -170,7 +182,9 @@ projects.put(
   asMember(async (c, member, orgId) => {
     const { environmentId, sealed, generation } = await readJson(c);
     const entry = secretEntry({ id: param(c, "secretId"), environmentId, sealed });
-    if (!entry || !isGeneration(generation)) return invalidSecret(c);
+    if (!entry || !isGeneration(generation)) {
+      return invalidSecret(c);
+    }
     return respond(c, await write(c, member, orgId, generation, [entry]));
   }),
 );
@@ -179,21 +193,23 @@ projects.post(
   "/projects/:projectId/access",
   asMember(async (c, member, orgId) => {
     const { events } = await readJson(c);
-    const valid =
-      Array.isArray(events) &&
-      events.length > 0 &&
-      events.length <= MAX_ACCESS_EVENTS &&
-      events.every(
-        (event) =>
+    if (
+      !Array.isArray(events) ||
+      events.length === 0 ||
+      events.length > MAX_ACCESS_EVENTS ||
+      !events.every(
+        (event: unknown): event is { environmentId: string; access: SecretAccess } =>
           typeof event === "object" &&
           event !== null &&
+          "environmentId" in event &&
+          "access" in event &&
           isEnvironmentId(event.environmentId) &&
-          SECRET_ACCESS.includes(event.access),
-      );
-    if (!valid) return invalidSecret(c);
-    const list = (events as { environmentId: string; access: SecretAccess }[]).map(
-      ({ environmentId, access }) => ({ environmentId, access }),
-    );
+          isSecretAccess(event.access),
+      )
+    ) {
+      return invalidSecret(c);
+    }
+    const list = events.map(({ environmentId, access }) => ({ environmentId, access }));
     return respond(
       c,
       await orgStore(c.env, orgId).noteSecretAccess(member, team(c), project(c), list, clientIp(c)),
@@ -240,7 +256,9 @@ projects.get(
   "/projects/:projectId/secrets/:secretId/versions",
   asMember(async (c, member, orgId) => {
     const secretId = param(c, "secretId");
-    if (!isUuid(secretId)) return invalidSecret(c);
+    if (!isUuid(secretId)) {
+      return invalidSecret(c);
+    }
     return respond(
       c,
       await orgStore(c.env, orgId).secretVersions(

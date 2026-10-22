@@ -101,7 +101,9 @@ export async function savePendingSignup(signup: PendingSignup): Promise<void> {
 export async function loadPendingSignup(): Promise<PendingSignup | null> {
   const signup = (await platform().session.get(PENDING_SIGNUP_KEY))[PENDING_SIGNUP_KEY] as
     PendingSignup | undefined;
-  if (!signup) return null;
+  if (!signup) {
+    return null;
+  }
   if (Date.now() - signup.sentAt > PENDING_SIGNUP_TTL_MS) {
     await clearPendingSignup();
     return null;
@@ -114,7 +116,7 @@ export async function clearPendingSignup(): Promise<void> {
 }
 
 export async function getLocal(): Promise<LocalState> {
-  return (await platform().local.get(null)) as LocalState;
+  return await platform().local.get(null);
 }
 
 export async function setLocal(patch: Partial<LocalState>): Promise<void> {
@@ -138,12 +140,14 @@ export async function clearAccountData(): Promise<void> {
 }
 
 async function getSession(): Promise<SessionState> {
-  return (await platform().session.get(null)) as SessionState;
+  return await platform().session.get(null);
 }
 
 export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: string } | null> {
   const session = await getSession();
-  if (!session.vaultKeyRaw) return null;
+  if (!session.vaultKeyRaw) {
+    return null;
+  }
 
   // Check the deadline here rather than trusting the alarm alone: MV3 can kill
   // the service worker and delay alarms, but the popup must always be right.
@@ -167,16 +171,23 @@ export async function requestItemFocus(id: string): Promise<void> {
 
 export async function takeItemFocus(): Promise<string | undefined> {
   const { focusItem } = await getSession();
-  if (focusItem) await platform().session.remove("focusItem");
+  if (focusItem) {
+    await platform().session.remove("focusItem");
+  }
   return focusItem;
 }
 
 export async function touch(): Promise<void> {
   const session = await getSession();
-  if (!session.vaultKeyRaw) return;
+  if (!session.vaultKeyRaw) {
+    return;
+  }
   const deadline = await lockDeadline();
-  if (deadline.lockAt) await platform().session.set(deadline);
-  else await platform().session.remove("lockAt");
+  if (deadline.lockAt) {
+    await platform().session.set(deadline);
+  } else {
+    await platform().session.remove("lockAt");
+  }
 }
 
 export async function notePasskeys(present: boolean): Promise<void> {

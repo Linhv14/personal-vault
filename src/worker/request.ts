@@ -10,7 +10,9 @@ export function isOpenRegistration(env: AppBindings["Bindings"]): boolean {
 }
 
 export function requestLocale(c: Context<AppBindings>, requested: unknown): "en" | "vi" {
-  if (requested === "vi" || requested === "en") return requested;
+  if (requested === "vi" || requested === "en") {
+    return requested;
+  }
   const preferred = c.req.header("Accept-Language")?.split(",")[0]?.trim().toLowerCase() ?? "";
   return preferred.startsWith("vi") ? "vi" : "en";
 }

@@ -38,6 +38,8 @@ export function ConsoleHost({
       </div>
     );
   }
-  if (!identity) return <ShellSkeleton />;
+  if (!identity) {
+    return <ShellSkeleton />;
+  }
   return <ConsoleApp identity={identity} account={account} footer={footer} personal={personal} />;
 }

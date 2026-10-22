@@ -32,10 +32,14 @@ export function asMember(
 ) {
   return async (c: Ctx) => {
     const orgId = param(c, "orgId");
-    if (!isUuid(orgId)) return notFound(c);
+    if (!isUuid(orgId)) {
+      return notFound(c);
+    }
     const accountId = c.get("session").accountId;
     const role = await directory(c).roleOf(orgId, accountId);
-    if (!role) return notFound(c);
+    if (!role) {
+      return notFound(c);
+    }
     const member = { accountId, role };
     return rule(member) ? handler(c, member, orgId) : forbidden(c);
   };

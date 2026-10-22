@@ -66,7 +66,9 @@ function updateTap(stage: string, release: string, sha256: string): void {
 
 async function publishedSha(release: string): Promise<string | null> {
   const response = await fetch(tarballUrl(release));
-  if (!response.ok) return null;
+  if (!response.ok) {
+    return null;
+  }
   return createHash("sha256")
     .update(new Uint8Array(await response.arrayBuffer()))
     .digest("hex");
@@ -74,7 +76,9 @@ async function publishedSha(release: string): Promise<string | null> {
 
 async function updateTapFromNpm(release: string): Promise<boolean> {
   const sha256 = await publishedSha(release);
-  if (!sha256) return false;
+  if (!sha256) {
+    return false;
+  }
   const stage = mkdtempSync(path.join(tmpdir(), "7key-tap-"));
   try {
     updateTap(stage, release, sha256);
@@ -123,10 +127,14 @@ try {
     cwd: stage,
     stdio: "inherit",
   });
-  if (published.status !== 0) process.exit(published.status ?? 1);
+  if (published.status !== 0) {
+    process.exit(published.status ?? 1);
+  }
   console.log(`Published ${PACKAGE}@${version} to npm`);
 
-  if (!(await updateTapFromNpm(version))) console.log(LATER);
+  if (!(await updateTapFromNpm(version))) {
+    console.log(LATER);
+  }
 } finally {
   rmSync(stage, { recursive: true, force: true });
 }

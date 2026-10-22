@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { isOrgAdmin } from "../../lib/orgs.js";
 import { createProject } from "../../lib/projects.js";
 import { Icon } from "../../ui/components/Icon.js";
@@ -19,13 +20,15 @@ function NewProjectDialog({ onClose }: { onClose: () => void }) {
       onSubmit={(form) => {
         const data = new FormData(form);
         const team = teams.find((entry) => entry.id === data.get("team"));
-        if (!team) return;
+        if (!team) {
+          return;
+        }
         void run(async () => {
           const id = await createProject(
             detail.org.id,
             team,
             identity,
-            String(data.get("name")).trim(),
+            formText(data, "name").trim(),
           );
           onClose();
           navigate(detail.org.id, { page: "project", projectId: id, environmentId: null });

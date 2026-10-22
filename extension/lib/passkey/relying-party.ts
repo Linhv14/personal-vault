@@ -11,10 +11,18 @@ export function resolveRpId(origin: string, requested: string | undefined): stri
   }
   const host = url.hostname.toLowerCase();
   const rpId = (requested ?? host).toLowerCase();
-  if (!rpId) return null;
-  if (IP_ADDRESS.test(host)) return rpId === host ? rpId : null;
-  if (rpId !== host && !host.endsWith(`.${rpId}`)) return null;
+  if (!rpId) {
+    return null;
+  }
+  if (IP_ADDRESS.test(host)) {
+    return rpId === host ? rpId : null;
+  }
+  if (rpId !== host && !host.endsWith(`.${rpId}`)) {
+    return null;
+  }
   const site = registrableDomain(url.href);
-  if (!site || !(rpId === site || rpId.endsWith(`.${site}`))) return null;
+  if (!site || !(rpId === site || rpId.endsWith(`.${site}`))) {
+    return null;
+  }
   return rpId;
 }

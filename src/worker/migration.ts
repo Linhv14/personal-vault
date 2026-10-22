@@ -7,13 +7,16 @@ export type StoreDump = Record<string, TableDump>;
 const SYSTEM_TABLE = /^(sqlite_|_cf_|__)/;
 
 function encode(value: SqlStorageValue): Cell {
-  if (value instanceof ArrayBuffer) return { b64: toBase64(new Uint8Array(value)) };
-  return value as string | number | null;
+  if (value instanceof ArrayBuffer) {
+    return { b64: toBase64(new Uint8Array(value)) };
+  }
+  return value;
 }
 
 function decode(value: Cell): SqlStorageValue {
-  if (value !== null && typeof value === "object")
-    return fromBase64(value.b64).buffer as ArrayBuffer;
+  if (value !== null && typeof value === "object") {
+    return fromBase64(value.b64).buffer;
+  }
   return value;
 }
 
@@ -41,9 +44,13 @@ export function restoreStore(storage: DurableObjectStorage, dump: StoreDump): nu
   const sql = storage.sql;
   const known = new Set(tables(sql));
   for (const table of Object.keys(dump)) {
-    if (!known.has(table)) throw new Error(`Unknown table ${table}`);
+    if (!known.has(table)) {
+      throw new Error(`Unknown table ${table}`);
+    }
     const count = sql.exec<{ n: number }>(`SELECT COUNT(*) AS n FROM "${table}"`).one().n;
-    if (count > 0) throw new Error(`Table ${table} is not empty`);
+    if (count > 0) {
+      throw new Error(`Table ${table} is not empty`);
+    }
   }
   let rows = 0;
   storage.transactionSync(() => {

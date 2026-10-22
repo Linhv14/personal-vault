@@ -49,9 +49,15 @@ function biometricKind(): BiometricKind {
   const platform =
     (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ||
     navigator.platform;
-  if (/mac/i.test(platform)) return "touch-id";
-  if (/win/i.test(platform)) return "windows-hello";
-  if (/cros|chrome ?os/i.test(platform)) return "chromeos";
+  if (/mac/i.test(platform)) {
+    return "touch-id";
+  }
+  if (/win/i.test(platform)) {
+    return "windows-hello";
+  }
+  if (/cros|chrome ?os/i.test(platform)) {
+    return "chromeos";
+  }
   return "screen-lock";
 }
 
@@ -79,7 +85,9 @@ function asCancelled(error: unknown): never {
 
 export async function enableBiometric(): Promise<void> {
   const session = await signedInSession();
-  if (!(await biometricSupported())) throw new BiometricError("unsupported");
+  if (!(await biometricSupported())) {
+    throw new BiometricError("unsupported");
+  }
   const { email = "7key" } = await getLocal();
   const credential = (await navigator.credentials
     .create({
@@ -101,10 +109,14 @@ export async function enableBiometric(): Promise<void> {
       },
     })
     .catch(asCancelled)) as PublicKeyCredential | null;
-  if (!credential) throw new BiometricError("cancelled");
+  if (!credential) {
+    throw new BiometricError("cancelled");
+  }
   const response = credential.response as AuthenticatorAttestationResponse;
   const publicKey = response.getPublicKey();
-  if (!publicKey) throw new BiometricError("unsupported");
+  if (!publicKey) {
+    throw new BiometricError("unsupported");
+  }
   const { bioKey } = await request<{ bioKey: string }>("/api/auth/biometric", {
     method: "PUT",
     body: JSON.stringify({
@@ -150,7 +162,9 @@ async function server<T>(path: string, token: string, body?: unknown): Promise<T
       await forget("biometric");
       throw new BiometricError("off");
     }
-    if (reason === "denied") throw new BiometricError("failed");
+    if (reason === "denied") {
+      throw new BiometricError("failed");
+    }
     throw error;
   }
 }
@@ -166,7 +180,9 @@ export function unlockWithBiometric(): Promise<string> {
 
 async function attemptUnlock(): Promise<string> {
   const { biometric } = await getLocal();
-  if (!biometric) throw new BiometricError("off");
+  if (!biometric) {
+    throw new BiometricError("off");
+  }
   const { challenge } = await server<{ challenge: string }>(
     "/api/auth/biometric/challenge",
     biometric.token,
@@ -182,7 +198,9 @@ async function attemptUnlock(): Promise<string> {
       },
     })
     .catch(asCancelled)) as PublicKeyCredential | null;
-  if (!credential) throw new BiometricError("cancelled");
+  if (!credential) {
+    throw new BiometricError("cancelled");
+  }
   const response = credential.response as AuthenticatorAssertionResponse;
   const { bioKey } = await server<{ bioKey: string }>(
     "/api/auth/biometric/unlock",

@@ -20,11 +20,21 @@ export function formatBackupCode(code: string): string {
 }
 
 export function parseSecondFactor(input: unknown): SecondFactor | null {
-  if (typeof input !== "string" || input.length > 64) return null;
+  if (typeof input !== "string" || input.length > 64) {
+    return null;
+  }
   const compact = input.replace(/[\s-]/g, "").toLowerCase();
-  if (/^\d{6}$/.test(compact)) return { kind: "totp", code: compact };
-  if (compact.length !== BACKUP_CODE_LENGTH) return null;
-  for (const char of compact) if (!BACKUP_CODE_ALPHABET.includes(char)) return null;
+  if (/^\d{6}$/.test(compact)) {
+    return { kind: "totp", code: compact };
+  }
+  if (compact.length !== BACKUP_CODE_LENGTH) {
+    return null;
+  }
+  for (const char of compact) {
+    if (!BACKUP_CODE_ALPHABET.includes(char)) {
+      return null;
+    }
+  }
   return { kind: "backup", code: compact };
 }
 

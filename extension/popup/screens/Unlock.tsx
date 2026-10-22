@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { describeError } from "../../../src/i18n/index.js";
 import { rememberUnlock } from "../../lib/resume.js";
 import { hasPin, PIN_MAX_LENGTH, PIN_MIN_LENGTH, PinError, unlockWithPin } from "../../lib/pin.js";
@@ -33,7 +34,9 @@ export function Unlock({ email }: { email: string }) {
     void hasPin().then((on) => setMode(on ? "pin" : "password"));
     void hasBiometric().then((on) => {
       setBiometric(on);
-      if (on) void useBiometric(true);
+      if (on) {
+        void useBiometric(true);
+      }
     });
   }, []);
 
@@ -54,7 +57,9 @@ export function Unlock({ email }: { email: string }) {
       } else if (failure instanceof BiometricError && failure.code === "failed") {
         setError(t("bio.failed", { method }));
       } else if (failure instanceof BiometricError) {
-        if (!automatic) setError(t("bio.cancelled", { method }));
+        if (!automatic) {
+          setError(t("bio.cancelled", { method }));
+        }
       } else {
         setError(describeError(failure, t));
       }
@@ -69,7 +74,7 @@ export function Unlock({ email }: { email: string }) {
     setWorking(true);
     const form = event.currentTarget as HTMLFormElement;
     try {
-      await finish(await unlockWithPin(String(new FormData(form).get("pin"))));
+      await finish(await unlockWithPin(formText(new FormData(form), "pin")));
     } catch (failure) {
       form.reset();
       if (failure instanceof PinError && failure.code === "wrong") {
@@ -94,18 +99,23 @@ export function Unlock({ email }: { email: string }) {
     try {
       await signIn(
         email,
-        String(new FormData(event.currentTarget as HTMLFormElement).get("password")),
+        formText(new FormData(event.currentTarget as HTMLFormElement), "password"),
       );
     } catch (failure) {
-      if (failure instanceof SecondFactorRequired) setPending(failure.pending);
-      else setError(describeError(failure, t));
+      if (failure instanceof SecondFactorRequired) {
+        setPending(failure.pending);
+      } else {
+        setError(describeError(failure, t));
+      }
     } finally {
       setWorking(false);
     }
   };
 
   const reset = async () => {
-    if (!confirm(t("unlock.reset_confirm"))) return;
+    if (!confirm(t("unlock.reset_confirm"))) {
+      return;
+    }
     await clearAccountData();
     await lock();
     location.reload();

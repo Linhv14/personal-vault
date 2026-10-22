@@ -82,7 +82,7 @@ export function Topbar() {
           autoComplete="off"
           placeholder={t("list.search")}
           value={searchQuery.value}
-          onInput={(event) => (searchQuery.value = (event.currentTarget as HTMLInputElement).value)}
+          onInput={(event) => (searchQuery.value = event.currentTarget.value)}
         />
       </label>
       <TeamsButton />

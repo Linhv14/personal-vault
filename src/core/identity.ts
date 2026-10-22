@@ -28,7 +28,9 @@ export async function createIdentity(): Promise<Identity> {
 }
 
 export function isPublicKey(value: unknown): value is string {
-  if (typeof value !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return false;
+  if (typeof value !== "string" || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+    return false;
+  }
   try {
     const bytes = fromBase64(value);
     return bytes.length > 0 && bytes.length <= MAX_SPKI_BYTES;

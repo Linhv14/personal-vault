@@ -205,7 +205,9 @@ type TypeEvidence = Partial<
 >;
 
 export function itemType(item: TypeEvidence): ItemType {
-  if (item.type) return item.type;
+  if (item.type) {
+    return item.type;
+  }
   const loginFields = item.url || item.username || item.password || item.totp || item.passkey;
   return !loginFields && item.note ? "note" : "login";
 }
@@ -235,13 +237,27 @@ export const CARD_BRAND_NAMES: Record<CardBrand, string> = {
 export function cardBrand(number: string | undefined): CardBrand {
   const digits = cardDigits(number);
   const prefix = (length: number) => Number(digits.slice(0, length));
-  if (/^4/.test(digits)) return "visa";
-  if (/^3[47]/.test(digits)) return "amex";
-  if (/^5[1-5]/.test(digits) || (prefix(4) >= 2221 && prefix(4) <= 2720)) return "mastercard";
-  if (/^(6011|65|64[4-9])/.test(digits)) return "discover";
-  if (prefix(4) >= 3528 && prefix(4) <= 3589) return "jcb";
-  if (/^62/.test(digits)) return "unionpay";
-  if (/^(36|38|30[0-5])/.test(digits)) return "diners";
+  if (/^4/.test(digits)) {
+    return "visa";
+  }
+  if (/^3[47]/.test(digits)) {
+    return "amex";
+  }
+  if (/^5[1-5]/.test(digits) || (prefix(4) >= 2221 && prefix(4) <= 2720)) {
+    return "mastercard";
+  }
+  if (/^(6011|65|64[4-9])/.test(digits)) {
+    return "discover";
+  }
+  if (prefix(4) >= 3528 && prefix(4) <= 3589) {
+    return "jcb";
+  }
+  if (/^62/.test(digits)) {
+    return "unionpay";
+  }
+  if (/^(36|38|30[0-5])/.test(digits)) {
+    return "diners";
+  }
   return "card";
 }
 
@@ -251,9 +267,13 @@ export function lastFour(number: string | undefined): string {
 
 export function normalizeExpiry(input: string): string | null {
   const match = /^\s*(\d{1,2})\s*[/.-]\s*(\d{2}|\d{4})\s*$/.exec(input);
-  if (!match?.[1] || !match[2]) return null;
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
   const month = Number(match[1]);
-  if (month < 1 || month > 12) return null;
+  if (month < 1 || month > 12) {
+    return null;
+  }
   return `${String(month).padStart(2, "0")}/${match[2].slice(-2)}`;
 }
 
@@ -272,8 +292,11 @@ export function toggleUsedCode(
   code: string,
 ): string[] | undefined {
   const used = new Set(item.usedCodes ?? []);
-  if (used.has(code)) used.delete(code);
-  else used.add(code);
+  if (used.has(code)) {
+    used.delete(code);
+  } else {
+    used.add(code);
+  }
   return keepUsedCodes(item.codes, [...used]);
 }
 
@@ -284,7 +307,9 @@ export function withPasswordHistory(
 ): PasswordChange[] | undefined {
   const history = previous?.passwordHistory ?? [];
   const old = previous?.password;
-  if (!old || old === nextPassword) return history.length > 0 ? history : undefined;
+  if (!old || old === nextPassword) {
+    return history.length > 0 ? history : undefined;
+  }
   return [{ password: old, changedAt: now }, ...history].slice(0, PASSWORD_HISTORY_LIMIT);
 }
 

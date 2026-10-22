@@ -7,10 +7,14 @@ export function useDismiss(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
-      if (!ref.current?.contains(event.target as Node)) onClose();
+      if (!ref.current?.contains(event.target as Node)) {
+        onClose();
+      }
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+      }
     };
     document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKey);

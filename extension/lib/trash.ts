@@ -8,7 +8,9 @@ const DAY_SECONDS = 86_400;
 type Trashed = Pick<VaultItem, "trashedAt" | "vault" | "system">;
 
 export function purgeAt(item: Trashed): number | null {
-  if (!item.trashedAt || isSharedVaultId(item.vault)) return null;
+  if (!item.trashedAt || isSharedVaultId(item.vault)) {
+    return null;
+  }
   return item.trashedAt + TRASH_RETENTION_DAYS * DAY_SECONDS;
 }
 

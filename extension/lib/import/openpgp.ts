@@ -38,9 +38,13 @@ function concat(parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
 
 export function dearmor(input: Uint8Array): Uint8Array {
   const text = new TextDecoder().decode(input);
-  if (!text.startsWith("-----BEGIN PGP MESSAGE-----")) return input;
+  if (!text.startsWith("-----BEGIN PGP MESSAGE-----")) {
+    return input;
+  }
   const body = text.split(/\r?\n\r?\n/, 2)[1]?.split("-----END PGP MESSAGE-----")[0];
-  if (!body) throw new OpenPgpError("damaged");
+  if (!body) {
+    throw new OpenPgpError("damaged");
+  }
   const base64 = body
     .split(/\r?\n/)
     .filter((line) => line && !line.startsWith("="))
@@ -52,11 +56,15 @@ function readPackets(data: Uint8Array): Packet[] {
   const packets: Packet[] = [];
   let offset = 0;
   const byte = () => {
-    if (offset >= data.length) throw new OpenPgpError("damaged");
+    if (offset >= data.length) {
+      throw new OpenPgpError("damaged");
+    }
     return data[offset++] ?? 0;
   };
   const take = (length: number) => {
-    if (offset + length > data.length) throw new OpenPgpError("damaged");
+    if (offset + length > data.length) {
+      throw new OpenPgpError("damaged");
+    }
     const part = data.subarray(offset, offset + length);
     offset += length;
     return part;
@@ -64,13 +72,19 @@ function readPackets(data: Uint8Array): Packet[] {
 
   while (offset < data.length) {
     const header = byte();
-    if (!(header & 0x80)) throw new OpenPgpError("damaged");
+    if (!(header & 0x80)) {
+      throw new OpenPgpError("damaged");
+    }
     if (!(header & 0x40)) {
       const lengthType = header & 0x03;
       const size = [1, 2, 4][lengthType];
-      if (!size) throw new OpenPgpError("unsupported");
+      if (!size) {
+        throw new OpenPgpError("unsupported");
+      }
       let length = 0;
-      for (let index = 0; index < size; index++) length = length * 256 + byte();
+      for (let index = 0; index < size; index++) {
+        length = length * 256 + byte();
+      }
       packets.push({ tag: (header >> 2) & 0x0f, body: take(length) });
       continue;
     }
@@ -108,7 +122,9 @@ async function stringToKey(
 ): Promise<{ key: Uint8Array; length: number }> {
   const type = spec[0];
   const hash = S2K_HASHES[spec[1] ?? -1];
-  if (!hash || (type !== 0 && type !== 1 && type !== 3)) throw new OpenPgpError("unsupported");
+  if (!hash || (type !== 0 && type !== 1 && type !== 3)) {
+    throw new OpenPgpError("unsupported");
+  }
   const salt = type === 0 ? new Uint8Array(0) : spec.subarray(2, 10);
   const material = concat([salt, new TextEncoder().encode(passphrase)]);
   let input = material;
@@ -157,13 +173,19 @@ async function sessionKey(
   skesk: Uint8Array,
   passphrase: string,
 ): Promise<{ algorithm: number; key: Uint8Array }> {
-  if (skesk[0] !== 4) throw new OpenPgpError("unsupported");
+  if (skesk[0] !== 4) {
+    throw new OpenPgpError("unsupported");
+  }
   const algorithm = skesk[1] ?? -1;
   const keyBytes = AES_KEY_BYTES[algorithm];
-  if (!keyBytes) throw new OpenPgpError("unsupported");
+  if (!keyBytes) {
+    throw new OpenPgpError("unsupported");
+  }
   const { key, length } = await stringToKey(passphrase, skesk.subarray(2), keyBytes);
   const encrypted = skesk.subarray(2 + length);
-  if (encrypted.length === 0) return { algorithm, key };
+  if (encrypted.length === 0) {
+    return { algorithm, key };
+  }
 
   const decrypted = await cfbDecrypt(key, encrypted);
   const inner = decrypted[0] ?? -1;
@@ -176,8 +198,12 @@ async function sessionKey(
 
 async function decompress(body: Uint8Array): Promise<Uint8Array> {
   const format = COMPRESSION[body[0] ?? -1];
-  if (format === undefined) throw new OpenPgpError("unsupported");
-  if (format === null) return body.subarray(1);
+  if (format === undefined) {
+    throw new OpenPgpError("unsupported");
+  }
+  if (format === null) {
+    return body.subarray(1);
+  }
   const stream = new Blob([new Uint8Array(body.subarray(1))])
     .stream()
     .pipeThrough(new DecompressionStream(format));
@@ -204,8 +230,12 @@ export async function decryptWithPassphrase(
   const packets = readPackets(dearmor(message));
   const skesk = packets.find((packet) => packet.tag === TAG_SKESK);
   const seipd = packets.find((packet) => packet.tag === TAG_SEIPD);
-  if (!skesk || !seipd) throw new OpenPgpError("unsupported");
-  if (seipd.body[0] !== 1) throw new OpenPgpError("unsupported");
+  if (!skesk || !seipd) {
+    throw new OpenPgpError("unsupported");
+  }
+  if (seipd.body[0] !== 1) {
+    throw new OpenPgpError("unsupported");
+  }
 
   const { key } = await sessionKey(skesk.body, passphrase);
   const plain = await cfbDecrypt(key, seipd.body.subarray(1));

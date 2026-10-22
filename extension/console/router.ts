@@ -39,7 +39,9 @@ export function parseHash(hash: string): Location {
   if (page === "projects" && id) {
     return { orgId: org, route: { page: "project", projectId: id, environmentId: sub ?? null } };
   }
-  if (page === "teams" && id) return { orgId: org, route: { page: "team", teamId: id } };
+  if (page === "teams" && id) {
+    return { orgId: org, route: { page: "team", teamId: id } };
+  }
   if (page === "teams" || page === "members" || page === "activity" || page === "settings") {
     return { orgId: org, route: { page } };
   }
@@ -65,8 +67,11 @@ export const location$ = signal<Location>(parseHash(location.hash));
 
 export function navigate(orgId: string, route: Route): void {
   const next = href(orgId, route);
-  if (location.hash !== next) location.hash = next;
-  else location$.value = parseHash(next);
+  if (location.hash !== next) {
+    location.hash = next;
+  } else {
+    location$.value = parseHash(next);
+  }
 }
 
 export function watchHash(): () => void {

@@ -13,13 +13,17 @@ function utf8Decode(b) {
 }
 function toBase64(bytes) {
   let s = "";
-  for (const byte of bytes) s += String.fromCharCode(byte);
+  for (const byte of bytes) {
+    s += String.fromCharCode(byte);
+  }
   return btoa(s);
 }
 function fromBase64(b64) {
   const s = atob(b64);
   const out = new Uint8Array(s.length);
-  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  for (let i = 0; i < s.length; i++) {
+    out[i] = s.charCodeAt(i);
+  }
   return out;
 }
 function fromBase64Url(s) {
@@ -189,15 +193,21 @@ async function githubIdToken(audience, env = process.env, request = fetch) {
   const target = new URL(url);
   target.searchParams.set("audience", audience);
   const response = await request(target, { headers: { Authorization: `Bearer ${bearer}` } });
-  if (!response.ok) throw new CiError(`GitHub refused an OIDC token (${response.status})`);
+  if (!response.ok) {
+    throw new CiError(`GitHub refused an OIDC token (${response.status})`);
+  }
   const { value } = await response.json();
-  if (!value) throw new CiError("GitHub returned an empty OIDC token");
+  if (!value) {
+    throw new CiError("GitHub returned an empty OIDC token");
+  }
   return value;
 }
 async function fetchSecrets(options) {
   const request = options.fetch ?? fetch;
   const reference = parseLinkReference(options.link);
-  if (!reference) throw new CiError("The link should look like <organization>.<link>");
+  if (!reference) {
+    throw new CiError("The link should look like <organization>.<link>");
+  }
   const server = new URL(options.server).origin;
   const token = await githubIdToken(server, options.env, request);
   const response = await request(`${server}/api/ci/secrets`, {
@@ -225,8 +235,12 @@ ${delimiter}
 }
 async function exportToGithubEnv(secrets, env = process.env, write = (line) => console.log(line)) {
   const file = env.GITHUB_ENV;
-  if (!file) throw new CiError("GITHUB_ENV is not set; this only works inside GitHub Actions");
-  for (const command of maskCommands(secrets)) write(command);
+  if (!file) {
+    throw new CiError("GITHUB_ENV is not set; this only works inside GitHub Actions");
+  }
+  for (const command of maskCommands(secrets)) {
+    write(command);
+  }
   await appendFile(file, githubEnvBlock(secrets));
 }
 
@@ -241,8 +255,12 @@ try {
     repoKey: input("key")
   });
   await exportToGithubEnv(secrets);
-  console.log(`7key: loaded ${secrets.length} values into the job environment`);
+  process.stdout.write(`7key: loaded ${secrets.length} values into the job environment
+`);
 } catch (error) {
-  console.log(`::error::7key: ${error instanceof Error ? error.message : String(error)}`);
+  process.stdout.write(
+    `::error::7key: ${error instanceof Error ? error.message : String(error)}
+`
+  );
   process.exit(1);
 }

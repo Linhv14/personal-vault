@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { rewrapVaultKey } from "../../../src/core/crypto.js";
 import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
 import { describeError } from "../../../src/i18n/index.js";
@@ -53,9 +54,9 @@ export function Security() {
     setChangeError(null);
     const form = event.currentTarget as HTMLFormElement;
     const data = new FormData(form);
-    const next = String(data.get("next"));
+    const next = formText(data, "next");
     const vaultKeyRaw = vaultKeyRawSignal.value;
-    if (next !== String(data.get("confirm"))) {
+    if (next !== formText(data, "confirm")) {
       setChangeError(t("setup.password_mismatch"));
       return;
     }
@@ -63,7 +64,7 @@ export function Security() {
       setChangeError(t("settings.locked_hint"));
       return;
     }
-    const authKey = await currentAuthKey(String(data.get("current")));
+    const authKey = await currentAuthKey(formText(data, "current"));
     const { email } = await getLocal();
     if (!authKey || !email) {
       setChangeError(t("settings.wrong_current"));
@@ -157,12 +158,12 @@ function PinCard({ unlocked }: { unlocked: boolean }) {
     setError(null);
     const form = event.currentTarget as HTMLFormElement;
     const data = new FormData(form);
-    const pin = String(data.get("pin"));
+    const pin = formText(data, "pin");
     if (!isValidPin(pin)) {
       setError(t("pin.invalid", { min: PIN_MIN_LENGTH, max: PIN_MAX_LENGTH }));
       return;
     }
-    if (pin !== String(data.get("confirm"))) {
+    if (pin !== formText(data, "confirm")) {
       setError(t("pin.mismatch"));
       return;
     }
@@ -186,7 +187,9 @@ function PinCard({ unlocked }: { unlocked: boolean }) {
     showToast(t("pin.disabled"));
   };
 
-  if (on === null) return null;
+  if (on === null) {
+    return null;
+  }
   return (
     <Card>
       <h2>{t("pin.title")}</h2>
@@ -283,7 +286,9 @@ function BiometricCard({ unlocked }: { unlocked: boolean }) {
     showToast(t("bio.disabled", { method }));
   };
 
-  if (!state) return null;
+  if (!state) {
+    return null;
+  }
   return (
     <Card>
       <h2>{t("bio.title", { method })}</h2>
@@ -334,7 +339,9 @@ function RecoveryCard({ unlocked }: { unlocked: boolean }) {
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
-    if (!unlocked) return;
+    if (!unlocked) {
+      return;
+    }
     recoveryCreatedAt().then(setCreatedAt, () => setCreatedAt(undefined));
   }, [unlocked]);
 
@@ -347,10 +354,12 @@ function RecoveryCard({ unlocked }: { unlocked: boolean }) {
       setError(t("settings.locked_hint"));
       return;
     }
-    if (asking === "remove" && !confirm(t("recovery.remove_confirm"))) return;
+    if (asking === "remove" && !confirm(t("recovery.remove_confirm"))) {
+      return;
+    }
     setWorking(true);
     try {
-      const authKey = await currentAuthKey(String(new FormData(form).get("current")));
+      const authKey = await currentAuthKey(formText(new FormData(form), "current"));
       if (!authKey) {
         setError(t("settings.wrong_current"));
         return;

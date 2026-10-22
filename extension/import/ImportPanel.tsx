@@ -84,9 +84,14 @@ export function ImportPanel() {
   }, []);
 
   useEffect(() => {
-    if (step.kind !== "passphrase") return;
-    if (step.error) passphrase.current?.select();
-    else passphrase.current?.focus();
+    if (step.kind !== "passphrase") {
+      return;
+    }
+    if (step.error) {
+      passphrase.current?.select();
+    } else {
+      passphrase.current?.focus();
+    }
   }, [step]);
 
   const review = async (file: SelectedFile, secret?: string) => {
@@ -118,7 +123,9 @@ export function ImportPanel() {
   };
 
   const openFile = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     selected.current = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
     await review(selected.current);
   };

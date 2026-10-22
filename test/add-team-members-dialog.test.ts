@@ -17,7 +17,7 @@ const candidates = Array.from({ length: 30 }, (_, index) => person(`dev${index}@
   person("lead@acme.io"),
 );
 
-const box = () => screen.getByRole("searchbox") as HTMLInputElement;
+const box = () => screen.getByRole<HTMLInputElement>("searchbox");
 const submit = () => fireEvent.submit(document.querySelector("form")!);
 
 describe("add team members dialog", () => {

@@ -7,7 +7,9 @@ const nativeCreate = vi.fn(async () => "native");
 const nativeGet = vi.fn(
   (options?: CredentialRequestOptions) =>
     new Promise((resolve, reject) => {
-      if (options?.mediation !== "conditional") return resolve("native");
+      if (options?.mediation !== "conditional") {
+        return resolve("native");
+      }
       options.signal?.addEventListener("abort", () =>
         reject(new DOMException("aborted", "AbortError")),
       );
@@ -29,7 +31,9 @@ window.addEventListener("message", (event) => {
     requests.push(event.data.request);
     ids.push(event.data.id);
   }
-  if (event.data?.type === PAGE_ABORT) aborts.push(event.data.id);
+  if (event.data?.type === PAGE_ABORT) {
+    aborts.push(event.data.id);
+  }
 });
 
 async function settle(): Promise<void> {

@@ -90,7 +90,9 @@ async function authenticatorData(
 function derSignature(raw: Uint8Array): Uint8Array {
   const integer = (bytes: Uint8Array) => {
     let start = 0;
-    while (start < bytes.length - 1 && bytes[start] === 0) start++;
+    while (start < bytes.length - 1 && bytes[start] === 0) {
+      start++;
+    }
     const trimmed = bytes.slice(start);
     const padded = (trimmed[0] ?? 0) & 0x80 ? concat(new Uint8Array([0]), trimmed) : trimmed;
     return concat(new Uint8Array([0x02, padded.length]), padded);

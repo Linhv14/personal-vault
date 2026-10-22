@@ -18,18 +18,30 @@ export function live(items: VaultItem[]): VaultItem[] {
 }
 
 export function scopeExists(scope: Scope, items: VaultItem[]): boolean {
-  if (scope === "all") return true;
-  if (scope === "trash") return items.some((item) => item.trashedAt);
-  if (scope === "favorites") return live(items).some((item) => item.favorite);
+  if (scope === "all") {
+    return true;
+  }
+  if (scope === "trash") {
+    return items.some((item) => item.trashedAt);
+  }
+  if (scope === "favorites") {
+    return live(items).some((item) => item.favorite);
+  }
   const tag = scope.slice(4);
   return live(items).some((item) => item.tags?.includes(tag));
 }
 
 export function inScope(scope: Scope, items: VaultItem[]): VaultItem[] {
-  if (scope === "trash") return items.filter((item) => item.trashedAt);
+  if (scope === "trash") {
+    return items.filter((item) => item.trashedAt);
+  }
   const current = live(items);
-  if (scope === "all") return current;
-  if (scope === "favorites") return current.filter((item) => item.favorite);
+  if (scope === "all") {
+    return current;
+  }
+  if (scope === "favorites") {
+    return current.filter((item) => item.favorite);
+  }
   const tag = scope.slice(4);
   return current.filter((item) => item.tags?.includes(tag));
 }
@@ -42,7 +54,9 @@ export function tagsOf(items: VaultItem[], locale: string): string[] {
 
 export function typeCounts(items: VaultItem[]): Map<ItemType, number> {
   const counts = new Map<ItemType, number>(ITEM_TYPES.map((type) => [type, 0]));
-  for (const item of items) counts.set(itemType(item), (counts.get(itemType(item)) ?? 0) + 1);
+  for (const item of items) {
+    counts.set(itemType(item), (counts.get(itemType(item)) ?? 0) + 1);
+  }
   return counts;
 }
 

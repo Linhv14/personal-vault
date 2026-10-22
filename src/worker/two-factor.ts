@@ -69,7 +69,9 @@ async function matchingStep(
   for (let step = current - DRIFT_STEPS; step <= current + DRIFT_STEPS; step++) {
     const expected = await generateTotp({ secret }, step * TOTP_DEFAULTS.period * 1000);
     const same = timingSafeEqual(utf8Encode(expected), utf8Encode(code));
-    if (same && (lastStep === null || step > lastStep) && matched === null) matched = step;
+    if (same && (lastStep === null || step > lastStep) && matched === null) {
+      matched = step;
+    }
   }
   return matched;
 }
@@ -90,7 +92,9 @@ async function freshBackupCodes(
   accountId: string,
 ): Promise<{ codes: string[]; hashes: string[] }> {
   const codes = new Set<string>();
-  while (codes.size < BACKUP_CODE_COUNT) codes.add(generateBackupCode());
+  while (codes.size < BACKUP_CODE_COUNT) {
+    codes.add(generateBackupCode());
+  }
   const list = [...codes];
   const hashes = await Promise.all(
     list.map((code) => protectBackupCode(env, accountId, parseSecondFactor(code)!.code)),
@@ -117,14 +121,24 @@ export async function confirmSetup(
       totp_pending_at: number | null;
       totp_enabled_at: number | null;
     }>();
-  if (row?.totp_enabled_at) return { ok: false, reason: "enabled" };
-  if (!row?.totp_pending_secret || !row.totp_pending_at) return { ok: false, reason: "expired" };
-  if (now - row.totp_pending_at > SETUP_TTL_SECONDS) return { ok: false, reason: "expired" };
+  if (row?.totp_enabled_at) {
+    return { ok: false, reason: "enabled" };
+  }
+  if (!row?.totp_pending_secret || !row.totp_pending_at) {
+    return { ok: false, reason: "expired" };
+  }
+  if (now - row.totp_pending_at > SETUP_TTL_SECONDS) {
+    return { ok: false, reason: "expired" };
+  }
   const factor = parseSecondFactor(code);
-  if (factor?.kind !== "totp") return { ok: false, reason: "invalid" };
+  if (factor?.kind !== "totp") {
+    return { ok: false, reason: "invalid" };
+  }
   const secret = await revealTwoFactorSecret(env, accountId, row.totp_pending_secret);
   const step = await matchingStep(secret, factor.code, now, null);
-  if (step === null) return { ok: false, reason: "invalid" };
+  if (step === null) {
+    return { ok: false, reason: "invalid" };
+  }
 
   const updated = await env.DB.prepare(
     `UPDATE accounts
@@ -140,7 +154,9 @@ export async function confirmSetup(
       row.totp_pending_secret,
     )
     .run();
-  if (!updated.meta.changes) return { ok: false, reason: "enabled" };
+  if (!updated.meta.changes) {
+    return { ok: false, reason: "enabled" };
+  }
   const codes = await regenerateBackupCodes(env, accountId, now);
   return { ok: true, backupCodes: codes, enabledAt: now };
 }
@@ -157,12 +173,16 @@ export async function verifySecondFactor(
   )
     .bind(accountId)
     .first<{ totp_secret: string | null; totp_last_step: number | null }>();
-  if (!row?.totp_secret || !factor) return null;
+  if (!row?.totp_secret || !factor) {
+    return null;
+  }
 
   if (factor.kind === "totp") {
     const secret = await revealTwoFactorSecret(env, accountId, row.totp_secret);
     const step = await matchingStep(secret, factor.code, now, row.totp_last_step);
-    if (step === null) return null;
+    if (step === null) {
+      return null;
+    }
     const claimed = await env.DB.prepare(
       `UPDATE accounts SET totp_last_step = ?
         WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)`,

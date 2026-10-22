@@ -60,7 +60,9 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init: RequestInit = {}) => {
-      if (init.method === "PUT") puts.push({ url, body: JSON.parse(String(init.body)) });
+      if (init.method === "PUT") {
+        puts.push({ url, body: JSON.parse(String(init.body)) });
+      }
       return new Response(JSON.stringify({ updatedAt: 10, items: [], serverTime: 10 }));
     }),
   );

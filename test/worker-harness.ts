@@ -64,7 +64,11 @@ export function createD1() {
   const log: string[] = [];
   const gates: { pattern: RegExp; opened: Promise<void> }[] = [];
   const gate = async (sql: string) => {
-    for (const held of gates) if (held.pattern.test(sql)) await held.opened;
+    for (const held of gates) {
+      if (held.pattern.test(sql)) {
+        await held.opened;
+      }
+    }
   };
   return {
     db,
@@ -108,12 +112,14 @@ function polyfillWorkerCrypto(): void {
   const subtle = crypto.subtle as SubtleCrypto & {
     timingSafeEqual?: (a: ArrayBuffer, b: ArrayBuffer) => boolean;
   };
-  if (subtle.timingSafeEqual) return;
+  if (subtle.timingSafeEqual) {
+    return;
+  }
   subtle.timingSafeEqual = (a, b) =>
     a.byteLength === b.byteLength && timingSafeEqual(new Uint8Array(a), new Uint8Array(b));
 }
 
-export async function startWorker({ mailer = false, vars = {} as Record<string, string> } = {}) {
+export async function startWorker({ mailer = false, vars = {} } = {}) {
   polyfillWorkerCrypto();
   const { default: worker } = (await import(WORKER_ENTRY)) as {
     default: { fetch(request: Request, env: unknown, ctx: unknown): Promise<Response> };
@@ -126,7 +132,9 @@ export async function startWorker({ mailer = false, vars = {} as Record<string, 
     ASSETS: {
       fetch: async (input: Request | URL | string) => {
         const url = new URL(input instanceof Request ? input.url : String(input));
-        if (url.pathname.endsWith(".md")) return new Response(`# ${url.pathname}\n`);
+        if (url.pathname.endsWith(".md")) {
+          return new Response(`# ${url.pathname}\n`);
+        }
         return new Response("<!doctype html><title>{{origin}}</title>", {
           headers: { "Content-Type": "text/html" },
         });
@@ -163,17 +171,25 @@ export async function startWorker({ mailer = false, vars = {} as Record<string, 
     init: RequestInit & { json?: unknown; token?: string; ip?: string; ua?: string } = {},
   ): Promise<Response> {
     const headers = new Headers(init.headers);
-    if (init.json !== undefined) headers.set("Content-Type", "application/json");
-    if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+    if (init.json !== undefined) {
+      headers.set("Content-Type", "application/json");
+    }
+    if (init.token) {
+      headers.set("Authorization", `Bearer ${init.token}`);
+    }
     headers.set("CF-Connecting-IP", init.ip ?? "203.0.113.1");
-    if (init.ua) headers.set("User-Agent", init.ua);
+    if (init.ua) {
+      headers.set("User-Agent", init.ua);
+    }
     const body = init.json !== undefined ? JSON.stringify(init.json) : init.body;
     const url = path.startsWith("http") ? path : `https://vault.test${path}`;
     return worker.fetch(new Request(url, { ...init, headers, body }), env, ctx);
   }
 
   async function settle(): Promise<void> {
-    while (pending.length) await Promise.all(pending.splice(0));
+    while (pending.length) {
+      await Promise.all(pending.splice(0));
+    }
   }
 
   return { env, d1, mail, pending, fetch, settle };

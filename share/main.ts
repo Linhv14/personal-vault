@@ -38,7 +38,9 @@ const t: Translate = createTranslator(locale);
 
 const el = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
-  if (!node) throw new Error(`Missing #${id}`);
+  if (!node) {
+    throw new Error(`Missing #${id}`);
+  }
   return node as T;
 };
 
@@ -51,7 +53,9 @@ const states = {
 };
 
 function show(name: keyof typeof states): void {
-  for (const [key, node] of Object.entries(states)) node.hidden = key !== name;
+  for (const [key, node] of Object.entries(states)) {
+    node.hidden = key !== name;
+  }
 }
 
 function fail(mark: IconName, title: MessageKey, message: string): void {
@@ -151,10 +155,16 @@ async function onPassphraseSubmit(event: SubmitEvent): Promise<void> {
 
 async function shareRequest(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(`/api/shares/${encodeURIComponent(shareId)}${path}`, init);
-  if (response.ok) return response;
+  if (response.ok) {
+    return response;
+  }
   const body = (await response.json().catch(() => null)) as { code?: string } | null;
-  if (body?.code === "shares.gone") throw new ShareGone();
-  if (body?.code === "shares.email_required") throw new EmailRequired();
+  if (body?.code === "shares.gone") {
+    throw new ShareGone();
+  }
+  if (body?.code === "shares.email_required") {
+    throw new EmailRequired();
+  }
   const key = body?.code ? (`error.${body.code}` as MessageKey) : "error.api.generic";
   throw new Error(t(key, { status: response.status }));
 }
@@ -202,7 +212,9 @@ function startResendCountdown(): void {
   resendTimer = setInterval(() => {
     seconds--;
     paint();
-    if (seconds <= 0) clearInterval(resendTimer);
+    if (seconds <= 0) {
+      clearInterval(resendTimer);
+    }
   }, 1000) as unknown as number;
 }
 
@@ -223,7 +235,9 @@ function turnstileSiteKey(): Promise<string | null> {
 
 async function humanCheckHeaders(): Promise<Record<string, string>> {
   const siteKey = await turnstileSiteKey();
-  if (!siteKey) return {};
+  if (!siteKey) {
+    return {};
+  }
   try {
     return { "X-Turnstile-Token": await turnstileToken(siteKey) };
   } catch {
@@ -288,7 +302,9 @@ function websiteUrl(raw: string): URL | null {
 
 function websiteField(raw: string): HTMLElement {
   const url = websiteUrl(raw);
-  if (!url) return textField(t("common.url"), raw);
+  if (!url) {
+    return textField(t("common.url"), raw);
+  }
   const { wrap, body } = field(t("common.url"));
   const valueNode = document.createElement("div");
   valueNode.className = "value";
@@ -322,19 +338,31 @@ function render(payload: SharePayload): void {
 
   const fields = el("fields");
   fields.replaceChildren();
-  if (payload.url) fields.append(websiteField(payload.url));
-  if (payload.username) fields.append(textField(t("common.username"), payload.username));
-  if (payload.password) fields.append(passwordField(payload.password));
-  if (payload.totp) fields.append(totpField(payload.totp));
+  if (payload.url) {
+    fields.append(websiteField(payload.url));
+  }
+  if (payload.username) {
+    fields.append(textField(t("common.username"), payload.username));
+  }
+  if (payload.password) {
+    fields.append(passwordField(payload.password));
+  }
+  if (payload.totp) {
+    fields.append(totpField(payload.totp));
+  }
   for (const custom of payload.fields ?? []) {
-    if (typeof custom?.value !== "string" || !custom.value) continue;
+    if (typeof custom?.value !== "string" || !custom.value) {
+      continue;
+    }
     const label =
       typeof custom.label === "string" && custom.label ? custom.label : t("common.field");
     fields.append(
       custom.hidden ? secretField(label, custom.value) : textField(label, custom.value),
     );
   }
-  if (payload.note) fields.append(noteField(payload.note));
+  if (payload.note) {
+    fields.append(noteField(payload.note));
+  }
 
   renderBanner(cached);
 
@@ -422,8 +450,11 @@ function secretField(label: string, password: string): HTMLElement {
     const label = t(shown ? "common.hide" : "common.show");
     toggle.title = label;
     toggle.setAttribute("aria-label", label);
-    if (shown) guard.revealed();
-    else guard.hidden();
+    if (shown) {
+      guard.revealed();
+    } else {
+      guard.hidden();
+    }
   };
   const guard = guardReveal(() => render(false));
   const toggle = iconButton("eye", t("common.show"), () => render(!shown));
@@ -465,7 +496,9 @@ function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
     ring.svg.classList.toggle("urgent", remaining <= 5);
 
     const counter = Math.floor(Date.now() / 1000 / period);
-    if (counter === lastCounter) return;
+    if (counter === lastCounter) {
+      return;
+    }
     lastCounter = counter;
     try {
       const code = await generateTotp(config);

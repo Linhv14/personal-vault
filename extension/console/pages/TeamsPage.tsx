@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { createTeam, isOrgAdmin, planLimits } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
@@ -37,7 +38,7 @@ export function TeamsPage() {
           submitLabel={t("orgs.create")}
           onClose={() => setCreating(false)}
           onSubmit={(form) => {
-            const name = String(new FormData(form).get("name")).trim();
+            const name = formText(new FormData(form), "name").trim();
             void run(async () => {
               const id = await createTeam(orgId, name, identity);
               setCreating(false);

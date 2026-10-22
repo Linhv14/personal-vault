@@ -23,23 +23,33 @@ const FILE_NAME_NOISE = new Set([
 ]);
 
 function looksLikeCode(token: string): boolean {
-  if (token.length < 4 || token.length > MAX_CODE_LENGTH || DATE.test(token)) return false;
-  if (!TOKEN.test(token)) return false;
-  if (/^\d+$/.test(token)) return token.length >= MIN_NUMERIC_CODE;
+  if (token.length < 4 || token.length > MAX_CODE_LENGTH || DATE.test(token)) {
+    return false;
+  }
+  if (!TOKEN.test(token)) {
+    return false;
+  }
+  if (/^\d+$/.test(token)) {
+    return token.length >= MIN_NUMERIC_CODE;
+  }
   return /\d/.test(token) || /[A-Za-z0-9]-[A-Za-z0-9]/.test(token);
 }
 
 function stripMarkers(chunk: string): string {
   let rest = chunk.trim();
-  while (LIST_MARKER.test(rest)) rest = rest.replace(LIST_MARKER, "");
+  while (LIST_MARKER.test(rest)) {
+    rest = rest.replace(LIST_MARKER, "");
+  }
   return rest.replace(/^["']|["'.]$/g, "").trim();
 }
 
 export function parseRecoveryCodes(input: string): string[] {
   const codes: string[] = [];
-  for (const line of input.replace(/^﻿/, "").split(/\r?\n/)) {
+  for (const line of input.replace(/^\uFEFF/, "").split(/\r?\n/)) {
     for (const chunk of line.split(CHUNK_SEPARATOR).map(stripMarkers)) {
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
       const candidates = DIGIT_GROUPS.test(chunk) ? [chunk] : chunk.split(" ").map(stripMarkers);
       for (const candidate of candidates) {
         if (

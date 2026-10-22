@@ -15,11 +15,15 @@ const migration = new Hono<AppBindings>();
 migration.use("*", async (c, next) => {
   const expected = c.env.MIGRATION_TOKEN;
   const provided = c.req.header("Authorization")?.match(/^Bearer (.+)$/)?.[1] ?? "";
-  if (!expected) return c.json(apiError("server.not_found"), 404);
+  if (!expected) {
+    return c.json(apiError("server.not_found"), 404);
+  }
   const [a, b] = await Promise.all(
     [provided, expected].map((value) => crypto.subtle.digest("SHA-256", utf8Encode(value))),
   );
-  if (!crypto.subtle.timingSafeEqual(a!, b!)) return c.json(apiError("auth.unauthorized"), 401);
+  if (!crypto.subtle.timingSafeEqual(a!, b!)) {
+    return c.json(apiError("auth.unauthorized"), 401);
+  }
   await next();
 });
 
@@ -40,7 +44,9 @@ migration.get("/export", async (c) => {
 
 migration.post("/import", async (c) => {
   const snapshot = (await c.req.json().catch(() => null)) as Snapshot | null;
-  if (!snapshot?.users || !snapshot.orgs) return c.json(apiError("auth.invalid_body"), 400);
+  if (!snapshot?.users || !snapshot.orgs) {
+    return c.json(apiError("auth.invalid_body"), 400);
+  }
   let rows = 0;
   try {
     for (const [id, dump] of Object.entries(snapshot.users)) {

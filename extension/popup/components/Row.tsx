@@ -19,7 +19,9 @@ export function Row({ item }: { item: VaultItem }) {
       data-id={item.id}
       onClick={() => selectItem(item.id)}
       onKeyDown={(event) => {
-        if (event.key === "Enter") selectItem(item.id);
+        if (event.key === "Enter") {
+          selectItem(item.id);
+        }
       }}
     >
       <ItemIcon item={item} />

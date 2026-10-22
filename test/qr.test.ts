@@ -31,13 +31,19 @@ const hexRows = (modules: boolean[][]) =>
 function readFormat(modules: boolean[][]): number {
   let bits = 0;
   const at = (x: number, y: number, index: number) => {
-    if (modules[y]![x]) bits |= 1 << index;
+    if (modules[y]![x]) {
+      bits |= 1 << index;
+    }
   };
-  for (let i = 0; i <= 5; i++) at(8, i, i);
+  for (let i = 0; i <= 5; i++) {
+    at(8, i, i);
+  }
   at(8, 7, 6);
   at(8, 8, 7);
   at(7, 8, 8);
-  for (let i = 9; i < 15; i++) at(14 - i, 8, i);
+  for (let i = 9; i < 15; i++) {
+    at(14 - i, 8, i);
+  }
   return bits;
 }
 

@@ -60,7 +60,9 @@ export interface Context {
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk as Buffer);
+  }
   return Buffer.concat(chunks).toString("utf8");
 }
 
@@ -89,25 +91,38 @@ export function parseFlags(argv: string[], options: { positional?: boolean } = {
     const arg = argv[index]!;
     const value = () => {
       const next = argv[++index];
-      if (next === undefined) throw new AgentError(`${arg} needs a value`);
+      if (next === undefined) {
+        throw new AgentError(`${arg} needs a value`);
+      }
       return next;
     };
     if (arg === "--") {
       flags.command = argv.slice(index + 1);
       break;
     }
-    if (arg === "--email") flags.email = value();
-    else if (arg === "--server") flags.server = value();
-    else if (arg === "--org") flags.org = value();
-    else if (arg === "--project") flags.project = value();
-    else if (arg === "--env") flags.environment = value();
-    else if (arg === "-i" || arg === "--in") flags.input = value();
-    else if (arg === "-o" || arg === "--out") flags.output = value();
-    else if (arg === "--force") flags.force = true;
-    else if (arg === INSECURE_FILE_STORE_FLAG) flags.insecureFileStore = true;
-    else if (options.positional && !arg.startsWith("-")) {
+    if (arg === "--email") {
+      flags.email = value();
+    } else if (arg === "--server") {
+      flags.server = value();
+    } else if (arg === "--org") {
+      flags.org = value();
+    } else if (arg === "--project") {
+      flags.project = value();
+    } else if (arg === "--env") {
+      flags.environment = value();
+    } else if (arg === "-i" || arg === "--in") {
+      flags.input = value();
+    } else if (arg === "-o" || arg === "--out") {
+      flags.output = value();
+    } else if (arg === "--force") {
+      flags.force = true;
+    } else if (arg === INSECURE_FILE_STORE_FLAG) {
+      flags.insecureFileStore = true;
+    } else if (options.positional && !arg.startsWith("-")) {
       flags.positional = [...(flags.positional ?? []), arg];
-    } else throw new AgentError(`Unexpected argument: ${arg}`);
+    } else {
+      throw new AgentError(`Unexpected argument: ${arg}`);
+    }
   }
   return flags;
 }
@@ -124,7 +139,9 @@ function requireSession(context: Context): Session {
     throw new AgentError("7key does not hand out secrets inside 7key agent");
   }
   const session = currentSession(context);
-  if (session) return session;
+  if (session) {
+    return session;
+  }
   const pid = pausedBy(context.env);
   if (pid) {
     throw new AgentError(
@@ -138,7 +155,9 @@ export async function login(flags: Flags, context: Context): Promise<number> {
   if (context.env.SEVENKEY_AGENT === "1") {
     throw new AgentError("7key login is not available inside 7key agent");
   }
-  if (context.keyring.unavailable) throw new AgentError(context.keyring.unavailable);
+  if (context.keyring.unavailable) {
+    throw new AgentError(context.keyring.unavailable);
+  }
   const saved = remembered(context.env);
   const server = flags.server ?? context.env.SEVENKEY_SERVER ?? saved.server ?? DEFAULT_SERVER;
   const email =
@@ -148,24 +167,34 @@ export async function login(flags: Flags, context: Context): Promise<number> {
       (await context.ask(saved.email ? `Email [${saved.email}]: ` : "Email: ")) ??
       ""
     ).trim() || saved.email;
-  if (!email) throw new AgentError("An email is needed");
+  if (!email) {
+    throw new AgentError("An email is needed");
+  }
   const password = await context.askPassword(`Master password for ${email}: `);
   const session = await signIn(server, email, password, context.request, context.ask);
   const previous = currentSession(context);
-  if (previous) await signOut(previous);
+  if (previous) {
+    await signOut(previous);
+  }
   const stored = loginOf(session, email);
   saveLogin(context.keyring, stored);
-  if (context.keyring.warning) context.log(context.keyring.warning);
+  if (context.keyring.warning) {
+    context.log(context.keyring.warning);
+  }
   remember(context.env, { email, server: session.server });
   context.log(`Logged in as ${email} on ${session.server}.`);
   context.log(`The session is kept in ${context.keyring.name} until ${date(stored.expiresAt)}.`);
-  if (!findLink(context.cwd)) context.log("Next: 7key link, in your project's folder");
+  if (!findLink(context.cwd)) {
+    context.log("Next: 7key link, in your project's folder");
+  }
   return 0;
 }
 
 export async function logout(_flags: Flags, context: Context): Promise<number> {
   const session = currentSession(context);
-  if (session) await signOut(session);
+  if (session) {
+    await signOut(session);
+  }
   context.keyring.remove();
   context.log(session ? "Logged out." : "Not logged in.");
   return 0;
@@ -195,10 +224,14 @@ async function pick<T>(
   name: (item: T) => { id: string; name: string },
   context: Context,
 ): Promise<T> {
-  if (items.length === 0) throw new AgentError(`No ${title.toLowerCase()} to choose from`);
+  if (items.length === 0) {
+    throw new AgentError(`No ${title.toLowerCase()} to choose from`);
+  }
   if (wanted) {
     const found = items.filter((item) => refersTo(wanted, name(item)));
-    if (found.length === 1) return found[0]!;
+    if (found.length === 1) {
+      return found[0]!;
+    }
     if (found.length === 0) {
       throw new AgentError(
         `No ${title.toLowerCase()} "${wanted}" (${items.map((item) => handleOf(name(item).name)).join(", ")})`,
@@ -266,7 +299,9 @@ export async function resolveSelection(
   if (flags.project) {
     const linked = findLink(context.cwd)?.link;
     const environment = flags.environment ?? linked?.environment;
-    if (!environment) throw new AgentError("Pass --env with --project");
+    if (!environment) {
+      throw new AgentError("Pass --env with --project");
+    }
     return selectEnvironment(session, flags.project, environment, flags.org);
   }
   const linked = findLink(context.cwd);
@@ -283,7 +318,9 @@ export async function resolveSelection(
 
 export async function runLocal(flags: Flags, context: Context): Promise<number> {
   const [program, ...args] = flags.command;
-  if (!program) throw new AgentError("Nothing to run: add -- <command>");
+  if (!program) {
+    throw new AgentError("Nothing to run: add -- <command>");
+  }
   const session = requireSession(context);
   const selected = await resolveSelection(flags, context, session);
   context.log(
@@ -291,8 +328,14 @@ export async function runLocal(flags: Flags, context: Context): Promise<number> 
   );
   void noteAccess(session, selected, "exported");
   const childEnv: NodeJS.ProcessEnv = { ...context.env };
-  for (const name of Object.keys(childEnv)) if (name.startsWith("SEVENKEY_")) delete childEnv[name];
-  for (const { name, value } of selected.secrets) childEnv[name] = value;
+  for (const name of Object.keys(childEnv)) {
+    if (name.startsWith("SEVENKEY_")) {
+      delete childEnv[name];
+    }
+  }
+  for (const { name, value } of selected.secrets) {
+    childEnv[name] = value;
+  }
   return new Promise((resolve) => {
     const child = spawn(program, args, { stdio: "inherit", env: childEnv });
     child.on("close", (code, signal) => resolve(code ?? (signal ? 128 : 1)));

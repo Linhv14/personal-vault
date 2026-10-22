@@ -15,7 +15,9 @@ export interface ZipEntry {
 function findEndOfCentralDirectory(view: DataView): number {
   const earliest = Math.max(0, view.byteLength - 22 - 0xffff);
   for (let offset = view.byteLength - 22; offset >= earliest; offset--) {
-    if (view.getUint32(offset, true) === END_OF_CENTRAL_DIRECTORY) return offset;
+    if (view.getUint32(offset, true) === END_OF_CENTRAL_DIRECTORY) {
+      return offset;
+    }
   }
   throw new ZipError("Not a zip archive");
 }
@@ -32,7 +34,9 @@ export function readZip(bytes: Uint8Array): ZipEntry[] {
   const end = findEndOfCentralDirectory(view);
   const count = view.getUint16(end + 10, true);
   let offset = view.getUint32(end + 16, true);
-  if (offset === ZIP64_MARKER) throw new ZipError("ZIP64 archives are not supported");
+  if (offset === ZIP64_MARKER) {
+    throw new ZipError("ZIP64 archives are not supported");
+  }
 
   const decoder = new TextDecoder();
   const entries: ZipEntry[] = [];
@@ -64,8 +68,12 @@ export function readZip(bytes: Uint8Array): ZipEntry[] {
           view.getUint16(localOffset + 26, true) +
           view.getUint16(localOffset + 28, true);
         const data = bytes.subarray(start, start + compressedSize);
-        if (method === STORED) return data;
-        if (method === DEFLATED) return inflate(data);
+        if (method === STORED) {
+          return data;
+        }
+        if (method === DEFLATED) {
+          return inflate(data);
+        }
         throw new ZipError(`Unsupported zip compression method ${method}`);
       },
     });

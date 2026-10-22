@@ -69,7 +69,9 @@ const SECOND_LEVEL = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
 
 function sharedBase(base: string): boolean {
   const labels = base.split(".");
-  if (labels.length === 2 && labels[1]!.length === 2 && SECOND_LEVEL.has(labels[0]!)) return true;
+  if (labels.length === 2 && labels[1]!.length === 2 && SECOND_LEVEL.has(labels[0]!)) {
+    return true;
+  }
   return SHARED_SUFFIXES.some((suffix) => base === suffix || base.endsWith(`.${suffix}`));
 }
 
@@ -78,17 +80,27 @@ export function normalizeHost(value: string): string | null {
   const wildcard = host.startsWith("*.");
   const base = wildcard ? host.slice(2) : host;
   const labels = base.split(".");
-  if (labels.length < 2 || host.length > 253) return null;
-  if (!labels.every((label) => HOST_LABEL.test(label))) return null;
-  if (/^\d+$/.test(labels.at(-1) ?? "")) return null;
-  if (wildcard && sharedBase(base)) return null;
+  if (labels.length < 2 || host.length > 253) {
+    return null;
+  }
+  if (!labels.every((label) => HOST_LABEL.test(label))) {
+    return null;
+  }
+  if (/^\d+$/.test(labels.at(-1) ?? "")) {
+    return null;
+  }
+  if (wildcard && sharedBase(base)) {
+    return null;
+  }
   return host;
 }
 
 export function parseHosts(text: string): string[] | null {
   const entries = [...new Set(text.split(/[\s,]+/).filter(Boolean))];
   const hosts = entries.map(normalizeHost);
-  if (hosts.length > MAX_SECRET_HOSTS || hosts.some((host) => host === null)) return null;
+  if (hosts.length > MAX_SECRET_HOSTS || hosts.some((host) => host === null)) {
+    return null;
+  }
   return hosts as string[];
 }
 
@@ -229,9 +241,13 @@ export function parseDotenv(text: string): SecretContent[] {
   const entries = new Map<string, string>();
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
-    if (!line || line.startsWith("#")) continue;
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
     const match = /^(?:export\s+)?([^=\s]+)\s*=\s*(.*)$/.exec(line);
-    if (!match || !isSecretName(match[1]!)) continue;
+    if (!match || !isSecretName(match[1]!)) {
+      continue;
+    }
     entries.set(match[1]!, unquote(match[2]!));
   }
   return [...entries].map(([name, value]) => ({ name, value }));
@@ -269,7 +285,9 @@ export function handleOf(name: string): string {
 
 export function refersTo(wanted: string, entry: { id: string; name: string }): boolean {
   const value = wanted.trim();
-  if (value === entry.id) return true;
+  if (value === entry.id) {
+    return true;
+  }
   const handle = handleOf(value);
   return handle !== "" && handle === handleOf(entry.name);
 }

@@ -13,10 +13,14 @@ export function guardReveal(
   let timer: ReturnType<typeof setTimeout> | undefined;
   let shown = false;
   const conceal = () => {
-    if (shown) hide();
+    if (shown) {
+      hide();
+    }
   };
   target.addEventListener("visibilitychange", () => {
-    if (target.visibilityState === "hidden") conceal();
+    if (target.visibilityState === "hidden") {
+      conceal();
+    }
   });
   return {
     revealed() {

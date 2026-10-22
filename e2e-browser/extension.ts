@@ -39,13 +39,17 @@ export function useExtension(): () => Harness {
   });
 
   test.afterAll(async () => {
-    if (!harness) return;
+    if (!harness) {
+      return;
+    }
     await harness.context.close();
     rmSync(profile, { recursive: true, force: true });
   });
 
   return () => {
-    if (!harness) throw new Error("The extension is not running");
+    if (!harness) {
+      throw new Error("The extension is not running");
+    }
     return harness;
   };
 }

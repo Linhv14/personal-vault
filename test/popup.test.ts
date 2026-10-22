@@ -27,12 +27,16 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: vi.fn(async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     }),
     set: vi.fn(async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     }),
     clear: vi.fn(async () => store.clear()),
     remove: vi.fn(async (key: string) => void store.delete(key)),
@@ -88,7 +92,9 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
   const url = new URL(String(input));
   const method = init?.method ?? "GET";
   const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, any>) : {};
-  if (init?.body) server.received.push(String(init.body));
+  if (init?.body) {
+    server.received.push(String(init.body));
+  }
 
   const now = Math.floor(Date.now() / 1000);
 
@@ -117,9 +123,15 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
     });
   }
 
-  if (url.pathname === "/api/time") return json({ serverTime: now });
-  if (url.pathname === "/api/orgs") return json({ orgs: [] });
-  if (url.pathname === "/api/invites") return json({ invites: server.invites });
+  if (url.pathname === "/api/time") {
+    return json({ serverTime: now });
+  }
+  if (url.pathname === "/api/orgs") {
+    return json({ orgs: [] });
+  }
+  if (url.pathname === "/api/invites") {
+    return json({ invites: server.invites });
+  }
   if (url.pathname === "/api/account/identity") {
     return init?.method === "PUT" ? json({ ok: true }) : json({ identity: null });
   }
@@ -176,7 +188,9 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit): Pr
 
 function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
-  if (!node) throw new Error(`Missing #${id} in popup.html`);
+  if (!node) {
+    throw new Error(`Missing #${id} in popup.html`);
+  }
   return node as T;
 }
 
@@ -192,7 +206,9 @@ function setField(form: HTMLFormElement, name: string, value: string): void {
 async function waitFor(check: () => boolean, label: string, timeoutMs = 60_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (check()) return;
+    if (check()) {
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
   throw new Error(`Timed out waiting for ${label} (visible screen: ${visibleScreen()})`);
@@ -293,7 +309,9 @@ describe("extension popup", () => {
     const option = [...el("add-menu").querySelectorAll<HTMLButtonElement>(".menu-item")].find(
       (button) => button.textContent === kind,
     );
-    if (!option) throw new Error(`No "${kind}" in the add menu`);
+    if (!option) {
+      throw new Error(`No "${kind}" in the add menu`);
+    }
     option.click();
   }
 
@@ -330,23 +348,31 @@ describe("extension popup", () => {
       (candidate) =>
         candidate.textContent === label || candidate.getAttribute("aria-label") === label,
     );
-    if (!button) throw new Error(`No "${label}" button in the detail pane`);
+    if (!button) {
+      throw new Error(`No "${label}" button in the detail pane`);
+    }
     return button;
   }
 
   function typeOptions(): HTMLButtonElement[] {
-    if (!document.querySelector(".dropdown .menu")) el("type-filter").click();
+    if (!document.querySelector(".dropdown .menu")) {
+      el("type-filter").click();
+    }
     return [...document.querySelectorAll<HTMLButtonElement>(".dropdown .menu .menu-item")];
   }
 
   function pickType(label: string): void {
     const option = typeOptions().find((candidate) => candidate.textContent === label);
-    if (!option) throw new Error(`No "${label}" in the type filter`);
+    if (!option) {
+      throw new Error(`No "${label}" in the type filter`);
+    }
     option.click();
   }
 
   function drawerLinks(): HTMLButtonElement[] {
-    if (!document.querySelector(".drawer")) el("btn-menu").click();
+    if (!document.querySelector(".drawer")) {
+      el("btn-menu").click();
+    }
     return [...document.querySelectorAll<HTMLButtonElement>(".drawer-scopes .drawer-link")];
   }
 
@@ -358,7 +384,9 @@ describe("extension popup", () => {
 
   function openScope(label: string): void {
     const link = drawerLinks().find((candidate) => candidate.textContent?.startsWith(label));
-    if (!link) throw new Error(`No "${label}" in the menu`);
+    if (!link) {
+      throw new Error(`No "${label}" in the menu`);
+    }
     link.click();
   }
 
@@ -397,7 +425,7 @@ describe("extension popup", () => {
       () => /\d{3} \d{3}/.test(el("detail").querySelector(".totp-code")?.textContent ?? ""),
       "the 2FA code",
     );
-    const shown = el("detail").querySelector(".totp-code")!.textContent!.replace(" ", "");
+    const shown = el("detail").querySelector(".totp-code")!.textContent.replace(" ", "");
     const { generateTotp } = await import("../src/core/totp.js");
     expect(shown).toBe(await generateTotp({ secret: TOTP_SECRET }));
   });
@@ -434,7 +462,9 @@ describe("extension popup", () => {
     const note = [...el("share-fields").querySelectorAll("[role=checkbox]")].find((row) =>
       row.textContent?.includes("Note"),
     );
-    if (note) expect(note.getAttribute("aria-checked")).toBe("false");
+    if (note) {
+      expect(note.getAttribute("aria-checked")).toBe("false");
+    }
     expect(document.getElementById("share-totp-hint")).not.toBeNull();
 
     server.shareRequests.length = 0;
@@ -587,7 +617,7 @@ describe("extension popup", () => {
     expect(el("detail").querySelector(".code-value")!.textContent).toBe("••••••••••");
     expect(rows("all-list")[0]!.textContent).toContain("2 codes");
     detailButton("Mark as used").click();
-    await waitFor(() => el("detail").textContent!.includes("1 of 2 left"), "the used mark");
+    await waitFor(() => el("detail").textContent.includes("1 of 2 left"), "the used mark");
     expect(el("detail").querySelector(".code.used")).not.toBeNull();
     expect(rows("all-list")[0]!.textContent).toContain("1 of 2 left");
   });
@@ -602,8 +632,8 @@ describe("extension popup", () => {
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
     pickType("Recovery codes2");
-    await waitFor(() => el("all-list").textContent!.includes("npm"), "the npm item");
-    [...rows("all-list")].find((row) => row.textContent!.includes("npm"))!.click();
+    await waitFor(() => el("all-list").textContent.includes("npm"), "the npm item");
+    [...rows("all-list")].find((row) => row.textContent.includes("npm"))!.click();
     await waitFor(() => el("detail").querySelectorAll(".code").length === 2, "the codes");
     expect(el("detail").querySelector(".codes-grid")!.classList.contains("long")).toBe(true);
     const write = vi.spyOn(navigator.clipboard, "writeText");
@@ -613,20 +643,28 @@ describe("extension popup", () => {
   });
 
   function vaultMenuItem(label: string): HTMLButtonElement {
-    if (!document.querySelector(".vault-menu")) el("vault-menu").click();
+    if (!document.querySelector(".vault-menu")) {
+      el("vault-menu").click();
+    }
     const item = [...document.querySelectorAll<HTMLButtonElement>(".vault-menu .menu-item")].find(
       (candidate) => candidate.textContent?.startsWith(label),
     );
-    if (!item) throw new Error(`No "${label}" in the vault menu`);
+    if (!item) {
+      throw new Error(`No "${label}" in the vault menu`);
+    }
     return item;
   }
 
   function vaultActions(name: string): void {
-    if (!document.querySelector(".vault-menu")) el("vault-menu").click();
+    if (!document.querySelector(".vault-menu")) {
+      el("vault-menu").click();
+    }
     const row = [...document.querySelectorAll<HTMLElement>(".vault-row")].find((candidate) =>
       candidate.textContent?.startsWith(name),
     );
-    if (!row) throw new Error(`No vault "${name}"`);
+    if (!row) {
+      throw new Error(`No vault "${name}"`);
+    }
     row.querySelector<HTMLButtonElement>(".vault-more")!.click();
   }
 
@@ -636,7 +674,7 @@ describe("extension popup", () => {
     const form = el<HTMLFormElement>("form-edit");
     setField(form, "title", title);
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    await waitFor(() => el("all-list").textContent!.includes(title), `the note ${title}`);
+    await waitFor(() => el("all-list").textContent.includes(title), `the note ${title}`);
   }
 
   it("keeps items in separate vaults", async () => {
@@ -669,7 +707,7 @@ describe("extension popup", () => {
     vaultMenuItem("Move all items to").click();
     vaultMenuItem("Personal").click();
     await waitFor(() => el("vault-menu").textContent === "Personal", "the target vault");
-    await waitFor(() => el("all-list").textContent!.includes("Office wifi"), "the moved note");
+    await waitFor(() => el("all-list").textContent.includes("Office wifi"), "the moved note");
     vaultMenuItem("Work").click();
     expect(rows("all-list")).toHaveLength(0);
   });
@@ -707,7 +745,9 @@ describe("extension popup", () => {
   });
 
   it("generates a Vietnamese address and saves it as an address item", async () => {
-    if (!document.querySelector(".drawer")) el("btn-menu").click();
+    if (!document.querySelector(".drawer")) {
+      el("btn-menu").click();
+    }
     [...document.querySelectorAll<HTMLButtonElement>(".drawer-link")]
       .find((link) => link.textContent === "Generate a password")!
       .click();
@@ -755,7 +795,9 @@ describe("extension popup", () => {
   });
 
   it("clears session storage when locked, keeping the offline cache", async () => {
-    if (!document.querySelector(".drawer")) el("btn-menu").click();
+    if (!document.querySelector(".drawer")) {
+      el("btn-menu").click();
+    }
     [...document.querySelectorAll<HTMLButtonElement>(".drawer-actions .drawer-link")]
       .find((link) => link.textContent === "Lock now")!
       .click();

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { groupSecret } from "../../../src/core/account-two-factor.js";
 import { describeError } from "../../../src/i18n/index.js";
 import { getLocal } from "../../lib/storage.js";
@@ -43,7 +44,9 @@ export function TwoFactorCard({ unlocked }: { unlocked: boolean }) {
   const refresh = () => twoFactorStatus().then(setStatus, () => setStatus(undefined));
 
   useEffect(() => {
-    if (unlocked) void refresh();
+    if (unlocked) {
+      void refresh();
+    }
   }, [unlocked]);
 
   const close = () => {
@@ -68,14 +71,16 @@ export function TwoFactorCard({ unlocked }: { unlocked: boolean }) {
     setWorking(true);
     try {
       const form = event.currentTarget as HTMLFormElement;
-      const authKey = await currentAuthKey(String(new FormData(form).get("current")));
+      const authKey = await currentAuthKey(formText(new FormData(form), "current"));
       if (!authKey) {
         setError(t("settings.wrong_current"));
         return;
       }
-      if (purpose === "enable")
+      if (purpose === "enable") {
         setStep({ kind: "scan", authKey, ...(await startTwoFactor(authKey)) });
-      else setStep({ kind: "code", purpose, authKey });
+      } else {
+        setStep({ kind: "code", purpose, authKey });
+      }
     } catch (failure) {
       setError(describeError(failure, t));
     } finally {
@@ -84,7 +89,9 @@ export function TwoFactorCard({ unlocked }: { unlocked: boolean }) {
   };
 
   const confirm = async (code: string) => {
-    if (step?.kind !== "scan" && step?.kind !== "code") return;
+    if (step?.kind !== "scan" && step?.kind !== "code") {
+      return;
+    }
     setError(null);
     try {
       if (step.kind === "scan") {

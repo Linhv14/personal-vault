@@ -8,12 +8,16 @@ const sessionArea = new Map<string, unknown>([["token", "t"]]);
 function area(store: Map<string, unknown>) {
   return {
     get: async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     },
     set: async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     },
     remove: async (key: string) => void store.delete(key),
     clear: async () => store.clear(),
@@ -33,8 +37,9 @@ vi.stubGlobal(
   vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
     if (init?.method === "PUT") {
       server.puts += 1;
-      if (server.identity)
+      if (server.identity) {
         return new Response(JSON.stringify({ code: "account.identity_exists" }), { status: 409 });
+      }
       server.identity = JSON.parse(String(init.body));
       return new Response(JSON.stringify({ ok: true }));
     }

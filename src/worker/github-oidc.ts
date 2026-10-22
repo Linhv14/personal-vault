@@ -20,7 +20,9 @@ export const githubJwks: JwksSource = async () => {
     cf: { cacheTtl: 3600, cacheEverything: true },
   };
   const response = await fetch(JWKS_URL, cached);
-  if (!response.ok) return [];
+  if (!response.ok) {
+    return [];
+  }
   const { keys } = (await response.json()) as { keys?: Jwk[] };
   return keys ?? [];
 };
@@ -43,15 +45,23 @@ export async function verifyGithubToken(
   token: string,
   options: { audience: string | readonly string[]; issuer?: string; now: number; jwks: JwksSource },
 ): Promise<GithubClaims | null> {
-  if (token.length > MAX_TOKEN_LENGTH) return null;
+  if (token.length > MAX_TOKEN_LENGTH) {
+    return null;
+  }
   const [headerPart, payloadPart, signaturePart, extra] = token.split(".");
-  if (!headerPart || !payloadPart || !signaturePart || extra !== undefined) return null;
+  if (!headerPart || !payloadPart || !signaturePart || extra !== undefined) {
+    return null;
+  }
   const header = decodeJson(headerPart);
   const payload = decodeJson(payloadPart);
-  if (!header || !payload || header.alg !== "RS256" || typeof header.kid !== "string") return null;
+  if (!header || !payload || header.alg !== "RS256" || typeof header.kid !== "string") {
+    return null;
+  }
 
   const jwk = (await options.jwks()).find((key) => key.kid === header.kid && key.kty === "RSA");
-  if (!jwk) return null;
+  if (!jwk) {
+    return null;
+  }
   let signature: Bytes;
   try {
     signature = fromBase64Url(signaturePart);
@@ -71,16 +81,30 @@ export async function verifyGithubToken(
     signature,
     utf8Encode(`${headerPart}.${payloadPart}`),
   );
-  if (!valid) return null;
+  if (!valid) {
+    return null;
+  }
 
   const { iss, aud, exp, nbf, repository, ref, environment, event_name } = payload;
-  if (iss !== (options.issuer ?? GITHUB_ISSUER)) return null;
+  if (iss !== (options.issuer ?? GITHUB_ISSUER)) {
+    return null;
+  }
   const audiences = typeof options.audience === "string" ? [options.audience] : options.audience;
-  if (!audienceMatches(aud, audiences)) return null;
-  if (typeof exp !== "number" || exp + CLOCK_SKEW_SECONDS < options.now) return null;
-  if (typeof nbf === "number" && nbf - CLOCK_SKEW_SECONDS > options.now) return null;
-  if (typeof repository !== "string" || typeof ref !== "string") return null;
-  if (typeof event_name !== "string") return null;
+  if (!audienceMatches(aud, audiences)) {
+    return null;
+  }
+  if (typeof exp !== "number" || exp + CLOCK_SKEW_SECONDS < options.now) {
+    return null;
+  }
+  if (typeof nbf === "number" && nbf - CLOCK_SKEW_SECONDS > options.now) {
+    return null;
+  }
+  if (typeof repository !== "string" || typeof ref !== "string") {
+    return null;
+  }
+  if (typeof event_name !== "string") {
+    return null;
+  }
   return {
     repository,
     ref,

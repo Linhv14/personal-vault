@@ -1,3 +1,4 @@
+import { formText } from "../../../src/ui/form-data.js";
 import { createOrg } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
@@ -15,7 +16,7 @@ export function WelcomePage({ run, error }: { run: Run; error: string | null }) 
         className="panel welcome-form"
         onSubmit={(event) => {
           event.preventDefault();
-          const name = String(new FormData(event.currentTarget).get("name")).trim();
+          const name = formText(new FormData(event.currentTarget), "name").trim();
           void run(async () => {
             const created = await createOrg(name);
             navigate(created.id, { page: "projects" });

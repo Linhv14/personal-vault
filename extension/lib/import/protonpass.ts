@@ -123,7 +123,9 @@ export function isProtonJson(parsed: JsonObject): boolean {
 }
 
 export async function protonFromJson(parsed: JsonObject): Promise<ImportSource> {
-  if (parsed.encrypted === true) throw new ImportError("unsupported_encryption");
+  if (parsed.encrypted === true) {
+    throw new ImportError("unsupported_encryption");
+  }
   return toSource(
     Object.values(object(parsed.vaults)).flatMap((vault) =>
       list(object(vault).items).map(fromJsonItem),
@@ -196,11 +198,15 @@ export async function decryptProtonPgp(
   message: Uint8Array,
   passphrase: string | undefined,
 ): Promise<string> {
-  if (!passphrase) throw new ImportError("needs_passphrase");
+  if (!passphrase) {
+    throw new ImportError("needs_passphrase");
+  }
   try {
     return new TextDecoder().decode(await decryptWithPassphrase(message, passphrase));
   } catch (error) {
-    if (error instanceof OpenPgpError) throw new ImportError(OPENPGP_ERRORS[error.code]);
+    if (error instanceof OpenPgpError) {
+      throw new ImportError(OPENPGP_ERRORS[error.code]);
+    }
     throw error;
   }
 }
@@ -295,14 +301,18 @@ function identityDraft(entry: ProtonEntry): ItemDraft {
 }
 
 function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
-  if (entry.trashed) return "trashed";
+  if (entry.trashed) {
+    return "trashed";
+  }
   const sections = sectionFields(entry.content.sections);
   const extras = [...entry.extraFields, ...sections];
   switch (entry.type) {
     case "login": {
       const url = entry.urls[0];
       const title = entry.name || (url && registrableDomain(url)) || entry.username || entry.email;
-      if (!title && !entry.password) return "other";
+      if (!title && !entry.password) {
+        return "other";
+      }
       const username = entry.username || entry.email || undefined;
       const { totp, unreadable } = firstTotp(
         [entry.totp, ...extras.filter((field) => field.totp).map((field) => field.value)],
@@ -341,7 +351,9 @@ function toDrafts(entry: ProtonEntry): ItemDraft[] | SkipReason {
     }
     case "note":
     case "custom":
-      if (!entry.name && !entry.note && extras.length === 0) return "other";
+      if (!entry.name && !entry.note && extras.length === 0) {
+        return "other";
+      }
       return [
         {
           type: "note",
@@ -392,8 +404,11 @@ async function toSource(entries: ProtonEntry[]): Promise<ImportSource> {
   for (const entry of await withPasskeys(entries)) {
     countSkip(source.skipped, "passkey", entry.unreadablePasskeys);
     const drafts = toDrafts(entry);
-    if (typeof drafts === "string") countSkip(source.skipped, drafts);
-    else source.drafts.push(...drafts);
+    if (typeof drafts === "string") {
+      countSkip(source.skipped, drafts);
+    } else {
+      source.drafts.push(...drafts);
+    }
   }
   return source;
 }

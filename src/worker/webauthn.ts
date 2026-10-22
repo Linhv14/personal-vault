@@ -25,15 +25,23 @@ async function sha256(data: Bytes): Promise<Bytes> {
 }
 
 function rawEcdsaSignature(der: Bytes): Bytes | null {
-  if (der[0] !== 0x30) return null;
+  if (der[0] !== 0x30) {
+    return null;
+  }
   const out = new Uint8Array(64);
   let offset = 2;
   for (const target of [0, 32]) {
-    if (der[offset] !== 0x02) return null;
+    if (der[offset] !== 0x02) {
+      return null;
+    }
     const length = der[offset + 1] ?? 0;
     let value = der.slice(offset + 2, offset + 2 + length);
-    while (value.length > 32 && value[0] === 0) value = value.slice(1);
-    if (value.length > 32) return null;
+    while (value.length > 32 && value[0] === 0) {
+      value = value.slice(1);
+    }
+    if (value.length > 32) {
+      return null;
+    }
     out.set(value, target + 32 - value.length);
     offset += 2 + length;
   }
@@ -69,22 +77,36 @@ export async function verifyAssertion(
       challenge?: unknown;
       origin?: unknown;
     };
-    if (clientData.type !== "webauthn.get") return false;
-    if (clientData.origin !== expected.origin) return false;
-    if (typeof clientData.challenge !== "string") return false;
+    if (clientData.type !== "webauthn.get") {
+      return false;
+    }
+    if (clientData.origin !== expected.origin) {
+      return false;
+    }
+    if (typeof clientData.challenge !== "string") {
+      return false;
+    }
     if (!timingSafeEqual(utf8Encode(clientData.challenge), utf8Encode(expected.challenge))) {
       return false;
     }
 
     const authData = fromBase64Url(input.authenticatorData);
-    if (authData.length < 37) return false;
+    if (authData.length < 37) {
+      return false;
+    }
     const rpIdHash = await sha256(utf8Encode(expected.rpId));
-    if (!timingSafeEqual(authData.slice(0, 32), rpIdHash)) return false;
+    if (!timingSafeEqual(authData.slice(0, 32), rpIdHash)) {
+      return false;
+    }
     const flags = authData[32] ?? 0;
-    if (!(flags & FLAG_USER_PRESENT) || !(flags & FLAG_USER_VERIFIED)) return false;
+    if (!(flags & FLAG_USER_PRESENT) || !(flags & FLAG_USER_VERIFIED)) {
+      return false;
+    }
 
     const key = await importPublicKey(fromBase64Url(expected.publicKey), expected.algorithm);
-    if (!key) return false;
+    if (!key) {
+      return false;
+    }
     const signed = new Uint8Array(authData.length + 32);
     signed.set(authData);
     signed.set(await sha256(clientDataBytes), authData.length);

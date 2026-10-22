@@ -36,14 +36,18 @@ export async function sendShareCode(
   )
     .bind(shareId, emailHash, timestamp)
     .first();
-  if (!allowed) return;
+  if (!allowed) {
+    return;
+  }
 
   const previous = await env.DB.prepare(
     "SELECT sent_at FROM share_codes WHERE share_id = ? AND email_hash = ?",
   )
     .bind(shareId, emailHash)
     .first<{ sent_at: number }>();
-  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) return;
+  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) {
+    return;
+  }
 
   const code = generateCode();
   await env.DB.prepare(
@@ -85,7 +89,9 @@ export async function consumeShareCode(
   )
     .bind(shareId, emailHash)
     .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) return "expired";
+  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) {
+    return "expired";
+  }
 
   const expected = utf8Encode(row.code_hash);
   const provided = utf8Encode(await codeHash(env, shareId, emailHash, code));

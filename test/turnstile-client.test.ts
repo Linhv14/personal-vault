@@ -7,7 +7,9 @@ const API = "https://7key.online";
 
 function frameIn(slot: HTMLElement): HTMLIFrameElement {
   const frame = slot.querySelector("iframe");
-  if (!frame) throw new Error("no frame");
+  if (!frame) {
+    throw new Error("no frame");
+  }
   return frame;
 }
 

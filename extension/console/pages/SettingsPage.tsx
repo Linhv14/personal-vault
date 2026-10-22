@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { createOrg, isOrgAdmin, planLimits, removeMember } from "../../lib/orgs.js";
 import { Fingerprint } from "../../ui/components/Fingerprint.js";
 import { useT } from "../../ui/i18n.js";
@@ -101,7 +102,7 @@ export function SettingsPage() {
           submitLabel={t("orgs.create")}
           onClose={() => setModal(null)}
           onSubmit={(form) => {
-            const name = String(new FormData(form).get("name")).trim();
+            const name = formText(new FormData(form), "name").trim();
             void run(async () => {
               const created = await createOrg(name);
               setModal(null);

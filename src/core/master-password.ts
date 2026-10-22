@@ -15,7 +15,9 @@ export function masterPasswordLength(password: string): number {
 
 function emailForms(email: string): string[] {
   const normalized = email.trim().toLowerCase();
-  if (!normalized) return [];
+  if (!normalized) {
+    return [];
+  }
   const at = normalized.lastIndexOf("@");
   return at > 0 ? [normalized, normalized.slice(0, at)] : [normalized];
 }
@@ -40,7 +42,9 @@ export async function checkMasterPassword(
   breachLookup: BreachLookup,
 ): Promise<MasterPasswordIssue | null> {
   const issue = masterPasswordIssue(password, email);
-  if (issue) return issue;
+  if (issue) {
+    return issue;
+  }
   let count: number;
   try {
     count = await breachLookup(password);

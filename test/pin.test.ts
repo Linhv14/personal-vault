@@ -7,12 +7,16 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     },
     set: async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     },
     remove: async (key: string) => void store.delete(key),
     clear: async () => store.clear(),
@@ -38,7 +42,9 @@ vi.stubGlobal(
   vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input)).pathname;
     const body = init?.body ? (JSON.parse(String(init.body)) as { verifier: string }) : null;
-    if (body) server.seen.push(body.verifier);
+    if (body) {
+      server.seen.push(body.verifier);
+    }
     if (path === "/api/auth/pin" && init?.method === "PUT") {
       server.verifier = body!.verifier;
       server.pinKey = toBase64(crypto.getRandomValues(new Uint8Array(32)));
@@ -50,7 +56,9 @@ vi.stubGlobal(
       return json({ ok: true });
     }
     if (path === "/api/auth/pin/unlock") {
-      if (!server.verifier) return json({ code: "auth.pin_off" }, 410);
+      if (!server.verifier) {
+        return json({ code: "auth.pin_off" }, 410);
+      }
       server.attempts += 1;
       if (body!.verifier === server.verifier) {
         server.attempts = 0;
@@ -92,7 +100,9 @@ describe("PIN unlock", () => {
     expect(await getUnlocked()).toMatchObject({ vaultKeyRaw: VAULT_KEY, token: "session-token" });
 
     const stored = JSON.stringify([...localArea.values()]);
-    for (const leak of ["482913", VAULT_KEY, server.pinKey]) expect(stored).not.toContain(leak);
+    for (const leak of ["482913", VAULT_KEY, server.pinKey]) {
+      expect(stored).not.toContain(leak);
+    }
     expect(server.seen.every((sent) => sent !== "482913")).toBe(true);
   });
 

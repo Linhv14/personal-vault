@@ -38,8 +38,12 @@ interface Person {
 
 async function api(path: string, init: RequestInit & { token?: string } = {}) {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null, text };
@@ -279,7 +283,9 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
     const posts: string[] = [];
     const original = globalThis.fetch;
     globalThis.fetch = (input, init) => {
-      if (init?.method === "POST") posts.push(new URL(String(input)).pathname);
+      if (init?.method === "POST") {
+        posts.push(new URL(String(input)).pathname);
+      }
       return original(input, init);
     };
     try {
@@ -364,7 +370,9 @@ describe.skipIf(!enabled)("projects and secrets against Worker + Durable Objects
   it("lets the free plan keep adding projects", async () => {
     as(owner);
     const current = await teamAs(owner);
-    for (let n = 0; n < 5; n++) await createProject(orgId, current, owner.identity, `P${n}`);
+    for (let n = 0; n < 5; n++) {
+      await createProject(orgId, current, owner.identity, `P${n}`);
+    }
   });
 
   it("deletes a project with its secrets and logs every step without names or values", async () => {

@@ -10,9 +10,13 @@ import {
 type Der = Buffer;
 
 function length(size: number): Buffer {
-  if (size < 0x80) return Buffer.from([size]);
+  if (size < 0x80) {
+    return Buffer.from([size]);
+  }
   const bytes: number[] = [];
-  for (let rest = size; rest > 0; rest >>= 8) bytes.unshift(rest & 0xff);
+  for (let rest = size; rest > 0; rest >>= 8) {
+    bytes.unshift(rest & 0xff);
+  }
   return Buffer.from([0x80 | bytes.length, ...bytes]);
 }
 
@@ -38,7 +42,9 @@ function oid(dotted: string): Der {
   const bytes = [first * 40 + second];
   for (const part of rest) {
     const chunk = [part & 0x7f];
-    for (let value = part >> 7; value > 0; value >>= 7) chunk.unshift((value & 0x7f) | 0x80);
+    for (let value = part >> 7; value > 0; value >>= 7) {
+      chunk.unshift((value & 0x7f) | 0x80);
+    }
     bytes.push(...chunk);
   }
   return tlv(0x06, Buffer.from(bytes));
@@ -137,7 +143,9 @@ export function createAuthority(label = "7key agent session"): Authority {
     key: pair.privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
     issue(hostname) {
       const known = issued.get(hostname);
-      if (known) return known;
+      if (known) {
+        return known;
+      }
       const result = {
         key: leafKey,
         cert: certificate({

@@ -3,7 +3,9 @@ import { InvalidField, readEditedFields } from "../extension/popup/edit-fields.j
 
 function form(entries: [string, string][]): FormData {
   const data = new FormData();
-  for (const [key, value] of entries) data.append(key, value);
+  for (const [key, value] of entries) {
+    data.append(key, value);
+  }
   return data;
 }
 

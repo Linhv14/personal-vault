@@ -16,7 +16,9 @@ declare global {
 let loading: Promise<TurnstileApi> | null = null;
 
 function loadTurnstile(): Promise<TurnstileApi> {
-  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (window.turnstile) {
+    return Promise.resolve(window.turnstile);
+  }
   loading ??= new Promise<TurnstileApi>((resolve, reject) => {
     const script = document.createElement("script");
     script.src = SCRIPT_URL;
@@ -36,7 +38,9 @@ function loadTurnstile(): Promise<TurnstileApi> {
 export function turnstileSlot(): HTMLElement {
   const slots = [...document.querySelectorAll<HTMLElement>(SLOT_SELECTOR)];
   const visible = slots.find((slot) => !slot.closest("[hidden]"));
-  if (visible) return visible;
+  if (visible) {
+    return visible;
+  }
   const fallback = document.createElement("div");
   fallback.dataset.turnstile = "";
   fallback.className = "turnstile-slot";
@@ -66,7 +70,9 @@ export async function turnstileToken(
       });
     });
   } finally {
-    if (widgetId !== undefined) api.remove(widgetId);
+    if (widgetId !== undefined) {
+      api.remove(widgetId);
+    }
     host.remove();
   }
 }

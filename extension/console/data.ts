@@ -81,7 +81,9 @@ export async function attempt(
   work: () => Promise<unknown>,
   describe: (failure: unknown) => string,
 ): Promise<boolean> {
-  if (pending$.value) return false;
+  if (pending$.value) {
+    return false;
+  }
   failure$.value = null;
   pending$.value = true;
   try {
@@ -89,8 +91,11 @@ export async function attempt(
     return true;
   } catch (failure) {
     const message = describe(failure);
-    if (dialogOpen()) failure$.value = message;
-    else toast(message, "error");
+    if (dialogOpen()) {
+      failure$.value = message;
+    } else {
+      toast(message, "error");
+    }
     return false;
   } finally {
     pending$.value = false;
@@ -125,7 +130,9 @@ export const ConsoleContext = createContext<ConsoleData | null>(null);
 
 export function useConsole(): ConsoleData {
   const value = useContext(ConsoleContext);
-  if (!value) throw new Error("useConsole outside the console");
+  if (!value) {
+    throw new Error("useConsole outside the console");
+  }
   return value;
 }
 
@@ -175,7 +182,9 @@ export function useConsoleLoader(identity: Identity) {
 
   const fetchOrg = async () => {
     const orgId = location$.value.orgId ?? lastOrgId;
-    if (!orgId || orgId !== detail?.org.id) return fetchAll();
+    if (!orgId || orgId !== detail?.org.id) {
+      return fetchAll();
+    }
     const next = await getOrg(orgId);
     const opened = await projectsOf(next);
     setDetail(next);
@@ -196,7 +205,9 @@ export function useConsoleLoader(identity: Identity) {
     const succeeded = await attempt(
       async () => {
         await work();
-        if (done) toast(t(done));
+        if (done) {
+          toast(t(done));
+        }
         await reload(scope);
       },
       (failure) => describeError(failure, t),

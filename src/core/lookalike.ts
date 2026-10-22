@@ -183,9 +183,15 @@ function adapt(delta: number, points: number, first: boolean): number {
 }
 
 function digitOf(code: number): number {
-  if (code >= 48 && code <= 57) return code - 22;
-  if (code >= 65 && code <= 90) return code - 65;
-  if (code >= 97 && code <= 122) return code - 97;
+  if (code >= 48 && code <= 57) {
+    return code - 22;
+  }
+  if (code >= 65 && code <= 90) {
+    return code - 65;
+  }
+  if (code >= 97 && code <= 122) {
+    return code - 97;
+  }
   return BASE;
 }
 
@@ -194,7 +200,9 @@ export function decodePunycode(input: string): string | null {
   const split = input.lastIndexOf("-");
   for (let index = 0; index < Math.max(split, 0); index++) {
     const code = input.charCodeAt(index);
-    if (code >= 0x80) return null;
+    if (code >= 0x80) {
+      return null;
+    }
     output.push(code);
   }
   let n = 128;
@@ -204,20 +212,30 @@ export function decodePunycode(input: string): string | null {
     const oldi = i;
     let w = 1;
     for (let k = BASE; ; k += BASE) {
-      if (index >= input.length) return null;
+      if (index >= input.length) {
+        return null;
+      }
       const digit = digitOf(input.charCodeAt(index++));
-      if (digit >= BASE) return null;
+      if (digit >= BASE) {
+        return null;
+      }
       i += digit * w;
       const threshold = k <= bias ? T_MIN : k >= bias + T_MAX ? T_MAX : k - bias;
-      if (digit < threshold) break;
+      if (digit < threshold) {
+        break;
+      }
       w *= BASE - threshold;
-      if (!Number.isSafeInteger(i) || !Number.isSafeInteger(w)) return null;
+      if (!Number.isSafeInteger(i) || !Number.isSafeInteger(w)) {
+        return null;
+      }
     }
     const length = output.length + 1;
     bias = adapt(i - oldi, length, oldi === 0);
     n += Math.floor(i / length);
     i %= length;
-    if (n > 0x10ffff) return null;
+    if (n > 0x10ffff) {
+      return null;
+    }
     output.splice(i, 0, n);
     i++;
   }
@@ -242,7 +260,9 @@ export function skeleton(text: string): string {
 
 function cleanHost(raw: string): string | null {
   let host = raw.trim().toLowerCase();
-  if (!host) return null;
+  if (!host) {
+    return null;
+  }
   if (host.includes("://") || host.includes("/")) {
     try {
       host = new URL(host.includes("://") ? host : `https://${host}`).hostname;
@@ -251,7 +271,9 @@ function cleanHost(raw: string): string | null {
     }
   }
   host = host.replace(/\.$/, "").replace(/^www\./, "");
-  if (!host.includes(".") || /^[\d.]+$/.test(host) || host.includes(":")) return null;
+  if (!host.includes(".") || /^[\d.]+$/.test(host) || host.includes(":")) {
+    return null;
+  }
   return host;
 }
 
@@ -265,19 +287,24 @@ interface Domain {
 
 function parseDomain(raw: string): Domain | null {
   const host = cleanHost(raw);
-  if (!host) return null;
+  if (!host) {
+    return null;
+  }
   const labels = host.split(".");
   let suffixLength = 1;
   const lastTwo = labels.slice(-2).join(".");
-  if (labels.length >= 3 && SHARED_HOSTING.has(lastTwo)) suffixLength = 2;
-  else if (
+  if (labels.length >= 3 && SHARED_HOSTING.has(lastTwo)) {
+    suffixLength = 2;
+  } else if (
     labels.length >= 3 &&
     labels.at(-1)!.length === 2 &&
     TWO_PART_SECOND.has(labels.at(-2)!)
   ) {
     suffixLength = 2;
   }
-  if (labels.length <= suffixLength) return null;
+  if (labels.length <= suffixLength) {
+    return null;
+  }
   const registrableLabels = labels.slice(-(suffixLength + 1));
   return {
     host,
@@ -308,7 +335,9 @@ export function damerauLevenshtein(a: string, b: string): number {
 }
 
 function tldsComparable(page: Domain, target: Domain): boolean {
-  if (page.suffix === target.suffix) return true;
+  if (page.suffix === target.suffix) {
+    return true;
+  }
   return SWAPPABLE_TLDS.has(page.suffix) && SWAPPABLE_TLDS.has(target.suffix);
 }
 
@@ -318,13 +347,19 @@ function distinctive(label: string): boolean {
 
 function confusable(page: Domain, target: Domain): boolean {
   const unicode = parseDomain(unicodeHost(page.host));
-  if (!unicode || !distinctive(target.label) || unicode.label === target.label) return false;
-  if (!tldsComparable(unicode, target)) return false;
+  if (!unicode || !distinctive(target.label) || unicode.label === target.label) {
+    return false;
+  }
+  if (!tldsComparable(unicode, target)) {
+    return false;
+  }
   return skeleton(unicode.label) === skeleton(target.label);
 }
 
 function embedded(page: Domain, target: Domain): boolean {
-  if (!distinctive(target.label) || page.label === target.label) return false;
+  if (!distinctive(target.label) || page.label === target.label) {
+    return false;
+  }
   const wanted = skeleton(target.label);
   const tokens = [...page.subdomain, page.label]
     .map((label) => unicodeHost(label))
@@ -333,8 +368,12 @@ function embedded(page: Domain, target: Domain): boolean {
 }
 
 function typo(page: Domain, target: Domain): boolean {
-  if (!distinctive(target.label) || !tldsComparable(page, target)) return false;
-  if (page.label === target.label) return page.suffix !== target.suffix;
+  if (!distinctive(target.label) || !tldsComparable(page, target)) {
+    return false;
+  }
+  if (page.label === target.label) {
+    return page.suffix !== target.suffix;
+  }
   const limit = target.label.length >= LONG_LABEL ? 2 : 1;
   return damerauLevenshtein(page.label, target.label) <= limit;
 }
@@ -347,17 +386,25 @@ const CHECKS: readonly (readonly [LookalikeReason, (page: Domain, target: Domain
 
 export function findLookalike(pageHost: string, savedDomains: string[]): LookalikeMatch | null {
   const page = parseDomain(pageHost);
-  if (!page) return null;
+  if (!page) {
+    return null;
+  }
   const targets = new Map<string, Domain>();
   for (const raw of savedDomains) {
     const domain = parseDomain(raw);
-    if (domain) targets.set(domain.registrable, domain);
+    if (domain) {
+      targets.set(domain.registrable, domain);
+    }
   }
-  if (targets.has(page.registrable)) return null;
+  if (targets.has(page.registrable)) {
+    return null;
+  }
   const sorted = [...targets.values()].sort((a, b) => a.registrable.localeCompare(b.registrable));
   for (const [reason, check] of CHECKS) {
     const hit = sorted.find((target) => check(page, target));
-    if (hit) return { kind: "lookalike", target: hit.registrable, reason };
+    if (hit) {
+      return { kind: "lookalike", target: hit.registrable, reason };
+    }
   }
   return null;
 }

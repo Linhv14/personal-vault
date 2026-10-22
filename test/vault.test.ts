@@ -8,15 +8,21 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     },
     set: async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     },
     remove: async (keys: string | string[]) => {
-      for (const key of typeof keys === "string" ? [keys] : keys) store.delete(key);
+      for (const key of typeof keys === "string" ? [keys] : keys) {
+        store.delete(key);
+      }
     },
     clear: async () => store.clear(),
   };

@@ -23,7 +23,9 @@ async function readCapped(body: ReadableStream<Uint8Array>, max: number) {
   let size = 0;
   for (;;) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) {
+      break;
+    }
     size += value.byteLength;
     if (size > max) {
       await reader.cancel();
@@ -49,7 +51,9 @@ async function fetchImage(url: string): Promise<{ body: ArrayBuffer; type: strin
     return null;
   }
   const body = await readCapped(response.body, LOGO_MAX_BYTES);
-  if (!body || body.byteLength === 0) return null;
+  if (!body || body.byteLength === 0) {
+    return null;
+  }
   return { body, type };
 }
 
@@ -57,11 +61,15 @@ export async function fetchLogo(domain: string): Promise<Response | null> {
   const cache = (caches as CacheStorage & { default: Cache }).default;
   const key = new Request(`https://logo-cache.invalid/${domain}`);
   const cached = await cache.match(key);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   for (const source of logoSources(domain)) {
     const image = await fetchImage(source).catch(() => null);
-    if (!image) continue;
+    if (!image) {
+      continue;
+    }
     const response = new Response(image.body, {
       headers: {
         "Content-Type": image.type,

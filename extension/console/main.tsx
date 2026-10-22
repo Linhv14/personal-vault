@@ -50,7 +50,9 @@ function ExtensionConsole() {
   };
 
   const vaultKey = vaultKeySignal.value;
-  if (!vaultKey) return <Locked />;
+  if (!vaultKey) {
+    return <Locked />;
+  }
   return (
     <ConsoleHost
       vaultKey={vaultKey}
@@ -67,5 +69,7 @@ function ExtensionConsole() {
 }
 
 const root = document.getElementById("app");
-if (!root) throw new Error("Missing #app");
+if (!root) {
+  throw new Error("Missing #app");
+}
 render(<ExtensionConsole />, root);

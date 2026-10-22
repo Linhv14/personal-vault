@@ -15,8 +15,12 @@ const enabled = process.env.VAULT_E2E === "1";
 
 async function api(path: string, init: RequestInit & { token?: string } = {}) {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };
@@ -450,7 +454,9 @@ describe.skipIf(!enabled)("organizations and teams against Worker + D1 + Durable
         }),
       });
     };
-    for (let n = 0; n < 4; n++) expect((await create()).status).toBe(201);
+    for (let n = 0; n < 4; n++) {
+      expect((await create()).status).toBe(201);
+    }
   });
 
   it("hands ownership to another member, and only the owner can", async () => {

@@ -55,7 +55,9 @@ const KEY_ICON: Partial<Record<string, IconName>> = {
 
 function fieldIcon(spec: FieldSpec): IconName {
   const byKey = KEY_ICON[spec.key];
-  if (byKey) return byKey;
+  if (byKey) {
+    return byKey;
+  }
   switch (spec.kind) {
     case "password":
     case "secret":
@@ -76,9 +78,13 @@ const SEPARATE_KEYS = new Set(["url", "note", "codes"]);
 
 function MainRow({ spec, item }: { spec: FieldSpec; item: VaultItem }) {
   const t = useT();
-  if (spec.key === "totp") return item.totp ? <TotpRow config={item.totp} /> : null;
+  if (spec.key === "totp") {
+    return item.totp ? <TotpRow config={item.totp} /> : null;
+  }
   const value = item[spec.key as keyof VaultItem];
-  if (typeof value !== "string" || !value) return null;
+  if (typeof value !== "string" || !value) {
+    return null;
+  }
   const label = t(spec.label);
   const icon = fieldIcon(spec);
   switch (spec.kind) {
@@ -177,7 +183,9 @@ function PasswordHistory({ item }: { item: VaultItem }) {
   const t = useT();
   const [opened, setOpened] = useState(false);
   const history = item.passwordHistory ?? [];
-  if (history.length === 0) return null;
+  if (history.length === 0) {
+    return null;
+  }
   return (
     <details className="group history" onToggle={() => setOpened(true)}>
       <summary>

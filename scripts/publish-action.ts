@@ -35,7 +35,9 @@ try {
   cpSync(path.join(root, "action", "action.yml"), path.join(work, "action.yml"));
   cpSync(path.join(root, "action", "README.md"), path.join(work, "README.md"));
   cpSync(path.join(root, "action", "dist", "index.mjs"), path.join(work, "dist", "index.mjs"));
-  for (const file of ["LICENSE", "NOTICE"]) cpSync(path.join(root, file), path.join(work, file));
+  for (const file of ["LICENSE", "NOTICE"]) {
+    cpSync(path.join(root, file), path.join(work, file));
+  }
 
   const tag = `v${version}`;
   run("git", ["add", "-A"], work);

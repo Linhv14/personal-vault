@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../src/ui/form-data.js";
 import type { MasterPasswordIssue } from "../src/core/master-password.js";
 import { previewInvite, type InvitePreview } from "../extension/lib/orgs.js";
 import * as api from "../extension/lib/api.js";
@@ -34,12 +35,16 @@ export function SignIn() {
   const [secondFactor, setSecondFactor] = useState<PendingSignIn | null>(null);
 
   useEffect(() => {
-    if (!inviteId) return;
+    if (!inviteId) {
+      return;
+    }
     void Promise.all([previewInvite(inviteId), api.serverConfig(location.origin)]).then(
       ([preview, config]) => {
         setInvite(preview);
         setVerification(config.emailVerification);
-        if (preview && !preview.hasAccount) setMode("register");
+        if (preview && !preview.hasAccount) {
+          setMode("register");
+        }
       },
     );
   }, [inviteId]);
@@ -54,12 +59,12 @@ export function SignIn() {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
     const data = new FormData(form);
-    const email = invite ? invite.email : String(data.get("email")).trim();
-    const password = String(data.get("password") ?? "");
+    const email = invite ? invite.email : formText(data, "email").trim();
+    const password = formText(data, "password");
     setError(null);
 
     if (mode === "register") {
-      if (password !== String(data.get("confirm"))) {
+      if (password !== formText(data, "confirm")) {
         setError(t("setup.password_mismatch"));
         return;
       }
@@ -76,7 +81,7 @@ export function SignIn() {
           setCodeSent(true);
           return;
         }
-        const code = verification ? String(data.get("code")).trim() : undefined;
+        const code = verification ? formText(data, "code").trim() : undefined;
         await registerFromInvite(email, password, inviteId ?? "", code);
       } catch (failure) {
         setError(describeError(failure, t));
@@ -89,7 +94,9 @@ export function SignIn() {
     const field = form.elements.namedItem("password") as HTMLInputElement | null;
     setWorking(true);
     try {
-      if (field) field.value = "";
+      if (field) {
+        field.value = "";
+      }
       setSecondFactor(await signIn(email, password));
     } catch (failure) {
       setError(describeError(failure, t));

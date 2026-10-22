@@ -24,13 +24,17 @@ function SiteLogo({ domain, fallback }: { domain: string; fallback: ComponentChi
     let current = true;
     setSrc(knownLogo(domain) ?? null);
     void logoFor(domain).then((url) => {
-      if (current) setSrc(url);
+      if (current) {
+        setSrc(url);
+      }
     });
     return () => {
       current = false;
     };
   }, [domain]);
-  if (!src) return <>{fallback}</>;
+  if (!src) {
+    return <>{fallback}</>;
+  }
   return (
     <span className="avatar site-logo">
       <img src={src} alt="" />

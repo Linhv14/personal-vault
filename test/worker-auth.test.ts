@@ -7,6 +7,13 @@ import { deviceKind, deviceLabel } from "../src/worker/device-label.js";
 import { newSignInEmail } from "../src/worker/emails.js";
 import { securityTxt } from "../src/worker/security-headers.js";
 import { accountDelayMs, pairDelaySeconds } from "../src/worker/throttle-policy.js";
+import {
+  numberField,
+  objectArrayField,
+  objectField,
+  readJsonObject,
+  stringField,
+} from "./helpers.js";
 import { REGISTRATION_TOKEN, startWorker, type TestWorker } from "./worker-harness.js";
 
 const CHROME_MAC =
@@ -36,7 +43,7 @@ async function register(worker: TestWorker, email: string, data: AccountRecord, 
 }
 
 async function tokenOf(response: Response): Promise<string> {
-  return ((await response.json()) as { token: string }).token;
+  return stringField(await readJsonObject(response), "token");
 }
 
 async function login(
@@ -52,7 +59,7 @@ async function login(
     ip: options.ip,
     headers: options.headers,
   });
-  return { status: response.status, body: (await response.json()) as any };
+  return { status: response.status, body: await readJsonObject(response) };
 }
 
 async function insertAccount(
@@ -142,8 +149,9 @@ describe("login throttling", () => {
     while (waits.length < 4) {
       const result = await login(worker, "owner@example.com", wrongKey(), { ip: attacker });
       if (result.status === 429) {
-        waits.push(result.body.params.seconds);
-        clock += result.body.params.seconds;
+        const seconds = numberField(objectField(result.body, "params"), "seconds");
+        waits.push(seconds);
+        clock += seconds;
         setTime(clock);
       } else {
         expect(result.status).toBe(401);
@@ -188,7 +196,9 @@ describe("login throttling", () => {
         json: { email: "owner@example.com", recoveryAuthKey: wrongKey() },
         ip,
       });
-    for (let i = 0; i < 6; i++) expect((await attempt("198.51.100.9")).status).toBe(401);
+    for (let i = 0; i < 6; i++) {
+      expect((await attempt("198.51.100.9")).status).toBe(401);
+    }
     expect((await attempt("198.51.100.9")).status).toBe(429);
     expect((await attempt("203.0.113.60")).status).toBe(401);
     const password = await login(worker, "owner@example.com", owner.authKey, {
@@ -238,13 +248,13 @@ describe("KDF floor", () => {
     const upgraded = record();
     const change = await worker.fetch("/api/auth/change-password", {
       method: "POST",
-      token: mine.body.token,
+      token: stringField(mine.body, "token"),
       json: { currentAuthKey: old.authKey, ...upgraded, keepSession: true },
     });
     expect(change.status).toBe(200);
     const sessions = (token: string) => worker.fetch("/api/auth/sessions", { token });
-    expect((await sessions(mine.body.token)).status).toBe(200);
-    expect((await sessions(other.body.token)).status).toBe(401);
+    expect((await sessions(stringField(mine.body, "token"))).status).toBe(200);
+    expect((await sessions(stringField(other.body, "token"))).status).toBe(401);
     const again = await login(worker, "old@example.com", upgraded.authKey);
     expect(again.body).not.toHaveProperty("upgradeKdf");
   });
@@ -310,7 +320,8 @@ describe("account enumeration", () => {
         method: "POST",
         json: { email, recoveryAuthKey: wrongKey() },
       });
-      return { status: response.status, body: await response.json() };
+      const body: unknown = await response.json();
+      return { status: response.status, body };
     };
     expect(await attempt("nobody@example.com")).toEqual(await attempt("owner@example.com"));
   });
@@ -351,7 +362,7 @@ describe("uniform responses", () => {
       });
       const seen = {
         status: response.status,
-        body: await response.json(),
+        body: (await response.json()) as unknown,
         background: worker.pending.length,
         mailedBeforeAnswer: worker.mail.length - mailed,
       };
@@ -384,7 +395,7 @@ describe("uniform responses", () => {
       });
       const seen = {
         status: response.status,
-        body: await response.json(),
+        body: (await response.json()) as unknown,
         background: worker.pending.length,
       };
       release();
@@ -458,7 +469,9 @@ describe("security headers", () => {
 
     const worker = await startWorker();
     const response = await worker.fetch("/s/abc");
-    for (const [name, value] of declared) expect(response.headers.get(name), name).toBe(value);
+    for (const [name, value] of declared) {
+      expect(response.headers.get(name), name).toBe(value);
+    }
     expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(await response.text()).toContain("https://vault.test");
   });
@@ -503,28 +516,35 @@ describe("sessions", () => {
     const mine = await login(worker, "owner@example.com", owner.authKey);
     const sessions = (token: string) => worker.fetch("/api/auth/sessions", { token });
 
-    const list = (await (await sessions(mine.body.token)).json()) as { sessions: any[] };
-    expect(list.sessions).toHaveLength(4);
-    expect(list.sessions[0]).toMatchObject({ current: true, label: "Chrome · macOS" });
-    expect(list.sessions.filter((session) => session.current)).toHaveLength(1);
-    const cliSession = list.sessions.find((session) => session.kind === "cli");
+    const list = await readJsonObject(await sessions(stringField(mine.body, "token")));
+    const sessionRows = objectArrayField(list, "sessions");
+    expect(sessionRows).toHaveLength(4);
+    expect(sessionRows[0]).toMatchObject({ current: true, label: "Chrome · macOS" });
+    expect(sessionRows.filter((session) => session.current === true)).toHaveLength(1);
+    const cliSession = sessionRows.find((session) => session.kind === "cli");
+    if (!cliSession) {
+      throw new Error("Expected a CLI session");
+    }
     expect(cliSession).toMatchObject({ label: "7key CLI", createdAt: T0 });
-    expect(JSON.stringify(list)).not.toContain(cli.body.token);
+    expect(JSON.stringify(list)).not.toContain(stringField(cli.body, "token"));
 
     const revoke = (id: string) =>
-      worker.fetch(`/api/auth/sessions/${id}`, { method: "DELETE", token: mine.body.token });
-    expect((await revoke(cliSession.id)).status).toBe(200);
-    expect((await sessions(cli.body.token)).status).toBe(401);
-    expect((await revoke(cliSession.id)).status).toBe(404);
+      worker.fetch(`/api/auth/sessions/${id}`, {
+        method: "DELETE",
+        token: stringField(mine.body, "token"),
+      });
+    expect((await revoke(stringField(cliSession, "id"))).status).toBe(200);
+    expect((await sessions(stringField(cli.body, "token"))).status).toBe(401);
+    expect((await revoke(stringField(cliSession, "id"))).status).toBe(404);
 
     const others = await worker.fetch("/api/auth/sessions/revoke-others", {
       method: "POST",
-      token: mine.body.token,
+      token: stringField(mine.body, "token"),
     });
     expect(await others.json()).toEqual({ ok: true, revoked: 2 });
-    expect((await sessions(firefox.body.token)).status).toBe(401);
-    const remaining = (await (await sessions(mine.body.token)).json()) as { sessions: any[] };
-    expect(remaining.sessions).toHaveLength(1);
+    expect((await sessions(stringField(firefox.body, "token"))).status).toBe(401);
+    const remaining = await readJsonObject(await sessions(stringField(mine.body, "token")));
+    expect(objectArrayField(remaining, "sessions")).toHaveLength(1);
   });
 
   it("cannot revoke someone else's session", async () => {
@@ -546,7 +566,10 @@ describe("sessions", () => {
     const worker = await startWorker();
     const owner = record();
     const idle = await tokenOf(await register(worker, "owner@example.com", owner));
-    const busy = (await login(worker, "owner@example.com", owner.authKey)).body.token as string;
+    const busy = stringField(
+      (await login(worker, "owner@example.com", owner.authKey)).body,
+      "token",
+    );
     const sessions = (token: string) => worker.fetch("/api/auth/sessions", { token });
 
     for (const day of [10, 20]) {

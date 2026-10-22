@@ -103,7 +103,9 @@ export function foldText(text: string): string {
 
 export function countryOf(value: string | undefined): Country | undefined {
   const folded = foldText(value ?? "");
-  if (!folded) return undefined;
+  if (!folded) {
+    return undefined;
+  }
   return COUNTRIES.find(
     (country) =>
       foldText(country.code) === folded || country.names.some((name) => foldText(name) === folded),
@@ -112,14 +114,20 @@ export function countryOf(value: string | undefined): Country | undefined {
 
 export function regionNames(value: string | undefined): string[] {
   const folded = foldText(value ?? "");
-  if (!folded) return [];
+  if (!folded) {
+    return [];
+  }
   const state = US_STATES.find(
     ([code, name]) => foldText(code) === folded || foldText(name) === folded,
   );
   const bare = folded.replace(REGION_PREFIX, "");
   const names = state ? [foldText(state[0]), foldText(state[1])] : [folded];
-  if (bare !== folded) names.push(bare);
-  if (bare === "ho chi minh") names.push("hcm", "tp hcm", "sai gon");
+  if (bare !== folded) {
+    names.push(bare);
+  }
+  if (bare === "ho chi minh") {
+    names.push("hcm", "tp hcm", "sai gon");
+  }
   return [...new Set(names)];
 }
 

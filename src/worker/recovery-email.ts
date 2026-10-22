@@ -21,7 +21,9 @@ export async function issueRecoveryEmailCode(
   )
     .bind(accountId)
     .first<{ sent_at: number }>();
-  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) return "cooldown";
+  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) {
+    return "cooldown";
+  }
 
   const code = generateCode();
   await env.DB.prepare(
@@ -60,12 +62,16 @@ export async function checkRecoveryEmailCode(
   )
     .bind(accountId)
     .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) return "expired";
+  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) {
+    return "expired";
+  }
   const matches = timingSafeEqual(
     utf8Encode(await codeHash(env, accountId, code)),
     utf8Encode(row.code_hash),
   );
-  if (matches) return "ok";
+  if (matches) {
+    return "ok";
+  }
   await env.DB.prepare(
     "UPDATE recovery_email_codes SET attempts = attempts + 1 WHERE account_id = ?",
   )

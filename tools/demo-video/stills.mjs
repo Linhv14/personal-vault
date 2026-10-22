@@ -1,9 +1,7 @@
-import { launch, sleep } from "./cdp.mjs";
+import { launch } from "./cdp.mjs";
 import { TIDY } from "./tidy.mjs";
-import { BASE, DEMO } from "./config.mjs";
+import { BASE } from "./config.mjs";
 const OUT = process.argv[2];
-const ORG = DEMO.org;
-const PROJECT = DEMO.project;
 const b = await launch(9336);
 try {
   for (const locale of ["en", "vi"]) {

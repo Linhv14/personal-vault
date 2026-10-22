@@ -9,7 +9,9 @@ export async function scheduleClipboardClear(): Promise<void> {
 }
 
 export async function clearClipboardNow(): Promise<void> {
-  if (!chrome.offscreen) return;
+  if (!chrome.offscreen) {
+    return;
+  }
 
   const existing = await chrome.runtime.getContexts({
     contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],

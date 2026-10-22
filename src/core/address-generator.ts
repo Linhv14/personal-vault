@@ -259,7 +259,9 @@ const VN_MOBILE = [
 function usExchange(): string {
   for (;;) {
     const exchange = `${2 + randomInt(8)}${digits(2)}`;
-    if (exchange !== "555" && !exchange.endsWith("11")) return exchange;
+    if (exchange !== "555" && !exchange.endsWith("11")) {
+      return exchange;
+    }
   }
 }
 

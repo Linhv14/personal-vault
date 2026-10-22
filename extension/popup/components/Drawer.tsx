@@ -94,7 +94,9 @@ export function Drawer() {
     <div
       className="drawer-backdrop"
       onClick={(event) => {
-        if (event.target === event.currentTarget) close();
+        if (event.target === event.currentTarget) {
+          close();
+        }
       }}
     >
       <nav className="drawer" ref={ref} aria-label={t("list.menu")}>

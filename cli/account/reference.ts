@@ -68,14 +68,18 @@ export async function injectTemplate<T extends { secrets: SecretContent[] }>(
       scopes.set(
         key,
         load(scope).catch((error: unknown) => {
-          if (error instanceof AgentError) return error;
+          if (error instanceof AgentError) {
+            return error;
+          }
           throw error;
         }),
       );
     }
   }
   const results = new Map<string, T | Error>();
-  for (const [key, pending] of scopes) results.set(key, await pending);
+  for (const [key, pending] of scopes) {
+    results.set(key, await pending);
+  }
 
   const missing = new Set<string>();
   const values = new Map<string, string>();
@@ -86,8 +90,11 @@ export async function injectTemplate<T extends { secrets: SecretContent[] }>(
       continue;
     }
     const secret = result.secrets.find((entry) => entry.name === reference.name);
-    if (secret) values.set(reference.text, secret.value);
-    else missing.add(reference.text);
+    if (secret) {
+      values.set(reference.text, secret.value);
+    } else {
+      missing.add(reference.text);
+    }
   }
 
   let count = 0;

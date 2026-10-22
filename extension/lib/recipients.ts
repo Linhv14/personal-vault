@@ -17,10 +17,15 @@ export function addRecipients(current: readonly string[], raw: string): Recipien
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
   for (const entry of entries) {
-    if (!EMAIL_PATTERN.test(entry)) rejected.push(entry);
-    else if (recipients.includes(entry)) continue;
-    else if (recipients.length >= MAX_SHARE_RECIPIENTS) overflow = true;
-    else recipients.push(entry);
+    if (!EMAIL_PATTERN.test(entry)) {
+      rejected.push(entry);
+    } else if (recipients.includes(entry)) {
+      continue;
+    } else if (recipients.length >= MAX_SHARE_RECIPIENTS) {
+      overflow = true;
+    } else {
+      recipients.push(entry);
+    }
   }
   return { recipients, rejected, overflow };
 }

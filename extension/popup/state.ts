@@ -104,7 +104,9 @@ function setItems(next: VaultItem[]): void {
 let vaultRecords: VaultItem[] = [];
 
 export async function reloadItems(): Promise<void> {
-  if (!vaultKey.value) return;
+  if (!vaultKey.value) {
+    return;
+  }
   const {
     items: next,
     system,
@@ -130,7 +132,9 @@ export function newItemVault(): string {
 
 async function storeVaults(next: VaultDef[]): Promise<void> {
   const key = vaultKey.value;
-  if (!key) return;
+  if (!key) {
+    return;
+  }
   const [newest, ...older] = [...vaultRecords].sort((a, b) => b.updatedAt - a.updatedAt);
   await saveItem(key, {
     id: newest?.id ?? newItemId(),
@@ -139,7 +143,9 @@ async function storeVaults(next: VaultDef[]): Promise<void> {
     vaults: next.filter((vault) => !vault.shared),
     createdAt: newest?.createdAt,
   });
-  for (const record of older) await removeItem(record.id);
+  for (const record of older) {
+    await removeItem(record.id);
+  }
   await reloadItems();
 }
 
@@ -168,7 +174,9 @@ async function rewriteItems(
   change: (item: VaultItem) => Omit<VaultItem, "createdAt" | "updatedAt">,
 ): Promise<number> {
   const key = vaultKey.value;
-  if (!key) return 0;
+  if (!key) {
+    return 0;
+  }
   const affected = items.value.filter((item) => vaultOf(item) === vaultId);
   vaultBusy.value = true;
   try {
@@ -206,8 +214,12 @@ export async function moveVaultItems(from: VaultDef, to: VaultDef): Promise<void
 export async function deleteVault(vault: VaultDef): Promise<void> {
   const t = translator();
   const key = vaultKey.value;
-  if (!key || vault.id === DEFAULT_VAULT_ID || vault.shared) return;
-  if (!confirm(t("vault.delete_confirm", { name: vault.name }))) return;
+  if (!key || vault.id === DEFAULT_VAULT_ID || vault.shared) {
+    return;
+  }
+  if (!confirm(t("vault.delete_confirm", { name: vault.name }))) {
+    return;
+  }
   const now = Math.floor(nowMs() / 1000);
   await rewriteItems(vault.id, (item) => ({
     ...withoutTimestamps(item),
@@ -231,7 +243,9 @@ export async function enterVault(rawBase64: string): Promise<void> {
   showList();
   const focus = await takeItemFocus();
   const focused = items.value.find((item) => item.id === focus);
-  if (focused) openEditor(focused);
+  if (focused) {
+    openEditor(focused);
+  }
   void backgroundSync();
   void ensureIdentity(vaultKey.value).catch(() => {});
 }
@@ -254,7 +268,9 @@ async function backgroundSync(): Promise<void> {
           ? (await migrateUnboundItems(key)) +
             (await purgeExpiredTrash(key, Math.floor(nowMs() / 1000)).catch(() => 0))
           : 0);
-      if (changed > 0) await reloadItems();
+      if (changed > 0) {
+        await reloadItems();
+      }
     }
   } catch (error) {
     syncProblem.value = { kind: "failed", message: describeError(error, t) };
@@ -264,7 +280,9 @@ async function backgroundSync(): Promise<void> {
   }
 
   const skew = await api.measureClockSkew();
-  if (skew === null) return;
+  if (skew === null) {
+    return;
+  }
   clockSkew.value = skew;
   await setLocal({ clockSkew: skew });
   clockWarning.value =
@@ -327,7 +345,9 @@ function withoutTimestamps(item: VaultItem): Omit<VaultItem, "createdAt" | "upda
 }
 
 async function replaceItem(draft: Omit<VaultItem, "createdAt" | "updatedAt">): Promise<void> {
-  if (!vaultKey.value) return;
+  if (!vaultKey.value) {
+    return;
+  }
   const saved = await saveItem(vaultKey.value, draft, draft);
   items.value = items.value.map((candidate) => (candidate.id === saved.id ? saved : candidate));
 }
@@ -358,7 +378,9 @@ export async function setTrashed(item: VaultItem, trashed: boolean): Promise<voi
 
 export async function deleteForever(item: VaultItem): Promise<void> {
   const t = translator();
-  if (!confirm(t("edit.delete_confirm", { title: item.title }))) return;
+  if (!confirm(t("edit.delete_confirm", { title: item.title }))) {
+    return;
+  }
   try {
     await removeItem(item.id, item);
     items.value = items.value.filter((candidate) => candidate.id !== item.id);

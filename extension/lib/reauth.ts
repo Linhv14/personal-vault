@@ -9,7 +9,9 @@ import { getLocal } from "./storage.js";
 
 export async function currentAuthKey(password: string): Promise<string | null> {
   const local = await getLocal();
-  if (!local.email || !local.kdf || !local.wrappedVaultKey) return null;
+  if (!local.email || !local.kdf || !local.wrappedVaultKey) {
+    return null;
+  }
   try {
     const masterKey = await deriveMasterKey(local.email, password, local.kdf);
     await openSealed(await deriveWrappingKey(masterKey), local.wrappedVaultKey);

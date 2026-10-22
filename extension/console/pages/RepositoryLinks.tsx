@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { ACTION_MAJOR, ACTION_REPOSITORY, DEFAULT_SERVER } from "../../../src/core/brand.js";
 import { isBranch, isGithubEnvironment, isRepository } from "../../../src/core/ci.js";
 import { describeError } from "../../../src/i18n/index.js";
@@ -49,7 +50,9 @@ function CreatedDialog({ created, onClose }: { created: Created; onClose: () => 
     location.origin.startsWith("chrome-extension") ? DEFAULT_SERVER : location.origin,
   );
   useEffect(() => {
-    if (!location.origin.startsWith("chrome-extension")) return;
+    if (!location.origin.startsWith("chrome-extension")) {
+      return;
+    }
     void getLocal().then(({ apiUrl }) => apiUrl && setServer(apiUrl.replace(/\/$/, "")));
   }, []);
   const snippet = workflow(created.reference, server);
@@ -106,15 +109,17 @@ function NewLinkDialog({
       onClose={onClose}
       onSubmit={(form) => {
         const data = new FormData(form);
-        const repository = String(data.get("repository")).trim();
-        const value = String(data.get("rule")).trim();
-        if (!isRepository(repository)) return setError(t("ci.invalid_repository"));
+        const repository = formText(data, "repository").trim();
+        const value = formText(data, "rule").trim();
+        if (!isRepository(repository)) {
+          return setError(t("ci.invalid_repository"));
+        }
         if (rule === "branch" ? !isBranch(value) : !isGithubEnvironment(value)) {
           return setError(t("ci.invalid_rule"));
         }
         void run(async () => {
           const created = await createLink(detail.org.id, project, {
-            environmentId: String(data.get("environment")),
+            environmentId: formText(data, "environment"),
             repository,
             branch: rule === "branch" ? value : null,
             githubEnvironment: rule === "environment" ? value : null,

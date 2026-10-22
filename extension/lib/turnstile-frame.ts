@@ -31,14 +31,21 @@ export function frameTurnstileToken(
       clearTimeout(timer);
       removeEventListener("message", onMessage);
       frame.remove();
-      if (token) resolve(token);
-      else reject(new Error("turnstile_failed"));
+      if (token) {
+        resolve(token);
+      } else {
+        reject(new Error("turnstile_failed"));
+      }
     };
     const timer = setTimeout(() => finish(null), SILENT_TIMEOUT_MS);
     const onMessage = (event: MessageEvent) => {
-      if (event.origin !== origin || event.source !== frame.contentWindow) return;
+      if (event.origin !== origin || event.source !== frame.contentWindow) {
+        return;
+      }
       const data = (event.data ?? {}) as FrameMessage;
-      if (data.source !== "7key-turnstile") return;
+      if (data.source !== "7key-turnstile") {
+        return;
+      }
       if (data.interactive === true) {
         clearTimeout(timer);
         frame.classList.add("interactive");

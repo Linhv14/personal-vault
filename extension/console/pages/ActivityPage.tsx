@@ -13,10 +13,18 @@ const CATEGORIES = ["all", "member", "team", "project", "secret", "ci"] as const
 type Category = (typeof CATEGORIES)[number];
 
 function categoryOf(action: string): Category {
-  if (action.startsWith("ci.") || action.startsWith("link.")) return "ci";
-  if (action.startsWith("member") || action.startsWith("org.")) return "member";
-  if (action.startsWith("team")) return "team";
-  if (action.startsWith("project")) return "project";
+  if (action.startsWith("ci.") || action.startsWith("link.")) {
+    return "ci";
+  }
+  if (action.startsWith("member") || action.startsWith("org.")) {
+    return "member";
+  }
+  if (action.startsWith("team")) {
+    return "team";
+  }
+  if (action.startsWith("project")) {
+    return "project";
+  }
   return "secret";
 }
 
@@ -49,7 +57,9 @@ export function ActivityPage() {
   const project = (id: string) => projects?.find((entry) => entry.id === id);
   const projectLabel = (projectId: string, environmentId?: string) => {
     const found = project(projectId);
-    if (!found) return t("console.other_project");
+    if (!found) {
+      return t("console.other_project");
+    }
     const env = found.content.environments.find((entry) => entry.id === environmentId);
     return env ? `${found.content.name} · ${env.name}` : found.content.name;
   };
@@ -57,7 +67,9 @@ export function ActivityPage() {
     if (action === "org.domains_changed") {
       return target ? target.replaceAll(",", ", ") : t("console.domains_any");
     }
-    if (!target || target === actor) return "";
+    if (!target || target === actor) {
+      return "";
+    }
     const [first = "", second] = target.split(":");
     if (
       action.startsWith("secret") ||
@@ -72,8 +84,12 @@ export function ActivityPage() {
         ? `${projectLabel(second)} (${teamName(first)})`
         : teamName(first);
     }
-    if (second) return `${emailOf(second)} → ${teamName(first)}`;
-    if (target.includes("@")) return target;
+    if (second) {
+      return `${emailOf(second)} → ${teamName(first)}`;
+    }
+    if (target.includes("@")) {
+      return target;
+    }
     return action.startsWith("team.") ? teamName(target) : emailOf(target);
   };
   const who = (actor: string) => (actor.startsWith("github:") ? actor.slice(7) : emailOf(actor));

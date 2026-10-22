@@ -51,12 +51,16 @@ export function ActionButton({
       aria-busy={busy || undefined}
       onClick={async (event) => {
         event.stopPropagation();
-        if (busy || pending$.value) return;
+        if (busy || pending$.value) {
+          return;
+        }
         setBusy(true);
         try {
           await onClick();
         } finally {
-          if (mounted.current) setBusy(false);
+          if (mounted.current) {
+            setBusy(false);
+          }
         }
       }}
       {...rest}
@@ -226,7 +230,9 @@ export function EmptyState({
 
 function emphasize(text: string, words: string[]): ComponentChildren {
   const wanted = words.filter(Boolean);
-  if (wanted.length === 0) return text;
+  if (wanted.length === 0) {
+    return text;
+  }
   const pattern = new RegExp(
     `(${wanted.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
   );
@@ -262,12 +268,16 @@ export function Dialog({
   const ref = useRef<HTMLDialogElement>(null);
   const working = pending$.value;
   const close = () => {
-    if (!pending$.value) onClose();
+    if (!pending$.value) {
+      onClose();
+    }
   };
   useEffect(() => {
     failure$.value = null;
     const dialog = ref.current;
-    if (dialog && !dialog.open) dialog.showModal();
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
   }, []);
   return (
     <dialog
@@ -279,14 +289,18 @@ export function Dialog({
         close();
       }}
       onClick={(event) => {
-        if (event.target === ref.current) close();
+        if (event.target === ref.current) {
+          close();
+        }
       }}
     >
       <form
         method="dialog"
         onSubmit={(event) => {
           event.preventDefault();
-          if (pending$.value) return;
+          if (pending$.value) {
+            return;
+          }
           onSubmit(event.currentTarget);
         }}
       >
@@ -418,7 +432,9 @@ export function relativeTime(epochSeconds: number, locale: string): string {
   const delta = epochSeconds - Math.floor(Date.now() / 1000);
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   for (const [unit, seconds] of UNITS) {
-    if (Math.abs(delta) >= seconds) return format.format(Math.round(delta / seconds), unit);
+    if (Math.abs(delta) >= seconds) {
+      return format.format(Math.round(delta / seconds), unit);
+    }
   }
   return format.format(0, "minute");
 }
@@ -439,9 +455,13 @@ export function Menu({ label, children }: { label: string; children: ComponentCh
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const close = (event: Event) => {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
+      if (!ref.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
     };
     addEventListener("pointerdown", close);
     return () => removeEventListener("pointerdown", close);

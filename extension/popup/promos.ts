@@ -44,7 +44,9 @@ function pickPromo(): void {
 async function refreshOrgs(): Promise<void> {
   const cached = (await chrome.storage.session.get(ORG_SNAPSHOT_KEY))[ORG_SNAPSHOT_KEY] as
     OrgSnapshot | undefined;
-  if (cached) orgSnapshot.value = cached;
+  if (cached) {
+    orgSnapshot.value = cached;
+  }
   try {
     const [orgs, invites] = await Promise.all([listOrgs(), myInvites()]);
     const fresh = { orgs: orgs.length, invites };
@@ -60,7 +62,9 @@ async function refreshDevicePromos(): Promise<void> {
   available.biometric = !biometric && !biometricPromoDismissed && (await biometricSupported());
   available.autofill =
     autofillSupported() && !autofillPromoDismissed && !(await isAutofillEnabled());
-  if (available.autofill) await setLocal({ autofillPromoDismissed: true });
+  if (available.autofill) {
+    await setLocal({ autofillPromoDismissed: true });
+  }
 }
 
 export async function refreshPromos(): Promise<void> {
@@ -84,7 +88,9 @@ export async function dismissPromo(promo: Promo): Promise<void> {
 export async function acceptPromo(promo: Promo): Promise<void> {
   const t = translator();
   if (promo === "autofill") {
-    if (!(await enableAutofill())) return;
+    if (!(await enableAutofill())) {
+      return;
+    }
     toast(t("settings.autofill_enabled"));
     available.autofill = false;
   } else if (promo === "biometric") {

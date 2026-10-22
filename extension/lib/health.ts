@@ -9,10 +9,18 @@ const SEQUENCES = ["abcdefghijklmnopqrstuvwxyz", "0123456789", "qwertyuiopasdfgh
 
 function poolSize(password: string): number {
   let pool = 0;
-  if (/[a-z]/.test(password)) pool += 26;
-  if (/[A-Z]/.test(password)) pool += 26;
-  if (/\d/.test(password)) pool += 10;
-  if (/[^a-zA-Z\d]/.test(password)) pool += 33;
+  if (/[a-z]/.test(password)) {
+    pool += 26;
+  }
+  if (/[A-Z]/.test(password)) {
+    pool += 26;
+  }
+  if (/\d/.test(password)) {
+    pool += 10;
+  }
+  if (/[^a-zA-Z\d]/.test(password)) {
+    pool += 33;
+  }
   return pool;
 }
 
@@ -27,13 +35,17 @@ function predictableCharacters(password: string): number {
       const at = sequence.indexOf(previous);
       return at >= 0 && (sequence[at + 1] === current || sequence[at - 1] === current);
     });
-    if (repeated || sequential) predictable++;
+    if (repeated || sequential) {
+      predictable++;
+    }
   }
   return predictable;
 }
 
 export function passwordEntropy(password: string): number {
-  if (!password) return 0;
+  if (!password) {
+    return 0;
+  }
   const effectiveLength = password.length - predictableCharacters(password);
   const bits = effectiveLength * Math.log2(poolSize(password));
   const looksLikeAWord = /^[a-zA-Z]+\d{0,4}[^a-zA-Z\d]?$/.test(password);
@@ -77,7 +89,9 @@ export const fetchBreachRange: FetchRange = async (prefix) => {
     referrerPolicy: "no-referrer",
     signal: AbortSignal.timeout(BREACH_CHECK_TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error(`Breach check failed with HTTP ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`Breach check failed with HTTP ${response.status}`);
+  }
   return response.text();
 };
 
@@ -86,7 +100,9 @@ export async function breachCounts(
   fetchRange: FetchRange = fetchBreachRange,
 ): Promise<Map<string, number>> {
   const hashes = new Map<string, string>();
-  for (const password of new Set(passwords)) hashes.set(password, await sha1Hex(password));
+  for (const password of new Set(passwords)) {
+    hashes.set(password, await sha1Hex(password));
+  }
 
   const prefixes = new Set([...hashes.values()].map((hash) => hash.slice(0, 5)));
   const found = new Map<string, number>();
@@ -94,14 +110,18 @@ export async function breachCounts(
     for (const line of (await fetchRange(prefix)).split(/\r?\n/)) {
       const [suffix, count] = line.trim().split(":");
       const times = Number(count);
-      if (suffix && times > 0) found.set(prefix + suffix.toUpperCase(), times);
+      if (suffix && times > 0) {
+        found.set(prefix + suffix.toUpperCase(), times);
+      }
     }
   }
 
   const counts = new Map<string, number>();
   for (const [password, hash] of hashes) {
     const times = found.get(hash);
-    if (times) counts.set(password, times);
+    if (times) {
+      counts.set(password, times);
+    }
   }
   return counts;
 }

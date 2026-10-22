@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
 import { normalizeRecoveryCode } from "../../../src/core/recovery.js";
 import { describeError } from "../../../src/i18n/index.js";
@@ -44,8 +45,11 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
       await setLocal({ apiUrl: server, email });
       return await action();
     } catch (failure) {
-      if (!previous.wrappedVaultKey) await chrome.storage.local.remove("email");
-      else await setLocal({ apiUrl: previous.apiUrl, email: previous.email });
+      if (!previous.wrappedVaultKey) {
+        await chrome.storage.local.remove("email");
+      } else {
+        await setLocal({ apiUrl: previous.apiUrl, email: previous.email });
+      }
       throw failure;
     }
   };
@@ -65,8 +69,8 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
   const submitCode = (event: Event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget as HTMLFormElement);
-    const email = String(data.get("email")).trim().toLowerCase();
-    const code = String(data.get("code"));
+    const email = formText(data, "email").trim().toLowerCase();
+    const code = formText(data, "code");
     if (!normalizeRecoveryCode(code)) {
       setError(t("recovery.invalid"));
       return;
@@ -81,7 +85,9 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
 
   const resend = () =>
     void run(async () => {
-      if (!proven) return;
+      if (!proven) {
+        return;
+      }
       await withServer(proven.email, () =>
         requestRecoveryEmail(proven.email, proven.code, localeSignal.value),
       );
@@ -90,14 +96,16 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
 
   const submitPassword = (event: Event) => {
     event.preventDefault();
-    if (!proven) return;
+    if (!proven) {
+      return;
+    }
     const data = new FormData(event.currentTarget as HTMLFormElement);
-    const password = String(data.get("password"));
-    if (password !== String(data.get("confirm"))) {
+    const password = formText(data, "password");
+    if (password !== formText(data, "confirm")) {
       setError(t("setup.password_mismatch"));
       return;
     }
-    const emailCode = proven.emailRequired ? String(data.get("emailCode")).trim() : undefined;
+    const emailCode = proven.emailRequired ? formText(data, "emailCode").trim() : undefined;
     void run(async () => {
       const issue = await checkNewMasterPassword(password, proven.email);
       if (issue) {
@@ -113,7 +121,9 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
 
   const openVault = () =>
     void run(async () => {
-      if (done) await signIn(done.email, done.password);
+      if (done) {
+        await signIn(done.email, done.password);
+      }
     });
 
   return (
@@ -127,8 +137,11 @@ export function Recover({ email: initialEmail, server, onCancel }: RecoverProps)
           hidden={done !== null}
           onClick={() => {
             setError(null);
-            if (proven) setProven(null);
-            else onCancel();
+            if (proven) {
+              setProven(null);
+            } else {
+              onCancel();
+            }
           }}
         >
           <Icon name="back" />

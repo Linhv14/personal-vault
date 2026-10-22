@@ -70,7 +70,9 @@ export async function throttle(
     retryAfter: pair.blocked_until > timestamp ? pair.blocked_until - timestamp : null,
     slowdownMs,
     async slowDown() {
-      if (slowdownMs > 0) await new Promise((resolve) => setTimeout(resolve, slowdownMs));
+      if (slowdownMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, slowdownMs));
+      }
     },
     async fail() {
       const failures = pair.failures + 1;

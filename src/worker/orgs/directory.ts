@@ -76,7 +76,9 @@ export class OrgDirectory {
       .prepare("SELECT id, name, plan, allowed_domains FROM orgs WHERE id = ?")
       .bind(orgId)
       .first<{ id: string; name: string; plan: string; allowed_domains: string }>();
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     const { allowed_domains, ...org } = row;
     return { ...org, allowedDomains: JSON.parse(allowed_domains) as string[] };
   }
@@ -221,7 +223,9 @@ export class OrgDirectory {
       .prepare("SELECT id, expires_at AS expiresAt FROM org_invites WHERE org_id = ? AND email = ?")
       .bind(orgId, email)
       .first<{ id: string; expiresAt: number }>();
-    if (!row) throw new Error("Invitation was not stored");
+    if (!row) {
+      throw new Error("Invitation was not stored");
+    }
     return row;
   }
 
@@ -254,7 +258,9 @@ export class OrgDirectory {
         allowedDomains: string;
         hasAccount: number;
       }>();
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     const { allowedDomains, ...invite } = row;
     return {
       ...invite,
@@ -296,9 +302,13 @@ export class OrgDirectory {
       )
       .bind(inviteId, email, now())
       .first<MyInviteRow & { allowedDomains: string }>();
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     const { allowedDomains, ...invite } = row;
-    if (!isDomainAllowed(email, JSON.parse(allowedDomains) as string[])) return "domain";
+    if (!isDomainAllowed(email, JSON.parse(allowedDomains) as string[])) {
+      return "domain";
+    }
     await this.db.batch([
       this.db
         .prepare(

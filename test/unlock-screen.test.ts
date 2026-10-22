@@ -101,7 +101,7 @@ describe("unlock screen", () => {
     fireEvent.click(ring);
     expect(unlockWithBiometric).toHaveBeenCalledTimes(1);
     expect(screen.getByText("or")).toBeTruthy();
-    const submit = screen.getByRole("button", { name: "Unlock" }) as HTMLButtonElement;
+    const submit = screen.getByRole<HTMLButtonElement>("button", { name: "Unlock" });
     expect(submit.disabled).toBe(false);
   });
 
@@ -120,7 +120,7 @@ describe("unlock screen", () => {
     render(h(Unlock, { email: "me@example.com" }));
     fireEvent.click(await screen.findByRole("button", { name: "Forgot master password?" }));
     const code = await screen.findByLabelText("Recovery code");
-    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("me@example.com");
+    expect(screen.getByLabelText<HTMLInputElement>("Email").value).toBe("me@example.com");
     fireEvent.input(code, { target: { value: "C933-BC97-F584" } });
     fireEvent.submit(document.querySelector("#form-recover")!);
     await screen.findByText(/not a recovery code/);
@@ -173,19 +173,19 @@ describe("unlock screen", () => {
     const first = await screen.findByLabelText("Digit 1");
     expect(screen.getByText("Two-factor authentication")).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(first));
-    const verify = screen.getByRole("button", { name: "Verify" }) as HTMLButtonElement;
+    const verify = screen.getByRole<HTMLButtonElement>("button", { name: "Verify" });
     expect(verify.disabled).toBe(true);
 
     fireEvent.paste(first, { clipboardData: { getData: () => "123 456" } });
     await waitFor(() => expect(signInWithCode).toHaveBeenCalledWith(pending, "123456"));
     await screen.findByText("That code is not correct");
-    expect((screen.getByLabelText("Digit 1") as HTMLInputElement).value).toBe("");
+    expect(screen.getByLabelText<HTMLInputElement>("Digit 1").value).toBe("");
 
     for (const [index, digit] of [..."654321"].entries()) {
       fireEvent.input(screen.getByLabelText(`Digit ${index + 1}`), { target: { value: digit } });
     }
     await screen.findByText("Try again in 9 seconds");
-    expect((screen.getByLabelText("Digit 1") as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByLabelText<HTMLInputElement>("Digit 1").disabled).toBe(true);
     expect(screen.queryByText("That code is not correct")).toBeNull();
   });
 

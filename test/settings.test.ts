@@ -13,12 +13,16 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: vi.fn(async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     }),
     set: vi.fn(async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     }),
     clear: vi.fn(async () => store.clear()),
     remove: vi.fn(async (key: string) => void store.delete(key)),
@@ -28,7 +32,9 @@ function area(store: Map<string, unknown>) {
 async function waitFor(check: () => boolean, label: string, timeout = 3_000): Promise<void> {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
-    if (check()) return;
+    if (check()) {
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   throw new Error(`Timed out waiting for ${label}`);
@@ -39,12 +45,18 @@ const heading = () => document.querySelector("main h1")?.textContent;
 function routed(input: RequestInfo | URL, init?: RequestInit, raw = ""): Response {
   const path = new URL(String(input)).pathname;
   const body = (value: unknown) => new Response(JSON.stringify(value), { status: 200 });
-  if (path === "/api/auth/pin") return body({ pinKey: raw });
+  if (path === "/api/auth/pin") {
+    return body({ pinKey: raw });
+  }
   if (path === "/api/account/identity") {
     return init?.method === "PUT" ? body({ ok: true }) : body({ identity: null });
   }
-  if (path === "/api/orgs") return body({ orgs: [] });
-  if (path === "/api/invites") return body({ invites: [] });
+  if (path === "/api/orgs") {
+    return body({ orgs: [] });
+  }
+  if (path === "/api/invites") {
+    return body({ invites: [] });
+  }
   return body({ shares: [] });
 }
 

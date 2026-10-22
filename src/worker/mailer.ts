@@ -48,9 +48,15 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 export function createMailer(env: MailerEnv): Mailer | null {
   const from = env.EMAIL_FROM;
-  if (!from) return null;
-  if (env.RESEND_API_KEY) return resendMailer(env.RESEND_API_KEY, from);
-  if (env.EMAIL) return cloudflareMailer(env.EMAIL, from);
+  if (!from) {
+    return null;
+  }
+  if (env.RESEND_API_KEY) {
+    return resendMailer(env.RESEND_API_KEY, from);
+  }
+  if (env.EMAIL) {
+    return cloudflareMailer(env.EMAIL, from);
+  }
   return null;
 }
 

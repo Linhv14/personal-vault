@@ -8,12 +8,16 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     },
     set: async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     },
     remove: async (key: string) => void store.delete(key),
     clear: async () => store.clear(),
@@ -39,7 +43,9 @@ vi.stubGlobal(
     if (url.pathname === "/api/items" && (init?.method ?? "GET") === "GET") {
       return new Response(JSON.stringify({ serverTime: Math.floor(Date.now() / 1000), items: [] }));
     }
-    if (url.pathname === "/api/vaults") return new Response(JSON.stringify({ vaults: [] }));
+    if (url.pathname === "/api/vaults") {
+      return new Response(JSON.stringify({ vaults: [] }));
+    }
     const id = url.pathname.split("/").pop()!;
     puts.push(id);
     return new Response(JSON.stringify({ id, updatedAt: Math.floor(Date.now() / 1000) + 1 }));
@@ -69,7 +75,9 @@ async function unlockWith(items: Parameters<typeof saveItem>[1][]) {
   localArea.set("unboundItemsMigrated", true);
   sessionArea.set("vaultKeyRaw", toBase64(raw));
   sessionArea.set("token", "session-token");
-  for (const item of items) await saveItem(key, item);
+  for (const item of items) {
+    await saveItem(key, item);
+  }
   puts.length = 0;
 }
 

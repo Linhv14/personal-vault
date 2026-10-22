@@ -20,7 +20,9 @@ const registered = await fetch(`${BASE}/api/auth/register`, {
   headers: { "Content-Type": "application/json", "X-Registration-Token": REGISTRATION_TOKEN },
   body: JSON.stringify({ email, ...record }),
 });
-if (!registered.ok) throw new Error(`Registration failed: ${await registered.text()}`);
+if (!registered.ok) {
+  throw new Error(`Registration failed: ${await registered.text()}`);
+}
 const { token } = (await registered.json()) as { token: string };
 
 const { sealed, fragment } = await createShare({
@@ -37,7 +39,9 @@ const created = await fetch(`${BASE}/api/shares`, {
   headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
   body: JSON.stringify({ ...sealed, ttlSeconds: 86_400, maxViews: 5 }),
 });
-if (!created.ok) throw new Error(`Creating the share failed: ${await created.text()}`);
+if (!created.ok) {
+  throw new Error(`Creating the share failed: ${await created.text()}`);
+}
 const { id } = (await created.json()) as { id: string };
 
 console.log(buildShareUrl(BASE, id, fragment));

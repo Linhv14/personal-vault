@@ -13,7 +13,9 @@ export function vaultOf(item: Pick<VaultItem, "vault">): string {
 export function vaultList(records: VaultItem[], defaultName: string): VaultDef[] {
   const byId = new Map<string, VaultDef>();
   for (const record of [...records].sort((a, b) => a.updatedAt - b.updatedAt)) {
-    for (const vault of record.vaults ?? []) byId.set(vault.id, vault);
+    for (const vault of record.vaults ?? []) {
+      byId.set(vault.id, vault);
+    }
   }
   const stored = byId.get(DEFAULT_VAULT_ID);
   byId.delete(DEFAULT_VAULT_ID);

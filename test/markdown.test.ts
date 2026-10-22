@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderMarkdown } from "../scripts/markdown.ts";
 
-const render = renderMarkdown as (markdown: string) => string;
+const render = renderMarkdown;
 
 describe("renderMarkdown", () => {
   it("escapes HTML everywhere, including inside code and tables", () => {

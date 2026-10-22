@@ -35,7 +35,9 @@ const DOM_GLOBALS = {
   HTMLButtonElement: page.HTMLButtonElement,
   getComputedStyle: page.getComputedStyle.bind(page),
 };
-for (const [name, value] of Object.entries(DOM_GLOBALS)) vi.stubGlobal(name, value);
+for (const [name, value] of Object.entries(DOM_GLOBALS)) {
+  vi.stubGlobal(name, value);
+}
 Object.defineProperty(page.HTMLElement.prototype, "getBoundingClientRect", {
   value: () => ({ width: 200, height: 32, top: 0, left: 0, right: 200, bottom: 32 }),
 });

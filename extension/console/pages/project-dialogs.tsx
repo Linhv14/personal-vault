@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import {
   isSecretName,
   parseDotenv,
@@ -37,10 +38,12 @@ export function AddSecretDialog({
   const [hosts, setHosts] = useState<string[]>([]);
   const [typed, setTyped] = useState({ name: "", value: "" });
   const suggest = (form: HTMLFormElement | null) => {
-    if (!form) return;
+    if (!form) {
+      return;
+    }
     const data = new FormData(form);
-    const value = included.map((id) => String(data.get(`value-${id}`) ?? "")).find(Boolean);
-    setTyped({ name: String(data.get("name") ?? ""), value: value ?? "" });
+    const value = included.map((id) => formText(data, `value-${id}`)).find(Boolean);
+    setTyped({ name: formText(data, "name"), value: value ?? "" });
   };
   return (
     <Dialog
@@ -49,16 +52,20 @@ export function AddSecretDialog({
       onClose={onClose}
       onSubmit={(form) => {
         const data = new FormData(form);
-        const name = String(data.get("name")).trim();
-        if (!isSecretName(name)) return setError(t("projects.invalid_name"));
-        if (included.length === 0) return setError(t("console.pick_environment"));
+        const name = formText(data, "name").trim();
+        if (!isSecretName(name)) {
+          return setError(t("projects.invalid_name"));
+        }
+        if (included.length === 0) {
+          return setError(t("console.pick_environment"));
+        }
         const taken = included.find((id) => existing[id]?.some((secret) => secret.name === name));
         if (taken) {
           const env = environments.find((entry) => entry.id === taken)?.name ?? "";
           return setError(t("console.name_taken_in", { name, env }));
         }
         const values = Object.fromEntries(
-          included.map((id) => [id, String(data.get(`value-${id}`) ?? "")]),
+          included.map((id) => [id, formText(data, `value-${id}`)]),
         );
         onSave({ name, kind, values, hosts: kind === "secret" ? hosts : [] });
       }}

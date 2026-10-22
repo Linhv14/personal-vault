@@ -67,9 +67,13 @@ let cut = 0;
 let pausedAt = 0;
 let n = 0;
 b.on((m) => {
-  if (m.method !== "Page.screencastFrame") return;
+  if (m.method !== "Page.screencastFrame") {
+    return;
+  }
   b.send("Page.screencastFrameAck", { sessionId: m.params.sessionId }).catch(() => {});
-  if (!recording) return;
+  if (!recording) {
+    return;
+  }
   const file = path.join(out, `f${String(n++).padStart(5, "0")}.jpg`);
   writeFileSync(file, Buffer.from(m.params.data, "base64"));
   frames.push({ file, t: m.params.metadata.timestamp - cut });
@@ -122,17 +126,23 @@ const clickOn = async (sel, wait = 350) => {
 };
 const reveal = async (sel) => {
   const moved = await st((s) => st.reveal(s), sel);
-  if (moved) await sleep(550);
+  if (moved) {
+    await sleep(550);
+  }
 };
 const focus = async (
   sel,
   { on, k = 1.5, ox = 0, oy = 0, pad = 8, radius = 10, call, place } = {},
 ) => {
   await reveal(on ?? sel);
-  if (k) await st((s, kk, x, y) => st.zoom(s, kk, x, y), on ?? sel, k, ox, oy);
+  if (k) {
+    await st((s, kk, x, y) => st.zoom(s, kk, x, y), on ?? sel, k, ox, oy);
+  }
   await sleep(250);
   await st((s, p, r) => st.spot(s, p, r), sel, pad, radius);
-  if (call) await st((s, c, pl) => st.callout(s, c, pl), sel, call, place ?? "top");
+  if (call) {
+    await st((s, c, pl) => st.callout(s, c, pl), sel, call, place ?? "top");
+  }
 };
 const unfocus = () =>
   st(() => {
@@ -400,9 +410,10 @@ try {
   recording = false;
   await b.send("Page.stopScreencast").catch(() => {});
   b.close();
-  for (let k = 0; k < frames.length; k++)
+  for (let k = 0; k < frames.length; k++) {
     frames[k].duration =
       k + 1 < frames.length ? Math.max(0.001, frames[k + 1].t - frames[k].t) : 0.5;
+  }
 }
 writeFileSync(
   path.join(out, "list.txt"),

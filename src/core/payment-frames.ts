@@ -23,7 +23,9 @@ export function isPaymentFrameHost(hostname: string): boolean {
 }
 
 export function isPaymentFrameUrl(raw: string | undefined): boolean {
-  if (!raw) return false;
+  if (!raw) {
+    return false;
+  }
   try {
     const url = new URL(raw);
     return url.protocol === "https:" && isPaymentFrameHost(url.hostname);

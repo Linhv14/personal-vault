@@ -39,8 +39,12 @@ const testKey = JSON.parse(
 
 async function api(path: string, init: RequestInit & { token?: string } = {}) {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null, text };
@@ -193,13 +197,7 @@ describe.skipIf(!enabled)("GitHub Actions reading linked secrets", () => {
       GITHUB_ENV: githubEnv,
     };
     const logged: string[] = [];
-    const log = console.log;
-    console.log = (line: string) => void logged.push(line);
-    try {
-      expect(await main(["env"], env)).toBe(0);
-    } finally {
-      console.log = log;
-    }
+    expect(await main(["env"], env, (line) => logged.push(line))).toBe(0);
     expect(await readFile(githubEnv, "utf8")).toMatch(
       /API_KEY<<SEVENKEY_\w+\nprod-key\nSEVENKEY_\w+/,
     );

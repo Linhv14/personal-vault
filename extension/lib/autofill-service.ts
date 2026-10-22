@@ -55,7 +55,9 @@ export interface TrustedSender {
 }
 
 function isFillableUrl(url: URL): boolean {
-  if (url.protocol === "https:") return true;
+  if (url.protocol === "https:") {
+    return true;
+  }
   return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
 }
 
@@ -73,7 +75,9 @@ export function trustedSender(
     return null;
   }
   const domain = registrableDomain(url.href);
-  if (!isFillableUrl(url) || !domain) return null;
+  if (!isFillableUrl(url) || !domain) {
+    return null;
+  }
   return { tabId: sender.tab.id, url: url.href, domain, site: siteOf(url.href) ?? domain };
 }
 
@@ -182,15 +186,23 @@ async function fetchQrImage(url: string): Promise<string | null> {
   } catch {
     return null;
   }
-  if (target.protocol !== "https:") return null;
+  if (target.protocol !== "https:") {
+    return null;
+  }
   try {
     const response = await fetch(target, { credentials: "omit", redirect: "error" });
     const type = response.headers.get("content-type") ?? "";
-    if (!response.ok || !/^image\/(png|gif|jpeg|webp|svg\+xml)\b/.test(type)) return null;
+    if (!response.ok || !/^image\/(png|gif|jpeg|webp|svg\+xml)\b/.test(type)) {
+      return null;
+    }
     const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length > MAX_QR_IMAGE_BYTES) return null;
+    if (bytes.length > MAX_QR_IMAGE_BYTES) {
+      return null;
+    }
     let binary = "";
-    for (const byte of bytes) binary += String.fromCharCode(byte);
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
     return `data:${type.split(";")[0]};base64,${btoa(binary)}`;
   } catch {
     return null;
@@ -200,7 +212,9 @@ async function fetchQrImage(url: string): Promise<string | null> {
 async function readPendingTotp(sender: TrustedSender): Promise<PendingTotp | null> {
   const key = totpKey(sender.tabId);
   const pending = (await chrome.storage.session.get(key))[key] as PendingTotp | undefined;
-  if (!pending) return null;
+  if (!pending) {
+    return null;
+  }
   if (Date.now() - pending.at > PENDING_TTL_MS || pending.domain !== sender.domain) {
     await chrome.storage.session.remove(key);
     return null;
@@ -211,7 +225,9 @@ async function readPendingTotp(sender: TrustedSender): Promise<PendingTotp | nul
 async function readPending(sender: TrustedSender): Promise<PendingCapture | null> {
   const key = pendingKey(sender.tabId);
   const pending = (await chrome.storage.session.get(key))[key] as PendingCapture | undefined;
-  if (!pending) return null;
+  if (!pending) {
+    return null;
+  }
   const ttl = pending.confirmed ? PENDING_TTL_MS : UNCONFIRMED_TTL_MS;
   if (Date.now() - pending.at > ttl || pending.domain !== sender.domain) {
     await chrome.storage.session.remove(key);
@@ -245,7 +261,9 @@ function promptFor(
   items: VaultItem[] | null,
 ): PendingPrompt | null {
   const existing = items && existingLogin(items, pageUrl, pending.username);
-  if (existing?.password === pending.password) return null;
+  if (existing?.password === pending.password) {
+    return null;
+  }
   return {
     domain: pending.site ?? pending.domain,
     username: pending.username,
@@ -256,7 +274,9 @@ function promptFor(
 
 async function isVaultServer(url: string): Promise<boolean> {
   const { apiUrl } = await getLocal();
-  if (!apiUrl) return false;
+  if (!apiUrl) {
+    return false;
+  }
   try {
     return new URL(url).origin === new URL(apiUrl).origin;
   } catch {
@@ -274,7 +294,9 @@ export async function handleAutofill(
         return { ok: true, locked: false, suggestions: [], domain: sender.domain };
       }
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const suggestions = vault.items
         .filter((item) => matchesSite(item, sender.url))
         .sort(bySite(sender.url))
@@ -284,7 +306,9 @@ export async function handleAutofill(
 
     case "autofill:fill": {
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const item = vault.items.find((candidate) => candidate.id === request.id);
       if (!item?.password || !matchesSite(item, sender.url)) {
         return { ok: false, error: "no_match" };
@@ -297,7 +321,9 @@ export async function handleAutofill(
       return { ok: true, password: generatePassword({ length: 20 }).value };
 
     case "autofill:capture": {
-      if (!request.password || (await isVaultServer(sender.url))) return { ok: true, prompt: null };
+      if (!request.password || (await isVaultServer(sender.url))) {
+        return { ok: true, prompt: null };
+      }
       const pending: PendingCapture = {
         domain: sender.domain,
         site: sender.site,
@@ -307,20 +333,26 @@ export async function handleAutofill(
       };
       const vault = await openVault();
       const prompt = promptFor(pending, sender.url, vault?.items ?? null);
-      if (prompt) await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
+      if (prompt) {
+        await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
+      }
       return { ok: true, prompt };
     }
 
     case "autofill:pending": {
       const pending = await readPending(sender);
-      if (!pending) return { ok: true, prompt: null };
+      if (!pending) {
+        return { ok: true, prompt: null };
+      }
       const vault = await openVault();
       return { ok: true, prompt: promptFor(pending, sender.url, vault?.items ?? null) };
     }
 
     case "autofill:confirm": {
       const pending = await readPending(sender);
-      if (!pending) return { ok: true, prompt: null };
+      if (!pending) {
+        return { ok: true, prompt: null };
+      }
       const confirmed = { ...pending, confirmed: true, at: Date.now() };
       await chrome.storage.session.set({ [pendingKey(sender.tabId)]: confirmed });
       const vault = await openVault();
@@ -329,7 +361,9 @@ export async function handleAutofill(
 
     case "autofill:save": {
       const pending = await readPending(sender);
-      if (!pending) return { ok: true, saved: false };
+      if (!pending) {
+        return { ok: true, saved: false };
+      }
       const vault = await openVault();
       if (!vault) {
         await chrome.action.openPopup?.().catch(() => {});
@@ -366,7 +400,9 @@ export async function handleAutofill(
 
     case "autofill:codes": {
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const suggestions = vault.items
         .filter((item) => item.totp && matchesSite(item, sender.url))
         .sort(byLastUsed)
@@ -376,15 +412,21 @@ export async function handleAutofill(
 
     case "autofill:code": {
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const item = vault.items.find((candidate) => candidate.id === request.id);
-      if (!item?.totp || !matchesSite(item, sender.url)) return { ok: false, error: "no_match" };
+      if (!item?.totp || !matchesSite(item, sender.url)) {
+        return { ok: false, error: "no_match" };
+      }
       void markUsed(vault.key, item).catch(() => {});
       return { ok: true, code: await currentCode(item.totp) };
     }
 
     case "autofill:totp-found": {
-      if (await isVaultServer(sender.url)) return { ok: true, totp: null };
+      if (await isVaultServer(sender.url)) {
+        return { ok: true, totp: null };
+      }
       let config: TotpConfig;
       try {
         config = parseTotpInput(request.text);
@@ -393,7 +435,9 @@ export async function handleAutofill(
       }
       const vault = await openVault();
       const target = vault ? totpTarget(vault.items, sender.url) : undefined;
-      if (target?.totp?.secret === config.secret) return { ok: true, totp: null };
+      if (target?.totp?.secret === config.secret) {
+        return { ok: true, totp: null };
+      }
       const pending: PendingTotp = {
         domain: sender.domain,
         site: sender.site,
@@ -414,7 +458,9 @@ export async function handleAutofill(
 
     case "autofill:totp-save": {
       const pending = await readPendingTotp(sender);
-      if (!pending) return { ok: true, saved: false };
+      if (!pending) {
+        return { ok: true, saved: false };
+      }
       const vault = await openVault();
       if (!vault) {
         await chrome.action.openPopup?.().catch(() => {});
@@ -447,9 +493,13 @@ export async function handleAutofill(
       return { ok: true, image: await fetchQrImage(request.url) };
 
     case "autofill:cards": {
-      if (!(await formsAllowed(sender))) return { ok: true, locked: false, cards: [] };
+      if (!(await formsAllowed(sender))) {
+        return { ok: true, locked: false, cards: [] };
+      }
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const cards = vault.items
         .filter(isCard)
         .sort(byLastUsed)
@@ -458,11 +508,17 @@ export async function handleAutofill(
     }
 
     case "autofill:card": {
-      if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
+      if (!(await formsAllowed(sender))) {
+        return { ok: false, error: "no_match" };
+      }
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const item = vault.items.find((candidate) => candidate.id === request.id);
-      if (!item || !isCard(item)) return { ok: false, error: "no_match" };
+      if (!item || !isCard(item)) {
+        return { ok: false, error: "no_match" };
+      }
       void markUsed(vault.key, item).catch(() => {});
       const card: CardData = {
         number: cardDigits(item.cardNumber),
@@ -476,9 +532,13 @@ export async function handleAutofill(
     }
 
     case "autofill:identities": {
-      if (!(await formsAllowed(sender))) return { ok: true, locked: false, identities: [] };
+      if (!(await formsAllowed(sender))) {
+        return { ok: true, locked: false, identities: [] };
+      }
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const identities = vault.items
         .filter(isIdentity)
         .sort(bySiteBound(sender.domain))
@@ -487,23 +547,33 @@ export async function handleAutofill(
     }
 
     case "autofill:identity": {
-      if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
+      if (!(await formsAllowed(sender))) {
+        return { ok: false, error: "no_match" };
+      }
       const vault = await openVault();
-      if (!vault) return { ok: true, locked: true };
+      if (!vault) {
+        return { ok: true, locked: true };
+      }
       const item = vault.items.find((candidate) => candidate.id === request.id);
-      if (!item || !isIdentity(item)) return { ok: false, error: "no_match" };
+      if (!item || !isIdentity(item)) {
+        return { ok: false, error: "no_match" };
+      }
       void markUsed(vault.key, item).catch(() => {});
       return { ok: true, identity: addressDataOf(item) };
     }
 
     case "autofill:random-address": {
-      if (!(await formsAllowed(sender))) return { ok: false, error: "no_match" };
+      if (!(await formsAllowed(sender))) {
+        return { ok: false, error: "no_match" };
+      }
       const country = request.country === "VN" ? "VN" : "US";
       return { ok: true, identity: addressDataOf(generateAddress({ country, email: true })) };
     }
 
     case "autofill:aliases": {
-      if (!(await formsAllowed(sender))) return { ok: true, aliases: [], site: "" };
+      if (!(await formsAllowed(sender))) {
+        return { ok: true, aliases: [], site: "" };
+      }
       const site = registrableDomain(sender.url) ?? sender.domain;
       const tag = aliasTag(site);
       const { email } = await getLocal();
@@ -525,9 +595,13 @@ export async function handleAutofill(
       return handleFormRequest(request, sender, await formsAllowed(sender));
 
     case "autofill:site-check": {
-      if (await isVaultServer(sender.url)) return { ok: true, lookalike: null };
+      if (await isVaultServer(sender.url)) {
+        return { ok: true, lookalike: null };
+      }
       const vault = await openVault();
-      if (!vault) return { ok: true, lookalike: null };
+      if (!vault) {
+        return { ok: true, lookalike: null };
+      }
       return { ok: true, lookalike: siteWarning(sender.url, vault.items) };
     }
 

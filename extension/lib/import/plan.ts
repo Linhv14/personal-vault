@@ -22,7 +22,9 @@ export function planImport(source: ImportSource, existing: VaultItem[]): ImportP
   for (const found of source.drafts) {
     const passkey =
       found.passkey && !knownPasskeys.has(found.passkey.credentialId) ? found.passkey : undefined;
-    if (passkey) knownPasskeys.add(passkey.credentialId);
+    if (passkey) {
+      knownPasskeys.add(passkey.credentialId);
+    }
     const draft = { ...found, passkey };
     const key = duplicateKey(draft);
     const saved = inVault.get(key);

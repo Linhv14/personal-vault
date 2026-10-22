@@ -28,7 +28,9 @@ export function supportsAliases(email: string): boolean {
 
 export function emailAlias(email: string, tag: string): string | null {
   const at = email.lastIndexOf("@");
-  if (at < 1 || !tag || !supportsAliases(email)) return null;
+  if (at < 1 || !tag || !supportsAliases(email)) {
+    return null;
+  }
   const local = email.slice(0, at).split("+")[0];
   return `${local}+${tag}@${email.slice(at + 1).toLowerCase()}`;
 }

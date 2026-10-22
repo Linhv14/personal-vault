@@ -21,8 +21,12 @@ export function watchStorage(): () => void {
   void reloadLocal();
   void resumeUnlock().then(() => refreshSession());
   const onChanged = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
-    if (area === "session") void refreshSession();
-    if (area === "local" && Object.keys(changes).length > 0) void reloadLocal();
+    if (area === "session") {
+      void refreshSession();
+    }
+    if (area === "local" && Object.keys(changes).length > 0) {
+      void reloadLocal();
+    }
   };
   chrome.storage.onChanged.addListener(onChanged);
   return () => chrome.storage.onChanged.removeListener(onChanged);

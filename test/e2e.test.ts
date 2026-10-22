@@ -43,8 +43,12 @@ async function api(
   init: RequestInit & { token?: string } = {},
 ): Promise<{ status: number; body: any }> {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
 
   const response = await fetch(`${BASE}${path}`, { ...init, headers });
   const text = await response.text();

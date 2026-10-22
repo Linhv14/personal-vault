@@ -14,7 +14,9 @@ const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
  */
 export function base32Decode(input: string): Bytes {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
-  if (clean.length === 0) return new Uint8Array(0);
+  if (clean.length === 0) {
+    return new Uint8Array(0);
+  }
 
   const out: number[] = [];
   let buffer = 0;
@@ -44,7 +46,9 @@ export function base32Decode(input: string): Bytes {
 }
 
 export function base32Encode(bytes: Uint8Array): string {
-  if (bytes.length === 0) return "";
+  if (bytes.length === 0) {
+    return "";
+  }
 
   let out = "";
   let buffer = 0;
@@ -64,13 +68,17 @@ export function base32Encode(bytes: Uint8Array): string {
   }
 
   // Pad to a multiple of 8 characters.
-  while (out.length % 8 !== 0) out += "=";
+  while (out.length % 8 !== 0) {
+    out += "=";
+  }
   return out;
 }
 
 /** Validate a string before treating it as a TOTP secret. */
 export function isValidBase32(input: string): boolean {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
-  if (clean.length === 0) return false;
+  if (clean.length === 0) {
+    return false;
+  }
   return [...clean].every((c) => ALPHABET.includes(c));
 }

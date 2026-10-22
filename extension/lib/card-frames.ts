@@ -17,8 +17,10 @@ function isHttps(raw: string | undefined): boolean {
 }
 
 async function storedFrames(tabId: number): Promise<CardFrame[]> {
-  const stored = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
-  if (!Array.isArray(stored)) return [];
+  const stored: unknown = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
+  if (!Array.isArray(stored)) {
+    return [];
+  }
   return stored.filter(
     (entry): entry is CardFrame =>
       typeof entry === "object" &&
@@ -34,8 +36,12 @@ export async function rememberCardFrame(
 ): Promise<void> {
   const tabId = sender.tab?.id;
   const { frameId, documentId } = sender;
-  if (sender.id !== extensionId || tabId === undefined || !frameId || !documentId) return;
-  if (!isPaymentFrameUrl(sender.url) || !isHttps(sender.tab?.url)) return;
+  if (sender.id !== extensionId || tabId === undefined || !frameId || !documentId) {
+    return;
+  }
+  if (!isPaymentFrameUrl(sender.url) || !isHttps(sender.tab?.url)) {
+    return;
+  }
   const frames = (await storedFrames(tabId)).filter((frame) => frame.frameId !== frameId);
   frames.push({ frameId, documentId });
   await chrome.storage.session.set({ [key(tabId)]: frames });
@@ -50,7 +56,9 @@ export async function fillCardFrames(
   topUrl: string,
   card: CardData,
 ): Promise<number> {
-  if (!isHttps(topUrl)) return 0;
+  if (!isHttps(topUrl)) {
+    return 0;
+  }
   const frames = await storedFrames(tabId);
   await Promise.all(
     frames.map(({ documentId }) =>
@@ -68,8 +76,12 @@ export async function isCardFrame(
 ): Promise<boolean> {
   const tabId = sender.tab?.id;
   const { frameId, documentId } = sender;
-  if (sender.id !== extensionId || tabId === undefined || !frameId || !documentId) return false;
-  if (!isPaymentFrameUrl(sender.url)) return false;
+  if (sender.id !== extensionId || tabId === undefined || !frameId || !documentId) {
+    return false;
+  }
+  if (!isPaymentFrameUrl(sender.url)) {
+    return false;
+  }
   return (await storedFrames(tabId)).some(
     (frame) => frame.frameId === frameId && frame.documentId === documentId,
   );

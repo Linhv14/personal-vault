@@ -33,7 +33,9 @@ ci.post("/secrets", async (c) => {
     return c.json(apiError("ci.forbidden"), 403);
   }
   const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: `ci:${reference.linkId}` });
-  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  if (!success) {
+    return c.json(apiError("server.rate_limited"), 429);
+  }
 
   const token = c.req.header("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   const claims = await verifyGithubToken(token, {
@@ -47,7 +49,9 @@ ci.post("/secrets", async (c) => {
     now: now(),
     ...trustSource(c),
   });
-  if (!claims) return c.json(apiError("ci.unauthorized"), 401);
+  if (!claims) {
+    return c.json(apiError("ci.unauthorized"), 401);
+  }
 
   return respond(
     c,

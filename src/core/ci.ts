@@ -70,10 +70,18 @@ export function isGithubEnvironment(value: unknown): value is string {
 }
 
 export function ruleAllows(rule: LinkRule, claims: GithubClaims): boolean {
-  if (claims.repository.toLowerCase() !== rule.repository.toLowerCase()) return false;
-  if (claims.event_name === "pull_request_target") return false;
-  if (rule.branch === null && rule.githubEnvironment === null) return false;
-  if (rule.branch !== null && claims.ref !== `refs/heads/${rule.branch}`) return false;
+  if (claims.repository.toLowerCase() !== rule.repository.toLowerCase()) {
+    return false;
+  }
+  if (claims.event_name === "pull_request_target") {
+    return false;
+  }
+  if (rule.branch === null && rule.githubEnvironment === null) {
+    return false;
+  }
+  if (rule.branch !== null && claims.ref !== `refs/heads/${rule.branch}`) {
+    return false;
+  }
   if (rule.githubEnvironment !== null && claims.environment !== rule.githubEnvironment) {
     return false;
   }

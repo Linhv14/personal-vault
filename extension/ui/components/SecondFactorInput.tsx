@@ -31,7 +31,9 @@ export function SecondFactorInput({
   const ready = backup ? factor?.kind === "backup" : factor?.kind === "totp";
 
   const submit = async (code: string) => {
-    if (blocked) return;
+    if (blocked) {
+      return;
+    }
     setWorking(true);
     try {
       await onSubmit(code);
@@ -47,7 +49,9 @@ export function SecondFactorInput({
       className="second-factor stack"
       onSubmit={(event) => {
         event.preventDefault();
-        if (ready) void submit(value);
+        if (ready) {
+          void submit(value);
+        }
       }}
     >
       <p className="second-factor-prompt">{t(backup ? "twofa.prompt_backup" : "twofa.prompt")}</p>

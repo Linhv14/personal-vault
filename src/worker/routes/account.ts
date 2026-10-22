@@ -29,7 +29,9 @@ account.get("/identity", async (c) => {
     .bind(c.get("session").accountId)
     .first<{ public_key: string | null; wrapped_private_key: string | null }>();
   c.header("Cache-Control", "no-store");
-  if (!row?.public_key || !row.wrapped_private_key) return c.json({ identity: null });
+  if (!row?.public_key || !row.wrapped_private_key) {
+    return c.json({ identity: null });
+  }
   return c.json({
     identity: {
       publicKey: row.public_key,
@@ -58,7 +60,9 @@ account.put("/identity", async (c) => {
       c.get("session").accountId,
     )
     .run();
-  if (!result.meta.changes) return c.json(apiError("account.identity_exists"), 409);
+  if (!result.meta.changes) {
+    return c.json(apiError("account.identity_exists"), 409);
+  }
   return c.json({ ok: true });
 });
 
@@ -67,7 +71,9 @@ async function reauthenticated(
   accountId: string,
   currentAuthKey: unknown,
 ): Promise<boolean> {
-  if (!isBase64(currentAuthKey, 32)) return false;
+  if (!isBase64(currentAuthKey, 32)) {
+    return false;
+  }
   const row = await env.DB.prepare("SELECT auth_key_hash FROM accounts WHERE id = ?")
     .bind(accountId)
     .first<{ auth_key_hash: string }>();
@@ -88,7 +94,9 @@ account.put("/recovery", async (c) => {
   if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
-  if (!isBase64(body?.authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
+  if (!isBase64(body?.authKey, 32)) {
+    return c.json(apiError("auth.invalid_auth_key"), 400);
+  }
   if (!isSealed(body?.wrappedVaultKey, 64)) {
     return c.json(apiError("auth.invalid_wrapped_key"), 400);
   }
@@ -146,7 +154,9 @@ function notify(
   render: typeof twoFactorEnabledEmail,
 ): void {
   const mailer = createMailer(c.env);
-  if (!mailer || !email) return;
+  if (!mailer || !email) {
+    return;
+  }
   const message = render({ locale: requestLocale(c, locale), siteUrl: new URL(c.req.url).origin });
   inBackground(c, "two_factor_email_failed", () => mailer.send({ to: email, ...message }));
 }
@@ -192,8 +202,12 @@ account.post("/2fa/enable", async (c) => {
   }
   const result = await confirmSetup(c.env, accountId, body?.code, now());
   if (!result.ok) {
-    if (result.reason === "enabled") return c.json(apiError("two_factor.already_enabled"), 409);
-    if (result.reason === "expired") return c.json(apiError("two_factor.setup_expired"), 400);
+    if (result.reason === "enabled") {
+      return c.json(apiError("two_factor.already_enabled"), 409);
+    }
+    if (result.reason === "expired") {
+      return c.json(apiError("two_factor.setup_expired"), 400);
+    }
     return c.json(apiError("auth.invalid_2fa"), 400);
   }
   await revokeOtherSessions(c.env, accountId, tokenHash);
@@ -212,7 +226,9 @@ account.post("/2fa/disable", async (c) => {
     return c.json(apiError("two_factor.not_enabled"), 409);
   }
   const refused = await checkCode(c, accountId, body?.code);
-  if (refused) return refused;
+  if (refused) {
+    return refused;
+  }
   await c.env.DB.batch(disableStatements(c.env, accountId));
   notify(c, await accountEmail(c.env, accountId), body?.locale, twoFactorDisabledEmail);
   return c.json({ ok: true });
@@ -228,7 +244,9 @@ account.post("/2fa/backup-codes", async (c) => {
     return c.json(apiError("two_factor.not_enabled"), 409);
   }
   const refused = await checkCode(c, accountId, body?.code);
-  if (refused) return refused;
+  if (refused) {
+    return refused;
+  }
   c.header("Cache-Control", "no-store");
   return c.json({ backupCodes: await regenerateBackupCodes(c.env, accountId, now()) });
 });

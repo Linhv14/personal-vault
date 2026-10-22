@@ -26,11 +26,14 @@ import { forgetFrameCards, rememberFrameCard } from "./lib/form-save.js";
 import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
 import { resumeUnlock } from "./lib/resume.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
+import { warn } from "./lib/log.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   void scheduleLockAlarm();
   void chrome.permissions.contains({ origins: AUTOFILL_ORIGINS }).then((granted) => {
-    if (granted) return registerAutofillScript();
+    if (granted) {
+      return registerAutofillScript();
+    }
   });
 });
 
@@ -41,13 +44,17 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === CLIPBOARD_ALARM) {
-    void clearClipboardNow().catch((error) => console.warn("Clipboard clear failed:", error));
+    void clearClipboardNow().catch((error) => warn("Clipboard clear failed:", error));
     return;
   }
-  if (alarm.name !== LOCK_ALARM) return;
+  if (alarm.name !== LOCK_ALARM) {
+    return;
+  }
   void (async () => {
-    const { lockAt } = (await chrome.storage.session.get("lockAt")) as { lockAt?: number };
-    if (lockAt && Date.now() > lockAt) await lock();
+    const { lockAt } = await chrome.storage.session.get<{ lockAt?: number }>("lockAt");
+    if (lockAt && Date.now() > lockAt) {
+      await lock();
+    }
   })();
 });
 
@@ -65,7 +72,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     : isPasskeyRequest(message)
       ? (trusted) => handlePasskey(message, trusted)
       : null;
-  if (!handle) return false;
+  if (!handle) {
+    return false;
+  }
   const trusted = trustedSender(sender, chrome.runtime.id);
   if (!trusted) {
     sendResponse({ ok: false, error: "untrusted_sender" });
@@ -78,15 +87,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, change) => {
-  if (change.status === "loading" && change.url) void forgetCardFrames(tabId);
+  if (change.status === "loading" && change.url) {
+    void forgetCardFrames(tabId);
+  }
 });
 chrome.tabs.onRemoved.addListener((tabId) => void forgetCardFrames(tabId));
 chrome.tabs.onRemoved.addListener((tabId) => void forgetFrameCards(tabId));
 
 chrome.permissions.onAdded.addListener((permissions) => {
-  if (grantsAutofill(permissions)) void registerAutofillScript();
+  if (grantsAutofill(permissions)) {
+    void registerAutofillScript();
+  }
 });
 
 chrome.permissions.onRemoved.addListener((permissions) => {
-  if (revokesAutofill(permissions)) void unregisterAutofillScript();
+  if (revokesAutofill(permissions)) {
+    void unregisterAutofillScript();
+  }
 });

@@ -41,7 +41,9 @@ export async function hasPin(): Promise<boolean> {
 }
 
 export async function enablePin(pin: string, iterations = PIN_ITERATIONS): Promise<void> {
-  if (!isValidPin(pin)) throw new PinError("invalid");
+  if (!isValidPin(pin)) {
+    throw new PinError("invalid");
+  }
   const session = await signedInSession();
   const salt = randomBytes(16);
   const { verifier, local } = await derive(pin, salt, iterations);
@@ -62,9 +64,13 @@ export async function disablePin(): Promise<void> {
 }
 
 export async function unlockWithPin(pin: string): Promise<string> {
-  if (!isValidPin(pin)) throw new PinError("invalid");
+  if (!isValidPin(pin)) {
+    throw new PinError("invalid");
+  }
   const { pin: stored } = await getLocal();
-  if (!stored) throw new PinError("off");
+  if (!stored) {
+    throw new PinError("off");
+  }
   const { verifier, local } = await derive(pin, fromBase64(stored.salt), stored.iterations);
   const pinKey = await request<{ pinKey: string }>("/api/auth/pin/unlock", {
     method: "POST",

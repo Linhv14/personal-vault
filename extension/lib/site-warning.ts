@@ -13,13 +13,17 @@ export function siteWarning(
   pageUrl: string | undefined,
   items: VaultItem[],
 ): LookalikeMatch | null {
-  if (!pageUrl) return null;
+  if (!pageUrl) {
+    return null;
+  }
   let url: URL;
   try {
     url = new URL(pageUrl);
   } catch {
     return null;
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    return null;
+  }
   return findLookalike(url.hostname, savedLoginDomains(items));
 }

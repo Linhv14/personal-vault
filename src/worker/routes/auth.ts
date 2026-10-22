@@ -66,7 +66,9 @@ interface SealedBody {
 }
 
 function isSealed(value: unknown, maxBytes = 4096): value is SealedBody {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const { ciphertext, nonce } = value as Record<string, unknown>;
   // An AES-GCM nonce is always exactly 12 bytes; anything else means a broken
   // client or someone probing.
@@ -80,7 +82,9 @@ interface KdfBody {
 }
 
 function isKdf(value: unknown): value is KdfBody {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const { type, iterations, salt } = value as Record<string, unknown>;
   return (
     type === "pbkdf2-sha256" &&
@@ -109,7 +113,7 @@ async function sameSecret(provided: string, expected: string): Promise<boolean> 
 }
 
 auth.post("/register", async (c) => {
-  const body = await c.req.json().catch(() => null);
+  const body: unknown = await c.req.json().catch(() => null);
   if (typeof body !== "object" || body === null) {
     return c.json(apiError("auth.invalid_body"), 400);
   }
@@ -136,19 +140,31 @@ auth.post("/register", async (c) => {
     }
   }
 
-  if (!email) return c.json(apiError("auth.invalid_email"), 400);
-  if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
-  if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
+  if (!email) {
+    return c.json(apiError("auth.invalid_email"), 400);
+  }
+  if (!isKdf(kdf)) {
+    return c.json(apiError("auth.invalid_kdf"), 400);
+  }
+  if (!isBase64(authKey, 32)) {
+    return c.json(apiError("auth.invalid_auth_key"), 400);
+  }
   if (!isSealed(wrappedVaultKey, 64)) {
     return c.json(apiError("auth.invalid_wrapped_key"), 400);
   }
 
   const timestamp = now();
   if (emailVerificationEnabled(c.env)) {
-    if (!isCode(verificationCode)) return c.json(apiError("auth.invalid_code"), 400);
+    if (!isCode(verificationCode)) {
+      return c.json(apiError("auth.invalid_code"), 400);
+    }
     const verified = await consumeCode(c.env, email, verificationCode, timestamp);
-    if (verified === "invalid") return c.json(apiError("auth.invalid_code"), 400);
-    if (verified === "expired") return c.json(apiError("auth.code_expired"), 400);
+    if (verified === "invalid") {
+      return c.json(apiError("auth.invalid_code"), 400);
+    }
+    if (verified === "expired") {
+      return c.json(apiError("auth.code_expired"), 400);
+    }
   }
   if (openRegistration && !(await claimRegistrationSlot(c.env, clientIp(c), timestamp))) {
     return c.json(apiError("auth.registration_limit"), 429);
@@ -175,8 +191,12 @@ auth.post("/register", async (c) => {
       )
       .run();
   } catch (error) {
-    if (!String(error).includes("UNIQUE")) throw error;
-    if (emailVerificationEnabled(c.env)) return c.json(apiError("auth.email_taken"), 409);
+    if (!String(error).includes("UNIQUE")) {
+      throw error;
+    }
+    if (emailVerificationEnabled(c.env)) {
+      return c.json(apiError("auth.email_taken"), 409);
+    }
     return c.json({ accountId: crypto.randomUUID(), ...decoySession(timestamp) }, 201);
   }
 
@@ -197,11 +217,15 @@ auth.post("/register", async (c) => {
 
 auth.post("/verify-email", async (c) => {
   const mailer = createMailer(c.env);
-  if (!mailer) return c.json({ ok: true, required: false });
+  if (!mailer) {
+    return c.json({ ok: true, required: false });
+  }
 
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
   const email = normalizeEmail(body?.email);
-  if (!email) return c.json(apiError("auth.invalid_email"), 400);
+  if (!email) {
+    return c.json(apiError("auth.invalid_email"), 400);
+  }
   const request = {
     email,
     locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
@@ -226,9 +250,11 @@ auth.post("/verify-email", async (c) => {
  * vault that address is half of the target.
  */
 auth.post("/prelogin", async (c) => {
-  const body = await c.req.json().catch(() => null);
+  const body: unknown = await c.req.json().catch(() => null);
   const email = normalizeEmail((body as Record<string, unknown> | null)?.email);
-  if (!email) return c.json(apiError("auth.invalid_email"), 400);
+  if (!email) {
+    return c.json(apiError("auth.invalid_email"), 400);
+  }
 
   const row = await c.env.DB.prepare(
     "SELECT kdf_type, kdf_iterations, kdf_salt FROM accounts WHERE email = ?",
@@ -255,7 +281,7 @@ async function decoyKdf(env: Env, email: string): Promise<KdfBody> {
 }
 
 auth.post("/login", async (c) => {
-  const body = await c.req.json().catch(() => null);
+  const body: unknown = await c.req.json().catch(() => null);
   const { email: rawEmail, authKey } = (body ?? {}) as Record<string, unknown>;
   const email = normalizeEmail(rawEmail);
   if (!email || !isBase64(authKey, 32)) {
@@ -328,7 +354,9 @@ async function signedIn(
   )
     .bind(accountId)
     .first<{ wrapped_vault_key: string; wrap_nonce: string; kdf_iterations: number }>();
-  if (!row) throw new Error("Account vanished during sign-in");
+  if (!row) {
+    throw new Error("Account vanished during sign-in");
+  }
   const wrapped = await revealWrappedKey(c.env, accountId, row.wrapped_vault_key);
   const label = deviceLabel(c.req.header("User-Agent"));
   const session = await createSession(c.env, accountId, timestamp, label);
@@ -355,11 +383,15 @@ auth.post("/login/2fa", async (c) => {
   }
   const timestamp = now();
   const challenge = await findChallenge(c.env, token, timestamp);
-  if (!challenge) return c.json(apiError("auth.two_factor_expired"), 401);
+  if (!challenge) {
+    return c.json(apiError("auth.two_factor_expired"), 401);
+  }
   const account = await c.env.DB.prepare("SELECT email FROM accounts WHERE id = ?")
     .bind(challenge.accountId)
     .first<{ email: string }>();
-  if (!account) return c.json(apiError("auth.two_factor_expired"), 401);
+  if (!account) {
+    return c.json(apiError("auth.two_factor_expired"), 401);
+  }
 
   const guard = await throttle(c.env, "login", account.email, clientIp(c), timestamp);
   if (guard.retryAfter) {
@@ -382,9 +414,11 @@ auth.post("/login/2fa", async (c) => {
 });
 
 auth.post("/delete-account", async (c) => {
-  const body = await c.req.json().catch(() => null);
+  const body: unknown = await c.req.json().catch(() => null);
   const { currentAuthKey } = (body ?? {}) as Record<string, unknown>;
-  if (!isBase64(currentAuthKey, 32)) return c.json(apiError("auth.invalid_credentials"), 400);
+  if (!isBase64(currentAuthKey, 32)) {
+    return c.json(apiError("auth.invalid_credentials"), 400);
+  }
 
   const { accountId } = c.get("session");
   const row = await c.env.DB.prepare("SELECT email, auth_key_hash FROM accounts WHERE id = ?")
@@ -411,7 +445,9 @@ auth.post("/delete-account", async (c) => {
 
 auth.get("/resume-key", async (c) => {
   const resumeKey = await sessionResumeKey(c.env, c.get("session").tokenHash);
-  if (!resumeKey) return c.json(apiError("auth.unauthorized"), 401);
+  if (!resumeKey) {
+    return c.json(apiError("auth.unauthorized"), 401);
+  }
   c.header("Cache-Control", "no-store");
   return c.json({ resumeKey });
 });
@@ -426,15 +462,23 @@ auth.post("/logout", async (c) => {
  * vault key itself, so the server only swaps three columns — no item is touched.
  */
 auth.post("/change-password", async (c) => {
-  const body = await c.req.json().catch(() => null);
+  const body: unknown = await c.req.json().catch(() => null);
   const { currentAuthKey, kdf, authKey, wrappedVaultKey, keepSession } = (body ?? {}) as Record<
     string,
     unknown
   >;
-  if (!isBase64(currentAuthKey, 32)) return c.json(apiError("auth.invalid_credentials"), 400);
-  if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
-  if (!isBase64(authKey, 32)) return c.json(apiError("auth.invalid_auth_key"), 400);
-  if (!isSealed(wrappedVaultKey, 64)) return c.json(apiError("auth.invalid_wrapped_key"), 400);
+  if (!isBase64(currentAuthKey, 32)) {
+    return c.json(apiError("auth.invalid_credentials"), 400);
+  }
+  if (!isKdf(kdf)) {
+    return c.json(apiError("auth.invalid_kdf"), 400);
+  }
+  if (!isBase64(authKey, 32)) {
+    return c.json(apiError("auth.invalid_auth_key"), 400);
+  }
+  if (!isSealed(wrappedVaultKey, 64)) {
+    return c.json(apiError("auth.invalid_wrapped_key"), 400);
+  }
 
   const { accountId, tokenHash } = c.get("session");
   const row = await c.env.DB.prepare("SELECT auth_key_hash FROM accounts WHERE id = ?")
@@ -461,12 +505,17 @@ auth.post("/change-password", async (c) => {
       row.auth_key_hash,
     )
     .run();
-  if (!result.meta.changes) return c.json(apiError("auth.invalid_credentials"), 403);
+  if (!result.meta.changes) {
+    return c.json(apiError("auth.invalid_credentials"), 403);
+  }
 
   // Revoke every session: other devices still hold the old vault key and must
   // unlock again.
-  if (keepSession === true) await revokeOtherSessions(c.env, accountId, tokenHash);
-  else await revokeAllSessions(c.env, accountId);
+  if (keepSession === true) {
+    await revokeOtherSessions(c.env, accountId, tokenHash);
+  } else {
+    await revokeAllSessions(c.env, accountId);
+  }
   return c.json({ ok: true });
 });
 
@@ -486,7 +535,9 @@ async function checkRecovery(
   timestamp: number,
 ): Promise<RecoveryRow | { retryAfter: number } | null> {
   const guard = await throttle(env, "recovery", email, ip, timestamp);
-  if (guard.retryAfter) return { retryAfter: guard.retryAfter };
+  if (guard.retryAfter) {
+    return { retryAfter: guard.retryAfter };
+  }
   await guard.slowDown();
   const row = await env.DB.prepare(
     `SELECT id, recovery_auth_hash, recovery_wrapped_key, recovery_nonce, totp_enabled_at
@@ -510,11 +561,19 @@ async function emailCodeError(
   code: unknown,
   timestamp: number,
 ): Promise<"auth.invalid_code" | "auth.code_expired" | null> {
-  if (!createMailer(env)) return null;
-  if (!isCode(code)) return "auth.invalid_code";
+  if (!createMailer(env)) {
+    return null;
+  }
+  if (!isCode(code)) {
+    return "auth.invalid_code";
+  }
   const result = await checkRecoveryEmailCode(env, accountId, code, timestamp);
-  if (result === "invalid") return "auth.invalid_code";
-  if (result === "expired") return "auth.code_expired";
+  if (result === "invalid") {
+    return "auth.invalid_code";
+  }
+  if (result === "expired") {
+    return "auth.code_expired";
+  }
   return null;
 }
 
@@ -529,9 +588,13 @@ auth.post("/recover/email", async (c) => {
   if (row && "retryAfter" in row) {
     return c.json(apiError("auth.rate_limited", { seconds: row.retryAfter }), 429);
   }
-  if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  if (!row) {
+    return c.json(apiError("auth.invalid_recovery_code"), 401);
+  }
   const mailer = createMailer(c.env);
-  if (!mailer) return c.json({ required: false });
+  if (!mailer) {
+    return c.json({ required: false });
+  }
   const issued = await issueRecoveryEmailCode(c.env, row.id, timestamp);
   if (issued === "cooldown") {
     return c.json(apiError("auth.code_cooldown", { seconds: CODE_RESEND_COOLDOWN_SECONDS }), 429);
@@ -558,9 +621,13 @@ auth.post("/recover/start", async (c) => {
   if (row && "retryAfter" in row) {
     return c.json(apiError("auth.rate_limited", { seconds: row.retryAfter }), 429);
   }
-  if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  if (!row) {
+    return c.json(apiError("auth.invalid_recovery_code"), 401);
+  }
   const codeError = await emailCodeError(c.env, row.id, body.emailCode, timestamp);
-  if (codeError) return c.json(apiError(codeError), 400);
+  if (codeError) {
+    return c.json(apiError(codeError), 400);
+  }
   const wrapped = await revealWrappedKey(c.env, recoveryScope(row.id), row.recovery_wrapped_key!);
   c.header("Cache-Control", "no-store");
   return c.json({ wrappedVaultKey: { ciphertext: wrapped.ciphertext, nonce: row.recovery_nonce } });
@@ -574,7 +641,9 @@ auth.post("/recover/finish", async (c) => {
   if (!email || !isBase64(recoveryAuthKey, 32)) {
     return c.json(apiError("auth.invalid_recovery_code"), 400);
   }
-  if (!isKdf(kdf)) return c.json(apiError("auth.invalid_kdf"), 400);
+  if (!isKdf(kdf)) {
+    return c.json(apiError("auth.invalid_kdf"), 400);
+  }
   if (!isBase64(authKey, 32) || !isBase64(next.authKey, 32)) {
     return c.json(apiError("auth.invalid_auth_key"), 400);
   }
@@ -587,9 +656,13 @@ auth.post("/recover/finish", async (c) => {
   if (row && "retryAfter" in row) {
     return c.json(apiError("auth.rate_limited", { seconds: row.retryAfter }), 429);
   }
-  if (!row) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  if (!row) {
+    return c.json(apiError("auth.invalid_recovery_code"), 401);
+  }
   const codeError = await emailCodeError(c.env, row.id, body?.emailCode, timestamp);
-  if (codeError) return c.json(apiError(codeError), 400);
+  if (codeError) {
+    return c.json(apiError(codeError), 400);
+  }
 
   const result = await c.env.DB.prepare(
     `UPDATE accounts
@@ -614,10 +687,14 @@ auth.post("/recover/finish", async (c) => {
       row.recovery_auth_hash,
     )
     .run();
-  if (!result.meta.changes) return c.json(apiError("auth.invalid_recovery_code"), 401);
+  if (!result.meta.changes) {
+    return c.json(apiError("auth.invalid_recovery_code"), 401);
+  }
 
   const twoFactorDisabled = row.totp_enabled_at !== null;
-  if (twoFactorDisabled) await c.env.DB.batch(disableStatements(c.env, row.id));
+  if (twoFactorDisabled) {
+    await c.env.DB.batch(disableStatements(c.env, row.id));
+  }
   await revokeAllSessions(c.env, row.id);
   await (await throttle(c.env, "login", email, clientIp(c), timestamp)).clear();
   await clearRecoveryEmailCode(c.env, row.id);
@@ -667,7 +744,9 @@ auth.post("/sessions/revoke-others", async (c) => {
 auth.delete("/sessions/:id", async (c) => {
   const { accountId } = c.get("session");
   const revoked = await revokeSessionById(c.env, accountId, c.req.param("id"));
-  if (!revoked) return c.json(apiError("auth.session_not_found"), 404);
+  if (!revoked) {
+    return c.json(apiError("auth.session_not_found"), 404);
+  }
   return c.json({ ok: true });
 });
 

@@ -26,8 +26,12 @@ let cached: { secret: string; keys: Promise<AtRestKeys> } | null = null;
 
 function keysFor(env: AtRestEnv): Promise<AtRestKeys> {
   const secret = env.AT_REST_SECRET;
-  if (!secret) throw new Error("AT_REST_SECRET is not configured");
-  if (cached?.secret !== secret) cached = { secret, keys: deriveKeys(secret) };
+  if (!secret) {
+    throw new Error("AT_REST_SECRET is not configured");
+  }
+  if (cached?.secret !== secret) {
+    cached = { secret, keys: deriveKeys(secret) };
+  }
   return cached.keys;
 }
 
@@ -129,7 +133,9 @@ export async function revealWrappedKey(
   accountId: string,
   stored: string,
 ): Promise<{ ciphertext: string; needsUpgrade: boolean }> {
-  if (!stored.startsWith(VERSION_PREFIX)) return { ciphertext: stored, needsUpgrade: true };
+  if (!stored.startsWith(VERSION_PREFIX)) {
+    return { ciphertext: stored, needsUpgrade: true };
+  }
 
   const { wrap } = await keysFor(env);
   const blob = fromBase64(stored.slice(VERSION_PREFIX.length));
@@ -165,7 +171,9 @@ export async function revealTwoFactorSecret(
   accountId: string,
   stored: string,
 ): Promise<string> {
-  if (!stored.startsWith(VERSION_PREFIX)) throw new Error("Unexpected two-factor secret format");
+  if (!stored.startsWith(VERSION_PREFIX)) {
+    throw new Error("Unexpected two-factor secret format");
+  }
   const { twoFactorSecret } = await keysFor(env);
   const blob = fromBase64(stored.slice(VERSION_PREFIX.length));
   const plaintext = await crypto.subtle.decrypt(

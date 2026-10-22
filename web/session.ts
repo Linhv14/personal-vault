@@ -31,7 +31,9 @@ export function startWebSession(): void {
 
   let lastTouch = 0;
   const onActivity = () => {
-    if (Date.now() - lastTouch < TOUCH_INTERVAL_MS) return;
+    if (Date.now() - lastTouch < TOUCH_INTERVAL_MS) {
+      return;
+    }
     lastTouch = Date.now();
     void touch();
   };
@@ -40,9 +42,13 @@ export function startWebSession(): void {
   }
 
   setInterval(() => {
-    if (!vaultKeySignal.value) return;
+    if (!vaultKeySignal.value) {
+      return;
+    }
     void getUnlocked().then((unlocked) => {
-      if (!unlocked?.token) void refreshSession();
+      if (!unlocked?.token) {
+        void refreshSession();
+      }
     });
   }, CHECK_INTERVAL_MS);
 }
@@ -84,7 +90,9 @@ async function openSession(
   const vaultKeyRaw = await open(await deriveWrappingKey(masterKey), wrappedVaultKey);
   if (login.upgradeKdf) {
     const upgraded = await upgradeKdf(email, password, vaultKeyRaw, authKey, login.token);
-    if (upgraded) ({ kdf, wrappedVaultKey } = upgraded);
+    if (upgraded) {
+      ({ kdf, wrappedVaultKey } = upgraded);
+    }
   }
   await setLocal({ email, kdf, wrappedVaultKey });
   await unlock(toBase64(vaultKeyRaw), login.token);
@@ -103,7 +111,9 @@ export async function registerFromInvite(
   const { token, orgId } = await api.register(email, record, "", verificationCode, inviteId);
   const { vaultKeyRaw } = await unlockVault(email, password, record);
   await setLocal({ email, kdf: record.kdf, wrappedVaultKey: record.wrappedVaultKey });
-  if (orgId) location.hash = `#/${orgId}/projects`;
+  if (orgId) {
+    location.hash = `#/${orgId}/projects`;
+  }
   await unlock(toBase64(vaultKeyRaw), token);
   accountEmail.value = email;
   await refreshSession();

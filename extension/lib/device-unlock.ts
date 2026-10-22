@@ -48,14 +48,22 @@ export async function openVaultKey(
 
 export async function signedInSession(): Promise<{ vaultKeyRaw: string; token: string }> {
   const session = await getUnlocked();
-  if (!session?.token) throw new ApiError("error.api.not_signed_in", 401);
+  if (!session?.token) {
+    throw new ApiError("error.api.not_signed_in", 401);
+  }
   return { vaultKeyRaw: session.vaultKeyRaw, token: session.token };
 }
 
 export function rejection(error: unknown): Rejection | null {
-  if (!(error instanceof ApiError)) return null;
-  if (error.status === 410 || error.status === 401) return "gone";
-  if (error.status === 403) return "denied";
+  if (!(error instanceof ApiError)) {
+    return null;
+  }
+  if (error.status === 410 || error.status === 401) {
+    return "gone";
+  }
+  if (error.status === 403) {
+    return "denied";
+  }
   return null;
 }
 

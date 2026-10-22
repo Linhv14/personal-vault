@@ -51,13 +51,19 @@ function useTotp(config: TotpConfig): { code: string; remaining: number; period:
     const tick = async () => {
       setRemaining(secondsRemaining(period, nowMs()));
       const counter = Math.floor(nowMs() / 1000 / period);
-      if (counter === lastCounter) return;
+      if (counter === lastCounter) {
+        return;
+      }
       lastCounter = counter;
       try {
         const next = await generateTotp(config, nowMs());
-        if (active) setCode(next);
+        if (active) {
+          setCode(next);
+        }
       } catch {
-        if (active) setCode("—");
+        if (active) {
+          setCode("—");
+        }
       }
     };
     void tick();
@@ -100,7 +106,9 @@ export function TotpRow({ config }: { config: TotpConfig }) {
       icon="clock"
       label={t("common.totp")}
       onCopy={() => {
-        if (totp.code) void copy(totp.code, t("common.totp"), source);
+        if (totp.code) {
+          void copy(totp.code, t("common.totp"), source);
+        }
       }}
     >
       <LiveCode totp={totp} radius={8} size={20} />

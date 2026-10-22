@@ -33,17 +33,23 @@ export function memoryArea(initial: Record<string, unknown> = {}): StorageArea {
   const store = new Map(Object.entries(initial));
   return {
     get: async (keys) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const wanted = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(
         wanted.filter((key) => store.has(key)).map((key) => [key, store.get(key)]),
       );
     },
     set: async (items) => {
-      for (const [key, value] of Object.entries(items)) store.set(key, value);
+      for (const [key, value] of Object.entries(items)) {
+        store.set(key, value);
+      }
     },
     remove: async (keys) => {
-      for (const key of typeof keys === "string" ? [keys] : keys) store.delete(key);
+      for (const key of typeof keys === "string" ? [keys] : keys) {
+        store.delete(key);
+      }
     },
     clear: async () => store.clear(),
   };

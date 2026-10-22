@@ -26,8 +26,12 @@ const PASSWORD = "cli read inject password";
 
 async function api(route: string, init: RequestInit & { token?: string } = {}) {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
   const response = await fetch(`${BASE}${route}`, { ...init, headers });
   const text = await response.text();
   return { status: response.status, body: text ? JSON.parse(text) : null };

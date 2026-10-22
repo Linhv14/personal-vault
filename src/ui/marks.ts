@@ -37,8 +37,11 @@ export function flagMark(code: string | undefined): HTMLElement {
   const node = document.createElement("span");
   node.className = "flag";
   const markup = flagMarkup(code);
-  if (markup) node.append(svgOf(markup));
-  else node.textContent = code ?? "";
+  if (markup) {
+    node.append(svgOf(markup));
+  } else {
+    node.textContent = code ?? "";
+  }
   return node;
 }
 
@@ -46,7 +49,10 @@ export function brandMark(brand: string): HTMLElement {
   const node = document.createElement("span");
   node.className = `brand brand-${brand}`;
   const markup = brandMarkup(brand);
-  if (markup) node.append(svgOf(markup));
-  else node.textContent = BRAND_LABEL[brand] ?? "";
+  if (markup) {
+    node.append(svgOf(markup));
+  } else {
+    node.textContent = BRAND_LABEL[brand] ?? "";
+  }
   return node;
 }

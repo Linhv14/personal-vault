@@ -58,7 +58,9 @@ export async function resolveSession(
   now = Math.floor(Date.now() / 1000),
 ): Promise<SessionContext | null> {
   const token = authorization?.match(/^Bearer (.+)$/)?.[1]?.trim();
-  if (!token) return null;
+  if (!token) {
+    return null;
+  }
 
   const tokenHash = await hashToken(token);
   const row = await env.DB.prepare(
@@ -188,6 +190,8 @@ export async function noteDevice(
        ON CONFLICT(account_id, label) DO NOTHING`,
     ).bind(accountId, label, now),
   ]);
-  if (!inserted?.meta.changes) return "known";
+  if (!inserted?.meta.changes) {
+    return "known";
+  }
   return (known?.results[0]?.known ?? 0) === 0 ? "first" : "new";
 }

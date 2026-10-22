@@ -29,7 +29,9 @@ export async function issueCode(
   const previous = await env.DB.prepare("SELECT sent_at FROM email_verifications WHERE email = ?")
     .bind(email)
     .first<{ sent_at: number }>();
-  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) return "cooldown";
+  if (previous && timestamp - previous.sent_at < CODE_RESEND_COOLDOWN_SECONDS) {
+    return "cooldown";
+  }
 
   const code = generateCode();
   await env.DB.prepare(
@@ -74,7 +76,9 @@ export async function consumeCode(
   )
     .bind(email)
     .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) return "expired";
+  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) {
+    return "expired";
+  }
 
   const matches = timingSafeEqual(
     utf8Encode(await codeHash(env, email, code)),

@@ -11,8 +11,10 @@ try {
     repoKey: input("key"),
   });
   await exportToGithubEnv(secrets);
-  console.log(`7key: loaded ${secrets.length} values into the job environment`);
+  process.stdout.write(`7key: loaded ${secrets.length} values into the job environment\n`);
 } catch (error) {
-  console.log(`::error::7key: ${error instanceof Error ? error.message : String(error)}`);
+  process.stdout.write(
+    `::error::7key: ${error instanceof Error ? error.message : String(error)}\n`,
+  );
   process.exit(1);
 }

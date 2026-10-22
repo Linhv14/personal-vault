@@ -47,21 +47,32 @@ export function parseAgentArgs(argv: string[]): AgentArgs {
     const arg = argv[index]!;
     const value = () => {
       const next = argv[++index];
-      if (next === undefined) throw new AgentError(`${arg} needs a value`);
+      if (next === undefined) {
+        throw new AgentError(`${arg} needs a value`);
+      }
       return next;
     };
     if (arg === "--") {
       parsed.command = argv.slice(index + 1);
       break;
     }
-    if (arg === "--project") parsed.project = value();
-    else if (arg === "--org") parsed.org = value();
-    else if (arg === "--env") parsed.environment = value();
-    else if (arg === "--email") parsed.email = value();
-    else if (arg === "--server") parsed.server = value();
-    else if (arg === "--yes" || arg === "-y") parsed.yes = true;
-    else if (arg === "--help" || arg === "-h") parsed.help = true;
-    else throw new AgentError(`Unexpected argument: ${arg}`);
+    if (arg === "--project") {
+      parsed.project = value();
+    } else if (arg === "--org") {
+      parsed.org = value();
+    } else if (arg === "--env") {
+      parsed.environment = value();
+    } else if (arg === "--email") {
+      parsed.email = value();
+    } else if (arg === "--server") {
+      parsed.server = value();
+    } else if (arg === "--yes" || arg === "-y") {
+      parsed.yes = true;
+    } else if (arg === "--help" || arg === "-h") {
+      parsed.help = true;
+    } else {
+      throw new AgentError(`Unexpected argument: ${arg}`);
+    }
   }
   return parsed;
 }
@@ -111,7 +122,9 @@ export async function agentMain(argv: string[], env: NodeJS.ProcessEnv): Promise
   if (!args.project || !args.environment) {
     throw new AgentError("Run 7key login and 7key link first, or pass --project and --env");
   }
-  if (!email) throw new AgentError("Pass --email the first time, or run 7key login");
+  if (!email) {
+    throw new AgentError("Pass --email the first time, or run 7key login");
+  }
   remember(env, { email, server });
   return runAgent({
     server,

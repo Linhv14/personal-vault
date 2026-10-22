@@ -11,7 +11,9 @@ interface StoredIdentity {
 
 async function fetchIdentity(): Promise<StoredIdentity | null> {
   const { identity } = await request<{ identity: StoredIdentity | null }>("/api/account/identity");
-  if (identity) await setLocal({ identity });
+  if (identity) {
+    await setLocal({ identity });
+  }
   return identity;
 }
 
@@ -26,7 +28,9 @@ async function opened(vaultKey: CryptoKey, stored: StoredIdentity): Promise<Iden
 
 export async function ensureIdentity(vaultKey: CryptoKey): Promise<Identity> {
   const stored = await fetchIdentity();
-  if (stored) return opened(vaultKey, stored);
+  if (stored) {
+    return opened(vaultKey, stored);
+  }
   const identity = await createIdentity();
   const wrappedPrivateKey = await seal(vaultKey, identity.privateKey, PRIVATE_KEY_CONTEXT);
   try {
@@ -37,16 +41,22 @@ export async function ensureIdentity(vaultKey: CryptoKey): Promise<Identity> {
     await setLocal({ identity: { publicKey: identity.publicKey, wrappedPrivateKey } });
     return identity;
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 409) throw error;
+    if (!(error instanceof ApiError) || error.status !== 409) {
+      throw error;
+    }
     const winner = await fetchIdentity();
-    if (!winner) throw error;
+    if (!winner) {
+      throw error;
+    }
     return opened(vaultKey, winner);
   }
 }
 
 export async function knownIdentity(vaultKey: CryptoKey): Promise<Identity | null> {
   const cached = (await getLocal()).identity;
-  if (cached) return opened(vaultKey, cached);
+  if (cached) {
+    return opened(vaultKey, cached);
+  }
   const stored = await fetchIdentity();
   return stored ? opened(vaultKey, stored) : null;
 }

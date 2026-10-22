@@ -15,7 +15,9 @@ const nativeCreate = credentials.create.bind(credentials);
 const nativeGet = credentials.get.bind(credentials);
 
 function bytesOf(source: BufferSource): Uint8Array {
-  if (source instanceof ArrayBuffer) return new Uint8Array(source);
+  if (source instanceof ArrayBuffer) {
+    return new Uint8Array(source);
+  }
   return new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
 }
 
@@ -37,22 +39,28 @@ function define<T extends object>(target: T, values: Record<string, unknown>): T
 function ask(request: PageRequest, signal?: AbortSignal | null): Promise<PageReply> {
   const id = crypto.randomUUID();
   return new Promise((resolve, reject) => {
-    const onReply = (event: MessageEvent) => {
-      if (event.source !== window || event.data?.type !== PAGE_REPLY || event.data.id !== id)
+    const onReply = (event: MessageEvent<unknown>) => {
+      const data = event.data as { type?: unknown; id?: unknown; reply?: PageReply } | null;
+      if (event.source !== window || data?.type !== PAGE_REPLY || data.id !== id || !data.reply) {
         return;
+      }
       cleanup();
-      resolve(event.data.reply as PageReply);
+      resolve(data.reply);
     };
     const onAbort = () => {
       cleanup();
       window.postMessage({ type: PAGE_ABORT, id }, location.origin);
-      reject(signal?.reason ?? new DOMException("The operation was aborted.", "AbortError"));
+      const reason: unknown =
+        signal?.reason ?? new DOMException("The operation was aborted.", "AbortError");
+      reject(reason);
     };
     const cleanup = () => {
       window.removeEventListener("message", onReply);
       signal?.removeEventListener("abort", onAbort);
     };
-    if (signal?.aborted) return onAbort();
+    if (signal?.aborted) {
+      return onAbort();
+    }
     window.addEventListener("message", onReply);
     signal?.addEventListener("abort", onAbort);
     window.postMessage({ type: PAGE_REQUEST, id, request }, location.origin);
@@ -61,15 +69,18 @@ function ask(request: PageRequest, signal?: AbortSignal | null): Promise<PageRep
 
 function registrationCredential(json: RegistrationJSON, wantsCredProps: boolean): Credential {
   const extensions = wantsCredProps ? { credProps: { rk: true } } : {};
-  const response = define(Object.create(AuthenticatorAttestationResponse.prototype), {
-    clientDataJSON: buffer(json.clientDataJSON),
-    attestationObject: buffer(json.attestationObject),
-    getTransports: () => ["internal", "hybrid"],
-    getPublicKey: () => buffer(json.publicKey),
-    getPublicKeyAlgorithm: () => json.publicKeyAlgorithm,
-    getAuthenticatorData: () => buffer(json.authenticatorData),
-  });
-  return define(Object.create(PublicKeyCredential.prototype), {
+  const response = define(
+    Object.create(AuthenticatorAttestationResponse.prototype) as AuthenticatorAttestationResponse,
+    {
+      clientDataJSON: buffer(json.clientDataJSON),
+      attestationObject: buffer(json.attestationObject),
+      getTransports: () => ["internal", "hybrid"],
+      getPublicKey: () => buffer(json.publicKey),
+      getPublicKeyAlgorithm: () => json.publicKeyAlgorithm,
+      getAuthenticatorData: () => buffer(json.authenticatorData),
+    },
+  );
+  return define(Object.create(PublicKeyCredential.prototype) as PublicKeyCredential, {
     id: json.credentialId,
     rawId: buffer(json.credentialId),
     type: "public-key",
@@ -95,13 +106,16 @@ function registrationCredential(json: RegistrationJSON, wantsCredProps: boolean)
 }
 
 function assertionCredential(json: AssertionJSON): Credential {
-  const response = define(Object.create(AuthenticatorAssertionResponse.prototype), {
-    clientDataJSON: buffer(json.clientDataJSON),
-    authenticatorData: buffer(json.authenticatorData),
-    signature: buffer(json.signature),
-    userHandle: buffer(json.userHandle),
-  });
-  return define(Object.create(PublicKeyCredential.prototype), {
+  const response = define(
+    Object.create(AuthenticatorAssertionResponse.prototype) as AuthenticatorAssertionResponse,
+    {
+      clientDataJSON: buffer(json.clientDataJSON),
+      authenticatorData: buffer(json.authenticatorData),
+      signature: buffer(json.signature),
+      userHandle: buffer(json.userHandle),
+    },
+  );
+  return define(Object.create(PublicKeyCredential.prototype) as PublicKeyCredential, {
     id: json.credentialId,
     rawId: buffer(json.credentialId),
     type: "public-key",
@@ -148,13 +162,16 @@ credentials.create = async function create(options?: CredentialCreationOptions) 
     },
     options?.signal,
   );
-  if (reply.kind === "fallback") return nativeCreate(options);
-  if (reply.kind === "error") throw failure(reply);
-  if (reply.kind !== "registration") throw new DOMException("Unexpected reply", "UnknownError");
-  return registrationCredential(
-    reply.registration,
-    Boolean((publicKey.extensions as { credProps?: boolean } | undefined)?.credProps),
-  );
+  if (reply.kind === "fallback") {
+    return nativeCreate(options);
+  }
+  if (reply.kind === "error") {
+    throw failure(reply);
+  }
+  if (reply.kind !== "registration") {
+    throw new DOMException("Unexpected reply", "UnknownError");
+  }
+  return registrationCredential(reply.registration, Boolean(publicKey.extensions?.credProps));
 };
 
 function getOptions(publicKey: PublicKeyCredentialRequestOptions) {
@@ -173,8 +190,9 @@ async function conditionalGet(
   options: CredentialRequestOptions & { publicKey: PublicKeyCredentialRequestOptions },
 ) {
   const outer = options.signal;
-  if (outer?.aborted)
+  if (outer?.aborted) {
     throw outer.reason ?? new DOMException("The operation was aborted.", "AbortError");
+  }
   const controller = new AbortController();
   const forward = () => controller.abort(outer?.reason);
   outer?.addEventListener("abort", forward);
@@ -202,12 +220,22 @@ async function conditionalGet(
 
 credentials.get = async function get(options?: CredentialRequestOptions) {
   const publicKey = options?.publicKey;
-  if (!publicKey) return nativeGet(options);
-  if (options?.mediation === "conditional") return conditionalGet({ ...options, publicKey });
+  if (!publicKey) {
+    return nativeGet(options);
+  }
+  if (options?.mediation === "conditional") {
+    return conditionalGet({ ...options, publicKey });
+  }
   const reply = await ask({ kind: "get", options: getOptions(publicKey) }, options?.signal);
-  if (reply.kind === "fallback") return nativeGet(options);
-  if (reply.kind === "error") throw failure(reply);
-  if (reply.kind !== "assertion") throw new DOMException("Unexpected reply", "UnknownError");
+  if (reply.kind === "fallback") {
+    return nativeGet(options);
+  }
+  if (reply.kind === "error") {
+    throw failure(reply);
+  }
+  if (reply.kind !== "assertion") {
+    throw new DOMException("Unexpected reply", "UnknownError");
+  }
   return assertionCredential(reply.assertion);
 };
 

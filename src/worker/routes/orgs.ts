@@ -56,11 +56,15 @@ function entriesOf<T>(
   max: number,
   valid: (entry: unknown) => entry is T,
 ): Record<string, T> | null {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
   const entries = Object.entries(value);
-  if (entries.length > max) return null;
+  if (entries.length > max) {
+    return null;
+  }
   return entries.every(([id, entry]) => isUuid(id) && valid(entry))
-    ? (Object.fromEntries(entries) as Record<string, T>)
+    ? Object.fromEntries(entries)
     : null;
 }
 
@@ -68,7 +72,9 @@ orgs.get("/", async (c) => c.json({ orgs: await directory(c).orgsOf(c.get("sessi
 
 orgs.post("/", async (c) => {
   const name = displayName((await readJson(c)).name);
-  if (!name) return c.json(apiError("orgs.invalid_name"), 400);
+  if (!name) {
+    return c.json(apiError("orgs.invalid_name"), 400);
+  }
   const accountId = c.get("session").accountId;
   if ((await directory(c).ownedCount(accountId)) >= MAX_ORGS_PER_ACCOUNT) {
     return c.json(apiError("orgs.limit_reached"), 409);
@@ -94,7 +100,9 @@ orgs.get(
       isOrgAdmin(member.role) ? dir.invites(orgId) : Promise.resolve([]),
       orgStore(c.env, orgId).overview(member),
     ]);
-    if (!overview.ok) return respond(c, overview);
+    if (!overview.ok) {
+      return respond(c, overview);
+    }
     return c.json({ org: { ...org, role: member.role }, members, invites, ...overview.value });
   }),
 );
@@ -102,14 +110,22 @@ orgs.get(
 const MAX_INVITE_TEAMS = 50;
 
 function inviteTeams(value: unknown): { teamId: string; access: TeamAccess }[] | null {
-  if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > MAX_INVITE_TEAMS) return null;
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || value.length > MAX_INVITE_TEAMS) {
+    return null;
+  }
   const teams = value.map((entry) => {
-    if (typeof entry !== "object" || entry === null) return null;
+    if (typeof entry !== "object" || entry === null) {
+      return null;
+    }
     const { teamId, access } = entry as Record<string, unknown>;
     return isUuid(teamId) && isTeamAccess(access) ? { teamId, access } : null;
   });
-  if (teams.some((entry) => entry === null)) return null;
+  if (teams.some((entry) => entry === null)) {
+    return null;
+  }
   const valid = teams as { teamId: string; access: TeamAccess }[];
   return new Set(valid.map((entry) => entry.teamId)).size === valid.length ? valid : null;
 }
@@ -119,10 +135,16 @@ orgs.post(
   asMember(async (c, member, orgId) => {
     const body = await readJson(c);
     const email = normalizeEmail(body.email);
-    if (!email || !isInvitableRole(body.role)) return c.json(apiError("orgs.invalid_invite"), 400);
+    if (!email || !isInvitableRole(body.role)) {
+      return c.json(apiError("orgs.invalid_invite"), 400);
+    }
     const teams = inviteTeams(body.teams);
-    if (!teams) return c.json(apiError("orgs.invalid_invite"), 400);
-    if (!canInvite(member.role, body.role)) return forbidden(c);
+    if (!teams) {
+      return c.json(apiError("orgs.invalid_invite"), 400);
+    }
+    if (!canInvite(member.role, body.role)) {
+      return forbidden(c);
+    }
     const dir = directory(c);
     const org = await dir.org(orgId);
     const { seats } = planLimits(org?.plan ?? "free");
@@ -137,7 +159,9 @@ orgs.post(
       return c.json(apiError("orgs.already_member"), 409);
     }
     const planned = await orgStore(c.env, orgId).planInvite(member, email, teams);
-    if (!planned.ok) return respond(c, planned);
+    if (!planned.ok) {
+      return respond(c, planned);
+    }
     const stored = await dir.invite(orgId, email, body.role, member.accountId);
     await orgStore(c.env, orgId).note(member.accountId, "member.invited", email, clientIp(c));
     const siteUrl = new URL(c.req.url).origin;
@@ -162,7 +186,9 @@ orgs.delete(
       (invite) => invite.id === param(c, "inviteId"),
     );
     await dir.withdrawInvite(orgId, param(c, "inviteId"));
-    if (withdrawn) await orgStore(c.env, orgId).forgetInvite(withdrawn.email);
+    if (withdrawn) {
+      await orgStore(c.env, orgId).forgetInvite(withdrawn.email);
+    }
     return c.json({ ok: true });
   }, admins),
 );
@@ -172,7 +198,9 @@ orgs.put(
   asMember(
     async (c, member, orgId) => {
       const domains = parseDomains((await readJson(c)).domains);
-      if (!domains) return c.json(apiError("orgs.invalid_domains"), 400);
+      if (!domains) {
+        return c.json(apiError("orgs.invalid_domains"), 400);
+      }
       await directory(c).setAllowedDomains(orgId, domains);
       await orgStore(c.env, orgId).note(
         member.accountId,
@@ -195,7 +223,9 @@ orgs.patch(
       if (!isInvitableRole(role) || target === member.accountId) {
         return c.json(apiError("orgs.invalid_role"), 400);
       }
-      if (!(await directory(c).setRole(orgId, target, role))) return notFound(c);
+      if (!(await directory(c).setRole(orgId, target, role))) {
+        return notFound(c);
+      }
       await orgStore(c.env, orgId).setMember(
         member.accountId,
         { accountId: target, role },
@@ -221,9 +251,15 @@ orgs.post(
       }
       const dir = directory(c);
       const successor = await dir.transferCandidate(orgId, accountId);
-      if (!successor) return notFound(c);
-      if (successor.role !== "admin") return c.json(apiError("orgs.transfer_needs_admin"), 400);
-      if (!successor.hasKey) return c.json(apiError("orgs.transfer_needs_key"), 400);
+      if (!successor) {
+        return notFound(c);
+      }
+      if (successor.role !== "admin") {
+        return c.json(apiError("orgs.transfer_needs_admin"), 400);
+      }
+      if (!successor.hasKey) {
+        return c.json(apiError("orgs.transfer_needs_key"), 400);
+      }
       const org = await dir.org(orgId);
       if (!isDomainAllowed(successor.email, org?.allowedDomains ?? [])) {
         return c.json(
@@ -234,7 +270,9 @@ orgs.post(
       if ((await dir.ownedCount(accountId)) >= MAX_ORGS_PER_ACCOUNT) {
         return c.json(apiError("orgs.limit_reached"), 409);
       }
-      if (!(await dir.transferOwnership(orgId, member.accountId, accountId))) return notFound(c);
+      if (!(await dir.transferOwnership(orgId, member.accountId, accountId))) {
+        return notFound(c);
+      }
       await orgStore(c.env, orgId).transferOwnership(member.accountId, accountId, clientIp(c));
       c.executionCtx.waitUntil(
         notifyNewOwner(c.env, dir, {
@@ -257,8 +295,12 @@ orgs.delete(
     const target = param(c, "accountId");
     const dir = directory(c);
     const role = await dir.roleOf(orgId, target);
-    if (!role) return notFound(c);
-    if (!canRemove(member, { accountId: target, role })) return forbidden(c);
+    if (!role) {
+      return notFound(c);
+    }
+    if (!canRemove(member, { accountId: target, role })) {
+      return forbidden(c);
+    }
     await dir.removeMember(orgId, target);
     await orgStore(c.env, orgId).removeMember(member.accountId, target, clientIp(c));
     return c.json({ ok: true });
@@ -313,7 +355,9 @@ orgs.put(
   "/:orgId/teams/:teamId/members/:accountId/access",
   asMember(async (c, member, orgId) => {
     const { access } = await readJson(c);
-    if (!isTeamAccess(access)) return c.json(apiError("orgs.invalid_team"), 400);
+    if (!isTeamAccess(access)) {
+      return c.json(apiError("orgs.invalid_team"), 400);
+    }
     return respond(
       c,
       await orgStore(c.env, orgId).setTeamAccess(
@@ -412,11 +456,17 @@ invites.get("/", async (c) => c.json({ invites: await directory(c).invitesFor(aw
 
 invites.get("/:inviteId/preview", async (c) => {
   const inviteId = param(c, "inviteId");
-  if (!isUuid(inviteId)) return notFound(c);
+  if (!isUuid(inviteId)) {
+    return notFound(c);
+  }
   const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp(c) ?? "unknown" });
-  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  if (!success) {
+    return c.json(apiError("server.rate_limited"), 429);
+  }
   const invite = await directory(c).preview(inviteId);
-  if (!invite) return notFound(c);
+  if (!invite) {
+    return notFound(c);
+  }
   return c.json(invite);
 });
 
@@ -427,8 +477,12 @@ invites.post("/:inviteId/accept", async (c) => {
     accountId: c.get("session").accountId,
     ip: clientIp(c),
   });
-  if (orgId === "domain") return c.json(apiError("orgs.invite_domain_blocked"), 403);
-  if (!orgId) return notFound(c);
+  if (orgId === "domain") {
+    return c.json(apiError("orgs.invite_domain_blocked"), 403);
+  }
+  if (!orgId) {
+    return notFound(c);
+  }
   return c.json({ orgId });
 });
 

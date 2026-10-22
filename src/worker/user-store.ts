@@ -50,7 +50,9 @@ export class UserStore extends DurableObject<Env> {
 
   private async open(accountId: string): Promise<boolean> {
     const owner = this.meta("owner");
-    if (owner !== null) return owner === accountId;
+    if (owner !== null) {
+      return owner === accountId;
+    }
     const { results } = await this.env.DB.prepare(
       "SELECT id, ciphertext, nonce, updated_at, deleted_at FROM items WHERE account_id = ?",
     )
@@ -83,7 +85,9 @@ export class UserStore extends DurableObject<Env> {
     accountId: string,
     since: number,
   ): Promise<Result<{ serverTime: number; items: StoredItem[] }>> {
-    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
+    if (!(await this.open(accountId))) {
+      return fail(403, "items.forbidden");
+    }
     const serverTime = now();
     const rows = this.sql
       .exec<Row>(
@@ -109,7 +113,9 @@ export class UserStore extends DurableObject<Env> {
     sealed: { ciphertext: string; nonce: string },
     ifUpdatedAt?: number,
   ): Promise<Result<{ id: string; updatedAt: number }>> {
-    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
+    if (!(await this.open(accountId))) {
+      return fail(403, "items.forbidden");
+    }
     const updatedAt = now();
     if (ifUpdatedAt !== undefined) {
       const changed = this.sql.exec(
@@ -145,7 +151,9 @@ export class UserStore extends DurableObject<Env> {
     accountId: string,
     rows: { id: string; ciphertext: string; nonce: string }[],
   ): Promise<Result<{ updatedAt: number; created: string[] }>> {
-    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
+    if (!(await this.open(accountId))) {
+      return fail(403, "items.forbidden");
+    }
     if (this.liveCount() + rows.length > MAX_ITEMS_PER_ACCOUNT) {
       return fail(403, "items.quota_exceeded");
     }
@@ -161,14 +169,18 @@ export class UserStore extends DurableObject<Env> {
           row.nonce,
           updatedAt,
         ).rowsWritten;
-        if (written) created.push(row.id);
+        if (written) {
+          created.push(row.id);
+        }
       }
     });
     return ok({ updatedAt, created });
   }
 
   async remove(accountId: string, id: string): Promise<Result<{ id: string; deletedAt: number }>> {
-    if (!(await this.open(accountId))) return fail(403, "items.forbidden");
+    if (!(await this.open(accountId))) {
+      return fail(403, "items.forbidden");
+    }
     const deletedAt = now();
     const changed = this.sql.exec(
       `UPDATE items SET deleted_at = ?, updated_at = ?, ciphertext = '', nonce = ''
@@ -182,15 +194,17 @@ export class UserStore extends DurableObject<Env> {
 
   async destroy(accountId: string): Promise<void> {
     const owner = this.meta("owner");
-    if (owner !== null && owner !== accountId) return;
+    if (owner !== null && owner !== accountId) {
+      return;
+    }
     await this.ctx.storage.deleteAll();
   }
 
   async exportState(): Promise<StoreDump> {
-    return dumpStore(this.sql);
+    return Promise.resolve(dumpStore(this.sql));
   }
 
   async importState(dump: StoreDump): Promise<number> {
-    return restoreStore(this.ctx.storage, dump);
+    return Promise.resolve(restoreStore(this.ctx.storage, dump));
   }
 }

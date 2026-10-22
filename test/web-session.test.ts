@@ -21,11 +21,17 @@ vi.stubGlobal(
     const url = new URL(String(input));
     calls.push(`${init?.method ?? "GET"} ${url.origin}${url.pathname}`);
     const { record } = account;
-    if (url.pathname === "/api/auth/prelogin") return json({ kdf: record.kdf });
+    if (url.pathname === "/api/auth/prelogin") {
+      return json({ kdf: record.kdf });
+    }
     if (url.pathname === "/api/auth/login") {
       const body = JSON.parse(String(init?.body));
-      if (body.authKey !== record.authKey) return json({ code: "auth.invalid_credentials" }, 401);
-      if (server.bareLogin) return json({ next: "something new" });
+      if (body.authKey !== record.authKey) {
+        return json({ code: "auth.invalid_credentials" }, 401);
+      }
+      if (server.bareLogin) {
+        return json({ next: "something new" });
+      }
       return server.twoFactor
         ? json({ twoFactor: "required", challenge: "challenge-1", expiresAt: 0 })
         : json({ token: "web-token", wrappedVaultKey: record.wrappedVaultKey });
@@ -36,7 +42,9 @@ vi.stubGlobal(
         ? json({ token: "web-token-2fa", wrappedVaultKey: record.wrappedVaultKey })
         : json({ code: "auth.invalid_2fa" }, 401);
     }
-    if (url.pathname === "/api/auth/logout") return json({ ok: true });
+    if (url.pathname === "/api/auth/logout") {
+      return json({ ok: true });
+    }
     return json({ code: "server.not_found" }, 404);
   }),
 );

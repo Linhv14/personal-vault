@@ -1,5 +1,6 @@
 import { useState } from "preact/hooks";
 import { isDomainAllowed } from "../../../src/core/org-model.js";
+import { formText } from "../../../src/ui/form-data.js";
 import type { Team, TeamAccess } from "../../lib/orgs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
@@ -41,7 +42,7 @@ export function InviteDialog({
       submitLabel={t("orgs.send_invite")}
       onClose={onClose}
       onSubmit={(form) => {
-        const email = String(new FormData(form).get("email")).trim();
+        const email = formText(new FormData(form), "email").trim();
         if (!isDomainAllowed(email, domains)) {
           failure$.value = t("error.orgs.domain_not_allowed", { domains: domainList });
           return;

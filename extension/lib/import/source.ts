@@ -45,13 +45,17 @@ export function list(value: unknown): unknown[] {
 }
 
 export function countSkip(skipped: ImportSource["skipped"], reason: SkipReason, count = 1): void {
-  if (count > 0) skipped[reason] = (skipped[reason] ?? 0) + count;
+  if (count > 0) {
+    skipped[reason] = (skipped[reason] ?? 0) + count;
+  }
 }
 
 export function cardExpiry(month: string, year: string): string | undefined {
   const m = Number(month);
   const digits = year.trim().slice(-2);
-  if (!Number.isInteger(m) || m < 1 || m > 12 || !/^\d{2}$/.test(digits)) return undefined;
+  if (!Number.isInteger(m) || m < 1 || m > 12 || !/^\d{2}$/.test(digits)) {
+    return undefined;
+  }
   return `${String(m).padStart(2, "0")}/${digits}`;
 }
 

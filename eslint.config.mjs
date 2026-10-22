@@ -1,0 +1,239 @@
+import js from "@eslint/js";
+import prettier from "eslint-config-prettier";
+import importPlugin from "eslint-plugin-import";
+import globals from "globals";
+import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
+
+export default defineConfig(
+  {
+    ignores: [
+      "dist/**",
+      "action/dist/**",
+      "e2e-browser/.artifacts/**",
+      "tools/demo-video/site/**",
+      "node_modules/**",
+      ".wrangler/**",
+      "coverage/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
+  },
+  js.configs.recommended,
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: "error",
+    },
+    plugins: {
+      import: importPlugin,
+    },
+    settings: {
+      "import/resolver": {
+        typescript: {
+          alwaysTryTypes: true,
+          project: [
+            "tsconfig.json",
+            "tsconfig.worker.json",
+            "tsconfig.scripts.json",
+            "tsconfig.eslint.json",
+            "tsconfig.eslint-config.json",
+            "e2e-browser/tsconfig.json",
+          ],
+        },
+      },
+    },
+    rules: {
+      "no-console": "error",
+      "import/no-restricted-paths": [
+        "error",
+        {
+          basePath: import.meta.dirname,
+          zones: [
+            { target: "./src/core", from: ".", except: ["./src/core"] },
+            {
+              target: "src/worker/**",
+              from: ["extension/**", "web/**", "src/ui/**", "src/i18n/**"],
+            },
+            {
+              target: "cli/**",
+              from: "extension/**",
+            },
+            {
+              target: "share/**",
+              from: "extension/**",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  ...tseslint.configs.recommendedTypeChecked.map((config) => ({
+    ...config,
+    files: ["**/*.{ts,tsx}"],
+  })),
+  {
+    files: ["eslint.config.mjs", "tools/demo-video/**/*.mjs"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["tools/demo-video/stills.mjs"],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
+  {
+    files: ["tools/demo-video/cdp.mjs"],
+    languageOptions: {
+      globals: {
+        WebSocket: "readonly",
+      },
+    },
+  },
+  {
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        project: [
+          "tsconfig.json",
+          "tsconfig.worker.json",
+          "tsconfig.scripts.json",
+          "tsconfig.eslint.json",
+          "tsconfig.eslint-config.json",
+          "e2e-browser/tsconfig.json",
+        ],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        Buffer: "readonly",
+        console: "readonly",
+        process: "readonly",
+      },
+    },
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "error",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: false }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+      "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/prefer-promise-reject-errors": ["error", { allowThrowingUnknown: true }],
+      curly: ["error", "all"],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSEnumDeclaration",
+          message: "Use an `as const` object instead of an enum.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/core/**/*.ts"],
+    languageOptions: {
+      parserOptions: {
+        project: "./tsconfig.worker.json",
+      },
+    },
+  },
+  {
+    files: ["cli/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "tools/demo-video/**/*.mjs"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
+    files: ["test/**/*.{ts,tsx}", "e2e-browser/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/require-await": "off",
+      "@typescript-eslint/no-base-to-string": "off",
+      "@typescript-eslint/unbound-method": "off",
+    },
+  },
+  {
+    files: ["src/worker/log.ts", "extension/lib/log.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
+    files: ["src/core/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSEnumDeclaration",
+          message: "Use an `as const` object instead of an enum.",
+        },
+        {
+          selector: "ImportDeclaration[source.value=/^(node:|[^./][^:]*)/]",
+          message: "Core modules may only import other core modules.",
+        },
+        {
+          selector: "ImportDeclaration[source.value=/^\\//]",
+          message: "Core modules may only import other core modules.",
+        },
+        {
+          selector: "ExportNamedDeclaration[source.value=/^(node:|[^./][^:]*)/]",
+          message: "Core modules may only export from other core modules.",
+        },
+        {
+          selector: "ExportNamedDeclaration[source.value=/^\\//]",
+          message: "Core modules may only export from other core modules.",
+        },
+        {
+          selector: "ExportAllDeclaration[source.value=/^(node:|[^./][^:]*)/]",
+          message: "Core modules may only export from other core modules.",
+        },
+        {
+          selector: "ExportAllDeclaration[source.value=/^\\//]",
+          message: "Core modules may only export from other core modules.",
+        },
+        {
+          selector: "TSImportType[source.value=/^(node:|[^./][^:]*)/]",
+          message: "Core modules may only import types from other core modules.",
+        },
+        {
+          selector: "ImportExpression",
+          message: "Core modules may not use dynamic imports.",
+        },
+        {
+          selector: "TSImportEqualsDeclaration",
+          message: "Core modules may not use import-equals declarations.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["extension/background.ts", "src/worker/**/*.ts"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        { name: "window", message: "Do not use window in Worker/background code." },
+      ],
+    },
+  },
+  {
+    ...prettier,
+    rules: {
+      ...prettier.rules,
+      curly: ["error", "all"],
+    },
+  },
+);

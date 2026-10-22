@@ -11,7 +11,9 @@ import { openConsole, clockWarning, syncing, syncProblem, vaultKey } from "../st
 function PromoBanner() {
   const t = useT();
   const promo = activePromo.value;
-  if (!promo) return null;
+  if (!promo) {
+    return null;
+  }
 
   const invites = orgSnapshot.value?.invites ?? [];
   const content: Record<typeof promo, { icon: IconName | null; text: string; action: string }> = {
@@ -56,7 +58,9 @@ function PromoBanner() {
 export function Notices() {
   const problem = syncProblem.value;
   useEffect(() => {
-    if (vaultKey.value) void refreshPromos();
+    if (vaultKey.value) {
+      void refreshPromos();
+    }
   }, [vaultKey.value]);
 
   return (

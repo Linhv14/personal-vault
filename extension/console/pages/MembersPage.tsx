@@ -1,4 +1,5 @@
 import { useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import {
   canChangeRoles,
   canInvite,
@@ -364,11 +365,13 @@ export function MembersPage() {
           danger
           onClose={() => setModal(null)}
           onSubmit={(form) => {
-            const password = String(new FormData(form).get("password"));
+            const password = formText(new FormData(form), "password");
             void run(
               async () => {
                 const authKey = await currentAuthKey(password);
-                if (!authKey) throw new ApiError("error.crypto.wrong_password", 403);
+                if (!authKey) {
+                  throw new ApiError("error.crypto.wrong_password", 403);
+                }
                 await transferOwnership(orgId, modal.member.accountId, authKey, localeSignal.value);
                 setModal(null);
               },

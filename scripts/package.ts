@@ -13,7 +13,9 @@ const staging = path.join(root, "dist", "store-extension");
 const build = spawnSync(process.execPath, [path.join(root, "scripts", "build.ts")], {
   stdio: "inherit",
 });
-if (build.status !== 0) process.exit(build.status ?? 1);
+if (build.status !== 0) {
+  process.exit(build.status ?? 1);
+}
 
 rmSync(staging, { recursive: true, force: true });
 cpSync(extension, staging, { recursive: true });

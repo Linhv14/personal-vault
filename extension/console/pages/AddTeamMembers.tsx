@@ -73,7 +73,9 @@ export function AddTeamMembersDialog({
   };
   const paste = (text: string) => {
     const emails = [...new Set((text.match(EMAIL) ?? []).map((email) => email.toLowerCase()))];
-    if (emails.length < 2) return false;
+    if (emails.length < 2) {
+      return false;
+    }
     const byEmail = new Map(candidates.map((member) => [member.email.toLowerCase(), member]));
     add(emails.flatMap((email) => byEmail.get(email) ?? []));
     setUnknown(emails.filter((email) => !byEmail.has(email)));
@@ -98,12 +100,16 @@ export function AddTeamMembersDialog({
           placeholder={t("console.find_people")}
           onInput={(event) => setQuery(event.currentTarget.value)}
           onPaste={(event) => {
-            if (paste(event.clipboardData?.getData("text") ?? "")) event.preventDefault();
+            if (paste(event.clipboardData?.getData("text") ?? "")) {
+              event.preventDefault();
+            }
           }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              if (matches[0]) add([matches[0]]);
+              if (matches[0]) {
+                add([matches[0]]);
+              }
             }
           }}
         />

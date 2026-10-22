@@ -174,7 +174,9 @@ export function buildOtpauthUri(config: TotpConfig): string {
     digits: String(config.digits),
     period: String(config.period),
   });
-  if (config.issuer) params.set("issuer", config.issuer);
+  if (config.issuer) {
+    params.set("issuer", config.issuer);
+  }
 
   return `otpauth://totp/${encodeURIComponent(label)}?${params.toString()}`;
 }

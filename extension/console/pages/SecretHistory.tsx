@@ -71,7 +71,9 @@ export function SecretHistoryDialog({
                 type="button"
                 className={shown === version.id ? "value-toggle shown" : "value-toggle"}
                 onClick={() => {
-                  if (shown !== version.id) onRevealed();
+                  if (shown !== version.id) {
+                    onRevealed();
+                  }
                   setShown(shown === version.id ? null : version.id);
                 }}
               >

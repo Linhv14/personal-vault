@@ -38,7 +38,9 @@ export function SessionsCard() {
 
   const revoke = async (session: api.SessionInfo) => {
     const label = session.label || t("settings.sessions_unknown_device");
-    if (!confirm(t("settings.sessions_revoke_confirm", { device: label }))) return;
+    if (!confirm(t("settings.sessions_revoke_confirm", { device: label }))) {
+      return;
+    }
     try {
       await api.revokeSession(session.id);
       showToast(t("settings.sessions_revoked"));
@@ -49,7 +51,9 @@ export function SessionsCard() {
   };
 
   const revokeOthers = async () => {
-    if (!confirm(t("settings.sessions_revoke_others_confirm"))) return;
+    if (!confirm(t("settings.sessions_revoke_others_confirm"))) {
+      return;
+    }
     try {
       await api.revokeOtherSessions();
       showToast(t("settings.sessions_revoked_others"));
@@ -59,7 +63,9 @@ export function SessionsCard() {
     }
   };
 
-  if (!sessions && !error) return null;
+  if (!sessions && !error) {
+    return null;
+  }
   const others = (sessions ?? []).filter((session) => !session.current).length;
 
   return (

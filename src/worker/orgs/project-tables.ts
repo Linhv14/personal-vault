@@ -334,7 +334,9 @@ export class ProjectTables {
     secrets: Record<string, SealedData>,
     versions: Record<string, SealedData>,
   ): void {
-    for (const [id, sealed] of Object.entries(projects)) this.replace(id, sealed);
+    for (const [id, sealed] of Object.entries(projects)) {
+      this.replace(id, sealed);
+    }
     for (const [id, sealed] of Object.entries(secrets)) {
       this.sql.exec("UPDATE secrets SET sealed = ? WHERE id = ?", JSON.stringify(sealed), id);
     }

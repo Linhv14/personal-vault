@@ -14,7 +14,9 @@ function configFile(env: NodeJS.ProcessEnv): string {
 
 export function remembered(env: NodeJS.ProcessEnv): Remembered {
   const file = configFile(env);
-  if (!existsSync(file)) return {};
+  if (!existsSync(file)) {
+    return {};
+  }
   try {
     return JSON.parse(readFileSync(file, "utf8")) as Remembered;
   } catch {

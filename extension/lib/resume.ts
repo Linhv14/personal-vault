@@ -25,9 +25,13 @@ export async function forgetUnlock(): Promise<void> {
 }
 
 export async function resumeUnlock(): Promise<boolean> {
-  if (await getUnlocked()) return true;
+  if (await getUnlocked()) {
+    return true;
+  }
   const { resume } = await getLocal();
-  if (!resume || (await autoLockMinutes()) !== LOCK_NEVER) return false;
+  if (!resume || (await autoLockMinutes()) !== LOCK_NEVER) {
+    return false;
+  }
   try {
     const resumeKey = await importVaultKey(fromBase64(await api.resumeKey(resume.token)));
     const { vaultKeyRaw } = await openJson<{ vaultKeyRaw: string }>(
@@ -39,7 +43,9 @@ export async function resumeUnlock(): Promise<boolean> {
     return true;
   } catch (error) {
     const offline = error instanceof api.ApiError && error.status === 0;
-    if (!offline) await forgetUnlock();
+    if (!offline) {
+      await forgetUnlock();
+    }
     return false;
   }
 }

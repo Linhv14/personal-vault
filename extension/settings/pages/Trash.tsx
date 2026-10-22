@@ -41,7 +41,9 @@ export function Trash() {
   };
 
   useEffect(() => {
-    if (!vaultKey) return;
+    if (!vaultKey) {
+      return;
+    }
     setLoadError(null);
     load(vaultKey).catch((error: unknown) => setLoadError(describeError(error, t)));
   }, [vaultKey, locale]);
@@ -49,11 +51,15 @@ export function Trash() {
   const settle = async (ids: Set<string>, message: string) => {
     setTrashed((current) => current?.filter((item) => !ids.has(item.id)) ?? null);
     showToast(message);
-    if (vaultKey) await load(vaultKey).catch(() => undefined);
+    if (vaultKey) {
+      await load(vaultKey).catch(() => undefined);
+    }
   };
 
   const restore = async (list: VaultItem[]) => {
-    if (!vaultKey) return;
+    if (!vaultKey) {
+      return;
+    }
     const done = new Set<string>();
     try {
       for (const item of list) {
@@ -61,7 +67,9 @@ export function Trash() {
         done.add(item.id);
       }
     } finally {
-      if (done.size > 0) await settle(done, t("trash.restored", { count: done.size }));
+      if (done.size > 0) {
+        await settle(done, t("trash.restored", { count: done.size }));
+      }
     }
   };
 
@@ -73,7 +81,9 @@ export function Trash() {
         done.add(item.id);
       }
     } finally {
-      if (done.size > 0) await settle(done, t("trash.deleted", { count: done.size }));
+      if (done.size > 0) {
+        await settle(done, t("trash.deleted", { count: done.size }));
+      }
     }
   };
 
@@ -137,15 +147,20 @@ export function TrashList({
   const toggle = (id: string, on: boolean) =>
     setPicked((current) => {
       const next = new Set(current);
-      if (on) next.add(id);
-      else next.delete(id);
+      if (on) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
       return next;
     });
 
   const forget = (list: VaultItem[]) =>
     setPicked((current) => {
       const next = new Set(current);
-      for (const item of list) next.delete(item.id);
+      for (const item of list) {
+        next.delete(item.id);
+      }
       return next;
     });
 
@@ -155,12 +170,15 @@ export function TrashList({
         () => onRestore(list),
         (error) => describeError(error, t),
       )
-    )
+    ) {
       forget(list);
+    }
   };
 
   const confirmDelete = async () => {
-    if (!confirming) return;
+    if (!confirming) {
+      return;
+    }
     const list = confirming.items;
     if (
       await attempt(
@@ -173,7 +191,9 @@ export function TrashList({
     }
   };
 
-  if (items.length === 0) return <EmptyState icon="trash" title={t("trash.empty_state")} />;
+  if (items.length === 0) {
+    return <EmptyState icon="trash" title={t("trash.empty_state")} />;
+  }
 
   const deletable = items.filter(editable);
   return (

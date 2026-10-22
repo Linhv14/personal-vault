@@ -25,7 +25,9 @@ export function Data() {
   const [linksError, setLinksError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!vaultKey) return;
+    if (!vaultKey) {
+      return;
+    }
     let active = true;
     const load = async () => {
       setLinksError(null);
@@ -37,7 +39,9 @@ export function Data() {
           ),
         );
         const activeLinks = stored.filter((link) => statuses.get(link.id)?.active);
-        if (activeLinks.length !== stored.length) await saveSharedLinks(vaultKey, activeLinks);
+        if (activeLinks.length !== stored.length) {
+          await saveSharedLinks(vaultKey, activeLinks);
+        }
         if (active) {
           setLinks(
             activeLinks.flatMap((link) => {
@@ -47,7 +51,9 @@ export function Data() {
           );
         }
       } catch (error) {
-        if (active) setLinksError(describeError(error, t));
+        if (active) {
+          setLinksError(describeError(error, t));
+        }
       }
     };
     void load();
@@ -57,7 +63,9 @@ export function Data() {
   }, [vaultKey, locale]);
 
   const revokeLink = async (entry: LinkEntry) => {
-    if (!vaultKey || !confirm(t("links.revoke_confirm", { title: entry.link.title }))) return;
+    if (!vaultKey || !confirm(t("links.revoke_confirm", { title: entry.link.title }))) {
+      return;
+    }
     try {
       await api.revokeShareLink(entry.link.id, entry.link.revokeToken);
       await forgetSharedLink(vaultKey, entry.link.id);

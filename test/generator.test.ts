@@ -37,7 +37,9 @@ describe("randomInt", () => {
     // noise, so this does not flake but would still catch real bias.
     const counts = [0, 0, 0];
     const samples = 30_000;
-    for (let i = 0; i < samples; i++) counts[randomInt(3)]! += 1;
+    for (let i = 0; i < samples; i++) {
+      counts[randomInt(3)]! += 1;
+    }
     for (const count of counts) {
       expect(Math.abs(count / samples - 1 / 3)).toBeLessThan(0.02);
     }
@@ -100,7 +102,9 @@ describe("generatePassword", () => {
     let digitInFirstFour = 0;
     const runs = 400;
     for (let i = 0; i < runs; i++) {
-      if (/[0-9]/.test(generatePassword({ length: 20 }).value.slice(0, 4))) digitInFirstFour += 1;
+      if (/[0-9]/.test(generatePassword({ length: 20 }).value.slice(0, 4))) {
+        digitInFirstFour += 1;
+      }
     }
     expect(digitInFirstFour).toBeLessThan(runs * 0.9);
   });
@@ -129,7 +133,9 @@ describe("generatePassphrase", () => {
     const { value } = generatePassphrase();
     const words = value.split("-");
     expect(words).toHaveLength(8);
-    for (const word of words) expect(EFF_SHORT_WORDLIST).toContain(word);
+    for (const word of words) {
+      expect(EFF_SHORT_WORDLIST).toContain(word);
+    }
   });
 
   it("computes entropy from the real list length", () => {
@@ -152,7 +158,9 @@ describe("generatePassphrase", () => {
     });
     const parts = value.split(".");
     expect(parts).toHaveLength(5);
-    for (const word of parts.slice(0, 4)) expect(word[0]).toMatch(/[A-Z]/);
+    for (const word of parts.slice(0, 4)) {
+      expect(word[0]).toMatch(/[A-Z]/);
+    }
     expect(parts[4]).toMatch(/^[0-9]$/);
     expect(entropyBits).toBeCloseTo(4 * Math.log2(1296) + Math.log2(10), 1);
   });

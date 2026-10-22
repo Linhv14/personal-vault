@@ -25,22 +25,32 @@ function describe(input: HTMLInputElement): string {
 }
 
 export function isOneTimeCodeField(input: HTMLInputElement): boolean {
-  if (input.type === "password" || input.type === "hidden" || input.disabled) return false;
-  if (input.autocomplete.split(/\s+/).includes("one-time-code")) return true;
-  if (!["text", "tel", "number", ""].includes(input.type)) return false;
+  if (input.type === "password" || input.type === "hidden" || input.disabled) {
+    return false;
+  }
+  if (input.autocomplete.split(/\s+/).includes("one-time-code")) {
+    return true;
+  }
+  if (!["text", "tel", "number", ""].includes(input.type)) {
+    return false;
+  }
   const short = input.maxLength > 0 && input.maxLength <= 10;
   const numeric = input.inputMode === "numeric" || /\\d|\[0-9\]/.test(input.pattern);
   return CODE_HINT.test(describe(input)) && (short || numeric || input.type === "tel");
 }
 
 export function codeBoxes(input: HTMLInputElement): HTMLInputElement[] {
-  if (input.maxLength !== 1) return [input];
+  if (input.maxLength !== 1) {
+    return [input];
+  }
   let group: Element | null = input.parentElement;
   for (let depth = 0; group && depth < 4; depth++, group = group.parentElement) {
     const boxes = [...group.querySelectorAll<HTMLInputElement>("input")].filter(
       (box) => box.maxLength === 1 && visible(box),
     );
-    if (boxes.length >= 4) return boxes;
+    if (boxes.length >= 4) {
+      return boxes;
+    }
   }
   return [input];
 }
@@ -65,13 +75,19 @@ export function findSetupText(root: ParentNode = document): string | null {
     "input, textarea",
   )) {
     const match = OTPAUTH.exec(input.value);
-    if (match) return match[0];
+    if (match) {
+      return match[0];
+    }
   }
   const element = "body" in root ? (root as Document).body : (root as HTMLElement);
   const text = element?.innerText || element?.textContent || "";
   const uri = OTPAUTH.exec(text);
-  if (uri) return uri[0];
-  if (!mentionsSetup(text)) return null;
+  if (uri) {
+    return uri[0];
+  }
+  if (!mentionsSetup(text)) {
+    return null;
+  }
   const candidates = [
     ...[...root.querySelectorAll<HTMLInputElement>("input[readonly]")].map((input) => input.value),
     ...(text.match(BASE32_RUN) ?? []),
@@ -84,7 +100,9 @@ export function findSetupText(root: ParentNode = document): string | null {
 function qrCandidates(root: ParentNode): Element[] {
   return [...root.querySelectorAll("img, canvas, svg")]
     .filter((element) => {
-      if (!visible(element)) return false;
+      if (!visible(element)) {
+        return false;
+      }
       const { width, height } = element.getBoundingClientRect();
       return (
         width >= 80 && height >= 80 && Math.abs(width - height) / Math.max(width, height) < 0.2
@@ -94,7 +112,9 @@ function qrCandidates(root: ParentNode): Element[] {
 }
 
 async function bitmapOf(element: Element): Promise<ImageBitmapSource | null> {
-  if (element instanceof HTMLImageElement || element instanceof HTMLCanvasElement) return element;
+  if (element instanceof HTMLImageElement || element instanceof HTMLCanvasElement) {
+    return element;
+  }
   const markup = new XMLSerializer().serializeToString(element);
   const url = URL.createObjectURL(new Blob([markup], { type: "image/svg+xml" }));
   try {
@@ -122,19 +142,27 @@ export async function findSetupQr(
 ): Promise<string | null> {
   const Barcode = (globalThis as { BarcodeDetector?: new (options: object) => Detector })
     .BarcodeDetector;
-  if (!Barcode) return null;
+  if (!Barcode) {
+    return null;
+  }
   const detector = new Barcode({ formats: ["qr_code"] });
   for (const element of qrCandidates(root)) {
     const local = await bitmapOf(element)
       .then((source) => (source ? decode(detector, source) : null))
       .catch(() => null);
-    if (local) return local;
+    if (local) {
+      return local;
+    }
     const src = element instanceof HTMLImageElement ? element.currentSrc : "";
-    if (!src.startsWith("https://") || new URL(src).origin === location.origin) continue;
+    if (!src.startsWith("https://") || new URL(src).origin === location.origin) {
+      continue;
+    }
     try {
       const blob = await fetchImage(src);
       const found = blob ? await decode(detector, await createImageBitmap(blob)) : null;
-      if (found) return found;
+      if (found) {
+        return found;
+      }
     } catch {
       continue;
     }

@@ -50,10 +50,13 @@ export function plan(secrets: readonly SecretContent[]): Plan {
   const skipped: string[] = [];
   const tooShort: string[] = [];
   for (const secret of secrets) {
-    if (isVariable(secret)) variables.push(secret);
-    else if (!secret.hosts || secret.hosts.length === 0) skipped.push(secret.name);
-    else if (secret.value.length < MIN_SECRET_LENGTH) tooShort.push(secret.name);
-    else {
+    if (isVariable(secret)) {
+      variables.push(secret);
+    } else if (!secret.hosts || secret.hosts.length === 0) {
+      skipped.push(secret.name);
+    } else if (secret.value.length < MIN_SECRET_LENGTH) {
+      tooShort.push(secret.name);
+    } else {
       injectables.push({
         name: secret.name,
         value: secret.value,
@@ -81,10 +84,16 @@ export function childEnvironment(
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...base };
   for (const name of Object.keys(env)) {
-    if (name.startsWith("SEVENKEY_")) delete env[name];
+    if (name.startsWith("SEVENKEY_")) {
+      delete env[name];
+    }
   }
-  for (const { name, value } of selected.variables) env[name] = value;
-  for (const { name, placeholder } of selected.injectables) env[name] = placeholder;
+  for (const { name, value } of selected.variables) {
+    env[name] = value;
+  }
+  for (const { name, placeholder } of selected.injectables) {
+    env[name] = placeholder;
+  }
   for (const name of ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"]) {
     env[name] = proxyUrl;
   }
@@ -92,7 +101,9 @@ export function childEnvironment(
   env.NO_PROXY = env.no_proxy = noProxy.join(",");
   env.NODE_USE_ENV_PROXY = "1";
   env.NODE_EXTRA_CA_CERTS = files.authority;
-  for (const name of CA_VARIABLES) env[name] = files.bundle;
+  for (const name of CA_VARIABLES) {
+    env[name] = files.bundle;
+  }
   env.SEVENKEY_AGENT = "1";
   return env;
 }
@@ -120,7 +131,9 @@ function describe(selected: Plan): string[] {
 
 export async function runAgent(options: AgentOptions): Promise<number> {
   const [program, ...args] = options.command;
-  if (!program) throw new AgentError("Nothing to run: add -- <command>");
+  if (!program) {
+    throw new AgentError("Nothing to run: add -- <command>");
+  }
   const session: Session =
     options.session ??
     (await signIn(
@@ -145,13 +158,17 @@ export async function runAgent(options: AgentOptions): Promise<number> {
     options.log(
       `7key: ${selected.projectName} / ${selected.environment.name} for ${[program, ...args].join(" ")}`,
     );
-    for (const line of describe(prepared)) options.log(line);
+    for (const line of describe(prepared)) {
+      options.log(line);
+    }
     if (prepared.injectables.length === 0) {
       options.log(
         "7key: no secret has allowed hosts yet. In the console, open the project and press Apply suggested hosts, or Agent hosts under a secret's name.",
       );
     }
-    if (!options.yes && !(await options.confirm("Allow? [y/N] "))) return 1;
+    if (!options.yes && !(await options.confirm("Allow? [y/N] "))) {
+      return 1;
+    }
 
     const authority = createAuthority();
     directory = mkdtempSync(path.join(tmpdir(), "7key-agent-"));
@@ -172,10 +189,14 @@ export async function runAgent(options: AgentOptions): Promise<number> {
       resolve: options.resolve,
       onUse: (entry, host) => {
         const key = `${entry.name}@${host}`;
-        if (reported.has(key)) return;
+        if (reported.has(key)) {
+          return;
+        }
         reported.add(key);
         options.log(`7key: used ${entry.name} for ${host}`);
-        if (reported.size === 1) void noteAccess(session, selected, "injected");
+        if (reported.size === 1) {
+          void noteAccess(session, selected, "injected");
+        }
       },
     });
     const env = childEnvironment(options.env, prepared, proxy.url, files);
@@ -194,9 +215,13 @@ export async function runAgent(options: AgentOptions): Promise<number> {
         ["SIGTERM", forward("SIGTERM")],
         ["SIGHUP", forward("SIGHUP")],
       ];
-      for (const [signal, handler] of handlers) process.on(signal, handler);
+      for (const [signal, handler] of handlers) {
+        process.on(signal, handler);
+      }
       const done = (result: number) => {
-        for (const [signal, handler] of handlers) process.off(signal, handler);
+        for (const [signal, handler] of handlers) {
+          process.off(signal, handler);
+        }
         resolve(result);
       };
       child.on("close", (exit, signal) => done(exit ?? (signal ? 128 : 1)));
@@ -209,7 +234,11 @@ export async function runAgent(options: AgentOptions): Promise<number> {
     return code;
   } finally {
     await proxy?.close();
-    if (directory) rmSync(directory, { recursive: true, force: true });
-    if (!options.session) await signOut(session);
+    if (directory) {
+      rmSync(directory, { recursive: true, force: true });
+    }
+    if (!options.session) {
+      await signOut(session);
+    }
   }
 }

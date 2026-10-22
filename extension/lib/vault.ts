@@ -20,6 +20,7 @@ import {
   type PasswordChange,
 } from "./item-types.js";
 import * as api from "./api.js";
+import { warn } from "./log.js";
 import { getLocal, getUnlocked, setLocal, type CachedItem } from "./storage.js";
 import {
   decryptSharedVaults,
@@ -118,9 +119,13 @@ async function openItem(
       unbound: false,
     };
   } catch (error) {
-    if (!allowUnbound) throw error;
+    if (!allowUnbound) {
+      throw error;
+    }
     const item = await openJson<VaultItem>(key, sealed);
-    if (item.id !== undefined && item.id !== row.id) throw error;
+    if (item.id !== undefined && item.id !== row.id) {
+      throw error;
+    }
     return { item, unbound: true };
   }
 }
@@ -135,9 +140,15 @@ async function accountTag(apiUrl: string, email: string): Promise<string> {
 
 async function unboundItemsAllowed(): Promise<boolean> {
   const { unboundItemsMigrated = false, aadBoundAccounts = [], apiUrl, email } = await getLocal();
-  if (unboundItemsMigrated) return false;
-  if (!email) return true;
-  if (!aadBoundAccounts.includes(await accountTag(apiUrl ?? "", email))) return true;
+  if (unboundItemsMigrated) {
+    return false;
+  }
+  if (!email) {
+    return true;
+  }
+  if (!aadBoundAccounts.includes(await accountTag(apiUrl ?? "", email))) {
+    return true;
+  }
   await setLocal({ unboundItemsMigrated: true });
   return false;
 }
@@ -145,7 +156,9 @@ async function unboundItemsAllowed(): Promise<boolean> {
 async function markAccountBound(): Promise<void> {
   const { aadBoundAccounts = [], apiUrl, email } = await getLocal();
   const tags = new Set(aadBoundAccounts);
-  if (email) tags.add(await accountTag(apiUrl ?? "", email));
+  if (email) {
+    tags.add(await accountTag(apiUrl ?? "", email));
+  }
   await setLocal({ unboundItemsMigrated: true, aadBoundAccounts: [...tags] });
 }
 
@@ -165,7 +178,9 @@ export function isPersonal(item: Pick<VaultItem, "vault">): boolean {
 
 export async function openVault(): Promise<OpenVault | null> {
   const session = await getUnlocked();
-  if (!session) return null;
+  if (!session) {
+    return null;
+  }
   const key = await importKey(session.vaultKeyRaw);
   const { items, shared } = await decryptEverything(key, "en", false, true);
   const names = new Map(
@@ -186,15 +201,20 @@ export async function decryptEverything(
   const system: VaultItem[] = [];
 
   for (const row of items) {
-    if (!isLive(row)) continue;
+    if (!isLive(row)) {
+      continue;
+    }
     try {
       const { item } = await openItem(key, row, allowUnbound);
       const resolved = { ...item, id: row.id, updatedAt: row.updatedAt };
-      if (resolved.system) system.push(resolved);
-      else if (!resolved.trashedAt || includeTrashed) output.push(resolved);
+      if (resolved.system) {
+        system.push(resolved);
+      } else if (!resolved.trashedAt || includeTrashed) {
+        output.push(resolved);
+      }
     } catch {
       // One corrupt item must not take down the whole list.
-      console.warn("Skipping item that failed to decrypt:", row.id);
+      warn("Skipping item that failed to decrypt:", row.id);
     }
   }
 
@@ -229,7 +249,9 @@ export async function sync(): Promise<number | null> {
   try {
     response = await api.fetchItems(lastSync);
   } catch (error) {
-    if (error instanceof api.ApiError && error.status === 0) return null;
+    if (error instanceof api.ApiError && error.status === 0) {
+      return null;
+    }
     throw error;
   }
 
@@ -251,7 +273,9 @@ export async function sync(): Promise<number | null> {
         merged.set(incoming.id, incoming);
       }
     }
-    if (changed > 0) await setLocal({ items: [...merged.values()] });
+    if (changed > 0) {
+      await setLocal({ items: [...merged.values()] });
+    }
   }
 
   // The cursor is the server's clock, never the local one.
@@ -281,7 +305,9 @@ export async function saveItem(
 
 async function locate(id: string): Promise<string | null> {
   const row = ((await getLocal()).items ?? []).find((cached) => cached.id === id);
-  if (row && isLive(row)) return "personal";
+  if (row && isLive(row)) {
+    return "personal";
+  }
   return sharedVaultOf(id);
 }
 
@@ -305,12 +331,20 @@ export async function markUsed(
   item: VaultItem,
   now = Math.floor(Date.now() / 1000),
 ): Promise<void> {
-  if (usedRecently(item, now) || isSharedVaultId(item.vault)) return;
-  if ((await sync()) === null) return;
+  if (usedRecently(item, now) || isSharedVaultId(item.vault)) {
+    return;
+  }
+  if ((await sync()) === null) {
+    return;
+  }
   const row = ((await getLocal()).items ?? []).find((cached) => cached.id === item.id);
-  if (!row || !isLive(row)) return;
+  if (!row || !isLive(row)) {
+    return;
+  }
   const { item: latest } = await openItem(key, row, false);
-  if (usedRecently(latest, now)) return;
+  if (usedRecently(latest, now)) {
+    return;
+  }
   await storeItem(
     key,
     { ...latest, editedAt: latest.editedAt ?? latest.updatedAt, lastUsedAt: now },
@@ -354,7 +388,9 @@ export async function saveItemPatiently(
     try {
       return await saveItem(key, item, source);
     } catch (error) {
-      if (!(error instanceof api.ApiError) || error.status !== 429) throw error;
+      if (!(error instanceof api.ApiError) || error.status !== 429) {
+        throw error;
+      }
       onWait();
       await pause(RATE_LIMIT_PAUSE_MS);
     }
@@ -452,19 +488,25 @@ export function migrateUnboundItems(key: CryptoKey): Promise<number> {
 }
 
 async function rewriteUnboundItems(key: CryptoKey): Promise<number> {
-  if (!(await unboundItemsAllowed())) return 0;
+  if (!(await unboundItemsAllowed())) {
+    return 0;
+  }
   const { items = [] } = await getLocal();
 
   let migrated = 0;
   for (const row of items) {
-    if (!isLive(row)) continue;
+    if (!isLive(row)) {
+      continue;
+    }
     let opened: { item: VaultItem; unbound: boolean };
     try {
       opened = await openItem(key, row, true);
     } catch {
       continue;
     }
-    if (!opened.unbound) continue;
+    if (!opened.unbound) {
+      continue;
+    }
     const { updatedAt: _updatedAt, ...item } = opened.item;
     await saveItem(key, { ...item, id: row.id });
     migrated++;
@@ -525,9 +567,13 @@ export function registrableDomain(rawUrl: string): string | null {
   } catch {
     return null;
   }
-  if (/^[\d.]+$/.test(hostname) || hostname.includes(":")) return hostname;
+  if (/^[\d.]+$/.test(hostname) || hostname.includes(":")) {
+    return hostname;
+  }
   const labels = hostname.replace(/^www\./, "").split(".");
-  if (labels.length <= 2) return labels.join(".");
+  if (labels.length <= 2) {
+    return labels.join(".");
+  }
   if (SHARED_HOSTING_SUFFIXES.has(labels.slice(-2).join("."))) {
     return labels.slice(-3).join(".");
   }
@@ -556,7 +602,9 @@ const SIGN_IN_PREFIXES = new Set([
 export function siteOf(rawUrl: string): string | null {
   const host = hostname(rawUrl);
   const domain = registrableDomain(rawUrl);
-  if (!host || !domain || host === domain || !host.endsWith(`.${domain}`)) return host ?? domain;
+  if (!host || !domain || host === domain || !host.endsWith(`.${domain}`)) {
+    return host ?? domain;
+  }
   const [first, ...rest] = host.split(".");
   return first && SIGN_IN_PREFIXES.has(first) && rest.join(".") === domain ? domain : host;
 }
@@ -567,11 +615,15 @@ export function sameSite(
 ): "exact" | "related" | null {
   const page = siteOf(pageUrl);
   const domain = registrableDomain(pageUrl);
-  if (!page || !domain) return null;
+  if (!page || !domain) {
+    return null;
+  }
   let best: "exact" | "related" | null = null;
   for (const site of itemSites(item)) {
     const stored = siteOf(site);
-    if (stored === page) return "exact";
+    if (stored === page) {
+      return "exact";
+    }
     if (registrableDomain(site) === domain && stored === domain) {
       best = "related";
     }
@@ -598,9 +650,13 @@ export function matchesSite(
   item: Pick<VaultItem, "type" | "url" | "urls" | "urlMatch" | "username" | "password" | "note">,
   pageUrl: string,
 ): boolean {
-  if (itemType(item) !== "login") return false;
+  if (itemType(item) !== "login") {
+    return false;
+  }
   const domain = registrableDomain(pageUrl);
-  if (!domain) return false;
+  if (!domain) {
+    return false;
+  }
   const host = hostname(pageUrl);
   return itemSites(item).some((site) =>
     item.urlMatch === "host" ? hostname(site) === host : registrableDomain(site) === domain,
@@ -608,13 +664,17 @@ export function matchesSite(
 }
 
 export function matchingItems(items: VaultItem[], tabUrl: string | undefined): VaultItem[] {
-  if (!tabUrl) return [];
+  if (!tabUrl) {
+    return [];
+  }
   return items.filter((item) => matchesSite(item, tabUrl));
 }
 
 export function searchItems(items: VaultItem[], query: string): VaultItem[] {
   const needle = query.trim().toLowerCase();
-  if (!needle) return items;
+  if (!needle) {
+    return items;
+  }
   return items.filter((item) =>
     searchableText(item).some((field) => field.toLowerCase().includes(needle)),
   );

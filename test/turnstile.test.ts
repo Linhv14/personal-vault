@@ -28,7 +28,9 @@ function stubSiteverify(
   const original = globalThis.fetch;
   const stub = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (url !== SITEVERIFY) return original(input, init);
+    if (url !== SITEVERIFY) {
+      return original(input, init);
+    }
     const form = init?.body as FormData;
     const call = {
       secret: String(form.get("secret")),
@@ -172,7 +174,7 @@ describe("Turnstile enabled", () => {
   });
 
   it("fails closed when siteverify cannot be reached", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     stubSiteverify(() => {
       throw new TypeError("network down");
     });
@@ -183,7 +185,7 @@ describe("Turnstile enabled", () => {
       headers: { "X-Turnstile-Token": GOOD_TOKEN },
     });
     expect(response.status).toBe(403);
-    expect(console.error).toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalled();
   });
 
   it("fails closed when siteverify answers with an error status", async () => {

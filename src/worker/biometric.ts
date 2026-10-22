@@ -16,7 +16,9 @@ export interface BiometricRegistration {
 const EXTENSION_ORIGIN = /^chrome-extension:\/\/([a-p]{32})$/;
 
 export function isRegistration(value: unknown): value is BiometricRegistration {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const body = value as Record<string, unknown>;
   const origin = typeof body.origin === "string" ? EXTENSION_ORIGIN.exec(body.origin) : null;
   return (
@@ -29,7 +31,9 @@ export function isRegistration(value: unknown): value is BiometricRegistration {
 }
 
 export function isAssertion(value: unknown): value is AssertionInput {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const body = value as Record<string, unknown>;
   return (
     isBase64Url(body.clientDataJSON, 4096) &&
@@ -82,7 +86,9 @@ interface OpenChallenge {
 }
 
 function openChallenges(stored: string | null, now: number): OpenChallenge[] {
-  if (!stored) return [];
+  if (!stored) {
+    return [];
+  }
   try {
     const parsed = JSON.parse(stored) as unknown;
     return Array.isArray(parsed)
@@ -120,7 +126,9 @@ export async function issueBiometricChallenge(
     )
       .bind(tokenHash)
       .first<{ bio_credential: string; bio_challenge: string | null }>();
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     const next = [
       ...openChallenges(row.bio_challenge, now),
       { value: challenge, expires: now + BIOMETRIC_CHALLENGE_SECONDS },
@@ -134,9 +142,17 @@ export async function issueBiometricChallenge(
 
 function claimedChallenge(assertion: AssertionInput): string | null {
   try {
-    const clientData = JSON.parse(
+    const clientData: unknown = JSON.parse(
       new TextDecoder().decode(fromBase64Url(assertion.clientDataJSON)),
     );
+    if (
+      typeof clientData !== "object" ||
+      clientData === null ||
+      Array.isArray(clientData) ||
+      !("challenge" in clientData)
+    ) {
+      return null;
+    }
     return typeof clientData.challenge === "string" ? clientData.challenge : null;
   } catch {
     return null;
@@ -165,11 +181,17 @@ async function consumeChallenge(
     )
       .bind(tokenHash)
       .first<BiometricRow>();
-    if (!row) return null;
+    if (!row) {
+      return null;
+    }
     const open = openChallenges(row.bio_challenge, now);
-    if (!open.some((entry) => entry.value === claimed)) return null;
+    if (!open.some((entry) => entry.value === claimed)) {
+      return null;
+    }
     const remaining = open.filter((entry) => entry.value !== claimed);
-    if (await replaceChallenges(env, tokenHash, row.bio_challenge, remaining)) return row;
+    if (await replaceChallenges(env, tokenHash, row.bio_challenge, remaining)) {
+      return row;
+    }
   }
   return null;
 }
@@ -181,9 +203,13 @@ export async function checkBiometric(
   now: number,
 ): Promise<string | null> {
   const claimed = claimedChallenge(assertion);
-  if (!claimed) return null;
+  if (!claimed) {
+    return null;
+  }
   const row = await consumeChallenge(env, tokenHash, claimed, now);
-  if (!row) return null;
+  if (!row) {
+    return null;
+  }
   const valid = await verifyAssertion(
     {
       publicKey: row.bio_public_key,

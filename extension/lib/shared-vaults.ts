@@ -7,6 +7,7 @@ import { ApiError, request } from "./api.js";
 import { knownIdentity } from "./identity.js";
 import { getLocal, setLocal, type CachedSharedVault } from "./storage.js";
 import type { VaultDef, VaultItem } from "./vault.js";
+import { warn } from "./log.js";
 
 const PREFIX = "team:";
 
@@ -58,13 +59,17 @@ export async function syncSharedVaults(): Promise<number | null> {
   try {
     ({ vaults } = await request<{ vaults: CachedSharedVault[] }>("/api/vaults"));
   } catch (error) {
-    if (error instanceof ApiError && error.status === 0) return null;
+    if (error instanceof ApiError && error.status === 0) {
+      return null;
+    }
     throw error;
   }
   const { sharedVaults: before = [], sharedGenerations: floor = {} } = await getLocal();
   const accepted = vaults.flatMap((vault) => {
-    if (vault.generation >= (floor[vault.teamId] ?? 0)) return [vault];
-    console.warn("Ignoring a team vault served with an older key:", vault.teamId);
+    if (vault.generation >= (floor[vault.teamId] ?? 0)) {
+      return [vault];
+    }
+    warn("Ignoring a team vault served with an older key:", vault.teamId);
     const previous = before.find((entry) => entry.teamId === vault.teamId);
     return previous ? [previous] : [];
   });
@@ -85,7 +90,9 @@ const teamKeys = new Map<string, Bytes>();
 async function keyOf(vault: CachedSharedVault, me: Identity): Promise<Bytes> {
   const memo = `${vault.teamId}/${vault.generation}/${vault.wrappedKey.ephemeralPublicKey}`;
   const known = teamKeys.get(memo);
-  if (known) return known;
+  if (known) {
+    return known;
+  }
   const key = new Uint8Array(
     await unwrapForRecipient(me, vault.wrappedKey, teamKeyContext(vault.teamId, vault.generation)),
   );
@@ -100,9 +107,13 @@ export async function decryptSharedVaults(
 ): Promise<{ items: VaultItem[]; vaults: VaultDef[] }> {
   const seen = new Set(taken);
   const vaults = await cachedVaults();
-  if (vaults.length === 0) return { items: [], vaults: [] };
+  if (vaults.length === 0) {
+    return { items: [], vaults: [] };
+  }
   const me = await knownIdentity(vaultKey).catch(() => null);
-  if (!me) return { items: [], vaults: [] };
+  if (!me) {
+    return { items: [], vaults: [] };
+  }
   const items: VaultItem[] = [];
   const readable: CachedSharedVault[] = [];
   for (const vault of vaults) {
@@ -110,12 +121,14 @@ export async function decryptSharedVaults(
     try {
       key = await keyOf(vault, me);
     } catch {
-      console.warn("Skipping shared vault whose key failed to open:", vault.teamId);
+      warn("Skipping shared vault whose key failed to open:", vault.teamId);
       continue;
     }
     readable.push(vault);
     for (const record of vault.items) {
-      if (seen.has(record.id)) continue;
+      if (seen.has(record.id)) {
+        continue;
+      }
       seen.add(record.id);
       try {
         const item = await openTeamItem<VaultItem>(
@@ -123,10 +136,12 @@ export async function decryptSharedVaults(
           { teamId: vault.teamId, generation: vault.generation, itemId: record.id },
           record.sealed,
         );
-        if (item.trashedAt && !includeTrashed) continue;
+        if (item.trashedAt && !includeTrashed) {
+          continue;
+        }
         items.push({ ...item, id: record.id, vault: idOf(vault), updatedAt: record.updatedAt });
       } catch {
-        console.warn("Skipping shared item that failed to decrypt:", record.id);
+        warn("Skipping shared item that failed to decrypt:", record.id);
       }
     }
   }
@@ -142,7 +157,9 @@ export async function sharedVaultOf(itemId: string): Promise<string | null> {
 
 async function findVault(id: string): Promise<CachedSharedVault> {
   const vault = (await cachedVaults()).find((entry) => idOf(entry) === id);
-  if (!vault) throw new ApiError("error.orgs.not_found", 404);
+  if (!vault) {
+    throw new ApiError("error.orgs.not_found", 404);
+  }
   return vault;
 }
 
@@ -168,7 +185,9 @@ async function put(
   item: VaultItem,
 ): Promise<{ sealed: SealedData; updatedAt: number }> {
   const me = await knownIdentity(vaultKey);
-  if (!me) throw new ApiError("error.orgs.not_in_team", 403);
+  if (!me) {
+    throw new ApiError("error.orgs.not_in_team", 403);
+  }
   const { vault: _vault, ...content } = item;
   const sealed = await sealTeamItem(
     await keyOf(vault, me),
@@ -192,8 +211,12 @@ export async function saveSharedItem(
   try {
     written = await put(vaultKey, vault, item);
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 409) throw error;
-    if ((await syncSharedVaults()) === null) throw error;
+    if (!(error instanceof ApiError) || error.status !== 409) {
+      throw error;
+    }
+    if ((await syncSharedVaults()) === null) {
+      throw error;
+    }
     vault = await findVault(vaultId);
     written = await put(vaultKey, vault, item);
   }

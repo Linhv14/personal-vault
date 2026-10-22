@@ -64,7 +64,9 @@ interface ExportKey {
 }
 
 async function exportKey(passphrase: string, file: JsonObject): Promise<ExportKey> {
-  if (file.kdfType === KDF_ARGON2ID) throw new ImportError("argon2");
+  if (file.kdfType === KDF_ARGON2ID) {
+    throw new ImportError("argon2");
+  }
   const iterations = file.kdfIterations;
   if (file.kdfType !== KDF_PBKDF2 || typeof iterations !== "number" || iterations < 1) {
     throw new ImportError("unsupported_encryption");
@@ -101,7 +103,9 @@ async function exportKey(passphrase: string, file: JsonObject): Promise<ExportKe
 }
 
 async function decryptEncString(value: string, key: ExportKey): Promise<string> {
-  if (!value.startsWith(ENC_AES_CBC_HMAC)) throw new ImportError("unsupported_encryption");
+  if (!value.startsWith(ENC_AES_CBC_HMAC)) {
+    throw new ImportError("unsupported_encryption");
+  }
   const [iv, data, mac] = value
     .slice(ENC_AES_CBC_HMAC.length)
     .split("|")
@@ -112,7 +116,9 @@ async function decryptEncString(value: string, key: ExportKey): Promise<string> 
         throw new ImportError("damaged");
       }
     });
-  if (!iv || !data || !mac) throw new ImportError("damaged");
+  if (!iv || !data || !mac) {
+    throw new ImportError("damaged");
+  }
   const signed = new Uint8Array([...iv, ...data]);
   if (!(await crypto.subtle.verify("HMAC", key.mac, new Uint8Array(mac), signed))) {
     throw new ImportError("wrong_passphrase");
@@ -126,8 +132,12 @@ async function decryptEncString(value: string, key: ExportKey): Promise<string> 
 }
 
 function credentialIdBytes(id: string): Uint8Array {
-  if (id.startsWith("b64.")) return fromBase64Url(id.slice(4));
-  if (!GUID.test(id)) throw new Error("Unknown credential id format");
+  if (id.startsWith("b64.")) {
+    return fromBase64Url(id.slice(4));
+  }
+  if (!GUID.test(id)) {
+    throw new Error("Unknown credential id format");
+  }
   const hex = id.replaceAll("-", "");
   return Uint8Array.from({ length: 16 }, (_, index) =>
     parseInt(hex.slice(index * 2, index * 2 + 2), 16),
@@ -141,9 +151,13 @@ function seconds(value: unknown): number | undefined {
 
 async function readPasskey(raw: unknown): Promise<StoredPasskey | null> {
   const credential = object(raw);
-  if (credential.keyAlgorithm !== "ECDSA" || credential.keyCurve !== "P-256") return null;
+  if (credential.keyAlgorithm !== "ECDSA" || credential.keyCurve !== "P-256") {
+    return null;
+  }
   const rpId = text(credential.rpId);
-  if (!rpId) return null;
+  if (!rpId) {
+    return null;
+  }
   try {
     const key = await crypto.subtle.importKey(
       "pkcs8",
@@ -393,19 +407,25 @@ export async function bitwardenFromJson(
   passphrase: string | undefined,
 ): Promise<ImportSource> {
   if (parsed.passwordProtected === true) {
-    if (!passphrase) throw new ImportError("needs_passphrase");
+    if (!passphrase) {
+      throw new ImportError("needs_passphrase");
+    }
     const key = await exportKey(passphrase, parsed);
     await decryptEncString(text(parsed.encKeyValidation_DO_NOT_EDIT), key);
     let inner: JsonObject;
     try {
       inner = object(JSON.parse(await decryptEncString(text(parsed.data), key)));
     } catch (error) {
-      if (error instanceof ImportError) throw error;
+      if (error instanceof ImportError) {
+        throw error;
+      }
       throw new ImportError("damaged");
     }
     return bitwardenFromJson(inner, undefined);
   }
-  if (parsed.encrypted === true) throw new ImportError("account_encrypted");
+  if (parsed.encrypted === true) {
+    throw new ImportError("account_encrypted");
+  }
   return fromItems(list(parsed.items));
 }
 

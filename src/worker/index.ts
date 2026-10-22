@@ -54,7 +54,9 @@ app.use("/api/*", async (c, next) => {
   if (new URL(c.req.url).protocol === "https:") {
     headers.set("Strict-Transport-Security", STRICT_TRANSPORT_SECURITY);
   }
-  if (!headers.has("Cache-Control")) headers.set("Cache-Control", "no-store");
+  if (!headers.has("Cache-Control")) {
+    headers.set("Cache-Control", "no-store");
+  }
 });
 
 app.use("/api/*", async (c, next) => {
@@ -67,13 +69,17 @@ app.use("/api/*", async (c, next) => {
 
 const limitByClientIp: MiddlewareHandler<AppBindings> = async (c, next) => {
   const { success } = await c.env.ANONYMOUS_RATE_LIMITER.limit({ key: clientIp(c) });
-  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  if (!success) {
+    return c.json(apiError("server.rate_limited"), 429);
+  }
   await next();
 };
 
 const limitRegistrationsByIp: MiddlewareHandler<AppBindings> = async (c, next) => {
   const { success } = await c.env.REGISTRATION_RATE_LIMITER.limit({ key: clientIp(c) });
-  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  if (!success) {
+    return c.json(apiError("server.rate_limited"), 429);
+  }
   await next();
 };
 
@@ -97,7 +103,9 @@ app.on("POST", "/api/shares/:id/code", requireHuman);
 
 const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
   const session = await resolveSession(c.env, c.req.header("Authorization"));
-  if (!session) return c.json(apiError("auth.unauthorized"), 401);
+  if (!session) {
+    return c.json(apiError("auth.unauthorized"), 401);
+  }
   c.set("session", session);
   await next();
 };
@@ -119,23 +127,27 @@ app.use("/api/orgs", requireAuth);
 app.use("/api/vaults", requireAuth);
 app.use("/api/orgs/*", requireAuth);
 app.use("/api/invites", requireAuth);
-app.use("/api/invites/*", async (c, next) =>
-  c.req.method === "GET" && c.req.path.endsWith("/preview") ? next() : requireAuth(c, next),
-);
+const authUnlessInvitePreview: MiddlewareHandler<AppBindings> = async (c, next) =>
+  c.req.method === "GET" && c.req.path.endsWith("/preview") ? next() : requireAuth(c, next);
+app.use("/api/invites/*", authUnlessInvitePreview);
 app.use("/api/auth/delete-account", requireAuth);
 
 // Creating a share needs a session; reading one must not, since the recipient
 // has no account.
-app.use("/api/shares", async (c, next) =>
-  c.req.method === "POST" ? requireAuth(c, next) : next(),
-);
+const authToCreateShare: MiddlewareHandler<AppBindings> = async (c, next) =>
+  c.req.method === "POST" ? requireAuth(c, next) : next();
+app.use("/api/shares", authToCreateShare);
 
 const limitWritesByAccount: MiddlewareHandler<AppBindings> = async (c, next) => {
-  if (c.req.method === "GET") return next();
+  if (c.req.method === "GET") {
+    return next();
+  }
   const { success } = await c.env.ACCOUNT_RATE_LIMITER.limit({
     key: c.get("session").accountId,
   });
-  if (!success) return c.json(apiError("server.rate_limited"), 429);
+  if (!success) {
+    return c.json(apiError("server.rate_limited"), 429);
+  }
   await next();
 };
 
@@ -145,9 +157,9 @@ app.use("/api/orgs/*", limitWritesByAccount);
 app.use("/api/invites/*", limitWritesByAccount);
 app.use("/api/account/*", limitWritesByAccount);
 app.use("/api/auth/sessions/*", limitWritesByAccount);
-app.use("/api/shares", async (c, next) =>
-  c.req.method === "POST" ? limitWritesByAccount(c, next) : next(),
-);
+const limitShareCreation: MiddlewareHandler<AppBindings> = async (c, next) =>
+  c.req.method === "POST" ? limitWritesByAccount(c, next) : next();
+app.use("/api/shares", limitShareCreation);
 app.use("/api/shares/status", requireAuth);
 app.on("DELETE", "/api/shares/*", requireAuth);
 app.on("DELETE", "/api/shares/*", limitWritesByAccount);
@@ -203,7 +215,9 @@ app.get("/s/:id", async (c) => {
   const response = new Response(html, asset);
   response.headers.set("Content-Type", "text/html; charset=utf-8");
   response.headers.set("Cache-Control", "no-store");
-  for (const [name, value] of Object.entries(SHARE_PAGE_HEADERS)) response.headers.set(name, value);
+  for (const [name, value] of Object.entries(SHARE_PAGE_HEADERS)) {
+    response.headers.set(name, value);
+  }
   if (new URL(c.req.url).protocol === "https:") {
     response.headers.set("Strict-Transport-Security", STRICT_TRANSPORT_SECURITY);
   }
@@ -212,14 +226,18 @@ app.get("/s/:id", async (c) => {
 
 app.get("/turnstile", (c) => {
   const siteKey = turnstileSiteKey(c.env);
-  if (!siteKey) return c.notFound();
+  if (!siteKey) {
+    return c.notFound();
+  }
   const nonce = crypto.randomUUID().replaceAll("-", "");
   return new Response(turnstileFramePage(siteKey, nonce), {
     headers: turnstileFrameHeaders(nonce),
   });
 });
 
-for (const page of Object.keys(MARKDOWN_PAGES)) app.get(page, servePage);
+for (const page of Object.keys(MARKDOWN_PAGES)) {
+  app.get(page, servePage);
+}
 
 app.get("/.well-known/security.txt", (c) => {
   const url = new URL(c.req.url);
@@ -229,7 +247,9 @@ app.get("/.well-known/security.txt", (c) => {
     "Cache-Control": "public, max-age=86400",
     "X-Content-Type-Options": "nosniff",
   };
-  if (url.protocol === "https:") headers["Strict-Transport-Security"] = STRICT_TRANSPORT_SECURITY;
+  if (url.protocol === "https:") {
+    headers["Strict-Transport-Security"] = STRICT_TRANSPORT_SECURITY;
+  }
   return new Response(body, { headers });
 });
 

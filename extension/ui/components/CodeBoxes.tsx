@@ -26,7 +26,9 @@ export function CodeBoxes({
   latest.current = value;
 
   useEffect(() => {
-    if (autoFocus && !disabled && value === "") boxes.current[0]?.focus();
+    if (autoFocus && !disabled && value === "") {
+      boxes.current[0]?.focus();
+    }
   }, [autoFocus, disabled, value === ""]);
 
   const update = (next: string, focusAt: number) => {
@@ -34,7 +36,9 @@ export function CodeBoxes({
     latest.current = digits;
     onChange(digits);
     boxes.current[Math.min(focusAt, length - 1)]?.focus();
-    if (digits.length === length) onComplete?.(digits);
+    if (digits.length === length) {
+      onComplete?.(digits);
+    }
   };
 
   const typed = (index: number, event: Event) => {
@@ -54,8 +58,11 @@ export function CodeBoxes({
     const value = latest.current;
     if (event.key === "Backspace") {
       event.preventDefault();
-      if (value[index] !== undefined) update(value.slice(0, index) + value.slice(index + 1), index);
-      else if (index > 0) update(value.slice(0, index - 1) + value.slice(index), index - 1);
+      if (value[index] !== undefined) {
+        update(value.slice(0, index) + value.slice(index + 1), index);
+      } else if (index > 0) {
+        update(value.slice(0, index - 1) + value.slice(index), index - 1);
+      }
     } else if (event.key === "ArrowLeft" && index > 0) {
       boxes.current[index - 1]?.focus();
     } else if (event.key === "ArrowRight" && index < length - 1) {
@@ -66,7 +73,9 @@ export function CodeBoxes({
   const pasted = (index: number, event: ClipboardEvent) => {
     const text = event.clipboardData?.getData("text") ?? "";
     const digits = text.replace(/\D/g, "");
-    if (!digits) return;
+    if (!digits) {
+      return;
+    }
     event.preventDefault();
     const value = latest.current;
     const start = digits.length >= length ? 0 : index;

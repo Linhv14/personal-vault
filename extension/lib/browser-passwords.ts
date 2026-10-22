@@ -21,30 +21,50 @@ export function browserPasswordsSupported(): boolean {
 }
 
 export async function browserPasswordsState(): Promise<BrowserPasswordsState> {
-  if (!(await chrome.permissions.contains(PERMISSION))) return "browser";
+  if (!(await chrome.permissions.contains(PERMISSION))) {
+    return "browser";
+  }
   const current = setting();
-  if (!current) return "browser";
-  const { value, levelOfControl } = await read(current);
-  if (levelOfControl === "not_controllable") return "managed";
-  if (levelOfControl === "controlled_by_other_extensions") return "other_extension";
+  if (!current) {
+    return "browser";
+  }
+  const details = await read(current);
+  const value: unknown = details.value;
+  const levelOfControl = details.levelOfControl;
+  if (levelOfControl === "not_controllable") {
+    return "managed";
+  }
+  if (levelOfControl === "controlled_by_other_extensions") {
+    return "other_extension";
+  }
   return levelOfControl === "controlled_by_this_extension" && value === false ? "ours" : "browser";
 }
 
 export async function takeOverBrowserPasswords(): Promise<BrowserPasswordsState> {
   const held = await chrome.permissions.contains(PERMISSION);
-  if (!held && !(await chrome.permissions.request(PERMISSION))) return "browser";
+  if (!held && !(await chrome.permissions.request(PERMISSION))) {
+    return "browser";
+  }
   const current = setting();
-  if (!current) return "browser";
+  if (!current) {
+    return "browser";
+  }
   const { levelOfControl } = await read(current);
-  if (levelOfControl === "not_controllable") return "managed";
-  if (levelOfControl === "controlled_by_other_extensions") return "other_extension";
+  if (levelOfControl === "not_controllable") {
+    return "managed";
+  }
+  if (levelOfControl === "controlled_by_other_extensions") {
+    return "other_extension";
+  }
   await write(current, false);
   return browserPasswordsState();
 }
 
 export async function giveBackBrowserPasswords(): Promise<void> {
   const current = setting();
-  if (current) await reset(current);
+  if (current) {
+    await reset(current);
+  }
   await chrome.permissions.remove(PERMISSION);
 }
 
@@ -76,12 +96,24 @@ function environment(): Environment {
 }
 
 export function detectBrowser(env: Environment = environment()): BrowserName {
-  if (env.brave) return "brave";
-  if (env.brands.includes("Microsoft Edge") || /\bEdg\//.test(env.userAgent)) return "edge";
-  if (env.brands.includes("Opera") || /\bOPR\//.test(env.userAgent)) return "opera";
-  if (/\bVivaldi\//.test(env.userAgent)) return "vivaldi";
-  if (/\bFirefox\//.test(env.userAgent)) return "firefox";
-  if (env.brands.includes("Google Chrome") || /\bChrome\//.test(env.userAgent)) return "chrome";
+  if (env.brave) {
+    return "brave";
+  }
+  if (env.brands.includes("Microsoft Edge") || /\bEdg\//.test(env.userAgent)) {
+    return "edge";
+  }
+  if (env.brands.includes("Opera") || /\bOPR\//.test(env.userAgent)) {
+    return "opera";
+  }
+  if (/\bVivaldi\//.test(env.userAgent)) {
+    return "vivaldi";
+  }
+  if (/\bFirefox\//.test(env.userAgent)) {
+    return "firefox";
+  }
+  if (env.brands.includes("Google Chrome") || /\bChrome\//.test(env.userAgent)) {
+    return "chrome";
+  }
   return "other";
 }
 
@@ -91,7 +123,9 @@ export function passwordSettingsPage(browser: BrowserName = detectBrowser()): st
 
 export async function openPasswordSettings(): Promise<boolean> {
   const url = passwordSettingsPage();
-  if (!url) return false;
+  if (!url) {
+    return false;
+  }
   try {
     await chrome.tabs.create({ url });
     return true;

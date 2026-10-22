@@ -76,7 +76,9 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
     });
   }
   (item.fields ?? []).forEach((field, index) => {
-    if (!field.value) return;
+    if (!field.value) {
+      return;
+    }
     parts.push({
       key: `field-${index}`,
       icon: field.hidden ? "lock" : "tag",
@@ -105,7 +107,9 @@ function shareParts(item: VaultItem, t: ReturnType<typeof useT>): SharePart[] {
 
 export function sharePayload(item: VaultItem, parts: SharePart[]): SharePayload {
   const payload: SharePayload = { title: item.title };
-  for (const part of parts) part.apply(payload);
+  for (const part of parts) {
+    part.apply(payload);
+  }
   return payload;
 }
 
@@ -183,14 +187,19 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
   const togglePart = (key: string) =>
     setExcluded((current) => {
       const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
       return next;
     });
 
   const commitEntry = (): { ok: boolean; recipients: string[] } => {
     const input = entry.current;
-    if (!input || !input.value.trim()) return { ok: true, recipients };
+    if (!input || !input.value.trim()) {
+      return { ok: true, recipients };
+    }
     const update = addRecipients(recipients, input.value);
     input.value = update.rejected.join(", ");
     setRecipients(update.recipients);
@@ -210,7 +219,9 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
     let shareTo: string[] = [];
     if (restricted) {
       const committed = commitEntry();
-      if (!committed.ok) return;
+      if (!committed.ok) {
+        return;
+      }
       if (committed.recipients.length === 0) {
         setRecipientsHint(t("share.recipients_required"));
         entry.current?.focus();
@@ -248,7 +259,9 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
         ["clock", t("links.expires", { expiry: formatDate(created.expiresAt) })],
         ["eye", t(viewLimit === 1 ? "share.result_once" : "share.result_unlimited")],
       ];
-      if (shareTo.length > 0) meta.push(["mail", t("links.restricted", { count: shareTo.length })]);
+      if (shareTo.length > 0) {
+        meta.push(["mail", t("links.restricted", { count: shareTo.length })]);
+      }
       setResult({ url, passphrase: Boolean(secret), meta });
       document.getElementById("screen-share")?.scrollTo({ top: 0 });
     } catch (failure) {
@@ -349,7 +362,9 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                 id="share-recipients"
                 aria-invalid={recipientsHint !== null}
                 onClick={(event) => {
-                  if (event.target === event.currentTarget) entry.current?.focus();
+                  if (event.target === event.currentTarget) {
+                    entry.current?.focus();
+                  }
                 }}
               >
                 {recipients.map((email) => (
@@ -412,7 +427,7 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
                 aria-label={t("share.passphrase")}
                 placeholder={t("share.passphrase")}
                 value={passphrase}
-                onInput={(event) => setPassphrase((event.currentTarget as HTMLInputElement).value)}
+                onInput={(event) => setPassphrase(event.currentTarget.value)}
               />
             </div>
           )}
@@ -445,7 +460,9 @@ export function Share({ item, emailAccess }: { item: VaultItem; emailAccess: boo
             type="button"
             className="primary"
             onClick={() => {
-              if (result) void copy(result.url, t("share.link").toLowerCase());
+              if (result) {
+                void copy(result.url, t("share.link").toLowerCase());
+              }
             }}
           >
             <Icon name="copy" />

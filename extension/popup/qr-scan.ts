@@ -2,6 +2,7 @@ import { fromBase64 } from "../../src/core/bytes.js";
 import { generateTotp, parseTotpInput, type TotpConfig } from "../../src/core/totp.js";
 import type { Translate } from "../../src/i18n/index.js";
 import { nowMs } from "./state.js";
+import { warn } from "../lib/log.js";
 
 export type ScanHint = { text: string; failed: boolean } | null;
 
@@ -44,7 +45,7 @@ export async function scanTotpFromTab(
     });
     return { ...config, raw: otpauth.rawValue };
   } catch (error) {
-    console.warn("QR scan failed:", error);
+    warn("QR scan failed:", error instanceof Error ? error.name : typeof error);
     setHint({ text: t("edit.scan_capture_failed"), failed: true });
     return null;
   }

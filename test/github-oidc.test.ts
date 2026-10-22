@@ -34,7 +34,7 @@ const verify = (token: string) =>
   verifyGithubToken(token, { audience: AUDIENCE, now: NOW, jwks: async () => [jwk] });
 
 beforeAll(async () => {
-  pair = (await crypto.subtle.generateKey(
+  pair = await crypto.subtle.generateKey(
     {
       name: "RSASSA-PKCS1-v1_5",
       modulusLength: 2048,
@@ -43,8 +43,8 @@ beforeAll(async () => {
     },
     true,
     ["sign", "verify"],
-  )) as CryptoKeyPair;
-  const exported = (await crypto.subtle.exportKey("jwk", pair.publicKey)) as JsonWebKey;
+  );
+  const exported = await crypto.subtle.exportKey("jwk", pair.publicKey);
   jwk = { kid: "key-1", kty: "RSA", n: exported.n!, e: exported.e! };
 });
 
@@ -84,7 +84,7 @@ describe("GitHub Actions OIDC tokens", () => {
   });
 
   it("rejects a token signed by a different key with the same id", async () => {
-    const other = (await crypto.subtle.generateKey(
+    const other = await crypto.subtle.generateKey(
       {
         name: "RSASSA-PKCS1-v1_5",
         modulusLength: 2048,
@@ -93,7 +93,7 @@ describe("GitHub Actions OIDC tokens", () => {
       },
       true,
       ["sign", "verify"],
-    )) as CryptoKeyPair;
+    );
     expect(await verify(await sign(claims(), "key-1", other.privateKey))).toBeNull();
   });
 });

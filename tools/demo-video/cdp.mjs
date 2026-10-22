@@ -20,12 +20,18 @@ export async function launch(port = 9333) {
     ],
     { stdio: "ignore" },
   );
-  let targets;
+  let targets = [];
   for (let i = 0; i < 150; i++) {
     try {
-      targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
-      if (targets.length) break;
-    } catch {}
+      const response = await fetch(`http://127.0.0.1:${port}/json`);
+      const payload = await response.json();
+      targets = Array.isArray(payload) ? payload : [];
+      if (targets.length) {
+        break;
+      }
+    } catch {
+      targets = [];
+    }
     await sleep(200);
   }
   const page = targets?.find((t) => t.type === "page");
@@ -44,7 +50,9 @@ export async function launch(port = 9333) {
       const { resolve, reject } = pending.get(msg.id);
       pending.delete(msg.id);
       msg.error ? reject(new Error(JSON.stringify(msg.error))) : resolve(msg.result);
-    } else if (msg.method) listeners.forEach((l) => l(msg));
+    } else if (msg.method) {
+      listeners.forEach((l) => l(msg));
+    }
   });
   const send = (method, params = {}) =>
     new Promise((resolve, reject) => {
@@ -88,8 +96,9 @@ export async function launch(port = 9333) {
         awaitPromise: true,
         returnByValue: true,
       });
-      if (r.exceptionDetails)
+      if (r.exceptionDetails) {
         throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
+      }
       return r.result.value;
     },
     async shot(file, format = "png") {

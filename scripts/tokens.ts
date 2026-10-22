@@ -9,6 +9,8 @@ export function hasTokensMarker(text: string): boolean {
 }
 
 export async function injectTokens(text: string, origin: string): Promise<string> {
-  if (!hasTokensMarker(text)) throw new Error(`${origin} has no ${TOKENS_MARKER} marker`);
+  if (!hasTokensMarker(text)) {
+    throw new Error(`${origin} has no ${TOKENS_MARKER} marker`);
+  }
   return text.replace(TOKENS_MARKER, await readFile(TOKENS_FILE, "utf8"));
 }

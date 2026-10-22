@@ -54,9 +54,12 @@ const ENTITIES: Record<string, string> = {
 
 function decode(text: string): string {
   return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, name: string) => {
-    if (name.startsWith("#x") || name.startsWith("#X"))
+    if (name.startsWith("#x") || name.startsWith("#X")) {
       return String.fromCodePoint(parseInt(name.slice(2), 16));
-    if (name.startsWith("#")) return String.fromCodePoint(Number(name.slice(1)));
+    }
+    if (name.startsWith("#")) {
+      return String.fromCodePoint(Number(name.slice(1)));
+    }
     return ENTITIES[name.toLowerCase()] ?? match;
   });
 }
@@ -88,39 +91,62 @@ export function htmlToMarkdown(html: string, base = ""): string {
   const inPre = () => stack.some((frame) => frame.name === "pre");
   const write = (text: string) => {
     const before = row ? cell : out;
-    if (gap && /\S$/.test(before) && /^[\p{L}\p{N}`*[(]/u.test(text)) text = gap + text;
+    if (gap && /\S$/.test(before) && /^[\p{L}\p{N}`*[(]/u.test(text)) {
+      text = gap + text;
+    }
     gap = "";
-    if (row) cell += text;
-    else out += text;
+    if (row) {
+      cell += text;
+    } else {
+      out += text;
+    }
   };
   const block = () => {
-    if (!row) out = out.replace(/[ \t]+$/, "") + "\n\n";
+    if (!row) {
+      out = out.replace(/[ \t]+$/, "") + "\n\n";
+    }
   };
 
   for (const token of tokens) {
-    if (!token) continue;
+    if (!token) {
+      continue;
+    }
     if (!token.startsWith("<")) {
-      if (skipping()) continue;
+      if (skipping()) {
+        continue;
+      }
       if (inPre()) {
         out += decode(token);
         continue;
       }
       const text = decode(token).replace(/\s+/g, " ");
-      if (adjacent) gap = "";
+      if (adjacent) {
+        gap = "";
+      }
       adjacent = false;
-      if (text.trim() || /\S$/.test(row ? cell : out)) write(text);
+      if (text.trim() || /\S$/.test(row ? cell : out)) {
+        write(text);
+      }
       continue;
     }
     const closing = token.startsWith("</");
     const name = token.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase() ?? "";
-    if (!name) continue;
+    if (!name) {
+      continue;
+    }
     if (closing) {
       const index = stack.map((frame) => frame.name).lastIndexOf(name);
-      if (index < 0) continue;
+      if (index < 0) {
+        continue;
+      }
       const frame = stack[index]!;
       stack.length = index;
-      if (frame.skip || skipping()) continue;
-      if (inPre() && name !== "pre") continue;
+      if (frame.skip || skipping()) {
+        continue;
+      }
+      if (inPre() && name !== "pre") {
+        continue;
+      }
       if (name === "pre") {
         out = out.replace(/\s+$/, "") + "\n```\n\n";
         continue;
@@ -128,9 +154,11 @@ export function htmlToMarkdown(html: string, base = ""): string {
       if (name === "a" && frame.href) {
         const text = out.slice(frame.start).trim();
         out = out.slice(0, frame.start) + (text ? `[${text}](${frame.href})` : "");
-      } else if (name === "strong" || name === "b") write("**");
-      else if (name === "code") write("`");
-      else if (name === "td" || name === "th") {
+      } else if (name === "strong" || name === "b") {
+        write("**");
+      } else if (name === "code") {
+        write("`");
+      } else if (name === "td" || name === "th") {
         row?.push(cell.trim().replace(/\|/g, "\\|"));
         cell = "";
       } else if (name === "tr" && row) {
@@ -149,8 +177,11 @@ export function htmlToMarkdown(html: string, base = ""): string {
       } else if (name === "ul" || name === "ol") {
         lists.pop();
         block();
-      } else if (name === "li") out = out.replace(/[ \t]+$/, "") + "\n";
-      else if (BLOCK.has(name)) block();
+      } else if (name === "li") {
+        out = out.replace(/[ \t]+$/, "") + "\n";
+      } else if (BLOCK.has(name)) {
+        block();
+      }
       if (INLINE.has(name)) {
         gap = name === "strong" || name === "b" ? " — " : " · ";
         adjacent = true;
@@ -167,11 +198,17 @@ export function htmlToMarkdown(html: string, base = ""): string {
       write("  \n");
       continue;
     }
-    if (selfClosing) continue;
+    if (selfClosing) {
+      continue;
+    }
     const frame: Frame = { name, skip: hidden, start: out.length };
     stack.push(frame);
-    if (hidden || skipping()) continue;
-    if (inPre() && name !== "pre") continue;
+    if (hidden || skipping()) {
+      continue;
+    }
+    if (inPre() && name !== "pre") {
+      continue;
+    }
     if (name === "pre") {
       block();
       out += "```\n";
@@ -188,22 +225,31 @@ export function htmlToMarkdown(html: string, base = ""): string {
       const href = attribute(token, "href");
       frame.href = !href || href.startsWith("#") ? null : base ? new URL(href, base).href : href;
       frame.start = out.length;
-    } else if (name === "strong" || name === "b") write("**");
-    else if (name === "code") write("`");
-    else if (name === "ul" || name === "ol") {
+    } else if (name === "strong" || name === "b") {
+      write("**");
+    } else if (name === "code") {
+      write("`");
+    } else if (name === "ul" || name === "ol") {
       block();
       lists.push({ ordered: name === "ol", count: 0 });
     } else if (name === "li") {
       const list = lists.at(-1);
-      if (list) list.count++;
+      if (list) {
+        list.count++;
+      }
       out = out.replace(/[ \t]+$/, "");
-      if (!out.endsWith("\n")) out += "\n";
+      if (!out.endsWith("\n")) {
+        out += "\n";
+      }
       out += `${"  ".repeat(Math.max(0, lists.length - 1))}${list?.ordered ? `${list.count}.` : "-"} `;
     } else if (name === "tr") {
       row = [];
       cell = "";
-    } else if (name === "table") block();
-    else if (BLOCK.has(name)) block();
+    } else if (name === "table") {
+      block();
+    } else if (BLOCK.has(name)) {
+      block();
+    }
   }
 
   return (

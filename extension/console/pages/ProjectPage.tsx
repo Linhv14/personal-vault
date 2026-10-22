@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../../../src/ui/form-data.js";
 import { suggestHosts } from "../../../src/core/agent-hosts.js";
 import {
   formatDotenv,
@@ -98,7 +99,9 @@ export function ProjectPage({
   const orgId = detail.org.id;
 
   const load = async () => {
-    if (!project) return;
+    if (!project) {
+      return;
+    }
     try {
       const lists = await Promise.all(
         project.content.environments.map(async (env) => [
@@ -115,7 +118,9 @@ export function ProjectPage({
           project,
           Object.values(byEnvironment).flat(),
         );
-        if (upgraded > 0) await load();
+        if (upgraded > 0) {
+          await load();
+        }
       }
     } catch (failure) {
       setError(describeError(failure, t));
@@ -126,7 +131,9 @@ export function ProjectPage({
     void load();
   }, [project?.id, project?.generation, project?.content.environments.map((env) => env.id).join()]);
 
-  if (!projects || (!project && (refreshing || pending$.value))) return <PageSkeleton />;
+  if (!projects || (!project && (refreshing || pending$.value))) {
+    return <PageSkeleton />;
+  }
   if (!project) {
     return (
       <EmptyState
@@ -165,8 +172,11 @@ export function ProjectPage({
       setBusyIds((current) => {
         const next = new Set(current);
         for (const id of ids) {
-          if (on) next.add(id);
-          else next.delete(id);
+          if (on) {
+            next.add(id);
+          } else {
+            next.delete(id);
+          }
         }
         return next;
       });
@@ -179,7 +189,9 @@ export function ProjectPage({
       },
       (failure) => describeError(failure, t),
     );
-    if (!succeeded) await load();
+    if (!succeeded) {
+      await load();
+    }
     mark(false);
     void reload();
     return succeeded;
@@ -620,7 +632,7 @@ export function ProjectPage({
           submitLabel={t("orgs.create")}
           onClose={() => setModal(null)}
           onSubmit={(form) => {
-            const name = String(new FormData(form).get("name")).trim();
+            const name = formText(new FormData(form), "name").trim();
             const created = newEnvironment(name);
             void run(async () => {
               await updateProject(orgId, owner, identity, project, {
@@ -643,7 +655,7 @@ export function ProjectPage({
           submitLabel={t("projects.save")}
           onClose={() => setModal(null)}
           onSubmit={(form) => {
-            const name = String(new FormData(form).get("name")).trim();
+            const name = formText(new FormData(form), "name").trim();
             void run(async () => {
               await updateProject(orgId, owner, identity, project, {
                 ...project.content,
@@ -672,11 +684,14 @@ export function ProjectPage({
           onConfirm={() =>
             void run(async () => {
               for (const link of await listLinks(orgId, project)) {
-                if (link.environmentId === environment.id)
+                if (link.environmentId === environment.id) {
                   await deleteLink(orgId, project, link.id);
+                }
               }
               const doomed = (secrets?.[environment.id] ?? []).map((secret) => secret.id);
-              if (doomed.length > 0) await deleteSecrets(orgId, project, doomed);
+              if (doomed.length > 0) {
+                await deleteSecrets(orgId, project, doomed);
+              }
               await updateProject(orgId, owner, identity, project, {
                 ...project.content,
                 environments: environments.filter((env) => env.id !== environment.id),
@@ -693,7 +708,7 @@ export function ProjectPage({
           submitLabel={t("projects.save")}
           onClose={() => setModal(null)}
           onSubmit={(form) => {
-            const name = String(new FormData(form).get("name")).trim();
+            const name = formText(new FormData(form), "name").trim();
             void run(async () => {
               await updateProject(orgId, owner, identity, project, { ...project.content, name });
               setModal(null);

@@ -11,10 +11,16 @@ import type { VaultItem } from "../extension/lib/vault.js";
 type Packable = null | number | string | Uint8Array | Packable[] | { [key: string]: Packable };
 
 function pack(value: Packable): number[] {
-  if (value === null) return [0xc0];
+  if (value === null) {
+    return [0xc0];
+  }
   if (typeof value === "number") {
-    if (value >= 0 && value < 128) return [value];
-    if (value < 0 && value >= -32) return [0x100 + value];
+    if (value >= 0 && value < 128) {
+      return [value];
+    }
+    if (value < 0 && value >= -32) {
+      return [0x100 + value];
+    }
     const out = new DataView(new ArrayBuffer(5));
     out.setUint8(0, 0xd2);
     out.setInt32(1, value);
@@ -24,9 +30,12 @@ function pack(value: Packable): number[] {
     const bytes = new TextEncoder().encode(value);
     return [0xd9, bytes.length, ...bytes];
   }
-  if (value instanceof Uint8Array) return [0xc5, value.length >> 8, value.length & 0xff, ...value];
-  if (Array.isArray(value))
+  if (value instanceof Uint8Array) {
+    return [0xc5, value.length >> 8, value.length & 0xff, ...value];
+  }
+  if (Array.isArray(value)) {
     return [0xdc, value.length >> 8, value.length & 0xff, ...value.flatMap(pack)];
+  }
   const entries = Object.entries(value);
   return [
     0xde,

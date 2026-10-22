@@ -19,7 +19,9 @@ function TransferApp() {
 
   useEffect(() => {
     const onChanged = (_changes: object, area: string) => {
-      if (area === "session") setSession((value) => value + 1);
+      if (area === "session") {
+        setSession((value) => value + 1);
+      }
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);
@@ -63,6 +65,8 @@ function TransferApp() {
 }
 
 const root = document.getElementById("app");
-if (!root) throw new Error("Missing #app");
+if (!root) {
+  throw new Error("Missing #app");
+}
 setUiLocale((await getLocal()).locale);
 render(<TransferApp />, root);

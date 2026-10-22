@@ -56,7 +56,9 @@ describe("passkey prompt", () => {
   it("lists passkeys for a conditional sign-in and answers the page when one is used", async () => {
     const replies: unknown[] = [];
     const listen = (event: MessageEvent) => {
-      if (event.data?.type === PAGE_REPLY) replies.push(event.data);
+      if (event.data?.type === PAGE_REPLY) {
+        replies.push(event.data);
+      }
     };
     window.addEventListener("message", listen);
     expect(conditionalPasskeys()).toBeNull();

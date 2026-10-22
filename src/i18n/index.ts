@@ -39,7 +39,9 @@ export function detectLocale(languages: readonly string[] = navigator.languages 
   for (const tag of languages) {
     const primary = tag.toLowerCase().split("-")[0];
     const match = LOCALES.find((locale) => locale === primary);
-    if (match) return match;
+    if (match) {
+      return match;
+    }
   }
   return "en";
 }
@@ -56,16 +58,22 @@ export function createTranslator(locale: Locale): Translate {
 
   return (key, params) => {
     const template = catalogue[key];
-    if (!params) return template;
+    if (!params) {
+      return template;
+    }
 
     // `{name}` -> value. An unknown placeholder is left as-is so a typo shows up
     // in the UI instead of silently rendering an empty string.
     return template
       .replace(PLURAL_BLOCK, (match, name: string, body: string) => {
-        if (!(name in params)) return match;
+        if (!(name in params)) {
+          return match;
+        }
         const count = Number(params[name]);
-        const forms = Object.fromEntries(
-          [...body.matchAll(/(=?\w+)\s*\{([^{}]*)\}/g)].map(([, form, text]) => [form, text]),
+        const forms: Record<string, string> = Object.fromEntries(
+          [...body.matchAll(/(=?\w+)\s*\{([^{}]*)\}/g)].map(
+            ([, form, text]) => [form!, text!] as const,
+          ),
         );
         const text = forms[`=${count}`] ?? forms[plurals.select(count)] ?? forms.other ?? match;
         return text.replace(/#/g, numbers.format(count));
@@ -90,8 +98,12 @@ export function describeError(error: unknown, t: Translate): string {
   if (isVaultError(error)) {
     return t(`error.${error.code}` as MessageKey, error.params);
   }
-  if (isLocalizedApiError(error)) return t(error.messageKey, error.params);
-  if (error instanceof Error) return error.message;
+  if (isLocalizedApiError(error)) {
+    return t(error.messageKey, error.params);
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
   return String(error);
 }
 

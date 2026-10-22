@@ -75,7 +75,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
   };
 
   const fail = (response: ServerResponse, message: string) => {
-    if (!response.headersSent) response.writeHead(502, { "content-type": "text/plain" });
+    if (!response.headersSent) {
+      response.writeHead(502, { "content-type": "text/plain" });
+    }
     response.end(`7key agent proxy: ${scrubber.scrub(message)}\n`);
   };
 
@@ -95,8 +97,12 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
     }
     const headers: Record<string, string | string[]> = {};
     for (const [name, value] of Object.entries(reply.headers)) {
-      if (value === undefined || HOP_HEADERS.has(name)) continue;
-      if (name === "content-length" || name === "content-encoding") continue;
+      if (value === undefined || HOP_HEADERS.has(name)) {
+        continue;
+      }
+      if (name === "content-length" || name === "content-encoding") {
+        continue;
+      }
       headers[name] = Array.isArray(value)
         ? value.map((item) => scrubber.scrub(item))
         : scrubber.scrub(value);
@@ -105,7 +111,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
     let pending = "";
     body.on("data", (chunk: Buffer) => {
       const { ready, pending: rest } = scrubber.split(pending + chunk.toString("latin1"));
-      if (ready) response.write(Buffer.from(ready, "latin1"));
+      if (ready) {
+        response.write(Buffer.from(ready, "latin1"));
+      }
       pending = rest;
     });
     body.on("end", () => {
@@ -123,7 +131,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
     const used = new Set<Injectable>();
     const headers: Record<string, string | string[]> = {};
     for (const [name, value] of Object.entries(request.headers)) {
-      if (value === undefined || HOP_HEADERS.has(name)) continue;
+      if (value === undefined || HOP_HEADERS.has(name)) {
+        continue;
+      }
       const swap = (item: string) => {
         const replaced = substituteHeader(name, item, injectables, host);
         replaced.used.forEach((entry) => used.add(entry));
@@ -133,7 +143,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
     }
     headers["accept-encoding"] = "identity";
     headers.host = port === 443 ? host : `${host}:${port}`;
-    for (const entry of used) options.onUse?.(entry, host);
+    for (const entry of used) {
+      options.onUse?.(entry, host);
+    }
 
     const upstream = https.request(
       {
@@ -174,7 +186,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
       return;
     }
     const headers = { ...request.headers };
-    for (const name of HOP_HEADERS) delete headers[name];
+    for (const name of HOP_HEADERS) {
+      delete headers[name];
+    }
     const upstream = http.request(
       {
         host: lookup(url.hostname),
@@ -189,7 +203,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
       },
     );
     upstream.on("error", () => {
-      if (!response.headersSent) response.writeHead(502);
+      if (!response.headersSent) {
+        response.writeHead(502);
+      }
       response.end();
     });
     request.pipe(upstream);
@@ -210,7 +226,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
     if (!injects(host)) {
       const remote = net.connect(port, lookup(host), () => {
         client.write("HTTP/1.1 200 Connection Established\r\n\r\n");
-        if (head.length > 0) remote.write(head);
+        if (head.length > 0) {
+          remote.write(head);
+        }
         remote.pipe(client);
         client.pipe(remote);
       });
@@ -220,7 +238,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
       return;
     }
     client.write("HTTP/1.1 200 Connection Established\r\n\r\n");
-    if (head.length > 0) client.unshift(head);
+    if (head.length > 0) {
+      client.unshift(head);
+    }
     const issued = authority.issue(host);
     const secure = new tls.TLSSocket(client, {
       isServer: true,
@@ -239,7 +259,9 @@ export async function startProxy(options: ProxyOptions): Promise<RunningProxy> {
     url: `http://${user}:${password}@127.0.0.1:${port}`,
     close: () =>
       new Promise((resolve) => {
-        for (const socket of sockets) socket.destroy();
+        for (const socket of sockets) {
+          socket.destroy();
+        }
         server.close(() => resolve());
       }),
   };

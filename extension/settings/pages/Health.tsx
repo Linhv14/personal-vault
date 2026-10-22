@@ -18,15 +18,21 @@ export function Health() {
   const [checkingBreaches, setCheckingBreaches] = useState(false);
 
   useEffect(() => {
-    if (!vaultKey) return;
+    if (!vaultKey) {
+      return;
+    }
     let active = true;
     setHealthError(null);
     void decryptAll(vaultKey, locale)
       .then((items) => {
-        if (active) setHealthItems(items);
+        if (active) {
+          setHealthItems(items);
+        }
       })
       .catch((error: unknown) => {
-        if (active) setHealthError(describeError(error, t));
+        if (active) {
+          setHealthError(describeError(error, t));
+        }
       });
     return () => {
       active = false;
@@ -34,7 +40,9 @@ export function Health() {
   }, [vaultKey, locale]);
 
   const checkBreaches = async () => {
-    if (!healthItems) return;
+    if (!healthItems) {
+      return;
+    }
     setCheckingBreaches(true);
     setHealthError(null);
     try {

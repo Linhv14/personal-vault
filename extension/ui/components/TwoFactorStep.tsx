@@ -18,7 +18,9 @@ function useCountdown(): [number, (seconds: number) => void] {
   const [until, setUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (until <= now) return;
+    if (until <= now) {
+      return;
+    }
     const timer = setTimeout(() => setNow(Date.now()), 250);
     return () => clearTimeout(timer);
   }, [until, now]);

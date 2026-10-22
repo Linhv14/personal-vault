@@ -41,7 +41,9 @@ function zipEntries(bytes: Uint8Array): ZipEntry[] {
   try {
     return readZip(bytes);
   } catch (error) {
-    if (error instanceof ZipError) throw new ImportError("damaged");
+    if (error instanceof ZipError) {
+      throw new ImportError("damaged");
+    }
     throw error;
   }
 }
@@ -55,20 +57,32 @@ function parseJson(content: string): JsonObject {
 }
 
 async function from1pw(file: EncryptedExport, passphrase?: string): Promise<ImportSource> {
-  if (!passphrase) throw new ImportError("needs_passphrase");
+  if (!passphrase) {
+    throw new ImportError("needs_passphrase");
+  }
   try {
     return { format: "1pw", drafts: await decryptExport(file, passphrase), skipped: {} };
   } catch (error) {
-    if (error instanceof ExportPassphraseError) throw new ImportError("wrong_passphrase");
+    if (error instanceof ExportPassphraseError) {
+      throw new ImportError("wrong_passphrase");
+    }
     throw error;
   }
 }
 
 async function fromJson(parsed: JsonObject, passphrase?: string): Promise<ImportSource> {
-  if (isEncryptedExport(parsed)) return from1pw(parsed, passphrase);
-  if (isProtonJson(parsed)) return protonFromJson(parsed);
-  if (isBitwardenJson(parsed)) return bitwardenFromJson(parsed, passphrase);
-  if (isOnePasswordExport(parsed)) return onePasswordFromExport(parsed);
+  if (isEncryptedExport(parsed)) {
+    return from1pw(parsed, passphrase);
+  }
+  if (isProtonJson(parsed)) {
+    return protonFromJson(parsed);
+  }
+  if (isBitwardenJson(parsed)) {
+    return bitwardenFromJson(parsed, passphrase);
+  }
+  if (isOnePasswordExport(parsed)) {
+    return onePasswordFromExport(parsed);
+  }
   throw new ImportError("unrecognized");
 }
 
@@ -79,10 +93,13 @@ async function fromZip(file: ExportFile): Promise<ImportSource> {
     return entry ? new TextDecoder().decode(await entry.read()) : null;
   };
   const pgp = entries.find((entry) => entry.name.endsWith("data.pgp"));
-  if (pgp)
+  if (pgp) {
     return protonFromJson(parseJson(await decryptProtonPgp(await pgp.read(), file.passphrase)));
+  }
   const json = (await read("export.data")) ?? (await read("data.json"));
-  if (json === null) throw new ImportError("unrecognized");
+  if (json === null) {
+    throw new ImportError("unrecognized");
+  }
   return fromJson(parseJson(json), file.passphrase);
 }
 
@@ -92,15 +109,23 @@ function fromCsv(content: string): Promise<ImportSource> | null {
   const records = rows.map((cells) =>
     Object.fromEntries(columns.map((name, index) => [name, cells[index] ?? ""])),
   );
-  if (isProtonCsv(columns)) return protonFromCsv(records);
-  if (isBitwardenCsv(columns)) return bitwardenFromCsv(records);
-  if (isGenericCsv(columns)) return Promise.resolve(genericCsv(columns, records));
+  if (isProtonCsv(columns)) {
+    return protonFromCsv(records);
+  }
+  if (isBitwardenCsv(columns)) {
+    return bitwardenFromCsv(records);
+  }
+  if (isGenericCsv(columns)) {
+    return Promise.resolve(genericCsv(columns, records));
+  }
   return null;
 }
 
 function fromRecoveryCodes(file: ExportFile, content: string): ImportSource {
   const codes = parseRecoveryCodes(content);
-  if (codes.length === 0) throw new ImportError("unrecognized");
+  if (codes.length === 0) {
+    throw new ImportError("unrecognized");
+  }
   return {
     format: "recovery",
     drafts: [
@@ -111,11 +136,18 @@ function fromRecoveryCodes(file: ExportFile, content: string): ImportSource {
 }
 
 export async function readExport(file: ExportFile): Promise<ImportSource> {
-  if (isZip(file.bytes)) return fromZip(file);
-  const content = new TextDecoder().decode(file.bytes).replace(/^﻿/, "").trim();
+  if (isZip(file.bytes)) {
+    return fromZip(file);
+  }
+  const content = new TextDecoder()
+    .decode(file.bytes)
+    .replace(/^\uFEFF/, "")
+    .trim();
   if (content.startsWith("-----BEGIN PGP")) {
     return protonFromJson(parseJson(await decryptProtonPgp(file.bytes, file.passphrase)));
   }
-  if (content.startsWith("{")) return fromJson(parseJson(content), file.passphrase);
+  if (content.startsWith("{")) {
+    return fromJson(parseJson(content), file.passphrase);
+  }
   return (await fromCsv(content)) ?? fromRecoveryCodes(file, content);
 }

@@ -27,16 +27,24 @@ function onView(
   callback: (entered: Element[]) => void,
   rootMargin = "0px 0px -8% 0px",
 ): void {
-  if (elements.length === 0) return;
+  if (elements.length === 0) {
+    return;
+  }
   const observer = new IntersectionObserver(
     (entries) => {
       const entered = entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target);
-      for (const element of entered) observer.unobserve(element);
-      if (entered.length > 0) callback(entered);
+      for (const element of entered) {
+        observer.unobserve(element);
+      }
+      if (entered.length > 0) {
+        callback(entered);
+      }
     },
     { rootMargin },
   );
-  for (const element of elements) observer.observe(element);
+  for (const element of elements) {
+    observer.observe(element);
+  }
 }
 
 function revealSections(): void {
@@ -89,7 +97,9 @@ function animateAudienceTabs(): void {
   for (const input of document.querySelectorAll<HTMLInputElement>(".aud > input")) {
     input.addEventListener("change", () => {
       const panel = document.getElementById(input.getAttribute("aria-controls") ?? "");
-      if (!panel) return;
+      if (!panel) {
+        return;
+      }
       gsap.fromTo(
         panel.querySelectorAll(".mock, .benefits li"),
         { opacity: 0, y: 14 },
@@ -114,13 +124,19 @@ function tickCodes(): void {
     const step = () => {
       if (used === 3) {
         used = 0;
-        for (const cell of cells) cell.classList.remove("used");
+        for (const cell of cells) {
+          cell.classList.remove("used");
+        }
       } else {
         cells[used]?.classList.add("used");
         used++;
       }
-      if (left) left.textContent = String(total - used);
-      if (bar) bar.style.width = `${((total - used) / total) * 100}%`;
+      if (left) {
+        left.textContent = String(total - used);
+      }
+      if (bar) {
+        bar.style.width = `${((total - used) / total) * 100}%`;
+      }
     };
     onView([demo], () => {
       setTimeout(step, 700);
@@ -131,7 +147,9 @@ function tickCodes(): void {
 
 function loadVideos(): void {
   const videos = [...document.querySelectorAll<HTMLVideoElement>("video[data-lazy-video]")];
-  if (videos.length === 0) return;
+  if (videos.length === 0) {
+    return;
+  }
   const start = (video: HTMLVideoElement) => {
     for (const source of video.querySelectorAll<HTMLSourceElement>("source[data-src]")) {
       source.src = source.dataset.src ?? "";
@@ -154,15 +172,22 @@ function loadVideos(): void {
   const watch = () => {
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
+        if (!entry.isIntersecting) {
+          continue;
+        }
         observer.unobserve(entry.target);
         start(entry.target as HTMLVideoElement);
       }
     });
-    for (const video of videos) observer.observe(video);
+    for (const video of videos) {
+      observer.observe(video);
+    }
   };
-  if (document.readyState === "complete") watch();
-  else window.addEventListener("load", watch, { once: true });
+  if (document.readyState === "complete") {
+    watch();
+  } else {
+    window.addEventListener("load", watch, { once: true });
+  }
 }
 
 interface ModelContext {
@@ -198,7 +223,9 @@ function registerAgentTools(): void {
   const context =
     (document as unknown as { modelContext?: ModelContext }).modelContext ??
     (navigator as unknown as { modelContext?: ModelContext }).modelContext;
-  if (!context) return;
+  if (!context) {
+    return;
+  }
   const controller = new AbortController();
   const lang = document.documentElement.lang.startsWith("vi") ? "vi" : "en";
   const tools: Parameters<ModelContext["registerTool"]>[0][] = [
@@ -251,7 +278,7 @@ function registerAgentTools(): void {
       },
       annotations: { readOnlyHint: true },
       execute: async (input) => {
-        const words = String(input.query ?? "")
+        const words = (typeof input.query === "string" ? input.query : "")
           .toLowerCase()
           .split(/\W+/u)
           .filter((word) => word.length > 2);
@@ -277,7 +304,9 @@ function registerAgentTools(): void {
       },
       execute: async (input) => {
         const target = document.getElementById(String(input.section));
-        if (!target) return { ok: false };
+        if (!target) {
+          return { ok: false };
+        }
         target.scrollIntoView({ behavior: reduced ? "auto" : "smooth" });
         return { ok: true };
       },
@@ -294,7 +323,9 @@ function animateCounters(): void {
   const counters = [...document.querySelectorAll<HTMLElement>("[data-count]")].filter(
     (element) => Number.isFinite(Number(element.dataset.count)) && belowFold(element),
   );
-  for (const element of counters) element.textContent = format.format(0);
+  for (const element of counters) {
+    element.textContent = format.format(0);
+  }
   onView(counters, (entered) => {
     for (const element of entered as HTMLElement[]) {
       const target = Number(element.dataset.count);
@@ -314,7 +345,9 @@ function animateCounters(): void {
 
 function typeTerminal(): void {
   const code = document.querySelector<HTMLElement>(".term pre code");
-  if (!code || !belowFold(code)) return;
+  if (!code || !belowFold(code)) {
+    return;
+  }
   code.innerHTML = code.innerHTML
     .split("\n")
     .map((line) => `<span class="ln">${line}</span>`)
@@ -343,7 +376,9 @@ function travelPacket(): void {
   const flow = document.querySelector<HTMLElement>(".flow");
   const wires = flow?.querySelectorAll<HTMLElement>(".wire");
   const nodes = flow?.querySelectorAll<HTMLElement>(".node");
-  if (!flow || wires?.length !== 2 || nodes?.length !== 3) return;
+  if (!flow || wires?.length !== 2 || nodes?.length !== 3) {
+    return;
+  }
   const [first, second] = [wires[0]!, wires[1]!];
   flow.classList.add("js-packet");
   const packet = document.createElement("span");
@@ -401,8 +436,11 @@ function travelPacket(): void {
     .add(glow(nodes[2]));
 
   new IntersectionObserver((entries) => {
-    if (entries.some((entry) => entry.isIntersecting)) timeline.play();
-    else timeline.pause();
+    if (entries.some((entry) => entry.isIntersecting)) {
+      timeline.play();
+    } else {
+      timeline.pause();
+    }
   }).observe(flow);
   let resize = 0;
   window.addEventListener("resize", () => {
@@ -412,7 +450,9 @@ function travelPacket(): void {
 }
 
 function followCursor(): void {
-  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    return;
+  }
   for (const card of gsap.utils.toArray<HTMLElement>(".card")) {
     const glow = { x: 0, y: 0 };
     const paint = () => {
@@ -447,7 +487,9 @@ function pickSystem(): void {
       ? "os-linux"
       : "os-mac";
   const input = document.getElementById(id);
-  if (input instanceof HTMLInputElement) input.checked = true;
+  if (input instanceof HTMLInputElement) {
+    input.checked = true;
+  }
 }
 
 function enableCopy(): void {

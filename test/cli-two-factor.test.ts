@@ -16,7 +16,7 @@ let backupCodes: string[];
 let publicKey: string;
 
 const request = ((input: RequestInfo | URL, init?: RequestInit) =>
-  worker.fetch(String(input), init as RequestInit)) as typeof fetch;
+  worker.fetch(String(input), init)) as typeof fetch;
 
 function answers(...codes: string[]) {
   const asked: string[] = [];

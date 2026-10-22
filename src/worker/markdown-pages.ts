@@ -18,7 +18,9 @@ function withVary(response: Response): Response {
 
 export async function servePage(c: Context<AppBindings>): Promise<Response> {
   const response = await negotiate(c);
-  if (c.req.path === "/" || c.req.path === "/vi") response.headers.set("Link", HOME_LINKS);
+  if (c.req.path === "/" || c.req.path === "/vi") {
+    response.headers.set("Link", HOME_LINKS);
+  }
   return response;
 }
 
@@ -28,7 +30,9 @@ async function negotiate(c: Context<AppBindings>): Promise<Response> {
     return withVary(await c.env.ASSETS.fetch(c.req.raw));
   }
   const asset = await c.env.ASSETS.fetch(new URL(source, c.req.url));
-  if (!asset.ok) return withVary(await c.env.ASSETS.fetch(c.req.raw));
+  if (!asset.ok) {
+    return withVary(await c.env.ASSETS.fetch(c.req.raw));
+  }
   const text = await asset.text();
   return new Response(c.req.method === "HEAD" ? null : text, {
     headers: {

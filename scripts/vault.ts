@@ -117,8 +117,8 @@ function wranglerTee(args: string[]): Promise<string> {
       stdio: ["inherit", "pipe", "inherit"],
     });
     let output = "";
-    child.stdout.on("data", (chunk) => {
-      output += chunk;
+    child.stdout.on("data", (chunk: Buffer) => {
+      output += chunk.toString();
       process.stdout.write(chunk);
     });
     child.on("close", (code) =>
@@ -150,7 +150,9 @@ function wranglerInherit(args: string[]): Promise<void> {
 function parseJsonFromOutput<T>(output: string): T | null {
   for (let i = 0; i < output.length; i++) {
     const char = output[i];
-    if (char !== "{" && char !== "[") continue;
+    if (char !== "{" && char !== "[") {
+      continue;
+    }
     try {
       return JSON.parse(output.slice(i)) as T;
     } catch {
@@ -178,7 +180,9 @@ async function ask<T extends { label: string }>(question: string, choices: T[]):
       const answer = (await rl.question(`  ${question} [1-${choices.length}]: `)).trim();
       const index = Number.parseInt(answer, 10) - 1;
       const choice = choices[index];
-      if (choice) return choice;
+      if (choice) {
+        return choice;
+      }
       console.log("  Not a valid choice.");
     }
   } finally {
@@ -200,11 +204,15 @@ async function ensureLogin() {
     style.info("Not signed in — opening a browser…");
     await wranglerInherit(["login"]);
     who = wranglerCapture(["whoami", "--json"]);
-    if (!who.ok) throw new Error("Sign-in failed");
+    if (!who.ok) {
+      throw new Error("Sign-in failed");
+    }
   }
 
   const accounts = parseJsonFromOutput<{ accounts?: Account[] }>(who.stdout)?.accounts ?? [];
-  if (accounts.length === 0) throw new Error("Could not read the account list from wrangler");
+  if (accounts.length === 0) {
+    throw new Error("Could not read the account list from wrangler");
+  }
 
   const state = readState();
   const fromEnv = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -249,7 +257,9 @@ async function ensureDatabase() {
   const after =
     parseJsonFromOutput<Database[]>(wranglerCapture(["d1", "list", "--json"]).stdout) ?? [];
   const created = after.find((db) => db.name === DB_NAME);
-  if (!created) throw new Error(`Created the database but could not find "${DB_NAME}"`);
+  if (!created) {
+    throw new Error(`Created the database but could not find "${DB_NAME}"`);
+  }
 
   writeState({ databaseId: created.uuid });
   style.ok(`Created database (${created.uuid})`);
@@ -351,7 +361,9 @@ function buildAssets() {
     cwd: root,
     stdio: "inherit",
   });
-  if (result.status !== 0) throw new Error("Build failed");
+  if (result.status !== 0) {
+    throw new Error("Build failed");
+  }
 }
 
 async function deploy() {
@@ -452,12 +464,16 @@ async function status() {
 }
 
 async function logs() {
-  if (!existsSync(GENERATED)) throw new Error("Never deployed. Run: npm run deploy");
+  if (!existsSync(GENERATED)) {
+    throw new Error("Never deployed. Run: npm run deploy");
+  }
   await wranglerInherit(["tail", "-c", GENERATED]);
 }
 
 async function backup() {
-  if (!existsSync(GENERATED)) throw new Error("Never deployed. Run: npm run deploy");
+  if (!existsSync(GENERATED)) {
+    throw new Error("Never deployed. Run: npm run deploy");
+  }
   const directory = path.join(root, "backups");
   mkdirSync(directory, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -476,7 +492,9 @@ async function backup() {
 const PRODUCTION = path.join(root, "deploy", "production.json");
 
 async function ci() {
-  if (!existsSync(PRODUCTION)) throw new Error("deploy/production.json is missing");
+  if (!existsSync(PRODUCTION)) {
+    throw new Error("deploy/production.json is missing");
+  }
   const state = JSON.parse(readFileSync(PRODUCTION, "utf8")) as DeployState & {
     accountId: string;
     databaseId: string;

@@ -19,7 +19,9 @@ export function generateRecoveryCode(): string {
 
 export function normalizeRecoveryCode(input: string): string | null {
   const compact = input.toUpperCase().replace(/[\s-]/g, "");
-  if (!/^[A-Z2-7]{32}$/.test(compact)) return null;
+  if (!/^[A-Z2-7]{32}$/.test(compact)) {
+    return null;
+  }
   return compact;
 }
 
@@ -33,8 +35,9 @@ async function hkdf(
     "deriveKey",
   ]);
   const params = { name: "HKDF", hash: "SHA-256", salt: SALT, info: utf8Encode(info) };
-  if (usage === "bits")
+  if (usage === "bits") {
     return new Uint8Array(await crypto.subtle.deriveBits(params, material, 256));
+  }
   return crypto.subtle.deriveKey(params, material, { name: "AES-GCM", length: 256 }, false, [
     "encrypt",
     "decrypt",
@@ -43,7 +46,9 @@ async function hkdf(
 
 async function keys(input: string): Promise<{ wrap: CryptoKey; auth: string }> {
   const code = normalizeRecoveryCode(input);
-  if (!code) throw new RangeError("Not a recovery code");
+  if (!code) {
+    throw new RangeError("Not a recovery code");
+  }
   const [wrap, auth] = await Promise.all([
     hkdf(code, "wrap", "wrap") as Promise<CryptoKey>,
     hkdf(code, "auth", "bits") as Promise<Bytes>,

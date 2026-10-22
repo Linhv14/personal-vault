@@ -51,7 +51,9 @@ async function send<K extends keyof PasskeyMessages>(
 }
 
 function reply(id: string, value: PageReply): void {
-  if (activeId === id) activeId = null;
+  if (activeId === id) {
+    activeId = null;
+  }
   closeDialog?.();
   window.postMessage({ type: PAGE_REPLY, id, reply: value }, location.origin);
 }
@@ -63,13 +65,17 @@ function element<K extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
   node.className = className;
-  if (text !== undefined) node.textContent = text;
+  if (text !== undefined) {
+    node.textContent = text;
+  }
   return node;
 }
 
 function trustedClick(button: HTMLElement, action: () => void): void {
   button.addEventListener("click", (event) => {
-    if (!event.isTrusted) return;
+    if (!event.isTrusted) {
+      return;
+    }
     event.preventDefault();
     action();
   });
@@ -98,7 +104,9 @@ function dialog(title: string, subtitle: string, onDismiss: () => void): HTMLEle
   (document.body ?? document.documentElement).append(host);
 
   const onKey = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && event.isTrusted) onDismiss();
+    if (event.key === "Escape" && event.isTrusted) {
+      onDismiss();
+    }
   };
   document.addEventListener("keydown", onKey, true);
   trustedClick(close, onDismiss);
@@ -117,7 +125,9 @@ function savedNotice(site: string): void {
   body.remove();
   const close = closeDialog;
   setTimeout(() => {
-    if (closeDialog === close) close?.();
+    if (closeDialog === close) {
+      close?.();
+    }
   }, SAVED_NOTICE_MS);
 }
 
@@ -144,9 +154,13 @@ function showLocked(id: string, site: string, resume: () => void): void {
     other(id),
   );
   const timer = setInterval(async () => {
-    if (activeId !== id) return clearInterval(timer);
+    if (activeId !== id) {
+      return clearInterval(timer);
+    }
     const query = await send("passkey:query", { allowCredentialIds: [] });
-    if (activeId !== id || (query.ok && query.state === "locked")) return;
+    if (activeId !== id || (query.ok && query.state === "locked")) {
+      return;
+    }
     clearInterval(timer);
     resume();
   }, UNLOCK_POLL_MS);
@@ -170,8 +184,12 @@ async function handleCreate(id: string, request: CreateRequest): Promise<void> {
     allowCredentialIds: [],
     excludeCredentialIds: request.options.excludeCredentialIds,
   });
-  if (activeId !== id) return;
-  if (!query.ok) return reply(id, { kind: "fallback" });
+  if (activeId !== id) {
+    return;
+  }
+  if (!query.ok) {
+    return reply(id, { kind: "fallback" });
+  }
   if (query.state === "locked") {
     return showLocked(id, location.hostname, () => void handleCreate(id, request));
   }
@@ -193,12 +211,16 @@ async function handleCreate(id: string, request: CreateRequest): Promise<void> {
   const save = button(t("passkey.save_action"), true, async () => {
     save.disabled = true;
     const result = await send("passkey:create", { options: request.options });
-    if (activeId !== id) return;
+    if (activeId !== id) {
+      return;
+    }
     if (result.ok) {
       reply(id, { kind: "registration", registration: result.registration });
       return savedNotice(site);
     }
-    if (result.error === "excluded") return reply(id, ALREADY_SAVED);
+    if (result.error === "excluded") {
+      return reply(id, ALREADY_SAVED);
+    }
     failed(id, site);
   });
   body.append(actions(save), other(id));
@@ -219,8 +241,12 @@ function accountRow(id: string, site: string, passkey: PasskeyOption, request: G
       options: request.options,
       credentialId: passkey.credentialId,
     });
-    if (activeId !== id) return;
-    if (result.ok) return reply(id, { kind: "assertion", assertion: result.assertion });
+    if (activeId !== id) {
+      return;
+    }
+    if (result.ok) {
+      return reply(id, { kind: "assertion", assertion: result.assertion });
+    }
     failed(id, site);
   });
   return row;
@@ -231,13 +257,21 @@ async function handleGet(id: string, request: GetRequest): Promise<void> {
     rpId: request.options.rpId,
     allowCredentialIds: request.options.allowCredentialIds,
   });
-  if (activeId !== id) return;
-  if (!query.ok) return reply(id, { kind: "fallback" });
+  if (activeId !== id) {
+    return;
+  }
+  if (!query.ok) {
+    return reply(id, { kind: "fallback" });
+  }
   if (query.state === "locked") {
-    if (!query.hasPasskeys) return reply(id, { kind: "fallback" });
+    if (!query.hasPasskeys) {
+      return reply(id, { kind: "fallback" });
+    }
     return showLocked(id, location.hostname, () => void handleGet(id, request));
   }
-  if (query.passkeys.length === 0) return reply(id, { kind: "fallback" });
+  if (query.passkeys.length === 0) {
+    return reply(id, { kind: "fallback" });
+  }
 
   const site = query.rpId;
   const body = dialog(t("passkey.signin_title", { site }), t("passkey.choose_account"), () =>
@@ -262,14 +296,22 @@ function startConditional(id: string, request: ConditionalRequest): void {
         rpId: options.rpId,
         allowCredentialIds: options.allowCredentialIds,
       });
-      if (conditionalId !== id || !query.ok) return { locked: false, passkeys: [] };
-      if (query.state === "locked") return { locked: query.hasPasskeys, passkeys: [] };
+      if (conditionalId !== id || !query.ok) {
+        return { locked: false, passkeys: [] };
+      }
+      if (query.state === "locked") {
+        return { locked: query.hasPasskeys, passkeys: [] };
+      }
       return { locked: false, passkeys: query.passkeys };
     },
     async use(credentialId) {
-      if (conditionalId !== id) return false;
+      if (conditionalId !== id) {
+        return false;
+      }
       const result = await send("passkey:get", { options, credentialId });
-      if (conditionalId !== id || !result.ok) return false;
+      if (conditionalId !== id || !result.ok) {
+        return false;
+      }
       endConditional();
       window.postMessage(
         { type: PAGE_REPLY, id, reply: { kind: "assertion", assertion: result.assertion } },
@@ -281,7 +323,9 @@ function startConditional(id: string, request: ConditionalRequest): void {
 }
 
 window.addEventListener("message", (event) => {
-  if (event.source !== window) return;
+  if (event.source !== window) {
+    return;
+  }
   const data = event.data as { type?: string; id?: string; request?: PageRequest } | null;
   if (data?.type === PAGE_ABORT && data.id === conditionalId) {
     endConditional();
@@ -292,18 +336,25 @@ window.addEventListener("message", (event) => {
     closeDialog?.();
     return;
   }
-  if (data?.type !== PAGE_REQUEST || typeof data.id !== "string" || !data.request) return;
+  if (data?.type !== PAGE_REQUEST || typeof data.id !== "string" || !data.request) {
+    return;
+  }
   if (data.request.kind === "conditional") {
     startConditional(data.id, data.request);
     return;
   }
-  if (activeId) reply(activeId, NOT_ALLOWED);
+  if (activeId) {
+    reply(activeId, NOT_ALLOWED);
+  }
   activeId = data.id;
-  if (data.request.kind === "create") void handleCreate(data.id, data.request);
-  else if (data.request.kind === "get") void handleGet(data.id, data.request);
+  if (data.request.kind === "create") {
+    void handleCreate(data.id, data.request);
+  } else if (data.request.kind === "get") {
+    void handleGet(data.id, data.request);
+  }
 });
 
 void (async () => {
-  const { locale } = (await chrome.storage.local.get("locale")) as { locale?: LocalePreference };
+  const { locale } = await chrome.storage.local.get<{ locale?: LocalePreference }>("locale");
   t = createTranslator(resolveLocale(locale));
 })();

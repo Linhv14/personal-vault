@@ -15,12 +15,16 @@ const sessionArea = new Map<string, unknown>();
 function area(store: Map<string, unknown>) {
   return {
     get: async (keys: string | string[] | null) => {
-      if (keys === null) return Object.fromEntries(store);
+      if (keys === null) {
+        return Object.fromEntries(store);
+      }
       const list = typeof keys === "string" ? [keys] : keys;
       return Object.fromEntries(list.filter((k) => store.has(k)).map((k) => [k, store.get(k)]));
     },
     set: async (patch: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(patch)) store.set(key, value);
+      for (const [key, value] of Object.entries(patch)) {
+        store.set(key, value);
+      }
     },
     remove: async (key: string) => void store.delete(key),
     clear: async () => store.clear(),
@@ -43,7 +47,9 @@ vi.stubGlobal("navigator", {
   platform: "MacIntel",
   credentials: {
     async create(options: CredentialCreationOptions) {
-      if (device.refuse) throw new DOMException("cancelled", "NotAllowedError");
+      if (device.refuse) {
+        throw new DOMException("cancelled", "NotAllowedError");
+      }
       const created = await createPasskey({
         rpId: RP_ID,
         origin: ORIGIN,
@@ -61,7 +67,9 @@ vi.stubGlobal("navigator", {
       };
     },
     async get(options: CredentialRequestOptions) {
-      if (device.refuse) throw new DOMException("cancelled", "NotAllowedError");
+      if (device.refuse) {
+        throw new DOMException("cancelled", "NotAllowedError");
+      }
       const assertion = await signAssertion(device.passkey!, {
         origin: ORIGIN,
         challenge: toBase64Url(new Uint8Array(options.publicKey!.challenge as ArrayBuffer)),
@@ -113,7 +121,9 @@ vi.stubGlobal(
       return json({ ok: true });
     }
     if (path === "/api/auth/biometric/challenge") {
-      if (!server.registration) return json({ code: "auth.biometric_off" }, 410);
+      if (!server.registration) {
+        return json({ code: "auth.biometric_off" }, 410);
+      }
       server.challenges += 1;
       server.challenge = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
       return json({ challenge: server.challenge, credentialId: server.registration.credentialId });

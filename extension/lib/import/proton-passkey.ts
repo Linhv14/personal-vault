@@ -16,9 +16,11 @@ export interface ProtonPasskeyFields {
 }
 
 function bytes(value: MsgpackValue | undefined): Uint8Array | null {
-  if (value instanceof Uint8Array) return value;
+  if (value instanceof Uint8Array) {
+    return value;
+  }
   if (Array.isArray(value) && value.every((byte) => typeof byte === "number")) {
-    return Uint8Array.from(value as number[]);
+    return Uint8Array.from(value);
   }
   return null;
 }
@@ -33,9 +35,13 @@ function field(value: MsgpackValue | undefined, key: string): MsgpackValue | und
 }
 
 function integer(value: MsgpackValue | undefined): number | null {
-  if (typeof value === "number") return value;
+  if (typeof value === "number") {
+    return value;
+  }
   const littleEndian = bytes(field(value, "inner"));
-  if (!littleEndian) return null;
+  if (!littleEndian) {
+    return null;
+  }
   return littleEndian.reduceRight((total, byte) => total * 256 + byte, 0);
 }
 
@@ -43,9 +49,13 @@ function coseParams(key: MsgpackValue | undefined): Map<number, MsgpackValue | u
   const params = new Map<number, MsgpackValue | undefined>();
   const list = field(key, "par");
   for (const pair of Array.isArray(list) ? list : []) {
-    if (!Array.isArray(pair)) continue;
+    if (!Array.isArray(pair)) {
+      continue;
+    }
     const label = integer(field(pair[0], "c"));
-    if (label !== null) params.set(label, pair[1]);
+    if (label !== null) {
+      params.set(label, pair[1]);
+    }
   }
   return params;
 }
@@ -58,17 +68,23 @@ export async function readProtonPasskey(input: ProtonPasskeyFields): Promise<Sto
   try {
     const envelope = decodeMsgpack(base64(input.content));
     const inner = bytes(field(envelope, "c"));
-    if (field(envelope, "v") !== 1 || !inner) return null;
+    if (field(envelope, "v") !== 1 || !inner) {
+      return null;
+    }
     const passkey = decodeMsgpack(inner);
     const key = field(passkey, "key");
-    if (field(field(key, "kty"), "c") !== "EC2") return null;
+    if (field(field(key, "kty"), "c") !== "EC2") {
+      return null;
+    }
 
     const params = coseParams(key);
     const curve = integer(field(params.get(COSE_CURVE), "c"));
     const [x, y, d] = [COSE_X, COSE_Y, COSE_D].map((label) => bytes(field(params.get(label), "c")));
     const credentialId = bytes(field(passkey, "cid"));
     const rpId = field(passkey, "rid");
-    if (curve !== P256 || !x || !y || !d || !credentialId || typeof rpId !== "string") return null;
+    if (curve !== P256 || !x || !y || !d || !credentialId || typeof rpId !== "string") {
+      return null;
+    }
 
     const privateKey = await crypto.subtle.importKey(
       "jwk",

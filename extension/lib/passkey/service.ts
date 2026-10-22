@@ -57,7 +57,9 @@ async function query(
   }: PasskeyMessages["passkey:query"]["request"],
 ): Promise<QueryResponse> {
   const rpId = resolveRpId(origin, requested);
-  if (!rpId) return { ok: false, error: "invalid_rp" };
+  if (!rpId) {
+    return { ok: false, error: "invalid_rp" };
+  }
   const vault = await openVault();
   if (!vault) {
     const { hasPasskeys = true } = await getLocal();
@@ -84,9 +86,13 @@ async function create(
   { options }: PasskeyMessages["passkey:create"]["request"],
 ): Promise<CreateResponse> {
   const rpId = resolveRpId(origin, options.rpId);
-  if (!rpId) return { ok: false, error: "invalid_rp" };
+  if (!rpId) {
+    return { ok: false, error: "invalid_rp" };
+  }
   const vault = await openVault();
-  if (!vault) return { ok: false, error: "locked" };
+  if (!vault) {
+    return { ok: false, error: "locked" };
+  }
   const excluded = options.excludeCredentialIds;
   if (
     excluded.length > 0 &&
@@ -125,13 +131,19 @@ async function get(
   { options, credentialId }: PasskeyMessages["passkey:get"]["request"],
 ): Promise<GetResponse> {
   const rpId = resolveRpId(origin, options.rpId);
-  if (!rpId) return { ok: false, error: "invalid_rp" };
+  if (!rpId) {
+    return { ok: false, error: "invalid_rp" };
+  }
   const vault = await openVault();
-  if (!vault) return { ok: false, error: "locked" };
+  if (!vault) {
+    return { ok: false, error: "locked" };
+  }
   const match = passkeysFor(vault.items, rpId, options.allowCredentialIds).find(
     ({ passkey }) => passkey.credentialId === credentialId,
   );
-  if (!match) return { ok: false, error: "not_found" };
+  if (!match) {
+    return { ok: false, error: "not_found" };
+  }
   const assertion = await signAssertion(match.passkey, { origin, challenge: options.challenge });
   void markUsed(vault.key, match.item).catch(() => {});
   return { ok: true, assertion };

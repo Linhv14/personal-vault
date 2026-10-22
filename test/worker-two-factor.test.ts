@@ -3,6 +3,7 @@ import { parseSecondFactor } from "../src/core/account-two-factor.js";
 import { randomBytes, toBase64 } from "../src/core/bytes.js";
 import { generateTotp, parseOtpauthUri } from "../src/core/totp.js";
 import { protectAuthKey, protectWrappedKey } from "../src/worker/at-rest.js";
+import { numberField, readJsonObject, stringArrayField, stringField } from "./helpers.js";
 import { startWorker, type TestWorker } from "./worker-harness.js";
 
 const T0 = Date.UTC(2026, 9, 20, 12) / 1000;
@@ -25,7 +26,7 @@ function setTime(seconds: number) {
 }
 
 async function json(response: Response) {
-  return { status: response.status, body: (await response.json()) as any };
+  return { status: response.status, body: await readJsonObject(response) };
 }
 
 async function register(worker: TestWorker, email = EMAIL): Promise<Account> {
@@ -48,7 +49,7 @@ async function register(worker: TestWorker, email = EMAIL): Promise<Account> {
       T0,
     );
   const { body } = await login(worker, data.authKey, { email });
-  return { ...data, token: body.token as string };
+  return { ...data, token: stringField(body, "token") };
 }
 
 function login(worker: TestWorker, authKey: string, options: { ip?: string; email?: string } = {}) {
@@ -79,12 +80,12 @@ async function enable(worker: TestWorker, account: Account) {
   const setup = await post(worker, "/api/account/2fa/setup", account.token, {
     currentAuthKey: account.authKey,
   });
-  const { secret } = setup.body as { secret: string };
+  const secret = stringField(setup.body, "secret");
   const enabled = await post(worker, "/api/account/2fa/enable", account.token, {
     currentAuthKey: account.authKey,
     code: await codeAt(secret, T0),
   });
-  return { secret, backupCodes: enabled.body.backupCodes as string[], enabled };
+  return { secret, backupCodes: stringArrayField(enabled.body, "backupCodes"), enabled };
 }
 
 beforeEach(() => {
@@ -111,9 +112,9 @@ describe("enrollment", () => {
       currentAuthKey: account.authKey,
     });
     expect(setup.status).toBe(200);
-    const config = parseOtpauthUri(setup.body.uri);
+    const config = parseOtpauthUri(stringField(setup.body, "uri"));
     expect(config).toMatchObject({
-      secret: setup.body.secret,
+      secret: stringField(setup.body, "secret"),
       issuer: "7key",
       account: EMAIL,
       algorithm: "SHA-1",
@@ -132,17 +133,22 @@ describe("enrollment", () => {
 
     const enabled = await post(worker, "/api/account/2fa/enable", account.token, {
       currentAuthKey: account.authKey,
-      code: await codeAt(setup.body.secret, T0 + 25),
+      code: await codeAt(stringField(setup.body, "secret"), T0 + 25),
     });
     expect(enabled.status).toBe(200);
-    expect(enabled.body.backupCodes).toHaveLength(10);
-    expect(new Set(enabled.body.backupCodes).size).toBe(10);
-    for (const code of enabled.body.backupCodes) expect(code).toMatch(/^[0-9a-z]{5}-[0-9a-z]{5}$/);
+    expect(stringArrayField(enabled.body, "backupCodes")).toHaveLength(10);
+    const backupCodes = stringArrayField(enabled.body, "backupCodes");
+    expect(new Set(backupCodes).size).toBe(10);
+    for (const code of backupCodes) {
+      expect(code).toMatch(/^[0-9a-z]{5}-[0-9a-z]{5}$/);
+    }
 
     const status = await json(await worker.fetch("/api/account/2fa", { token: account.token }));
     expect(status.body).toEqual({ enabled: true, enabledAt: T0, backupCodesLeft: 10 });
 
-    const stale = await worker.fetch("/api/account/2fa", { token: other.body.token });
+    const stale = await worker.fetch("/api/account/2fa", {
+      token: stringField(other.body, "token"),
+    });
     expect(stale.status).toBe(401);
     await worker.settle();
     expect(worker.mail.map((mail) => mail.subject)).toContain(
@@ -178,7 +184,7 @@ describe("enrollment", () => {
     setTime(T0 + 16 * 60);
     const late = await post(worker, "/api/account/2fa/enable", account.token, {
       currentAuthKey: account.authKey,
-      code: await codeAt(setup.body.secret, T0 + 16 * 60),
+      code: await codeAt(stringField(setup.body, "secret"), T0 + 16 * 60),
     });
     expect(late).toMatchObject({ status: 400, body: { code: "two_factor.setup_expired" } });
   });
@@ -193,23 +199,34 @@ describe("sign-in with two factors", () => {
     setTime(T0 + 60);
     const first = await login(worker, account.authKey);
     expect(first.status).toBe(200);
+    const challenge = stringField(first.body, "challenge");
     expect(first.body).toEqual({
       twoFactor: "required",
-      challenge: expect.any(String),
+      challenge,
       expiresAt: T0 + 60 + 300,
     });
     expect(first.body).not.toHaveProperty("token");
     expect(first.body).not.toHaveProperty("wrappedVaultKey");
 
-    const wrong = await secondStep(worker, first.body.challenge, "123456");
+    const wrong = await secondStep(worker, stringField(first.body, "challenge"), "123456");
     expect(wrong).toMatchObject({ status: 401, body: { code: "auth.invalid_2fa" } });
 
-    const done = await secondStep(worker, first.body.challenge, await codeAt(secret, T0 + 60));
+    const done = await secondStep(
+      worker,
+      stringField(first.body, "challenge"),
+      await codeAt(secret, T0 + 60),
+    );
     expect(done.status).toBe(200);
     expect(done.body.wrappedVaultKey).toEqual(account.wrappedVaultKey);
-    expect((await worker.fetch("/api/account/2fa", { token: done.body.token })).status).toBe(200);
+    expect(
+      (await worker.fetch("/api/account/2fa", { token: stringField(done.body, "token") })).status,
+    ).toBe(200);
 
-    const again = await secondStep(worker, first.body.challenge, await codeAt(secret, T0 + 90));
+    const again = await secondStep(
+      worker,
+      stringField(first.body, "challenge"),
+      await codeAt(secret, T0 + 90),
+    );
     expect(again).toMatchObject({ status: 401, body: { code: "auth.two_factor_expired" } });
   });
 
@@ -220,12 +237,16 @@ describe("sign-in with two factors", () => {
     setTime(T0 + 120);
     const code = await codeAt(secret, T0 + 120);
     const first = await login(worker, account.authKey);
-    expect((await secondStep(worker, first.body.challenge, code)).status).toBe(200);
+    expect((await secondStep(worker, stringField(first.body, "challenge"), code)).status).toBe(200);
     const second = await login(worker, account.authKey);
-    const replay = await secondStep(worker, second.body.challenge, code);
+    const replay = await secondStep(worker, stringField(second.body, "challenge"), code);
     expect(replay).toMatchObject({ status: 401, body: { code: "auth.invalid_2fa" } });
     setTime(T0 + 150);
-    const next = await secondStep(worker, second.body.challenge, await codeAt(secret, T0 + 150));
+    const next = await secondStep(
+      worker,
+      stringField(second.body, "challenge"),
+      await codeAt(secret, T0 + 150),
+    );
     expect(next.status).toBe(200);
   });
 
@@ -244,7 +265,7 @@ describe("sign-in with two factors", () => {
       const step = await login(worker, account.authKey);
       const result = await secondStep(
         worker,
-        step.body.challenge,
+        stringField(step.body, "challenge"),
         await codeAt(secret, now + offset),
       );
       expect(result.status, `offset ${offset}`).toBe(status);
@@ -259,13 +280,15 @@ describe("sign-in with two factors", () => {
 
     const first = await login(worker, account.authKey);
     const typed = ` ${code.toUpperCase().replace("-", " ")} `;
-    expect((await secondStep(worker, first.body.challenge, typed)).status).toBe(200);
+    expect((await secondStep(worker, stringField(first.body, "challenge"), typed)).status).toBe(
+      200,
+    );
 
     const second = await login(worker, account.authKey);
-    const reused = await secondStep(worker, second.body.challenge, code);
+    const reused = await secondStep(worker, stringField(second.body, "challenge"), code);
     expect(reused).toMatchObject({ status: 401, body: { code: "auth.invalid_2fa" } });
     const status = await json(await worker.fetch("/api/account/2fa", { token: account.token }));
-    expect(status.body.backupCodesLeft).toBe(9);
+    expect(numberField(status.body, "backupCodesLeft")).toBe(9);
   });
 
   it("expires the challenge after five minutes", async () => {
@@ -274,7 +297,11 @@ describe("sign-in with two factors", () => {
     const { secret } = await enable(worker, account);
     const first = await login(worker, account.authKey);
     setTime(T0 + 301);
-    const late = await secondStep(worker, first.body.challenge, await codeAt(secret, T0 + 301));
+    const late = await secondStep(
+      worker,
+      stringField(first.body, "challenge"),
+      await codeAt(secret, T0 + 301),
+    );
     expect(late).toMatchObject({ status: 401, body: { code: "auth.two_factor_expired" } });
   });
 
@@ -285,9 +312,15 @@ describe("sign-in with two factors", () => {
     setTime(T0 + 60);
     const first = await login(worker, account.authKey);
     for (let i = 0; i < 5; i++) {
-      expect((await secondStep(worker, first.body.challenge, "000000")).status).toBe(401);
+      expect(
+        (await secondStep(worker, stringField(first.body, "challenge"), "000000")).status,
+      ).toBe(401);
     }
-    const burned = await secondStep(worker, first.body.challenge, await codeAt(secret, T0 + 60));
+    const burned = await secondStep(
+      worker,
+      stringField(first.body, "challenge"),
+      await codeAt(secret, T0 + 60),
+    );
     expect(burned.body.code).toBe("auth.two_factor_expired");
   });
 
@@ -297,11 +330,13 @@ describe("sign-in with two factors", () => {
     const { secret } = await enable(worker, account);
     const ip = "198.51.100.7";
     setTime(T0 + 60);
-    let challenge = (await login(worker, account.authKey, { ip })).body.challenge;
+    let challenge = stringField((await login(worker, account.authKey, { ip })).body, "challenge");
     const wrongs: number[] = [];
     for (let i = 0; i < 6; i++) {
       wrongs.push((await secondStep(worker, challenge, "000000", ip)).status);
-      if (i === 3) challenge = (await login(worker, account.authKey, { ip })).body.challenge;
+      if (i === 3) {
+        challenge = stringField((await login(worker, account.authKey, { ip })).body, "challenge");
+      }
     }
     expect(wrongs).toEqual([401, 401, 401, 401, 401, 401]);
     const blocked = await secondStep(worker, challenge, await codeAt(secret, T0 + 60), ip);
@@ -325,9 +360,10 @@ describe("sign-in with two factors", () => {
     const account = await register(worker);
     await enable(worker, account);
     const first = await login(worker, account.authKey);
-    expect((await worker.fetch("/api/account/2fa", { token: first.body.challenge })).status).toBe(
-      401,
-    );
+    expect(
+      (await worker.fetch("/api/account/2fa", { token: stringField(first.body, "challenge") }))
+        .status,
+    ).toBe(401);
   });
 });
 
@@ -355,7 +391,7 @@ describe("managing two factors", () => {
     });
     expect(off.status).toBe(200);
     const plain = await login(worker, account.authKey);
-    expect(plain.body.token).toEqual(expect.any(String));
+    expect(stringField(plain.body, "token")).toEqual(expect.any(String));
     expect(worker.d1.db.prepare("SELECT COUNT(*) AS n FROM two_factor_backup_codes").get()).toEqual(
       {
         n: 0,
@@ -377,12 +413,16 @@ describe("managing two factors", () => {
       code: await codeAt(secret, T0 + 60),
     });
     expect(fresh.status).toBe(200);
-    expect(fresh.body.backupCodes).toHaveLength(10);
+    expect(stringArrayField(fresh.body, "backupCodes")).toHaveLength(10);
 
     const step = await login(worker, account.authKey);
-    const old = await secondStep(worker, step.body.challenge, backupCodes[1]!);
+    const old = await secondStep(worker, stringField(step.body, "challenge"), backupCodes[1]!);
     expect(old.status).toBe(401);
-    const current = await secondStep(worker, step.body.challenge, fresh.body.backupCodes[1]);
+    const current = await secondStep(
+      worker,
+      stringField(step.body, "challenge"),
+      stringArrayField(fresh.body, "backupCodes")[1]!,
+    );
     expect(current.status).toBe(200);
   });
 
@@ -434,9 +474,9 @@ describe("account recovery", () => {
     expect(finished.body).toEqual({ ok: true, twoFactorDisabled: true });
 
     const signedIn = await login(worker, next.authKey);
-    expect(signedIn.body.token).toEqual(expect.any(String));
+    expect(stringField(signedIn.body, "token")).toEqual(expect.any(String));
     const status = await json(
-      await worker.fetch("/api/account/2fa", { token: signedIn.body.token }),
+      await worker.fetch("/api/account/2fa", { token: stringField(signedIn.body, "token") }),
     );
     expect(status.body).toEqual({ enabled: false, enabledAt: null, backupCodesLeft: 0 });
   });

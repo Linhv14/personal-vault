@@ -5,7 +5,9 @@ export function defaultServer(): string {
 }
 
 export function isDefaultServer(apiUrl: string | undefined, fallback = defaultServer()): boolean {
-  if (!apiUrl || !fallback) return false;
+  if (!apiUrl || !fallback) {
+    return false;
+  }
   try {
     return new URL(apiUrl).origin === new URL(fallback).origin;
   } catch {

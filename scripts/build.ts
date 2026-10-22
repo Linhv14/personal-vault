@@ -34,10 +34,14 @@ const dev = watch || process.argv.includes("--dev");
 function deployedServerUrl() {
   for (const file of [".cf-state.json", "deploy/production.json"]) {
     const config = path.join(root, file);
-    if (!existsSync(config)) continue;
+    if (!existsSync(config)) {
+      continue;
+    }
     try {
-      const workerUrl = JSON.parse(readFileSync(config, "utf8")).workerUrl;
-      if (typeof workerUrl === "string" && workerUrl) return workerUrl;
+      const { workerUrl } = JSON.parse(readFileSync(config, "utf8")) as { workerUrl?: unknown };
+      if (typeof workerUrl === "string" && workerUrl) {
+        return workerUrl;
+      }
     } catch {
       continue;
     }
@@ -123,7 +127,9 @@ async function iconSvg(): Promise<(name: string) => string> {
   };
   return (name) => {
     const markup = iconMarkup(name);
-    if (!markup) throw new Error(`share/landing.html uses an unknown icon "${name}"`);
+    if (!markup) {
+      throw new Error(`share/landing.html uses an unknown icon "${name}"`);
+    }
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${markup}</svg>`;
   };
 }
@@ -329,9 +335,13 @@ async function buildExtension() {
   });
 
   for (const entry of await readdir(source, { recursive: true, withFileTypes: true })) {
-    if (!entry.isFile()) continue;
+    if (!entry.isFile()) {
+      continue;
+    }
     const relative = path.relative(source, path.join(entry.parentPath, entry.name));
-    if (/\.tsx?$/.test(relative)) continue;
+    if (/\.tsx?$/.test(relative)) {
+      continue;
+    }
     const target = path.join(outExtension, relative);
     await mkdir(path.dirname(target), { recursive: true });
     if (/\.(css|html)$/.test(relative)) {
@@ -344,12 +354,16 @@ async function buildExtension() {
 
 async function copyConsoleTokens() {
   const target = path.join(outExtension, "console", "tokens.css");
-  if (!existsSync(path.dirname(target))) return;
+  if (!existsSync(path.dirname(target))) {
+    return;
+  }
   await cp(path.join(root, "src", "ui", "tokens.css"), target);
 }
 
 async function packageForDownload() {
-  if (!existsSync(outExtension)) return;
+  if (!existsSync(outExtension)) {
+    return;
+  }
   const target = path.join(outPublic, "download", "7key-extension.zip");
   await mkdir(path.dirname(target), { recursive: true });
   const zip = spawnSync("zip", ["-r", "-X", "-q", target, "."], { cwd: outExtension });
@@ -366,12 +380,16 @@ async function packageForDownload() {
  * fail with EBUSY on Windows; in that case clear the contents instead.
  */
 async function clean(dir: string): Promise<void> {
-  if (!existsSync(dir)) return;
+  if (!existsSync(dir)) {
+    return;
+  }
   try {
     await rm(dir, { recursive: true, force: true });
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code !== "EBUSY" && code !== "EPERM") throw error;
+    if (code !== "EBUSY" && code !== "EPERM") {
+      throw error;
+    }
     for (const entry of await readdir(dir)) {
       await rm(path.join(dir, entry), { recursive: true, force: true });
     }

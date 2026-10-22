@@ -33,7 +33,9 @@ export function genericCsv(header: string[], records: Record<string, string>[]):
     const username = read(row, "username") || undefined;
     const password = row[columnOf(header, "password") ?? ""] || undefined;
     const title = read(row, "title") || (url && registrableDomain(url)) || username || "";
-    if (!title && !password) return [];
+    if (!title && !password) {
+      return [];
+    }
     const { totp, unreadable } = firstTotp([read(row, "totp")], title);
     return [
       {

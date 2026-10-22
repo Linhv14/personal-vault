@@ -1,4 +1,4 @@
-import { launch, sleep } from "./cdp.mjs";
+import { launch } from "./cdp.mjs";
 import { ACCOUNTS, DEMO, BASE } from "./config.mjs";
 const ORG = DEMO.org,
   PROJECT = DEMO.project;
@@ -32,7 +32,9 @@ try {
       const done = await ev(
         `const base = ${JSON.stringify(KEEP)}; const row = [...document.querySelectorAll("main tbody tr")].find((r) => { const n = r.querySelector("td code")?.textContent.trim(); return n && !base.includes(n); }); if (!row) return true; [...row.querySelectorAll('button')].find((x) => /^(Delete|Xoá)$/.test(x.getAttribute('aria-label') || ''))?.click(); await new Promise((r) => setTimeout(r, 400)); document.querySelector("dialog[open] button[type=submit]")?.click(); await new Promise((r) => setTimeout(r, 1500)); return false;`,
       );
-      if (done) break;
+      if (done) {
+        break;
+      }
       removed++;
     }
   }
@@ -41,7 +43,9 @@ try {
     const left = await ev(
       `const b = document.querySelector("main .host-chip:not(.suggested) button"); if (!b) return false; b.click(); await new Promise((r) => setTimeout(r, 1200)); return true;`,
     );
-    if (!left) break;
+    if (!left) {
+      break;
+    }
     unhosted++;
   }
   const unprotected = await ev(

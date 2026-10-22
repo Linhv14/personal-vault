@@ -11,7 +11,9 @@ const waiting: (() => void)[] = [];
 let running = 0;
 
 async function slot<T>(task: () => Promise<T>): Promise<T> {
-  if (running >= MAX_PARALLEL) await new Promise<void>((resolve) => waiting.push(resolve));
+  if (running >= MAX_PARALLEL) {
+    await new Promise<void>((resolve) => waiting.push(resolve));
+  }
   running += 1;
   try {
     return await task();
@@ -39,7 +41,9 @@ export function knownLogo(domain: string): string | null | undefined {
 }
 
 export function logoDomainOf(url: string | undefined): string | null {
-  if (!url) return null;
+  if (!url) {
+    return null;
+  }
   try {
     const host = new URL(url.includes("://") ? url : `https://${url}`).hostname.toLowerCase();
     return /^[a-z0-9.-]+\.[a-z][a-z0-9-]*$/.test(host) && !/^\d+(\.\d+){3}$/.test(host)

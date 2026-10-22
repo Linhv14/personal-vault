@@ -28,7 +28,9 @@ export function substitute(
   const used: Injectable[] = [];
   let result = text;
   for (const entry of injectables) {
-    if (!result.includes(entry.placeholder) || !hostAllowed(entry.hosts, host)) continue;
+    if (!result.includes(entry.placeholder) || !hostAllowed(entry.hosts, host)) {
+      continue;
+    }
     result = replaceAll(result, entry.placeholder, binary(entry.value));
     used.push(entry);
   }
@@ -133,13 +135,17 @@ export class Scrubber {
     this.longest = this.forms[0]?.form.length ?? 0;
     this.prefixes = new Set();
     for (const { form } of this.forms) {
-      for (let length = 1; length < form.length; length++) this.prefixes.add(form.slice(0, length));
+      for (let length = 1; length < form.length; length++) {
+        this.prefixes.add(form.slice(0, length));
+      }
     }
   }
 
   scrub(text: string): string {
     let result = text;
-    for (const { form, placeholder } of this.forms) result = replaceAll(result, form, placeholder);
+    for (const { form, placeholder } of this.forms) {
+      result = replaceAll(result, form, placeholder);
+    }
     return result;
   }
 

@@ -17,7 +17,9 @@ const NOT_SUBMIT =
 function valueOf(element: FormField): string {
   if (element instanceof HTMLSelectElement) {
     const option = element.selectedOptions[0];
-    if (!option || !option.value.trim()) return "";
+    if (!option || !option.value.trim()) {
+      return "";
+    }
     return (option.text || option.value).trim();
   }
   return element.value.trim();
@@ -26,7 +28,9 @@ function valueOf(element: FormField): string {
 function first(fields: DetectedField[], ...kinds: string[]): string | undefined {
   for (const kind of kinds) {
     const value = fields.find((field) => field.kind === kind && valueOf(field.element))?.element;
-    if (value) return valueOf(value);
+    if (value) {
+      return valueOf(value);
+    }
   }
   return undefined;
 }
@@ -37,7 +41,9 @@ function monthOf(element: FormField): number | null {
   const raw =
     element instanceof HTMLSelectElement ? element.value || valueOf(element) : element.value;
   const digits = /\d{1,2}/.exec(raw)?.[0];
-  if (digits) return Number(digits);
+  if (digits) {
+    return Number(digits);
+  }
   const index = MONTHS.findIndex((name) => raw.trim().toLowerCase().startsWith(name));
   return index >= 0 ? index + 1 : null;
 }
@@ -50,13 +56,19 @@ function yearOf(element: FormField): string | null {
 
 function expiryOf(fields: DetectedField[]): string | undefined {
   const combined = first(fields, "cc-exp");
-  if (combined) return combined;
+  if (combined) {
+    return combined;
+  }
   const month = fields.find((field) => field.kind === "cc-exp-month")?.element;
   const year = fields.find((field) => field.kind === "cc-exp-year")?.element;
-  if (!month || !year) return undefined;
+  if (!month || !year) {
+    return undefined;
+  }
   const mm = monthOf(month);
   const yy = yearOf(year);
-  if (!mm || mm > 12 || !yy) return undefined;
+  if (!mm || mm > 12 || !yy) {
+    return undefined;
+  }
   return `${String(mm).padStart(2, "0")}/${yy.slice(-2)}`;
 }
 
@@ -71,7 +83,7 @@ export function readCard(fields: DetectedField[]): CapturedCard {
     expiry: expiryOf(fields),
     cvv: first(fields, "cc-csc"),
   };
-  return Object.fromEntries(Object.entries(entries).filter(([, value]) => value)) as CapturedCard;
+  return Object.fromEntries(Object.entries(entries).filter(([, value]) => value));
 }
 
 export function readAddress(fields: DetectedField[]): AddressData {
@@ -97,7 +109,7 @@ export function readAddress(fields: DetectedField[]): AddressData {
     postalCode: first(own, "postal-code"),
     country,
   };
-  return Object.fromEntries(Object.entries(entries).filter(([, value]) => value)) as AddressData;
+  return Object.fromEntries(Object.entries(entries).filter(([, value]) => value));
 }
 
 export function fillState(
@@ -108,10 +120,15 @@ export function fillState(
   let random = false;
   for (const { element } of fields) {
     const value = element.value;
-    if (!value.trim()) continue;
+    if (!value.trim()) {
+      continue;
+    }
     const ours = filled.get(element);
-    if (!ours || ours.value !== value) typed = true;
-    else if (ours.random) random = true;
+    if (!ours || ours.value !== value) {
+      typed = true;
+    } else if (ours.random) {
+      random = true;
+    }
   }
   return { typed, random };
 }
@@ -124,9 +141,15 @@ export function isSubmitLike(button: Element): boolean {
   ]
     .join(" ")
     .trim();
-  if (NOT_SUBMIT.test(text)) return false;
+  if (NOT_SUBMIT.test(text)) {
+    return false;
+  }
   const type = (button.getAttribute("type") ?? "").toLowerCase();
-  if (button instanceof HTMLInputElement) return type === "submit" || SUBMIT_TEXT.test(text);
-  if (button instanceof HTMLButtonElement && button.form && type !== "button") return true;
+  if (button instanceof HTMLInputElement) {
+    return type === "submit" || SUBMIT_TEXT.test(text);
+  }
+  if (button instanceof HTMLButtonElement && button.form && type !== "button") {
+    return true;
+  }
   return SUBMIT_TEXT.test(text);
 }

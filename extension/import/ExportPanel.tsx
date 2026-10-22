@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { formText } from "../../src/ui/form-data.js";
 import { describeError } from "../../src/i18n/index.js";
 import { csvExport, encryptExport, EXPORT_PASSPHRASE_MIN } from "../lib/export.js";
 import { itemType } from "../lib/item-types.js";
@@ -52,8 +53,12 @@ export function ExportPanel() {
     })();
   }, []);
 
-  if (state.kind === "loading") return null;
-  if (state.kind === "locked") return <LockedCard />;
+  if (state.kind === "loading") {
+    return null;
+  }
+  if (state.kind === "locked") {
+    return <LockedCard />;
+  }
   if (state.kind === "done") {
     return (
       <section className="card">
@@ -75,13 +80,13 @@ export function ExportPanel() {
     event.preventDefault();
     setError(null);
     const data = new FormData(event.currentTarget as HTMLFormElement);
-    const passphrase = String(data.get("passphrase") ?? "");
+    const passphrase = formText(data, "passphrase");
     if (format === "encrypted") {
       if (passphrase.length < EXPORT_PASSPHRASE_MIN) {
         setError(t("export.passphrase_short", { count: EXPORT_PASSPHRASE_MIN }));
         return;
       }
-      if (passphrase !== String(data.get("confirm") ?? "")) {
+      if (passphrase !== formText(data, "confirm")) {
         setError(t("setup.password_mismatch"));
         return;
       }

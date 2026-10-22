@@ -1,4 +1,5 @@
 import { Fragment } from "preact";
+import { formText } from "../../../src/ui/form-data.js";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { generatePassword } from "../../../src/core/generator.js";
 import { describeError } from "../../../src/i18n/index.js";
@@ -79,7 +80,9 @@ function EditField({
               const area = event.currentTarget;
               setTimeout(() => {
                 const codes = parseRecoveryCodes(area.value);
-                if (codes.length > 0) area.value = codes.join("\n");
+                if (codes.length > 0) {
+                  area.value = codes.join("\n");
+                }
               });
             }
           : undefined
@@ -148,7 +151,9 @@ function EditField({
         label={t("edit.regenerate")}
         onClick={() => {
           const generated = generatePassword({ length: 20 });
-          if (input.current) input.current.value = generated.value;
+          if (input.current) {
+            input.current.value = generated.value;
+          }
           setRevealed(true);
           toast(formatEntropy(generated, t));
         }}
@@ -161,7 +166,9 @@ function EditField({
         label={t("edit.scan")}
         onClick={() =>
           void scanTotpFromTab(t, setScanHint).then((config) => {
-            if (!config || !input.current) return;
+            if (!config || !input.current) {
+              return;
+            }
             input.current.value = config.raw;
             onScanned(config.issuer);
           })
@@ -202,7 +209,9 @@ function cvvLength(form: HTMLFormElement | null): number {
 
 function maskExpiry(raw: string): string {
   let digits = raw.replace(/\D/g, "").slice(0, 4);
-  if (digits.length === 1 && Number(digits) > 1) digits = `0${digits}`;
+  if (digits.length === 1 && Number(digits) > 1) {
+    digits = `0${digits}`;
+  }
   return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 }
 
@@ -257,7 +266,9 @@ export function Editor({
     }
 
     const key = vaultKey.value;
-    if (!key) return;
+    if (!key) {
+      return;
+    }
     try {
       await saveItem(
         key,
@@ -265,8 +276,8 @@ export function Editor({
           ...item,
           id: item?.id ?? newItemId(),
           type,
-          title: String(data.get("title")).trim(),
-          vault: storedVault(String(data.get("vault") ?? initialVault)),
+          title: formText(data, "title").trim(),
+          vault: storedVault(formText(data, "vault") || initialVault),
           ...fields,
           usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
           passwordHistory: HAS_PASSWORD_HISTORY.has(type)
@@ -284,7 +295,9 @@ export function Editor({
   };
 
   const moveToTrash = async () => {
-    if (!item) return;
+    if (!item) {
+      return;
+    }
     try {
       await setTrashed(item, true);
     } catch (failure) {
@@ -346,7 +359,9 @@ export function Editor({
                 type={type}
                 onScanned={(issuer) => {
                   const title = titleField();
-                  if (issuer && title && !title.value) title.value = issuer;
+                  if (issuer && title && !title.value) {
+                    title.value = issuer;
+                  }
                 }}
               />
             </Fragment>

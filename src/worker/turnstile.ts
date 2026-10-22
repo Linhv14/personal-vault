@@ -44,12 +44,16 @@ export async function verifyTurnstile(
   requestHost: string,
 ): Promise<boolean> {
   const secret = env.TURNSTILE_SECRET?.trim();
-  if (!secret || !token || token.length > MAX_TOKEN_LENGTH) return false;
+  if (!secret || !token || token.length > MAX_TOKEN_LENGTH) {
+    return false;
+  }
 
   const form = new FormData();
   form.set("secret", secret);
   form.set("response", token);
-  if (ip !== "unknown") form.set("remoteip", ip);
+  if (ip !== "unknown") {
+    form.set("remoteip", ip);
+  }
 
   let outcome: SiteverifyOutcome;
   try {
@@ -58,8 +62,10 @@ export async function verifyTurnstile(
       body: form,
       signal: AbortSignal.timeout(SITEVERIFY_TIMEOUT_MS),
     });
-    if (!response.ok) throw new Error(`siteverify answered ${response.status}`);
-    outcome = (await response.json()) as SiteverifyOutcome;
+    if (!response.ok) {
+      throw new Error(`siteverify answered ${response.status}`);
+    }
+    outcome = await response.json<SiteverifyOutcome>();
   } catch (error) {
     logError("turnstile_unreachable", error);
     return false;
@@ -69,21 +75,29 @@ export async function verifyTurnstile(
     logInfo("turnstile_rejected", { codes: outcome["error-codes"] ?? [] });
     return false;
   }
-  if (!outcome.hostname || DUMMY_SECRET.test(secret)) return true;
-  if (allowedHostnames(env, requestHost).has(outcome.hostname.toLowerCase())) return true;
+  if (!outcome.hostname || DUMMY_SECRET.test(secret)) {
+    return true;
+  }
+  if (allowedHostnames(env, requestHost).has(outcome.hostname.toLowerCase())) {
+    return true;
+  }
   logInfo("turnstile_hostname_mismatch", { hostname: outcome.hostname });
   return false;
 }
 
 export const requireHuman: MiddlewareHandler<AppBindings> = async (c, next) => {
-  if (!turnstileSiteKey(c.env)) return next();
+  if (!turnstileSiteKey(c.env)) {
+    return next();
+  }
   const passed = await verifyTurnstile(
     c.env,
     c.req.header(TURNSTILE_HEADER),
     clientIp(c),
     new URL(c.req.url).hostname,
   );
-  if (!passed) return c.json(apiError("auth.bot_check_failed"), 403);
+  if (!passed) {
+    return c.json(apiError("auth.bot_check_failed"), 403);
+  }
   await next();
 };
 

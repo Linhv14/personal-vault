@@ -78,7 +78,9 @@ async function neverAsks(domain: string): Promise<boolean> {
 
 async function stopAsking(domain: string): Promise<void> {
   const current = (await getLocal()).neverAskForms ?? [];
-  if (!current.includes(domain)) await setLocal({ neverAskForms: [...current, domain] });
+  if (!current.includes(domain)) {
+    await setLocal({ neverAskForms: [...current, domain] });
+  }
 }
 
 function shortField(value: unknown): string | undefined {
@@ -90,7 +92,9 @@ function sanitizeCard(card: unknown): CapturedCard {
   const clean: CapturedCard = {};
   for (const key of ["cardholder", "number", "expiry", "cvv"] as const) {
     const value = shortField(raw[key]);
-    if (value) clean[key] = value;
+    if (value) {
+      clean[key] = value;
+    }
   }
   return clean;
 }
@@ -98,7 +102,9 @@ function sanitizeCard(card: unknown): CapturedCard {
 async function readFrames(tabId: number): Promise<FrameParts | null> {
   const stored = (await chrome.storage.session.get(framesKey(tabId)))[framesKey(tabId)] as
     FrameParts | undefined;
-  if (!stored || Date.now() - stored.at > FRAME_TTL_MS) return null;
+  if (!stored || Date.now() - stored.at > FRAME_TTL_MS) {
+    return null;
+  }
   return stored;
 }
 
@@ -112,12 +118,20 @@ export async function rememberFrameCard(
   message: CardFrameCapture,
 ): Promise<void> {
   const tabId = sender.tab?.id;
-  if (tabId === undefined || !isHttps(sender.tab?.url ?? "") || !isHttps(sender.url ?? "")) return;
-  if (!(await isCardFrame(sender, extensionId))) return;
+  if (tabId === undefined || !isHttps(sender.tab?.url ?? "") || !isHttps(sender.url ?? "")) {
+    return;
+  }
+  if (!(await isCardFrame(sender, extensionId))) {
+    return;
+  }
   const card = sanitizeCard(message.card);
-  if (Object.keys(card).length === 0) return;
+  if (Object.keys(card).length === 0) {
+    return;
+  }
   const domain = registrableDomain(sender.tab?.url ?? "");
-  if (!domain) return;
+  if (!domain) {
+    return;
+  }
   const previous = await readFrames(tabId);
   const stored = previous?.domain === domain ? previous : { at: Date.now(), domain, parts: {} };
   stored.parts[String(sender.frameId)] = { card, untouched: message.untouched !== false };
@@ -133,7 +147,9 @@ export async function rememberFrameCard(
 async function readPending(sender: TrustedSender): Promise<PendingForm | null> {
   const key = pendingKey(sender.tabId);
   const pending = (await chrome.storage.session.get(key))[key] as PendingForm | undefined;
-  if (!pending) return null;
+  if (!pending) {
+    return null;
+  }
   if (Date.now() - pending.at > PENDING_TTL_MS) {
     await chrome.storage.session.remove(key);
     return null;
@@ -146,7 +162,9 @@ function personalMatch(match: Match<VaultItem>): Match<VaultItem> {
 }
 
 function matchOf(pending: PendingForm, items: VaultItem[] | null): Match<VaultItem> {
-  if (!items) return { status: "new" };
+  if (!items) {
+    return { status: "new" };
+  }
   return personalMatch(
     pending.kind === "card"
       ? matchCard(items, pending.card)
@@ -156,7 +174,9 @@ function matchOf(pending: PendingForm, items: VaultItem[] | null): Match<VaultIt
 
 function promptOf(pending: PendingForm, items: VaultItem[] | null): FormPrompt | null {
   const match = matchOf(pending, items);
-  if (match.status === "same") return null;
+  if (match.status === "same") {
+    return null;
+  }
   const update = match.status === "changed";
   if (pending.kind === "card") {
     const { card } = pending;
@@ -198,7 +218,9 @@ async function capture(
   let pending: PendingForm | null = null;
   if (card) {
     await forgetFrameCards(sender.tabId);
-    if (typed) pending = { kind: "card", card, domain: sender.domain, at: Date.now() };
+    if (typed) {
+      pending = { kind: "card", card, domain: sender.domain, at: Date.now() };
+    }
   } else if (request.address) {
     const address = cleanAddress(request.address);
     if (addressWorthSaving(address, request.random)) {
@@ -211,11 +233,16 @@ async function capture(
       };
     }
   }
-  if (!pending) return null;
+  if (!pending) {
+    return null;
+  }
   const vault = await openVault();
   const prompt = promptOf(pending, vault?.items ?? null);
-  if (prompt) await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
-  else await chrome.storage.session.remove(pendingKey(sender.tabId));
+  if (prompt) {
+    await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
+  } else {
+    await chrome.storage.session.remove(pendingKey(sender.tabId));
+  }
   return prompt;
 }
 
@@ -225,8 +252,12 @@ function cardTitle(card: CleanCard): string {
 }
 
 function bindSite(item: VaultItem, domain: string): VaultItem {
-  if (boundToSite(item, domain)) return item;
-  if (!item.url) return { ...item, url: domain };
+  if (boundToSite(item, domain)) {
+    return item;
+  }
+  if (!item.url) {
+    return { ...item, url: domain };
+  }
   return { ...item, urls: [...(item.urls ?? []), domain] };
 }
 
@@ -273,7 +304,9 @@ function itemToSave(
 
 async function save(sender: TrustedSender, withCvv: boolean): Promise<AutofillResponse> {
   const pending = await readPending(sender);
-  if (!pending) return { ok: true, saved: false };
+  if (!pending) {
+    return { ok: true, saved: false };
+  }
   const vault = await openVault();
   if (!vault) {
     await chrome.action.openPopup?.().catch(() => {});
@@ -302,18 +335,24 @@ export async function handleFormRequest(
 
     case "autofill:form-pending": {
       const pending = allowed ? await readPending(sender) : null;
-      if (!pending) return { ok: true, form: null };
+      if (!pending) {
+        return { ok: true, form: null };
+      }
       const vault = await openVault();
       return { ok: true, form: promptOf(pending, vault?.items ?? null) };
     }
 
     case "autofill:form-save":
-      if (!allowed) return { ok: true, saved: false };
+      if (!allowed) {
+        return { ok: true, saved: false };
+      }
       return save(sender, request.cvv === true);
 
     case "autofill:form-dismiss":
       await chrome.storage.session.remove(pendingKey(sender.tabId));
-      if (request.never) await stopAsking(sender.domain);
+      if (request.never) {
+        await stopAsking(sender.domain);
+      }
       return { ok: true, saved: false };
   }
 }

@@ -176,10 +176,10 @@ export class OrgStore extends DurableObject<Env> {
     teams: { teamId: string; access: TeamAccess }[],
   ): Promise<Result<{ ok: true }>> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
-      return fail(403, "orgs.forbidden");
+      return Promise.resolve(fail(403, "orgs.forbidden"));
     }
     if (!teams.every(({ teamId }) => this.teamExists(teamId))) {
-      return fail(400, "orgs.invalid_team");
+      return Promise.resolve(fail(400, "orgs.invalid_team"));
     }
     this.ctx.storage.transactionSync(() => {
       this.sql.exec("DELETE FROM team_invites WHERE email = ?", email);
@@ -192,11 +192,12 @@ export class OrgStore extends DurableObject<Env> {
         );
       }
     });
-    return ok({ ok: true as const });
+    return Promise.resolve(ok({ ok: true as const }));
   }
 
   async forgetInvite(email: string): Promise<void> {
     this.sql.exec("DELETE FROM team_invites WHERE email = ?", email);
+    return Promise.resolve();
   }
 
   async claimInvite(email: string, accountId: string): Promise<void> {
@@ -210,10 +211,13 @@ export class OrgStore extends DurableObject<Env> {
       );
       this.sql.exec("DELETE FROM team_invites WHERE email = ?", email);
     });
+    return Promise.resolve();
   }
 
   async listTeams(principal: Principal): Promise<Result<TeamView[]>> {
-    if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
+    if (!this.confirmed(principal)) {
+      return Promise.resolve(fail(403, "orgs.forbidden"));
+    }
     const teams = this.sql
       .exec<{ id: string; name: string; key_generation: number; rekey_needed: number }>(
         "SELECT id, name, key_generation, rekey_needed FROM teams ORDER BY created_at",
@@ -245,28 +249,30 @@ export class OrgStore extends DurableObject<Env> {
           (entry) => entry.team_id === team.id && entry.account_id === principal.accountId,
         ),
     );
-    return ok(
-      visible.map((team) => {
-        const members = memberships.filter((entry) => entry.team_id === team.id);
-        const mine = members.find((entry) => entry.account_id === principal.accountId);
-        return {
-          id: team.id,
-          name: team.name,
-          members: members.map((entry) => entry.account_id),
-          viewers: members
-            .filter((entry) => entry.access === "view")
-            .map((entry) => entry.account_id),
-          invited: invited
-            .filter((entry) => entry.team_id === team.id)
-            .map(({ email, access }) => ({ email, access })),
-          pending: pending
-            .filter((entry) => entry.team_id === team.id)
-            .map(({ account_id, access }) => ({ accountId: account_id, access })),
-          generation: team.key_generation,
-          rekeyNeeded: team.rekey_needed === 1,
-          wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
-        };
-      }),
+    return Promise.resolve(
+      ok(
+        visible.map((team) => {
+          const members = memberships.filter((entry) => entry.team_id === team.id);
+          const mine = members.find((entry) => entry.account_id === principal.accountId);
+          return {
+            id: team.id,
+            name: team.name,
+            members: members.map((entry) => entry.account_id),
+            viewers: members
+              .filter((entry) => entry.access === "view")
+              .map((entry) => entry.account_id),
+            invited: invited
+              .filter((entry) => entry.team_id === team.id)
+              .map(({ email, access }) => ({ email, access })),
+            pending: pending
+              .filter((entry) => entry.team_id === team.id)
+              .map(({ account_id, access }) => ({ accountId: account_id, access })),
+            generation: team.key_generation,
+            rekeyNeeded: team.rekey_needed === 1,
+            wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
+          };
+        }),
+      ),
     );
   }
 
@@ -277,10 +283,14 @@ export class OrgStore extends DurableObject<Env> {
     }>
   > {
     const teams = await this.listTeams(principal);
-    if (!teams.ok) return teams;
+    if (!teams.ok) {
+      return teams;
+    }
     const projects: Record<string, { generation: number; projects: ProjectRecord[] }> = {};
     for (const team of teams.value) {
-      if (!team.wrappedKey) continue;
+      if (!team.wrappedKey) {
+        continue;
+      }
       const listed = await this.listProjects(principal, team.id);
       if (listed.ok) {
         projects[team.id] = {
@@ -302,8 +312,12 @@ export class OrgStore extends DurableObject<Env> {
       return fail(403, "orgs.forbidden");
     }
     const count = this.sql.exec<{ n: number }>("SELECT count(*) AS n FROM teams").one().n;
-    if (count >= maxTeams) return fail(409, "orgs.team_limit", { limit: maxTeams });
-    if (this.teamExists(team.id)) return fail(409, "orgs.invalid_team");
+    if (count >= maxTeams) {
+      return fail(409, "orgs.team_limit", { limit: maxTeams });
+    }
+    if (this.teamExists(team.id)) {
+      return fail(409, "orgs.invalid_team");
+    }
     const at = now();
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
@@ -366,12 +380,18 @@ export class OrgStore extends DurableObject<Env> {
       return fail(403, "orgs.forbidden");
     }
     const generation = this.generationOf(teamId);
-    if (generation === null) return fail(404, "orgs.not_found");
+    if (generation === null) {
+      return fail(404, "orgs.not_found");
+    }
     if (!this.inTeam(teamId, principal.accountId)) {
       return fail(403, "orgs.not_in_team");
     }
-    if (!this.role(member.accountId)) return fail(404, "orgs.not_found");
-    if (member.generation !== generation) return fail(409, "orgs.stale_team_key");
+    if (!this.role(member.accountId)) {
+      return fail(404, "orgs.not_found");
+    }
+    if (member.generation !== generation) {
+      return fail(409, "orgs.stale_team_key");
+    }
     this.sql.exec(
       `INSERT INTO team_members (team_id, account_id, wrapped_key, added_by, added_at, access)
        VALUES (?, ?, ?, ?, ?, ?)
@@ -409,7 +429,9 @@ export class OrgStore extends DurableObject<Env> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
       return fail(403, "orgs.forbidden");
     }
-    if (!this.inTeam(teamId, accountId)) return fail(404, "orgs.not_found");
+    if (!this.inTeam(teamId, accountId)) {
+      return fail(404, "orgs.not_found");
+    }
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
         "DELETE FROM team_members WHERE team_id = ? AND account_id = ?",
@@ -440,9 +462,15 @@ export class OrgStore extends DurableObject<Env> {
       return fail(403, "orgs.forbidden");
     }
     const generation = this.generationOf(teamId);
-    if (generation === null) return fail(404, "orgs.not_found");
-    if (!this.inTeam(teamId, principal.accountId)) return fail(403, "orgs.not_in_team");
-    if (next.generation !== generation + 1) return fail(409, "orgs.stale_team_key");
+    if (generation === null) {
+      return fail(404, "orgs.not_found");
+    }
+    if (!this.inTeam(teamId, principal.accountId)) {
+      return fail(403, "orgs.not_in_team");
+    }
+    if (next.generation !== generation + 1) {
+      return fail(409, "orgs.stale_team_key");
+    }
     const members = this.teamMembers(teamId);
     const recipients = Object.keys(next.wrappedKeys);
     if (
@@ -466,7 +494,9 @@ export class OrgStore extends DurableObject<Env> {
       return fail(409, "orgs.team_changed");
     }
     this.ctx.storage.transactionSync(() => {
-      if (next.versions === undefined) this.projects.dropVersionsOfTeam(teamId);
+      if (next.versions === undefined) {
+        this.projects.dropVersionsOfTeam(teamId);
+      }
       this.projects.reseal(next.projects, next.secrets, next.versions ?? {});
       this.links.rewrap(next.links);
       this.items.reseal(next.items);
@@ -501,11 +531,19 @@ export class OrgStore extends DurableObject<Env> {
     teamId: string,
     adminOnly: boolean,
   ): Result<{ generation: number; rekeyNeeded: boolean }> {
-    if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
-    if (adminOnly && !isOrgAdmin(principal.role)) return fail(403, "orgs.forbidden");
+    if (!this.confirmed(principal)) {
+      return fail(403, "orgs.forbidden");
+    }
+    if (adminOnly && !isOrgAdmin(principal.role)) {
+      return fail(403, "orgs.forbidden");
+    }
     const generation = this.generationOf(teamId);
-    if (generation === null) return fail(404, "orgs.not_found");
-    if (!this.inTeam(teamId, principal.accountId)) return fail(403, "orgs.not_in_team");
+    if (generation === null) {
+      return fail(404, "orgs.not_found");
+    }
+    if (!this.inTeam(teamId, principal.accountId)) {
+      return fail(403, "orgs.not_in_team");
+    }
     const rekeyNeeded =
       this.sql
         .exec<{ rekey_needed: number }>("SELECT rekey_needed FROM teams WHERE id = ?", teamId)
@@ -514,8 +552,12 @@ export class OrgStore extends DurableObject<Env> {
   }
 
   private writable(access: { generation: number; rekeyNeeded: boolean }, generation: number) {
-    if (access.rekeyNeeded) return fail<never>(409, "orgs.rekey_required");
-    if (generation !== access.generation) return fail<never>(409, "orgs.stale_team_key");
+    if (access.rekeyNeeded) {
+      return fail<never>(409, "orgs.rekey_required");
+    }
+    if (generation !== access.generation) {
+      return fail<never>(409, "orgs.stale_team_key");
+    }
     return null;
   }
 
@@ -526,8 +568,12 @@ export class OrgStore extends DurableObject<Env> {
     adminOnly: boolean,
   ): Result<{ generation: number; rekeyNeeded: boolean }> {
     const access = this.teamAccess(principal, teamId, adminOnly);
-    if (!access.ok) return access;
-    if (this.projects.teamOf(projectId) !== teamId) return fail(404, "orgs.not_found");
+    if (!access.ok) {
+      return access;
+    }
+    if (this.projects.teamOf(projectId) !== teamId) {
+      return fail(404, "orgs.not_found");
+    }
     return access;
   }
 
@@ -549,9 +595,15 @@ export class OrgStore extends DurableObject<Env> {
     projectId: string | null,
     environmentIds: Iterable<string>,
   ) {
-    if (isOrgAdmin(principal.role)) return null;
-    if (this.viewer(teamId, principal.accountId)) return fail<never>(403, "orgs.read_only");
-    if (projectId === null) return null;
+    if (isOrgAdmin(principal.role)) {
+      return null;
+    }
+    if (this.viewer(teamId, principal.accountId)) {
+      return fail<never>(403, "orgs.read_only");
+    }
+    if (projectId === null) {
+      return null;
+    }
     for (const environmentId of environmentIds) {
       if (this.projects.isProtected(projectId, environmentId)) {
         return fail<never>(403, "orgs.protected_environment");
@@ -569,7 +621,9 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     this.projects.protect(projectId, environmentId, on);
     await this.record(
       principal.accountId,
@@ -590,7 +644,9 @@ export class OrgStore extends DurableObject<Env> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
       return fail(403, "orgs.forbidden");
     }
-    if (!this.inTeam(teamId, accountId)) return fail(404, "orgs.not_found");
+    if (!this.inTeam(teamId, accountId)) {
+      return fail(404, "orgs.not_found");
+    }
     this.sql.exec(
       "UPDATE team_members SET access = ? WHERE team_id = ? AND account_id = ?",
       access,
@@ -611,12 +667,16 @@ export class OrgStore extends DurableObject<Env> {
     teamId: string,
   ): Promise<Result<{ generation: number; rekeyNeeded: boolean; projects: ProjectRecord[] }>> {
     const access = this.teamAccess(principal, teamId, false);
-    if (!access.ok) return access;
-    return ok({
-      generation: access.value.generation,
-      rekeyNeeded: access.value.rekeyNeeded,
-      projects: this.projects.ofTeam(teamId),
-    });
+    if (!access.ok) {
+      return Promise.resolve(access);
+    }
+    return Promise.resolve(
+      ok({
+        generation: access.value.generation,
+        rekeyNeeded: access.value.rekeyNeeded,
+        projects: this.projects.ofTeam(teamId),
+      }),
+    );
   }
 
   async createProject(
@@ -627,10 +687,16 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ id: string }>> {
     const access = this.teamAccess(principal, teamId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const refused = this.writable(access.value, project.generation);
-    if (refused) return refused;
-    if (this.projects.teamOf(project.id) !== null) return fail(409, "orgs.invalid_project");
+    if (refused) {
+      return refused;
+    }
+    if (this.projects.teamOf(project.id) !== null) {
+      return fail(409, "orgs.invalid_project");
+    }
     if (this.projects.count() >= maxProjects) {
       return fail(409, "orgs.project_limit", { limit: maxProjects });
     }
@@ -647,9 +713,13 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const refused = this.writable(access.value, update.generation);
-    if (refused) return refused;
+    if (refused) {
+      return refused;
+    }
     this.projects.replace(projectId, update.sealed);
     await this.record(principal.accountId, "project.updated", `${teamId}:${projectId}`, ip);
     return ok({ ok: true as const });
@@ -662,7 +732,9 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     this.ctx.storage.transactionSync(() => {
       this.links.removeProject(projectId);
       this.projects.remove(projectId);
@@ -679,7 +751,9 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const allowed = this.projectAccess(principal, teamId, projectId, false);
-    if (!allowed.ok) return allowed;
+    if (!allowed.ok) {
+      return allowed;
+    }
     for (const { environmentId, access } of events) {
       await this.record(
         principal.accountId,
@@ -699,7 +773,9 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ generation: number; secrets: SecretRecord[] }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const secrets = this.projects.secrets(projectId, environmentId);
     await this.record(principal.accountId, "secrets.read", `${projectId}:${environmentId}`, ip);
     return ok({ generation: access.value.generation, secrets });
@@ -715,9 +791,13 @@ export class OrgStore extends DurableObject<Env> {
     Result<{ generation: number; environmentId: string; versions: SecretVersionRecord[] }>
   > {
     const access = this.projectAccess(principal, teamId, projectId, false);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const location = this.projects.secretLocation(secretId);
-    if (location?.projectId !== projectId) return fail(404, "orgs.not_found");
+    if (location?.projectId !== projectId) {
+      return fail(404, "orgs.not_found");
+    }
     await this.record(
       principal.accountId,
       "secret.history_read",
@@ -742,7 +822,9 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ids: string[] }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const refused =
       this.writable(access.value, batch.generation) ??
       this.refusedEdit(
@@ -751,15 +833,18 @@ export class OrgStore extends DurableObject<Env> {
         projectId,
         new Set(batch.secrets.map((secret) => secret.environmentId)),
       );
-    if (refused) return refused;
+    if (refused) {
+      return refused;
+    }
     if (new Set(batch.secrets.map((secret) => secret.id)).size !== batch.secrets.length) {
       return fail(400, "orgs.invalid_secret");
     }
     let added = 0;
     for (const secret of batch.secrets) {
       const existing = this.projects.secretLocation(secret.id);
-      if (!existing) added += 1;
-      else if (
+      if (!existing) {
+        added += 1;
+      } else if (
         existing.projectId !== projectId ||
         existing.environmentId !== secret.environmentId
       ) {
@@ -789,20 +874,28 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ deleted: number }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const found = ids
       .map((id) => ({ id, location: this.projects.secretLocation(id) }))
       .filter(({ location }) => location?.projectId === projectId);
-    if (found.length === 0) return fail(404, "orgs.not_found");
+    if (found.length === 0) {
+      return fail(404, "orgs.not_found");
+    }
     const refused = this.refusedEdit(
       principal,
       teamId,
       projectId,
       new Set(found.map(({ location }) => location!.environmentId)),
     );
-    if (refused) return refused;
+    if (refused) {
+      return refused;
+    }
     this.ctx.storage.transactionSync(() => {
-      for (const { id } of found) this.projects.deleteSecret(id);
+      for (const { id } of found) {
+        this.projects.deleteSecret(id);
+      }
     });
     for (const environmentId of new Set(found.map(({ location }) => location!.environmentId))) {
       await this.record(principal.accountId, "secret.deleted", `${projectId}:${environmentId}`, ip);
@@ -816,8 +909,10 @@ export class OrgStore extends DurableObject<Env> {
     projectId: string,
   ): Promise<Result<{ links: LinkRecord[] }>> {
     const access = this.projectAccess(principal, teamId, projectId, false);
-    if (!access.ok) return access;
-    return ok({ links: this.links.ofProject(projectId) });
+    if (!access.ok) {
+      return Promise.resolve(access);
+    }
+    return Promise.resolve(ok({ links: this.links.ofProject(projectId) }));
   }
 
   async createLink(
@@ -830,17 +925,28 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ id: string }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const refused = this.writable(access.value, link.generation);
-    if (refused) return refused;
-    if (this.links.find(link.id)) return fail(409, "orgs.invalid_link");
+    if (refused) {
+      return refused;
+    }
+    if (this.links.find(link.id)) {
+      return fail(409, "orgs.invalid_link");
+    }
     if (this.links.count(projectId) >= MAX_LINKS_PER_PROJECT) {
       return fail(409, "orgs.link_limit", { limit: MAX_LINKS_PER_PROJECT });
     }
-    const { generation: _generation, ...record } = link;
     this.links.insert(teamId, {
-      ...record,
+      id: link.id,
       projectId,
+      environmentId: link.environmentId,
+      repository: link.repository,
+      branch: link.branch,
+      githubEnvironment: link.githubEnvironment,
+      publicKey: link.publicKey,
+      wrappedKey: link.wrappedKey,
       createdBy: principal.accountId,
       createdAt: now(),
     });
@@ -861,9 +967,13 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const access = this.projectAccess(principal, teamId, projectId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const link = this.links.find(linkId);
-    if (!link || link.projectId !== projectId) return fail(404, "orgs.not_found");
+    if (!link || link.projectId !== projectId) {
+      return fail(404, "orgs.not_found");
+    }
     this.links.remove(linkId);
     await this.record(
       principal.accountId,
@@ -888,9 +998,13 @@ export class OrgStore extends DurableObject<Env> {
     }>
   > {
     const link = this.links.find(linkId);
-    if (!link || !ruleAllows(link, claims)) return fail(403, "ci.forbidden");
+    if (!link || !ruleAllows(link, claims)) {
+      return fail(403, "ci.forbidden");
+    }
     const generation = this.generationOf(link.teamId);
-    if (generation === null) return fail(403, "ci.forbidden");
+    if (generation === null) {
+      return fail(403, "ci.forbidden");
+    }
     const secrets = this.projects
       .secrets(link.projectId, link.environmentId)
       .map(({ id, sealed }) => ({ id, sealed }));
@@ -925,7 +1039,9 @@ export class OrgStore extends DurableObject<Env> {
     }>
   > {
     const access = this.teamAccess(principal, teamId, true);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const vault = {
       generation: access.value.generation,
       projects: this.projects.ofTeam(teamId),
@@ -956,7 +1072,9 @@ export class OrgStore extends DurableObject<Env> {
       }[]
     >
   > {
-    if (!this.confirmed(principal)) return fail(403, "orgs.forbidden");
+    if (!this.confirmed(principal)) {
+      return Promise.resolve(fail(403, "orgs.forbidden"));
+    }
     const rows = this.sql
       .exec<{
         id: string;
@@ -972,16 +1090,18 @@ export class OrgStore extends DurableObject<Env> {
         principal.accountId,
       )
       .toArray();
-    return ok(
-      rows.map((row) => ({
-        teamId: row.id,
-        name: row.name,
-        generation: row.key_generation,
-        rekeyNeeded: row.rekey_needed === 1,
-        viewOnly: row.access === "view" && !isOrgAdmin(principal.role),
-        wrappedKey: JSON.parse(row.wrapped_key) as WrappedKey,
-        items: this.items.ofTeam(row.id),
-      })),
+    return Promise.resolve(
+      ok(
+        rows.map((row) => ({
+          teamId: row.id,
+          name: row.name,
+          generation: row.key_generation,
+          rekeyNeeded: row.rekey_needed === 1,
+          viewOnly: row.access === "view" && !isOrgAdmin(principal.role),
+          wrappedKey: JSON.parse(row.wrapped_key) as WrappedKey,
+          items: this.items.ofTeam(row.id),
+        })),
+      ),
     );
   }
 
@@ -992,12 +1112,18 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ updatedAt: number }>> {
     const access = this.teamAccess(principal, teamId, false);
-    if (!access.ok) return access;
+    if (!access.ok) {
+      return access;
+    }
     const refused =
       this.writable(access.value, item.generation) ?? this.refusedEdit(principal, teamId, null, []);
-    if (refused) return refused;
+    if (refused) {
+      return refused;
+    }
     const owner = this.items.teamOf(item.id);
-    if (owner !== null && owner !== teamId) return fail(409, "orgs.invalid_item");
+    if (owner !== null && owner !== teamId) {
+      return fail(409, "orgs.invalid_item");
+    }
     if (owner === null && this.items.count(teamId) >= MAX_TEAM_ITEMS) {
       return fail(409, "orgs.item_limit", { limit: MAX_TEAM_ITEMS });
     }
@@ -1018,10 +1144,16 @@ export class OrgStore extends DurableObject<Env> {
     ip: string | null,
   ): Promise<Result<{ ok: true }>> {
     const access = this.teamAccess(principal, teamId, false);
-    if (!access.ok) return access;
-    if (this.items.teamOf(itemId) !== teamId) return fail(404, "orgs.not_found");
+    if (!access.ok) {
+      return access;
+    }
+    if (this.items.teamOf(itemId) !== teamId) {
+      return fail(404, "orgs.not_found");
+    }
     const refused = this.refusedEdit(principal, teamId, null, []);
-    if (refused) return refused;
+    if (refused) {
+      return refused;
+    }
     this.items.remove(itemId);
     await this.record(principal.accountId, "team.item_deleted", teamId, ip);
     return ok({ ok: true as const });
@@ -1035,7 +1167,9 @@ export class OrgStore extends DurableObject<Env> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
       return fail(403, "orgs.forbidden");
     }
-    if (!this.teamExists(teamId)) return fail(404, "orgs.not_found");
+    if (!this.teamExists(teamId)) {
+      return fail(404, "orgs.not_found");
+    }
     this.ctx.storage.transactionSync(() => {
       this.projects.removeTeam(teamId);
       this.links.removeTeam(teamId);
@@ -1069,7 +1203,9 @@ export class OrgStore extends DurableObject<Env> {
   private async verifyPage(events: AuditEvent[]): Promise<boolean> {
     const ordered = [...events].sort((a, b) => a.seq - b.seq);
     const first = ordered[0];
-    if (!first) return true;
+    if (!first) {
+      return true;
+    }
     let previous =
       this.sql
         .exec<{ hash: string }>(
@@ -1085,17 +1221,19 @@ export class OrgStore extends DurableObject<Env> {
         target: row.target,
         ip: row.ip,
       });
-      if (expected !== row.hash) return false;
+      if (expected !== row.hash) {
+        return false;
+      }
       previous = row.hash;
     }
     return true;
   }
 
   async exportState(): Promise<StoreDump> {
-    return dumpStore(this.sql);
+    return Promise.resolve(dumpStore(this.sql));
   }
 
   async importState(dump: StoreDump): Promise<number> {
-    return restoreStore(this.ctx.storage, dump);
+    return Promise.resolve(restoreStore(this.ctx.storage, dump));
   }
 }

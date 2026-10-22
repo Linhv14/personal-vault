@@ -39,7 +39,9 @@ export function TeamPage({ teamId }: { teamId: string }) {
   const team = findTeam(teamId);
   const orgId = detail.org.id;
 
-  if (!team && (refreshing || pending$.value)) return <PageSkeleton />;
+  if (!team && (refreshing || pending$.value)) {
+    return <PageSkeleton />;
+  }
   if (!team) {
     return (
       <EmptyState

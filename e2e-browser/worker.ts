@@ -14,7 +14,9 @@ const migrate = spawnSync(
   [wrangler, "d1", "migrations", "apply", "vault", "--local", "--persist-to", PERSIST_DIR],
   { cwd: root, stdio: "inherit", env: { ...process.env, CI: "1" } },
 );
-if (migrate.status !== 0) process.exit(migrate.status ?? 1);
+if (migrate.status !== 0) {
+  process.exit(migrate.status ?? 1);
+}
 
 const testKey = JSON.parse(
   readFileSync(path.join(root, "test", "fixtures", "ci-test-key.json"), "utf8"),

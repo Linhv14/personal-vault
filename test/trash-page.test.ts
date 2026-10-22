@@ -125,7 +125,7 @@ describe("trash page", () => {
 
   it("does not let view-only items be selected", () => {
     setup();
-    const box = screen.getByRole("checkbox", { name: "Select Read only" }) as HTMLInputElement;
+    const box = screen.getByRole<HTMLInputElement>("checkbox", { name: "Select Read only" });
     expect(box.disabled).toBe(true);
   });
 });

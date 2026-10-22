@@ -6,7 +6,9 @@ function overwriteWithEmptyText(event: ClipboardEvent): void {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!isClearClipboardMessage(message)) return;
+  if (!isClearClipboardMessage(message)) {
+    return;
+  }
   document.addEventListener("copy", overwriteWithEmptyText, { once: true });
   const cleared = document.execCommand("copy");
   sendResponse({ cleared });

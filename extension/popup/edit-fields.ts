@@ -5,6 +5,7 @@ import {
   type TotpConfig,
 } from "../../src/core/totp.js";
 import type { MessageKey } from "../../src/i18n/index.js";
+import { formText } from "../../src/ui/form-data.js";
 import {
   cardDigits,
   cleanCustomFields,
@@ -38,9 +39,15 @@ function totpFieldValue(config: TotpConfig): string {
 }
 
 export function initialValue(spec: FieldSpec, item: VaultItem | null, tabUrl?: string): string {
-  if (!item) return spec.key === "url" && tabUrl ? (registrableDomain(tabUrl) ?? "") : "";
-  if (spec.key === "totp") return item.totp ? totpFieldValue(item.totp) : "";
-  if (spec.key === "codes") return (item.codes ?? []).join("\n");
+  if (!item) {
+    return spec.key === "url" && tabUrl ? (registrableDomain(tabUrl) ?? "") : "";
+  }
+  if (spec.key === "totp") {
+    return item.totp ? totpFieldValue(item.totp) : "";
+  }
+  if (spec.key === "codes") {
+    return (item.codes ?? []).join("\n");
+  }
   const raw = item[spec.key] ?? "";
   return spec.kind === "cardNumber" ? formatCardNumber(raw) : raw;
 }
@@ -51,7 +58,7 @@ export function readEditedFields(
   hiddenFlags: boolean[],
 ): EditedFields {
   const text = (key: string, trim = true): string | undefined => {
-    const raw = String(data.get(key) ?? "");
+    const raw = formText(data, key);
     return (trim ? raw.trim() : raw) || undefined;
   };
   const fields: EditedFields = {};
@@ -64,12 +71,14 @@ export function readEditedFields(
     }
     if (key === "cardCvv") {
       const raw = text(key);
-      if (raw && !/^\d{3,4}$/.test(raw)) throw new InvalidField("edit.cvv_invalid");
+      if (raw && !/^\d{3,4}$/.test(raw)) {
+        throw new InvalidField("edit.cvv_invalid");
+      }
       fields.cardCvv = raw || undefined;
       continue;
     }
     if (key === "codes") {
-      const codes = parseRecoveryCodes(String(data.get(key) ?? ""));
+      const codes = parseRecoveryCodes(formText(data, key));
       fields.codes = codes.length > 0 ? codes : undefined;
       continue;
     }
@@ -80,7 +89,9 @@ export function readEditedFields(
       case "expiry": {
         const raw = text(key);
         const expiry = raw ? normalizeExpiry(raw) : undefined;
-        if (expiry === null) throw new InvalidField("edit.expiry_invalid");
+        if (expiry === null) {
+          throw new InvalidField("edit.expiry_invalid");
+        }
         fields[key] = expiry;
         break;
       }
@@ -108,7 +119,7 @@ export function readEditedFields(
   );
   const tags = [
     ...new Set(
-      String(data.get("tags") ?? "")
+      formText(data, "tags")
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
