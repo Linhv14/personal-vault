@@ -96,8 +96,8 @@ export const en = {
     "Cannot reach the server. Check your connection or the server address.",
   "setup.hint_create":
     "7key never stores your master password and cannot recover it if you forget it. Create a recovery code right after you sign in.",
-  "setup.server": "Server",
-  "setup.custom_server": "Use your own server",
+  "setup.server": "Server address",
+  "setup.custom_server": "Use a self-hosted server",
   "setup.email": "Email",
   "setup.registration_token": "Registration code",
   "setup.registration_token_hint": "Found in .secrets.local.txt",
@@ -116,7 +116,7 @@ export const en = {
   "password.too_long": "Use at most {max} characters",
   "password.matches_email": "Can't be your email address",
   "password.breached":
-    "{count, plural, one {This password has been exposed in a breach # time} other {This password has been exposed in breaches # times}}",
+    "{count, plural, one {This password appears # time in public data breaches. Please choose a different one.} other {This password appears # times in public data breaches. Please choose a different one.}}",
   "password.checking": "Checking against known breaches…",
   "password.strength": "Strength: {strength}",
 

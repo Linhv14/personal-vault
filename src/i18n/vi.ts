@@ -98,8 +98,8 @@ export const vi: Catalogue = {
   "setup.server_unreachable": "Không kết nối được server. Kiểm tra mạng hoặc địa chỉ server.",
   "setup.hint_create":
     "7key không lưu mật khẩu chính và không thể khôi phục nếu bạn quên. Hãy tạo mã khôi phục ngay sau khi vào kho.",
-  "setup.server": "Server",
-  "setup.custom_server": "Dùng server riêng",
+  "setup.server": "Địa chỉ server",
+  "setup.custom_server": "Dùng server tự host",
   "setup.email": "Email",
   "setup.registration_token": "Mã đăng ký",
   "setup.registration_token_hint": "Xem trong file .secrets.local.txt",
@@ -117,7 +117,8 @@ export const vi: Catalogue = {
   "password.too_short": "Cần ít nhất {min} ký tự",
   "password.too_long": "Tối đa {max} ký tự",
   "password.matches_email": "Không được trùng với email",
-  "password.breached": "{count, plural, other {Mật khẩu này đã bị lộ # lần}}",
+  "password.breached":
+    "{count, plural, other {Mật khẩu này xuất hiện # lần trong các vụ rò rỉ dữ liệu công khai. Vui lòng chọn mật khẩu khác.}}",
   "password.checking": "Đang kiểm tra rò rỉ…",
   "password.strength": "Độ mạnh: {strength}",
 

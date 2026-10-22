@@ -291,7 +291,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             <input
               name="apiUrl"
               type="url"
-              placeholder="https://personal-vault.you.workers.dev"
+              placeholder="https://vault.example.com"
               defaultValue={signup?.apiUrl ?? (customServer ? apiUrl : defaultServer)}
               required={askServer}
               onChange={() => void applyServerConfig()}

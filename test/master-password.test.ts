@@ -114,8 +114,12 @@ describe("MasterPasswordRejected", () => {
     const en = createTranslator("en");
     const vi = createTranslator("vi");
     const breached = new MasterPasswordRejected({ code: "breached", count: 5 });
-    expect(describeError(breached, en)).toBe("This password has been exposed in breaches 5 times");
-    expect(describeError(breached, vi)).toBe("Mật khẩu này đã bị lộ 5 lần");
+    expect(describeError(breached, en)).toBe(
+      "This password appears 5 times in public data breaches. Please choose a different one.",
+    );
+    expect(describeError(breached, vi)).toBe(
+      "Mật khẩu này xuất hiện 5 lần trong các vụ rò rỉ dữ liệu công khai. Vui lòng chọn mật khẩu khác.",
+    );
   });
 
   it("guards account flows that bypass the form", () => {

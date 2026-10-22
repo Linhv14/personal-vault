@@ -40,7 +40,7 @@ describe("setup screen", () => {
   it("offers the remembered server again behind the own-server link", async () => {
     render(h(Setup, { apiUrl: "https://old.example", defaultServer: HOSTED, signup: null }));
     fireEvent.click(await screen.findByText("Sign in to your vault"));
-    fireEvent.click(screen.getByText("Use your own server"));
+    fireEvent.click(screen.getByText("Use a self-hosted server"));
     await waitFor(() => expect(serverInput().closest("label")!.hidden).toBe(false));
     expect(serverInput().value).toBe("https://old.example");
   });
@@ -49,7 +49,7 @@ describe("setup screen", () => {
     render(h(Setup, { apiUrl: "", defaultServer: "", signup: null }));
     fireEvent.click(await screen.findByText("Sign in to your vault"));
     expect(serverInput().closest("label")!.hidden).toBe(false);
-    expect(screen.getByText("Use your own server").hidden).toBe(true);
+    expect(screen.getByText("Use a self-hosted server").hidden).toBe(true);
   });
 });
 
@@ -102,12 +102,32 @@ describe("creating a vault", () => {
     fireEvent.submit(document.querySelector("#form-setup")!);
     expect(await screen.findByRole("alert")).toHaveProperty(
       "textContent",
-      "This password has been exposed in breaches 1,234 times",
+      "This password appears 1,234 times in public data breaches. Please choose a different one.",
     );
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       `https://api.pwnedpasswords.com/range/${hash.slice(0, 5)}`,
     );
+  });
+
+  it("flags a breached master password as soon as the field loses focus", async () => {
+    const password = "password1234";
+    const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(password));
+    const hash = [...new Uint8Array(digest)]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+    fetchMock.mockResolvedValue(new Response(`${hash.slice(5)}:1234`));
+    vi.stubGlobal("fetch", fetchMock);
+    await openCreateForm();
+    fill("email", "me@example.com");
+    const input = fill("password", password);
+    fireEvent.blur(input);
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "This password appears 1,234 times in public data breaches. Please choose a different one.",
+    );
+    expect(input.getAttribute("aria-invalid")).toBe("true");
   });
 
   it("rejects a master password shorter than 12 characters before any network call", async () => {
