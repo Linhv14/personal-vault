@@ -21,7 +21,7 @@ import {
   mergeCards,
   withAddress,
 } from "../extension/lib/form-capture.js";
-import type { VaultItem } from "../extension/lib/vault.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 
 const page = new Window({ url: "https://shop.example/checkout" });
 const DOM_GLOBALS = {

@@ -1,6 +1,6 @@
 import { parseTotpInput, type TotpConfig } from "../../../src/core/totp.js";
 import { cleanCustomFields, type CustomField } from "../item-types.js";
-import type { ItemDraft } from "../vault.js";
+import type { ItemDraft } from "../vault/types.js";
 
 export type ImportErrorCode =
   | "needs_passphrase"

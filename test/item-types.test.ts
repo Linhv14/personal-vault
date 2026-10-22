@@ -9,7 +9,9 @@ import {
   normalizeExpiry,
   searchableText,
 } from "../extension/lib/item-types.js";
-import { matchingItems, searchItems, type VaultItem } from "../extension/lib/vault.js";
+import { matchingItems } from "../extension/lib/vault/site-match.js";
+import { searchItems } from "../extension/lib/vault/search.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 
 describe("item types", () => {
   it("treats items saved before types existed as logins", () => {

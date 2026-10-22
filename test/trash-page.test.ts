@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
 import { h } from "preact";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { VaultDef, VaultItem } from "../extension/lib/vault.js";
+import type { VaultDef, VaultItem } from "../extension/lib/vault/types.js";
 
 const { TrashList } = await import("../extension/settings/pages/Trash.js");
 

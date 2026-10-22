@@ -68,7 +68,8 @@ async function settled(done: () => boolean = () => false): Promise<void> {
 
 const { forgetMissedSave, forgetTab, handleAutofill, missedSave, tabSender, trustedSender } =
   await import("../extension/lib/autofill-service.js");
-const { saveItem, decryptAll } = await import("../extension/lib/vault.js");
+const { saveItem } = await import("../extension/lib/vault/store.js");
+const { decryptAll } = await import("../extension/lib/vault/decrypt.js");
 
 const EXTENSION_ID = "vault-extension";
 

@@ -11,7 +11,7 @@ import {
   unusedCodes,
   type FieldSpec,
 } from "../../lib/item-types.js";
-import type { VaultItem } from "../../lib/vault.js";
+import type { VaultItem } from "../../lib/vault/types.js";
 import { daysUntilPurge } from "../../lib/trash.js";
 import { vaultOf } from "../../lib/vaults.js";
 import { Icon } from "../../ui/components/Icon.js";

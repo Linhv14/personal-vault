@@ -1,7 +1,8 @@
 import { findLookalike, type LookalikeMatch } from "../../src/core/lookalike.js";
 import { itemType } from "./item-types.js";
 import { registrableDomain } from "../../src/core/site.js";
-import { itemSites, type VaultItem } from "./vault.js";
+import { itemSites } from "./vault/site-match.js";
+import type { VaultItem } from "./vault/types.js";
 
 export function savedLoginDomains(items: VaultItem[]): string[] {
   return items

@@ -2,7 +2,7 @@ import { fromBase64, fromBase64Url, toBase64Url } from "../../../src/core/bytes.
 import { cardDigits } from "../item-types.js";
 import type { StoredPasskey } from "../passkey/authenticator.js";
 import { registrableDomain } from "../../../src/core/site.js";
-import type { ItemDraft } from "../vault.js";
+import type { ItemDraft } from "../vault/types.js";
 import type { CustomField } from "../item-types.js";
 import {
   cardExpiry,

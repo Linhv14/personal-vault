@@ -19,7 +19,7 @@ import {
 } from "../lib/item-types.js";
 import { parseRecoveryCodes } from "../lib/recovery-codes.js";
 import { registrableDomain } from "../../src/core/site.js";
-import type { VaultItem } from "../lib/vault.js";
+import type { VaultItem } from "../lib/vault/types.js";
 
 export type EditedFields = Partial<
   Pick<VaultItem, TextFieldKey | "totp" | "codes" | "urls" | "urlMatch" | "fields" | "tags">

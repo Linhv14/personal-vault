@@ -1,6 +1,6 @@
 import type { MessageKey } from "../../src/i18n/index.js";
 import type { IconName } from "../../src/ui/icons.js";
-import type { VaultItem } from "./vault.js";
+import type { VaultItem } from "./vault/types.js";
 
 export const ITEM_TYPES = [
   "login",

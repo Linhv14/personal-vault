@@ -6,7 +6,7 @@ import { openTeamItem, sealTeamItem } from "../../src/core/team-items.js";
 import { ApiError, request } from "./api.js";
 import { knownIdentity } from "./identity.js";
 import { getLocal, setLocal, type CachedSharedVault } from "./storage.js";
-import type { VaultDef, VaultItem } from "./vault.js";
+import type { VaultDef, VaultItem } from "./vault/types.js";
 import { warn } from "./log.js";
 
 const PREFIX = "team:";

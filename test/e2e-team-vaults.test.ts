@@ -11,14 +11,9 @@ import { memoryArea, usePlatform } from "../extension/lib/platform.js";
 import { getOrg, type Team } from "../extension/lib/orgs.js";
 import { rekeyTeam } from "../extension/lib/projects.js";
 import { sharedVaultId } from "../extension/lib/shared-vaults.js";
-import {
-  decryptEverything,
-  newItemId,
-  removeItem,
-  saveItem,
-  sync,
-  type VaultItem,
-} from "../extension/lib/vault.js";
+import { decryptEverything } from "../extension/lib/vault/decrypt.js";
+import { newItemId, removeItem, saveItem, sync } from "../extension/lib/vault/store.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 
 const BASE = process.env.VAULT_E2E_URL ?? "http://127.0.0.1:8787";
 const REGISTRATION_TOKEN = process.env.VAULT_REGISTRATION_TOKEN ?? "token-dev-local";

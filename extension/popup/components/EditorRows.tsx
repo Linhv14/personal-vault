@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { VaultItem } from "../../lib/vault.js";
+import type { VaultItem } from "../../lib/vault/types.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";

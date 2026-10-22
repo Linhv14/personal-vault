@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { VaultItem } from "../extension/lib/vault.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 
 const store = new Map<string, VaultItem>();
 const removeItem = vi.fn(async (id: string) => void store.delete(id));
 
-vi.mock("../extension/lib/vault.js", () => ({
+vi.mock("../extension/lib/vault/decrypt.js", () => ({
   decryptEverything: vi.fn(async () => ({ items: [...store.values()], system: [], shared: [] })),
+}));
+
+vi.mock("../extension/lib/vault/store.js", () => ({
   removeItem: (id: string) => removeItem(id),
   saveItem: vi.fn(),
 }));

@@ -1,5 +1,5 @@
 import { itemSubtitle } from "../../lib/item-subtitle.js";
-import type { VaultItem } from "../../lib/vault.js";
+import type { VaultItem } from "../../lib/vault/types.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
 import { daysUntilPurge } from "../../lib/trash.js";

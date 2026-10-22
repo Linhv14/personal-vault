@@ -2,7 +2,7 @@ import type { ComponentChildren } from "preact";
 import { Fragment } from "preact";
 import { useState } from "preact/hooks";
 import type { IconName } from "../../../src/ui/icons.js";
-import type { VaultDef } from "../../lib/vault.js";
+import type { VaultDef } from "../../lib/vault/types.js";
 import { consolePathOf } from "../../lib/shared-vaults.js";
 import { DEFAULT_VAULT_ID, vaultOf } from "../../lib/vaults.js";
 import { Icon } from "../../ui/components/Icon.js";

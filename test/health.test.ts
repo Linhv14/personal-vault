@@ -7,7 +7,7 @@ import {
   WEAK_BELOW_BITS,
   weakItems,
 } from "../extension/lib/health.js";
-import type { VaultItem } from "../extension/lib/vault.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 
 const item = (id: string, password: string, type?: VaultItem["type"]): VaultItem => ({
   id,

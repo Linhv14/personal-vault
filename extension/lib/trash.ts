@@ -1,5 +1,7 @@
 import { isSharedVaultId } from "./shared-vaults.js";
-import { decryptEverything, removeItem, saveItem, type VaultItem } from "./vault.js";
+import { decryptEverything } from "./vault/decrypt.js";
+import { removeItem, saveItem } from "./vault/store.js";
+import type { VaultItem } from "./vault/types.js";
 
 export const TRASH_RETENTION_DAYS = 30;
 

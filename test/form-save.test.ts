@@ -55,7 +55,8 @@ vi.stubGlobal(
 const { handleAutofill, trustedSender } = await import("../extension/lib/autofill-service.js");
 const { rememberCardFrame } = await import("../extension/lib/card-frames.js");
 const { rememberFrameCard } = await import("../extension/lib/form-save.js");
-const { saveItem, decryptAll } = await import("../extension/lib/vault.js");
+const { saveItem } = await import("../extension/lib/vault/store.js");
+const { decryptAll } = await import("../extension/lib/vault/decrypt.js");
 
 const EXTENSION_ID = "vault-extension";
 

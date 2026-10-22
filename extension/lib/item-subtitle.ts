@@ -1,7 +1,7 @@
 import type { Translate } from "../../src/i18n/index.js";
 import { itemType, lastFour, unusedCodes } from "./item-types.js";
 import { parseSiteUrl, registrableDomain } from "../../src/core/site.js";
-import type { VaultItem } from "./vault.js";
+import type { VaultItem } from "./vault/types.js";
 
 function keyComment(publicKey: string | undefined): string {
   return publicKey?.trim().split(/\s+/).slice(2).join(" ") ?? "";

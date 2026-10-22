@@ -2,7 +2,7 @@ import { openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
 import { fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
 import { buildOtpauthUri } from "../../src/core/totp.js";
 import { itemType } from "./item-types.js";
-import type { ItemDraft, VaultItem } from "./vault.js";
+import type { ItemDraft, VaultItem } from "./vault/types.js";
 
 export const EXPORT_FORMAT = "1pw-export";
 export const EXPORT_ITERATIONS = 600_000;

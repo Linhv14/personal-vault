@@ -1,5 +1,5 @@
 import { HAS_PASSWORD_HISTORY, itemType } from "./item-types.js";
-import type { VaultItem } from "./vault.js";
+import type { VaultItem } from "./vault/types.js";
 
 export const WEAK_BELOW_BITS = 60;
 export const BREACH_RANGE_URL = "https://api.pwnedpasswords.com/range/";

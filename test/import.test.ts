@@ -4,7 +4,7 @@ import { parseCsv } from "../extension/lib/import/csv.js";
 import { readZip } from "../extension/lib/import/zip.js";
 import { planImport } from "../extension/lib/import/plan.js";
 import { readExport } from "../extension/lib/import/read-export.js";
-import type { VaultItem } from "../extension/lib/vault.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 import { makeZip } from "./zip-fixture.js";
 
 const TOTP_URI = "otpauth://totp/GitHub:me@example.com?secret=JBSWY3DPEHPK3PXP&issuer=GitHub";

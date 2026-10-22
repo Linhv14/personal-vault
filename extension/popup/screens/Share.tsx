@@ -8,7 +8,7 @@ import { addRecipients, MAX_SHARE_RECIPIENTS, singleViewAllowed } from "../../li
 import { rememberSharedLink } from "../../lib/shared-links.js";
 import { getLocal } from "../../lib/storage.js";
 import { registrableDomain } from "../../../src/core/site.js";
-import type { VaultItem } from "../../lib/vault.js";
+import type { VaultItem } from "../../lib/vault/types.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
 import { IconButton } from "../../ui/components/IconButton.js";

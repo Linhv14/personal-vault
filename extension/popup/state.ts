@@ -7,19 +7,18 @@ import { localeSignal } from "../ui/i18n.js";
 import * as api from "../lib/api.js";
 import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { getLocal, lock, notePasskeys, setLocal, takeItemFocus, touch } from "../lib/storage.js";
+import { decryptEverything } from "../lib/vault/decrypt.js";
 import {
-  decryptEverything,
   newItemId,
-  importKey,
   markUsed,
-  migrateUnboundItems,
   removeItem,
   saveItem,
   saveItemPatiently,
   sync,
-  type VaultDef,
-  type VaultItem,
-} from "../lib/vault.js";
+} from "../lib/vault/store.js";
+import { importKey } from "../lib/vault/item-crypto.js";
+import { migrateUnboundItems } from "../lib/vault/migrate.js";
+import type { VaultDef, VaultItem } from "../lib/vault/types.js";
 import { itemType, type ItemType } from "../lib/item-types.js";
 import { purgeExpiredTrash } from "../lib/trash.js";
 import { DEFAULT_VAULT_ID, vaultList, vaultOf, withoutVault, withVault } from "../lib/vaults.js";

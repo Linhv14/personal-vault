@@ -8,7 +8,8 @@ import { memoryArea, usePlatform, type StorageArea } from "../extension/lib/plat
 import { handleAutofill } from "../extension/lib/autofill-service.js";
 import { handlePasskey } from "../extension/lib/passkey/service.js";
 import { sharedVaultId, syncSharedVaults } from "../extension/lib/shared-vaults.js";
-import { decryptEverything, removeItem } from "../extension/lib/vault.js";
+import { decryptEverything } from "../extension/lib/vault/decrypt.js";
+import { removeItem } from "../extension/lib/vault/store.js";
 
 const ORG = "11111111-1111-4111-8111-111111111111";
 const TEAM = "22222222-2222-4222-8222-222222222222";

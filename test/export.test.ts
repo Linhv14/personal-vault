@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { csvExport, encryptExport, isEncryptedExport } from "../extension/lib/export.js";
 import { readExport } from "../extension/lib/import/read-export.js";
 import { ImportError } from "../extension/lib/import/source.js";
-import type { VaultItem } from "../extension/lib/vault.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 
 const base = { createdAt: 1, updatedAt: 2 };
 const items: VaultItem[] = [

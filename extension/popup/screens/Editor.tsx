@@ -13,7 +13,8 @@ import {
   type ItemType,
 } from "../../lib/item-types.js";
 import { parseRecoveryCodes } from "../../lib/recovery-codes.js";
-import { newItemId, saveItem, type VaultItem } from "../../lib/vault.js";
+import { newItemId, saveItem } from "../../lib/vault/store.js";
+import type { VaultItem } from "../../lib/vault/types.js";
 import { DEFAULT_VAULT_ID, vaultOf } from "../../lib/vaults.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";

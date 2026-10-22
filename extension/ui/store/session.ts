@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { fromBase64, type Bytes } from "../../../src/core/bytes.js";
 import { getUnlocked } from "../../lib/storage.js";
-import { importKey } from "../../lib/vault.js";
+import { importKey } from "../../lib/vault/item-crypto.js";
 
 export const vaultKeySignal = signal<CryptoKey | null>(null);
 export const vaultKeyRawSignal = signal<Bytes | null>(null);

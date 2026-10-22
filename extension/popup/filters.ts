@@ -1,5 +1,7 @@
 import { ITEM_TYPES, itemType, type ItemType } from "../lib/item-types.js";
-import { byLastUsed, matchingItems, searchItems, type VaultItem } from "../lib/vault.js";
+import { byLastUsed, searchItems } from "../lib/vault/search.js";
+import { matchingItems } from "../lib/vault/site-match.js";
+import type { VaultItem } from "../lib/vault/types.js";
 import { vaultOf } from "../lib/vaults.js";
 import type { Scope, SortOrder } from "./state.js";
 

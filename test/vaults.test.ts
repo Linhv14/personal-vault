@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { VaultItem } from "../extension/lib/vault.js";
+import type { VaultItem } from "../extension/lib/vault/types.js";
 import {
   DEFAULT_VAULT_ID,
   vaultList,

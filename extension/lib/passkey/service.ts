@@ -2,15 +2,10 @@ import type { TrustedSender } from "../autofill-service.js";
 import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
 import { registrableDomain } from "../../../src/core/site.js";
-import {
-  byLastUsed,
-  isPersonal,
-  markUsed,
-  newItemId,
-  openVault,
-  saveItem,
-  type VaultItem,
-} from "../vault.js";
+import { byLastUsed } from "../vault/search.js";
+import { isPersonal, openVault } from "../vault/decrypt.js";
+import { markUsed, newItemId, saveItem } from "../vault/store.js";
+import type { VaultItem } from "../vault/types.js";
 import { createPasskey, signAssertion, type StoredPasskey } from "./authenticator.js";
 import type {
   CreateResponse,

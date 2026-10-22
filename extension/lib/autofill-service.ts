@@ -21,18 +21,11 @@ import { handleFormRequest } from "./form-save.js";
 import { siteWarning } from "./site-warning.js";
 import { getLocal } from "./storage.js";
 import { registrableDomain, siteOf } from "../../src/core/site.js";
-import {
-  byLastUsed,
-  markUsed,
-  matchesSite,
-  newItemId,
-  openVault,
-  sameSite,
-  saveItem,
-  type OpenVault,
-  type VaultItem,
-  isPersonal,
-} from "./vault.js";
+import { byLastUsed } from "./vault/search.js";
+import { markUsed, newItemId, saveItem } from "./vault/store.js";
+import { matchesSite, sameSite } from "./vault/site-match.js";
+import { openVault, type OpenVault, isPersonal } from "./vault/decrypt.js";
+import type { VaultItem } from "./vault/types.js";
 
 const PENDING_TTL_MS = 5 * 60_000;
 const UNCONFIRMED_TTL_MS = 60_000;

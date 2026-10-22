@@ -1,4 +1,5 @@
-import { duplicateKey, type ItemDraft, type VaultItem } from "../vault.js";
+import { duplicateKey } from "../vault/import-items.js";
+import type { ItemDraft, VaultItem } from "../vault/types.js";
 import { countSkip, type ImportFormat, type ImportSource } from "./source.js";
 
 export interface ImportPlan {

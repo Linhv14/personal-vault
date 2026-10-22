@@ -48,8 +48,9 @@ vi.stubGlobal(
   }),
 );
 
-const { decryptAll, migrateUnboundItems, saveItem, saveItemPatiently } =
-  await import("../extension/lib/vault.js");
+const { decryptAll } = await import("../extension/lib/vault/decrypt.js");
+const { migrateUnboundItems } = await import("../extension/lib/vault/migrate.js");
+const { saveItem, saveItemPatiently } = await import("../extension/lib/vault/store.js");
 const { clearAccountData } = await import("../extension/lib/storage.js");
 
 const ID_A = "00000000-0000-4000-8000-00000000000a";
