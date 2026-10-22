@@ -12,7 +12,7 @@ import { isWrappedForRecipient } from "../src/core/identity.js";
 import { isPlainObject, isStringArray, parseJsonAs } from "../src/core/json.js";
 import { createShare, openShare, parseSharePayload } from "../src/core/share.js";
 import { parseTotpConfig } from "../src/core/totp.js";
-import { validJwks } from "../src/worker/github-oidc.js";
+import { validJwks } from "../src/worker/jwt.js";
 import { expectCodeAsync } from "./helpers.js";
 
 const SEALED = { ciphertext: "AAAA", nonce: "BBBB" };

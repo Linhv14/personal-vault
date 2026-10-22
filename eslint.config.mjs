@@ -269,7 +269,7 @@ export default defineConfig(
       "src/core/**",
       "src/worker/at-rest.ts",
       "src/worker/webauthn.ts",
-      "src/worker/github-oidc.ts",
+      "src/worker/jwt.ts",
       "extension/lib/passkey/authenticator.ts",
       "extension/lib/import/bitwarden.ts",
       "extension/lib/import/openpgp.ts",
