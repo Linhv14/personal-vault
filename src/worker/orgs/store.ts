@@ -1,5 +1,4 @@
 import { DurableObject } from "cloudflare:workers";
-import { toBase64, utf8Encode } from "../../core/bytes.js";
 import type { SealedData } from "../../core/crypto.js";
 import { isWrappedForRecipient } from "../../core/identity.js";
 import { parseJsonAs } from "../../core/json.js";
@@ -18,6 +17,7 @@ import { fail, now, ok, type Result } from "../http.js";
 import { dumpStore, restoreStore, type StoreDump } from "../migration.js";
 import type { Env } from "../types.js";
 import { ruleAllows, type GithubClaims } from "../../core/ci.js";
+import { AuditLog } from "./audit.js";
 import { LinkTables, type LinkRecord } from "./link-tables.js";
 import { ItemTables, type TeamItemRecord } from "./item-tables.js";
 import {
@@ -26,24 +26,12 @@ import {
   type SecretRecord,
   type SecretVersionRecord,
 } from "./project-tables.js";
+import { createOrgSchema } from "./schema.js";
 
-const AUDIT_PAGE = 100;
-const GENESIS = "genesis";
 const MAX_LINKS_PER_PROJECT = 50;
 
 function sameKeys(ids: string[], map: Record<string, unknown>): boolean {
   return ids.length === Object.keys(map).length && ids.every((id) => id in map);
-}
-
-async function chainHash(
-  previous: string,
-  event: Omit<AuditEvent, "seq" | "hash">,
-): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    utf8Encode(`${previous}\n${JSON.stringify(event)}`),
-  );
-  return toBase64(new Uint8Array(digest));
 }
 
 export class OrgStore extends DurableObject<Env> {
@@ -51,63 +39,16 @@ export class OrgStore extends DurableObject<Env> {
   private readonly projects: ProjectTables;
   private readonly links: LinkTables;
   private readonly items: ItemTables;
+  private readonly log: AuditLog;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
-    this.sql.exec(`
-      CREATE TABLE IF NOT EXISTS members (account_id TEXT PRIMARY KEY, role TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS teams (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        rekey_needed INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS team_members (
-        team_id TEXT NOT NULL,
-        account_id TEXT NOT NULL,
-        wrapped_key TEXT NOT NULL,
-        added_by TEXT NOT NULL,
-        added_at INTEGER NOT NULL,
-        PRIMARY KEY (team_id, account_id)
-      );
-      CREATE TABLE IF NOT EXISTS team_invites (
-        email TEXT NOT NULL,
-        team_id TEXT NOT NULL,
-        access TEXT NOT NULL,
-        PRIMARY KEY (email, team_id)
-      );
-      CREATE TABLE IF NOT EXISTS pending_grants (
-        team_id TEXT NOT NULL,
-        account_id TEXT NOT NULL,
-        access TEXT NOT NULL,
-        PRIMARY KEY (team_id, account_id)
-      );
-      CREATE TABLE IF NOT EXISTS audit (
-        seq INTEGER PRIMARY KEY AUTOINCREMENT,
-        at INTEGER NOT NULL,
-        actor TEXT NOT NULL,
-        action TEXT NOT NULL,
-        target TEXT,
-        ip TEXT,
-        hash TEXT NOT NULL
-      );
-    `);
-    this.addColumn("teams", "key_generation INTEGER NOT NULL DEFAULT 0");
-    this.addColumn("team_members", "access TEXT NOT NULL DEFAULT 'edit'");
+    createOrgSchema(this.sql);
     this.projects = new ProjectTables(this.sql);
     this.links = new LinkTables(this.sql);
     this.items = new ItemTables(this.sql);
-  }
-
-  private addColumn(table: string, definition: string) {
-    const column = definition.split(" ")[0];
-    const columns = this.sql
-      .exec<{ name: string }>(`SELECT name FROM pragma_table_info('${table}')`)
-      .toArray();
-    if (!columns.some((entry) => entry.name === column)) {
-      this.sql.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
-    }
+    this.log = new AuditLog(this.sql);
   }
 
   private role(accountId: string): OrgRole | null {
@@ -122,21 +63,7 @@ export class OrgStore extends DurableObject<Env> {
   }
 
   private async record(actor: string, action: string, target: string | null, ip: string | null) {
-    const previous =
-      this.sql
-        .exec<{ hash: string }>("SELECT hash FROM audit ORDER BY seq DESC LIMIT 1")
-        .toArray()[0]?.hash ?? GENESIS;
-    const event = { at: now(), actor, action, target, ip };
-    const hash = await chainHash(previous, event);
-    this.sql.exec(
-      "INSERT INTO audit (at, actor, action, target, ip, hash) VALUES (?, ?, ?, ?, ?, ?)",
-      event.at,
-      actor,
-      action,
-      target,
-      ip,
-      hash,
-    );
+    await this.log.record(actor, action, target, ip);
   }
 
   async setMember(
@@ -1184,43 +1111,8 @@ export class OrgStore extends DurableObject<Env> {
     if (!this.confirmed(principal) || !isOrgAdmin(principal.role)) {
       return fail(403, "orgs.forbidden");
     }
-    const events = this.sql
-      .exec<AuditEvent>(
-        "SELECT seq, at, actor, action, target, ip, hash FROM audit WHERE seq < ? ORDER BY seq DESC LIMIT ?",
-        before ?? Number.MAX_SAFE_INTEGER,
-        AUDIT_PAGE,
-      )
-      .toArray();
-    return ok({ events, verified: await this.verifyPage(events) });
-  }
-
-  private async verifyPage(events: AuditEvent[]): Promise<boolean> {
-    const ordered = [...events].sort((a, b) => a.seq - b.seq);
-    const first = ordered[0];
-    if (!first) {
-      return true;
-    }
-    let previous =
-      this.sql
-        .exec<{ hash: string }>(
-          "SELECT hash FROM audit WHERE seq < ? ORDER BY seq DESC LIMIT 1",
-          first.seq,
-        )
-        .toArray()[0]?.hash ?? GENESIS;
-    for (const row of ordered) {
-      const expected = await chainHash(previous, {
-        at: row.at,
-        actor: row.actor,
-        action: row.action,
-        target: row.target,
-        ip: row.ip,
-      });
-      if (expected !== row.hash) {
-        return false;
-      }
-      previous = row.hash;
-    }
-    return true;
+    const events = this.log.page(before);
+    return ok({ events, verified: await this.log.verify(events) });
   }
 
   async exportState(): Promise<StoreDump> {
