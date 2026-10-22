@@ -3,9 +3,13 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   pull_request:
-  schedule:
-    - cron: "17 3 * * *"
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   workflow_dispatch:
 
 permissions:
@@ -61,31 +65,38 @@ jobs:
 
       - run: npm run build
 
-      - name: Start a local Worker
-        run: |
-          state="$RUNNER_TEMP/worker-state"
-          printf 'REGISTRATION_TOKEN=token-dev-local\nEMAIL_PROBE_SECRET=ci-probe\nAT_REST_SECRET=ci-at-rest\n' > .dev.vars
-          npx wrangler d1 migrations apply vault --local --persist-to "$state"
-          jwks=$(node -e 'const k=require("./test/fixtures/ci-test-key.json");process.stdout.write(Buffer.from(JSON.stringify([{kid:k.kid,kty:k.kty,n:k.n,e:k.e}])).toString("base64url"))')
-          nohup npx wrangler dev --local --port 8787 --persist-to "$state" \
-            --var "CI_TEST_JWKS:$jwks" --var "CI_TEST_ISSUER:https://ci-test.invalid" \
-            --var "MIGRATION_TOKEN:local-migration-token" > "$RUNNER_TEMP/worker.log" 2>&1 &
-          for _ in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8787/api/health > /dev/null && exit 0
-            sleep 2
-          done
-          cat "$RUNNER_TEMP/worker.log"
-          exit 1
-
-      - name: Run the end-to-end suites one at a time
+      - name: Run each end-to-end suite against its own fresh local Worker
         env:
           VAULT_E2E: "1"
           VAULT_E2E_URL: http://127.0.0.1:8787
         run: |
+          printf 'REGISTRATION_TOKEN=token-dev-local\nEMAIL_PROBE_SECRET=ci-probe\nAT_REST_SECRET=ci-at-rest\n' > .dev.vars
+          jwks=$(node -e 'const k=require("./test/fixtures/ci-test-key.json");process.stdout.write(Buffer.from(JSON.stringify([{kid:k.kid,kty:k.kty,n:k.n,e:k.e}])).toString("base64url"))')
           status=0
           for file in test/e2e*.test.ts; do
-            npx vitest run "$file" || status=1
-            sleep 62
+            state="$RUNNER_TEMP/state-$(basename "$file" .test.ts)"
+            npx wrangler d1 migrations apply vault --local --persist-to "$state" > /dev/null
+            npx wrangler dev --local --port 8787 --persist-to "$state" \
+              --var "CI_TEST_JWKS:$jwks" --var "CI_TEST_ISSUER:https://ci-test.invalid" \
+              --var "MIGRATION_TOKEN:local-migration-token" > "$RUNNER_TEMP/worker.log" 2>&1 &
+            worker=$!
+            ready=0
+            for _ in $(seq 1 60); do
+              curl -sf http://127.0.0.1:8787/api/health > /dev/null && ready=1 && break
+              sleep 1
+            done
+            if [ "$ready" = 1 ]; then
+              npx vitest run "$file" || status=1
+            else
+              cat "$RUNNER_TEMP/worker.log"
+              status=1
+            fi
+            pkill -f "wrangler dev --local --port 8787" || true
+            wait "$worker" 2>/dev/null || true
+            for _ in $(seq 1 30); do
+              curl -sf http://127.0.0.1:8787/api/health > /dev/null || break
+              sleep 1
+            done
           done
           exit $status
 
