@@ -100,6 +100,7 @@ const FIELDS: { [K in keyof LocalState]-?: Guard<NonNullable<LocalState[K]>> } =
   aadBoundAccounts: isStringArray,
   autofillPromoDismissed: isBoolean,
   neverAskForms: isStringArray,
+  neverAskLogins: isStringArray,
   sharedLinks: isSealedData,
   autoLockMinutes: isAutoLock,
   hasPasskeys: isBoolean,

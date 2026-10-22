@@ -1102,6 +1102,15 @@ export const en = {
   "settings.browser_passwords_restore_failed":
     "Could not turn the browser's own password manager back on. Turn it on in the browser's settings.",
   "settings.autofill_enabled": "On. Reload open pages to start.",
+  "settings.never_save": "Sites that never ask to save",
+  "settings.never_save_hint":
+    "7key won't offer to save on these sites. Remove one to be asked again.",
+  "settings.never_save_empty":
+    "Choose Never ask on this site in a save prompt and the site will be listed here.",
+  "settings.never_save_logins": "Passwords",
+  "settings.never_save_forms": "Cards and addresses",
+  "settings.never_save_both": "Passwords, cards and addresses",
+  "settings.never_save_remove": "Ask again on {domain}",
   "passkey.save_title": "Save a passkey for {site}?",
   "passkey.save_action": "Save in 7key",
   "passkey.signin_title": "Sign in to {site}",

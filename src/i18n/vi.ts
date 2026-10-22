@@ -1090,6 +1090,15 @@ export const vi: Catalogue = {
   "settings.browser_passwords_restore_failed":
     "Không bật lại được trình quản lý mật khẩu của trình duyệt. Hãy bật lại trong cài đặt trình duyệt.",
   "settings.autofill_enabled": "Đã bật. Tải lại các trang đang mở để bắt đầu.",
+  "settings.never_save": "Trang web không hỏi lưu",
+  "settings.never_save_hint":
+    "7key sẽ không đề nghị lưu trên các trang này. Xoá một trang để được hỏi lại.",
+  "settings.never_save_empty":
+    "Chọn Không hỏi lại trên trang này trong lời nhắc lưu, trang đó sẽ xuất hiện ở đây.",
+  "settings.never_save_logins": "Mật khẩu",
+  "settings.never_save_forms": "Thẻ và địa chỉ",
+  "settings.never_save_both": "Mật khẩu, thẻ và địa chỉ",
+  "settings.never_save_remove": "Hỏi lại trên {domain}",
   "passkey.save_title": "Lưu passkey cho {site}?",
   "passkey.save_action": "Lưu vào 7key",
   "passkey.signin_title": "Đăng nhập {site}",

@@ -766,6 +766,50 @@ describe("capture and save", () => {
     expect(await missedSave(tab)).toBeNull();
   });
 
+  it("never asks again to save a password on a site turned off, and only on that site", async () => {
+    await unlockWith([]);
+    const page = sender("https://news.example.com/login")!;
+    const tab = tabSender({ id: 7, url: page.url } as chrome.tabs.Tab)!;
+    await handleAutofill({ type: "autofill:capture", password: "fresh-password" }, page);
+    await handleAutofill({ type: "autofill:confirm" }, page);
+    expect(await handleAutofill({ type: "autofill:dismiss", never: true }, page)).toEqual({
+      ok: true,
+      saved: false,
+    });
+    expect(localArea.get("neverAskLogins")).toEqual(["example.com"]);
+    expect(localArea.has("neverAskForms")).toBe(false);
+    expect(await missedSave(tab)).toBeNull();
+    expect(await handleAutofill({ type: "autofill:save" }, page)).toEqual({
+      ok: true,
+      saved: false,
+    });
+    expect(puts).toHaveLength(0);
+
+    const capture = { type: "autofill:capture" as const, password: "another-password" };
+    expect(await handleAutofill(capture, sender("https://shop.example.com/")!)).toEqual({
+      ok: true,
+      prompt: null,
+    });
+    expect(await handleAutofill({ type: "autofill:pending" }, page)).toEqual({
+      ok: true,
+      prompt: null,
+    });
+    expect(await handleAutofill(capture, sender("https://other.test/")!)).toMatchObject({
+      prompt: { domain: "other.test" },
+    });
+  });
+
+  it("drops a capture held from before the site was turned off", async () => {
+    await unlockWith([]);
+    const page = sender("https://news.example.com/login")!;
+    await handleAutofill({ type: "autofill:capture", password: "fresh-password" }, page);
+    localArea.set("neverAskLogins", ["example.com"]);
+    expect(await handleAutofill({ type: "autofill:confirm" }, page)).toEqual({
+      ok: true,
+      prompt: null,
+    });
+  });
+
   it("forgets everything held for a tab once it closes", async () => {
     await unlockWith([]);
     const page = sender("https://news.example.com/login")!;

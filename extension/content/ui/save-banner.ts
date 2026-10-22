@@ -99,9 +99,21 @@ export function showBanner(prompt: PendingPrompt): void {
     banner.hidden = true;
   });
 
+  const never = document.createElement("button");
+  never.type = "button";
+  never.className = "link";
+  never.textContent = t("autofill.never_here");
+  never.addEventListener("click", (event) => {
+    if (!event.isTrusted) {
+      return;
+    }
+    void send({ type: "autofill:dismiss", never: true });
+    banner.hidden = true;
+  });
+
   const text = document.createElement("div");
   text.className = "text";
-  text.append(title, detail);
+  text.append(title, detail, never);
   const actions = document.createElement("div");
   actions.className = "actions";
   actions.append(dismiss, save);

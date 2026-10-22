@@ -23,7 +23,7 @@ import {
   type Match,
 } from "./captured-forms.js";
 import { CARD_BRAND_NAMES, cardBrand, lastFour } from "./item-types.js";
-import { getLocal, setLocal } from "./storage.js";
+import { neverSaves, stopSaving } from "./never-save.js";
 import { registrableDomain } from "#core/site.js";
 import { isPersonal, openVault } from "./vault/decrypt.js";
 import { newItemId, saveItem } from "./vault/store.js";
@@ -65,17 +65,6 @@ function isHttps(url: string): boolean {
     return new URL(url).protocol === "https:";
   } catch {
     return false;
-  }
-}
-
-async function neverAsks(domain: string): Promise<boolean> {
-  return ((await getLocal()).neverAskForms ?? []).includes(domain);
-}
-
-async function stopAsking(domain: string): Promise<void> {
-  const current = (await getLocal()).neverAskForms ?? [];
-  if (!current.includes(domain)) {
-    await setLocal({ neverAskForms: [...current, domain] });
   }
 }
 
@@ -202,7 +191,7 @@ async function capture(
   sender: TrustedSender,
 ): Promise<FormPrompt | null> {
   const frames = await readFrames(sender.tabId);
-  if (!isHttps(sender.url) || (await neverAsks(sender.domain))) {
+  if (!isHttps(sender.url) || (await neverSaves("forms", sender.domain))) {
     await forgetFrameCards(sender.tabId);
     return null;
   }
@@ -347,7 +336,7 @@ export async function handleFormRequest(
     case "autofill:form-dismiss":
       await chrome.storage.session.remove(pendingKey(sender.tabId));
       if (request.never) {
-        await stopAsking(sender.domain);
+        await stopSaving("forms", sender.domain);
       }
       return { ok: true, saved: false };
   }

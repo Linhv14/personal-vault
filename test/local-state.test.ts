@@ -19,6 +19,7 @@ const VALID = {
   aadBoundAccounts: ["tag"],
   autofillPromoDismissed: false,
   neverAskForms: ["example.com"],
+  neverAskLogins: ["example.org"],
   sharedLinks: SEALED,
   autoLockMinutes: 15,
   hasPasskeys: true,
@@ -73,6 +74,8 @@ describe("local state normalisation", () => {
     ["resume", { token: 1, sealed: SEALED }],
     ["identity", { publicKey: "pk" }],
     ["neverAskForms", ["a", 1]],
+    ["neverAskLogins", "example.com"],
+    ["neverAskLogins", [null]],
     ["sharedGenerations", { t: "2" }],
     ["sharedVaults", [{ ...VALID.sharedVaults[0], wrappedKey: SEALED }]],
   ])("drops a malformed %s and keeps the rest", (key, value) => {

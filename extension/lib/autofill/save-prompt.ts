@@ -1,5 +1,6 @@
 import type { PendingPrompt } from "../autofill-protocol.js";
 import { withPasswordHistory } from "../item-types.js";
+import { neverSaves, stopSaving } from "../never-save.js";
 import { isPersonal, openVault } from "../vault/decrypt.js";
 import { byLastUsed } from "../vault/search.js";
 import { matchesSite, sameSite } from "../vault/site-match.js";
@@ -39,6 +40,10 @@ async function rememberedIdentifier(sender: TrustedSender): Promise<string | und
 async function readPending(sender: TrustedSender): Promise<PendingCapture | null> {
   const key = pendingKey(sender.tabId);
   const pending = (await chrome.storage.session.get(key))[key] as PendingCapture | undefined;
+  if (pending && (await neverSaves("logins", sender.domain))) {
+    await chrome.storage.session.remove(key);
+    return null;
+  }
   if (!pending) {
     return null;
   }
@@ -112,7 +117,11 @@ export const savePromptHandlers: AutofillHandlers<
   },
 
   "autofill:capture": async (request, sender) => {
-    if (!request.password || (await isVaultServer(sender.url))) {
+    if (
+      !request.password ||
+      (await isVaultServer(sender.url)) ||
+      (await neverSaves("logins", sender.domain))
+    ) {
       return { ok: true, prompt: null };
     }
     const pending: PendingCapture = {
@@ -197,7 +206,12 @@ export const savePromptHandlers: AutofillHandlers<
     return { ok: true, saved: true };
   },
 
-  "autofill:dismiss": async (_request, sender) => {
+  "autofill:dismiss": async (request, sender) => {
+    if (request.never) {
+      await chrome.storage.session.remove(pendingKey(sender.tabId));
+      await stopSaving("logins", sender.domain);
+      return { ok: true, saved: false };
+    }
     const pending = await readPending(sender);
     if (pending?.confirmed && !pending.dismissed) {
       await chrome.storage.session.set({

@@ -96,7 +96,7 @@ export type AutofillRequest =
   | { type: "autofill:pending" }
   | { type: "autofill:confirm" }
   | { type: "autofill:save"; username?: string; password?: string }
-  | { type: "autofill:dismiss" }
+  | { type: "autofill:dismiss"; never?: boolean }
   | { type: "autofill:open-popup" }
   | { type: "autofill:codes" }
   | { type: "autofill:code"; id: string }

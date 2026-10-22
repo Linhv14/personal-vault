@@ -125,6 +125,23 @@ describe("personal settings in the console", () => {
     await waitFor(() => localArea.get("showLogos") === false, "the stored choice");
   });
 
+  it("lists the sites that never ask to save and asks again on one once removed", async () => {
+    localArea.set("neverAskLogins", ["news.example", "shop.example"]);
+    localArea.set("neverAskForms", ["shop.example"]);
+    const { reloadLocal } = await import("../extension/settings/state.js");
+    await reloadLocal();
+    const rows = () => [...document.querySelectorAll<HTMLElement>(".never-save .row")].slice(1);
+    await waitFor(() => rows().length === 2, "the two sites");
+    expect(rows().map((row) => row.textContent)).toEqual([
+      "news.examplePasswords",
+      "shop.examplePasswords, cards and addresses",
+    ]);
+    rows()[1]!.querySelector<HTMLButtonElement>("button")!.click();
+    await waitFor(() => rows().length === 1, "the remaining site");
+    expect(localArea.get("neverAskLogins")).toEqual(["news.example"]);
+    expect(localArea.get("neverAskForms")).toEqual([]);
+  });
+
   it("turns on PIN unlock from Security", async () => {
     history.replaceState(null, "", "#/me/security");
     window.dispatchEvent(new HashChangeEvent("hashchange"));

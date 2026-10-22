@@ -20,6 +20,7 @@ export interface LocalState {
   aadBoundAccounts?: string[];
   autofillPromoDismissed?: boolean;
   neverAskForms?: string[];
+  neverAskLogins?: string[];
   sharedLinks?: SealedData;
   autoLockMinutes?: number;
   hasPasskeys?: boolean;

@@ -28,6 +28,7 @@ import { rememberUnlock } from "#ext/lib/resume.js";
 import { Card } from "#ext/ui/components/Card.js";
 import { useT } from "#ext/ui/i18n.js";
 import { localState, reloadLocal, showToast } from "../state.js";
+import { NeverSaveCard } from "./NeverSave.js";
 
 function lockLabel(minutes: number, t: Translate): string {
   if (minutes === LOCK_ON_BROWSER_CLOSE) {
@@ -227,6 +228,7 @@ export function General() {
           </label>
         )}
       </Card>
+      <NeverSaveCard />
     </section>
   );
 }

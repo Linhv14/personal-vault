@@ -381,7 +381,8 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
-.personal .sessions h2 {
+.personal .sessions h2,
+.personal .never-save h2 {
   margin: 0;
 }
 .personal .session {
