@@ -13,14 +13,13 @@ All commands run from the repository root with Node 22 or newer.
 
 `deploy` accepts options, remembered in `.cf-state.json` for later runs:
 
-| Option                        | Effect                                                                                                       |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `--open-registration`         | Anyone can create an account.                                                                                |
-| `--token-registration`        | Creating an account needs `REGISTRATION_TOKEN` (default).                                                    |
-| `--domain <host>`             | Serve on a custom domain in the same account. `none` removes it.                                             |
-| `--email-from <address>`      | Send verification and share codes from this address; requires verification at sign-up. `none` removes it.    |
-| `--email-provider <provider>` | `resend` (default, needs the `RESEND_API_KEY` secret) or `cloudflare` (Workers Paid).                        |
-| `--site-service <name>`       | Bind the Worker `<name>` as `SITE`; it then serves `/`, `/vi`, `/privacy` and `/media/*`. `none` removes it. |
+| Option                        | Effect                                                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `--open-registration`         | Anyone can create an account.                                                                             |
+| `--token-registration`        | Creating an account needs `REGISTRATION_TOKEN` (default).                                                 |
+| `--domain <host>`             | Serve on a custom domain in the same account. `none` removes it.                                          |
+| `--email-from <address>`      | Send verification and share codes from this address; requires verification at sign-up. `none` removes it. |
+| `--email-provider <provider>` | `resend` (default, needs the `RESEND_API_KEY` secret) or `cloudflare` (Workers Paid).                     |
 
 Pass options after `--`: `npm run deploy -- --open-registration`.
 

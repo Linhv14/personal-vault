@@ -91,9 +91,8 @@ the extension afterwards (`npm run build`) so new builds use the new address.
 
 ## Before you invite strangers
 
-- Check that `https://<worker>/privacy` describes what you actually run. Edit
-  [`share/privacy.html`](../../share/privacy.html), especially the contact
-  section.
+- Publish a privacy policy that describes what you actually run, especially
+  how to reach you.
 - Back up the database and `AT_REST_SECRET` together, offline.
 - Decide how you will tell users about an outage or a required extension
   update. Every user depends on you redeploying fixes.

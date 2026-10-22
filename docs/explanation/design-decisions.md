@@ -250,7 +250,7 @@ when the first copy sits in a hidden screen, every other logo loses its fill.
 
 **One source for colour.** `src/ui/tokens.css` defines every colour. The build
 injects it wherever a stylesheet has a `/* @tokens */` marker (popup, share
-page, privacy page) and bundles it into the page script's shadow root. Teal is
+page, security page, home page) and bundles it into the page script's shadow root. Teal is
 the only accent: deep teal on a warm off-white in light mode, a luminous teal on
 a teal-tinted ink in dark mode. Item icons use the same tint rather than one
 colour per item, so nothing competes with the accent.

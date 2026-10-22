@@ -6,6 +6,7 @@ export interface Env {
   USER_STORE: DurableObjectNamespace<UserStore>;
   ORG_STORE: DurableObjectNamespace<OrgStore>;
   ASSETS: Fetcher;
+  SITE?: Fetcher;
   ANONYMOUS_RATE_LIMITER: RateLimit;
   REGISTRATION_RATE_LIMITER: RateLimit;
   ACCOUNT_RATE_LIMITER: RateLimit;

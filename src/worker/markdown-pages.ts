@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { CONTENT_SIGNAL, MARKDOWN_PAGES, wantsMarkdown } from "./markdown-negotiation.js";
 import { HOME_LINKS } from "./discovery.js";
-import { PUBLIC_PAGE_CSP } from "./security-headers.js";
+import { PUBLIC_PAGE_CSP, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import type { AppBindings } from "./types.js";
 
 function withVary(response: Response): Response {
@@ -16,12 +16,30 @@ function withVary(response: Response): Response {
   return result;
 }
 
-export async function servePage(c: Context<AppBindings>): Promise<Response> {
-  const response = await negotiate(c);
-  if (c.req.path === "/" || c.req.path === "/vi") {
+const HOME_PAGES = new Set(["/", "/vi"]);
+
+function withHomeLinks(c: Context<AppBindings>, response: Response): Response {
+  if (HOME_PAGES.has(c.req.path)) {
     response.headers.set("Link", HOME_LINKS);
   }
   return response;
+}
+
+export async function servePage(c: Context<AppBindings>): Promise<Response> {
+  return withHomeLinks(c, await negotiate(c));
+}
+
+export async function serveFromSite(c: Context<AppBindings>, site: Fetcher): Promise<Response> {
+  const upstream = await site.fetch(c.req.raw);
+  const response = c.req.path.startsWith("/media/")
+    ? new Response(upstream.body, upstream)
+    : withVary(upstream);
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  if (new URL(c.req.url).protocol === "https:") {
+    response.headers.set("Strict-Transport-Security", STRICT_TRANSPORT_SECURITY);
+  }
+  return withHomeLinks(c, response);
 }
 
 async function negotiate(c: Context<AppBindings>): Promise<Response> {

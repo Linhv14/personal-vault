@@ -8,8 +8,7 @@ shared server ([Run a shared server](run-a-shared-server.md)).
 
 - A [Chrome Web Store developer account](https://chrome.google.com/webstore/devconsole)
   (one-time registration fee).
-- A deployed Worker with a privacy policy that matches it, served at
-  `https://<worker>/privacy`.
+- A deployed Worker, and a privacy policy that matches it at a public URL.
 - Screenshots at 1280×800: the popup list, an item with its 2FA code, the
   autofill menu on a login page, and the share page. Take them from the
   installed extension and a real login page.
@@ -88,4 +87,4 @@ codes, end-to-end encrypted.
 - Not sold, not used for anything unrelated to the single purpose, not used for
   creditworthiness or lending.
 
-**Privacy policy URL:** `https://<worker>/privacy`
+**Privacy policy URL:** the URL of that policy

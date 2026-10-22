@@ -615,9 +615,9 @@ Errors: `400 shares.invalid_code`, `400 shares.code_expired`, `404 shares.gone`.
 | Path                           | Content                                                                     |
 | ------------------------------ | --------------------------------------------------------------------------- |
 | `/s/:id`                       | The recipient page. Served with `Cache-Control: no-store` and a strict CSP. |
-| `/`, `/vi`                     | The landing page, in English and Vietnamese.                                |
+| `/`                            | A short home page linking to the web app, the extension, security and API.  |
+| `/security`, `/api-docs`       | The threat model and this reference.                                        |
 | `/download/7key-extension.zip` | The extension built for this server, for loading unpacked.                  |
-| `/privacy`                     | The privacy policy.                                                         |
 
 ## Error codes
 

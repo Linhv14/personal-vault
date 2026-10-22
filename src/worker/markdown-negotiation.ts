@@ -1,9 +1,9 @@
 export const MARKDOWN_PAGES: Record<string, string> = {
   "/": "/index.md",
-  "/vi": "/vi.md",
-  "/privacy": "/privacy.md",
   "/security": "/security.md",
 };
+
+export const SITE_PAGES = ["/", "/vi", "/privacy", "/media/*"];
 
 export const CONTENT_SIGNAL = "search=yes, ai-input=yes, ai-train=no";
 

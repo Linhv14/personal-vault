@@ -1,8 +1,7 @@
-import { build, transform, type BuildOptions } from "esbuild";
+import { build, type BuildOptions } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.ts";
 import { renderMarkdown } from "./markdown.ts";
 import { pageMarkdown } from "./html-markdown.ts";
-import { localizePage } from "./localize-page.ts";
 import { EXTENSION_PAGES, INJECTED_SCRIPTS } from "./extension-entries.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -48,7 +47,7 @@ const common: BuildOptions = {
   loader: { ".css": "text" },
 };
 
-async function logoSvgs(): Promise<{ still: string; animated: string; mark: string }> {
+async function logoSvgs(): Promise<{ still: string; mark: string }> {
   const { outputFiles } = await build({
     entryPoints: [path.join(root, "src", "ui", "logo.ts")],
     bundle: true,
@@ -60,62 +59,7 @@ async function logoSvgs(): Promise<{ still: string; animated: string; mark: stri
   const { logoSvg } = (await import(`data:text/javascript;base64,${source}`)) as {
     logoSvg: (id?: string, animated?: boolean, bare?: boolean) => string;
   };
-  return { still: logoSvg(), animated: logoSvg("", true, true), mark: logoSvg("", false, true) };
-}
-
-const assetVersions = new Map<string, string>();
-
-async function assetVersion(file: string): Promise<string> {
-  let version = assetVersions.get(file);
-  if (!version) {
-    const bytes = await readFile(path.join(root, "share", "assets", file));
-    version = createHash("sha256").update(bytes).digest("hex").slice(0, 10);
-    assetVersions.set(file, version);
-  }
-  return version;
-}
-
-async function polishLanding(html: string, lang: "en" | "vi"): Promise<string> {
-  const styled = await replaceAsync(
-    html,
-    /<style>([\s\S]*?)<\/style>/g,
-    async (_, css = "") =>
-      `<style>${(await transform(css, { loader: "css", minify: true })).code.trim()}</style>`,
-  );
-  const versioned = await replaceAsync(
-    styled,
-    /\/assets\/([\w.-]+\.(?:webp|png|jpg|svg|mp4|webm))(?=["'\s)])/g,
-    async (_, file = "") =>
-      existsSync(path.join(root, "share", "assets", file))
-        ? `/assets/${file}?v=${await assetVersion(file)}`
-        : `/assets/${file}`,
-  );
-  const poster = `/assets/demo-poster-${lang}.webp?v=${await assetVersion(`demo-poster-${lang}.webp`)}`;
-  return versioned.replace(
-    "</head>",
-    `  <link rel="preload" as="image" href="${poster}" fetchpriority="high" />\n  </head>`,
-  );
-}
-
-async function iconSvg(): Promise<(name: string) => string> {
-  const { outputFiles } = await build({
-    entryPoints: [path.join(root, "src", "ui", "icons.ts")],
-    bundle: true,
-    format: "esm",
-    write: false,
-    logLevel: "silent",
-  });
-  const source = Buffer.from(outputFiles[0]?.text ?? "").toString("base64");
-  const { iconMarkup } = (await import(`data:text/javascript;base64,${source}`)) as {
-    iconMarkup: (name: string) => string | undefined;
-  };
-  return (name) => {
-    const markup = iconMarkup(name);
-    if (!markup) {
-      throw new Error(`share/landing.html uses an unknown icon "${name}"`);
-    }
-    return `<svg viewBox="0 0 24 24" aria-hidden="true">${markup}</svg>`;
-  };
+  return { still: logoSvg(), mark: logoSvg("", false, true) };
 }
 
 async function replaceAsync(
@@ -132,6 +76,15 @@ async function replaceAsync(
   return parts.join("") + text.slice(last);
 }
 
+function siteUrl(): string {
+  return (deployedServerUrl() || "https://7key.online").replace(/\/$/, "");
+}
+
+async function writeMarkdownCopy(page: string): Promise<void> {
+  const html = await readFile(path.join(outPublic, `${page}.html`), "utf8");
+  await writeFile(path.join(outPublic, `${page}.md`), pageMarkdown(html, `${siteUrl()}/`));
+}
+
 async function copyPage(from: string, to: string): Promise<void> {
   const text = await readFile(from, "utf8");
   await writeFile(to, hasTokensMarker(text) ? await injectTokens(text, from) : text);
@@ -146,7 +99,6 @@ async function buildSharePage() {
   });
   await copyPage(path.join(root, "share", "index.html"), path.join(outPublic, "share.html"));
   await cp(path.join(root, "share", "_headers"), path.join(outPublic, "_headers"));
-  await copyPage(path.join(root, "share", "privacy.html"), path.join(outPublic, "privacy.html"));
   const security = await readFile(path.join(root, "share", "security.html"), "utf8");
   const filled = await replaceAsync(security, /<!-- markdown:([^ ]+) -->/g, async (_, file = "") =>
     renderMarkdown(await readFile(path.join(root, file), "utf8")),
@@ -169,47 +121,19 @@ async function buildSharePage() {
   if (existsSync(path.join(root, "share", "openapi.json"))) {
     await cp(path.join(root, "share", "openapi.json"), path.join(outPublic, "openapi.json"));
   }
-  await build({
-    ...common,
-    entryPoints: [path.join(root, "share", "landing.ts")],
-    outfile: path.join(outPublic, "landing.js"),
-    minify: true,
-    sourcemap: false,
-  });
-  const site = (deployedServerUrl() || "https://7key.online").replace(/\/$/, "");
-  const svg = await iconSvg();
-  const landing = (await readFile(path.join(root, "share", "landing.html"), "utf8"))
-    .replace(/\{\{icon:([a-z-]+)\}\}/g, (_: string, name: string) => svg(name))
-    .replaceAll("{{site}}", site)
-    .replaceAll("{{logo}}", (await logoSvgs()).animated)
-    .replaceAll("{{mark}}", (await logoSvgs()).mark);
-  for (const [lang, file] of [
-    ["en", "index.html"],
-    ["vi", "vi.html"],
-  ] as const) {
-    await writeFile(
-      path.join(outPublic, file),
-      await polishLanding(
-        await injectTokens(localizePage(landing, lang), "share/landing.html"),
-        lang,
-      ),
-    );
-  }
+  const site = siteUrl();
   await writeFile(
     path.join(outPublic, "robots.txt"),
     `User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=no\nAllow: /\nDisallow: /app/\nDisallow: /api/\nDisallow: /s/\n\nSitemap: ${site}/sitemap.xml\n`,
   );
-  const pages = ["/", "/vi", "/privacy", "/security", "/api-docs"];
+  const pages = ["/", "/security", "/api-docs"];
   await writeFile(
     path.join(outPublic, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages
       .map((page) => `  <url><loc>${site}${page}</loc></url>`)
       .join("\n")}\n</urlset>\n`,
   );
-  for (const page of ["index", "vi", "privacy", "security"]) {
-    const html = await readFile(path.join(outPublic, `${page}.html`), "utf8");
-    await writeFile(path.join(outPublic, `${page}.md`), pageMarkdown(html, `${site}/`));
-  }
+  await writeMarkdownCopy("security");
   await cp(path.join(root, "share", "skills"), path.join(outPublic, "skills"), { recursive: true });
   const skills: { name: string; type: string; description: string; url: string; digest: string }[] =
     [];
@@ -230,6 +154,20 @@ async function buildSharePage() {
   await cp(path.join(root, "share", "assets"), path.join(outPublic, "assets"), { recursive: true });
   await writeFile(path.join(outPublic, "favicon.svg"), (await logoSvgs()).still);
   await writeFile(path.join(outPublic, "mark.svg"), (await logoSvgs()).mark);
+}
+
+async function buildHomePage() {
+  const download = existsSync(path.join(outPublic, "download", "7key-extension.zip"));
+  const template = (await readFile(path.join(root, "share", "home.html"), "utf8"))
+    .replace(/[ \t]*<!-- download -->\n([\s\S]*?)[ \t]*<!-- \/download -->\n/, (_, link: string) =>
+      download ? link : "",
+    )
+    .replace("{{logo}}", (await logoSvgs()).mark);
+  await writeFile(
+    path.join(outPublic, "index.html"),
+    await injectTokens(template, "share/home.html"),
+  );
+  await writeMarkdownCopy("index");
 }
 
 async function fingerprinted(out: string, name: string, text: string): Promise<string> {
@@ -380,4 +318,5 @@ await buildCli();
 await buildExtension();
 await copyConsoleTokens();
 await packageForDownload();
+await buildHomePage();
 console.log(dev ? "Dev build complete." : "Build complete.");

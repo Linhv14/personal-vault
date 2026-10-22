@@ -10,6 +10,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- `/` shows a short built-in home page linking to the web app, the extension,
+  `/security` and `/api-docs`.
 - 7key is now licensed under the GNU AGPL-3.0 instead of the MIT License; releases
   before this one stay under MIT. Future enterprise-only modules may live in a
   `commercial/` directory under the source-available 7key Commercial License. See

@@ -20,8 +20,8 @@ import { resolveSession, SESSION_IDLE_SECONDS } from "./session.js";
 import { securityTxt, SHARE_PAGE_HEADERS, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import { PAIR_MEMORY_SECONDS } from "./throttle-policy.js";
 import { apiCatalog } from "./discovery.js";
-import { MARKDOWN_PAGES } from "./markdown-negotiation.js";
-import { servePage } from "./markdown-pages.js";
+import { MARKDOWN_PAGES, SITE_PAGES } from "./markdown-negotiation.js";
+import { serveFromSite, servePage } from "./markdown-pages.js";
 import {
   requireHuman,
   TURNSTILE_HEADER,
@@ -229,7 +229,15 @@ app.get("/turnstile", (c) => {
   });
 });
 
-for (const page of Object.keys(MARKDOWN_PAGES)) {
+for (const page of SITE_PAGES) {
+  app.get(page, (c) => {
+    if (c.env.SITE) {
+      return serveFromSite(c, c.env.SITE);
+    }
+    return page in MARKDOWN_PAGES ? servePage(c) : c.notFound();
+  });
+}
+for (const page of Object.keys(MARKDOWN_PAGES).filter((page) => !SITE_PAGES.includes(page))) {
   app.get(page, servePage);
 }
 

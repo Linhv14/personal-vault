@@ -72,3 +72,108 @@ describe("discovery", () => {
     expect(await (await worker.fetch("/api/health")).json()).toEqual({ status: "ok" });
   });
 });
+
+describe("site binding", () => {
+  const assets = {
+    fetch: async (input: Request | URL | string) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.pathname === "/index.md") {
+        return new Response("# 7key\n");
+      }
+      if (["/", "/security", "/share.html"].includes(url.pathname)) {
+        return new Response("<!doctype html><title>7key</title><h1>7KEY</h1>", {
+          headers: { "Content-Type": "text/html" },
+        });
+      }
+      return new Response("Not found", { status: 404 });
+    },
+  };
+
+  function fakeSite() {
+    const seen: { path: string; accept: string | null; method: string }[] = [];
+    const site = {
+      fetch: async (input: Request | URL | string) => {
+        const request = input instanceof Request ? input : new Request(input);
+        const url = new URL(request.url);
+        seen.push({
+          path: url.pathname,
+          accept: request.headers.get("Accept"),
+          method: request.method,
+        });
+        if (url.pathname.startsWith("/media/")) {
+          return new Response("video", { headers: { "Content-Type": "video/mp4" } });
+        }
+        if (request.headers.get("Accept") === "text/markdown") {
+          return new Response(`# site ${url.pathname}\n`, {
+            headers: { "Content-Type": "text/markdown; charset=utf-8", Vary: "Accept" },
+          });
+        }
+        return new Response(`<!doctype html><title>site ${url.pathname}</title>`, {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        });
+      },
+    };
+    return { site, seen };
+  }
+
+  it("proxies the home pages, privacy page and media to SITE", async () => {
+    const { site, seen } = fakeSite();
+    const worker = await startWorker({ vars: { ASSETS: assets, SITE: site } });
+    for (const path of ["/", "/vi", "/privacy", "/media/demo-en.mp4"]) {
+      const response = await worker.fetch(path, { headers: { Accept: "text/html" } });
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain(
+        path.startsWith("/media/") ? "video" : `site ${path}`,
+      );
+    }
+    expect(seen.map((request) => request.path)).toEqual([
+      "/",
+      "/vi",
+      "/privacy",
+      "/media/demo-en.mp4",
+    ]);
+    const home = await worker.fetch("/");
+    expect(home.headers.get("link")).toContain('</.well-known/api-catalog>; rel="api-catalog"');
+    expect(home.headers.get("vary")).toContain("Accept");
+    expect(home.headers.get("content-security-policy")).toContain(
+      "https://static.cloudflareinsights.com",
+    );
+    expect((await worker.fetch("/vi")).headers.get("link")).toContain("api-catalog");
+    expect((await worker.fetch("/privacy")).headers.get("link")).toBeNull();
+    const video = await worker.fetch("/media/demo-en.mp4");
+    expect(video.headers.get("content-type")).toBe("video/mp4");
+    expect(video.headers.get("content-security-policy")).toBeNull();
+  });
+
+  it("lets the site answer markdown requests", async () => {
+    const { site, seen } = fakeSite();
+    const worker = await startWorker({ vars: { ASSETS: assets, SITE: site } });
+    const agent = await worker.fetch("/", { headers: { Accept: "text/markdown" } });
+    expect(agent.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+    expect(await agent.text()).toBe("# site /\n");
+    expect(agent.headers.get("link")).toContain("api-catalog");
+    expect(seen[0]?.accept).toBe("text/markdown");
+  });
+
+  it("keeps the product routes on the product Worker", async () => {
+    const { site, seen } = fakeSite();
+    const worker = await startWorker({ vars: { ASSETS: assets, SITE: site } });
+    expect(await (await worker.fetch("/api/health")).json()).toEqual({ status: "ok" });
+    expect((await worker.fetch("/security")).status).toBe(200);
+    expect((await worker.fetch("/s/abc")).status).toBe(200);
+    expect(seen).toEqual([]);
+  });
+
+  it("serves the built-in home page and nothing else of the site without SITE", async () => {
+    const worker = await startWorker({ vars: { ASSETS: assets } });
+    const home = await worker.fetch("/", { headers: { Accept: "text/html" } });
+    expect(home.status).toBe(200);
+    expect(await home.text()).toContain("<h1>7KEY</h1>");
+    expect(home.headers.get("link")).toContain("api-catalog");
+    const agent = await worker.fetch("/", { headers: { Accept: "text/markdown" } });
+    expect(await agent.text()).toBe("# 7key\n");
+    for (const path of ["/vi", "/privacy", "/media/demo-en.mp4"]) {
+      expect((await worker.fetch(path)).status).toBe(404);
+    }
+  });
+});
