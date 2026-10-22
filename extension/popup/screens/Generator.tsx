@@ -9,12 +9,10 @@ import {
 import { describeError, type MessageKey } from "../../../src/i18n/index.js";
 import { useT } from "../../ui/i18n.js";
 import { IconButton } from "../../ui/components/IconButton.js";
-import { AddressGenerator } from "../components/AddressGenerator.js";
 import { copy, showList } from "../state.js";
 import { formatEntropy } from "../strength.js";
 
-type Mode = "password" | "passphrase" | "pin" | "address";
-type SecretMode = Exclude<Mode, "address">;
+type Mode = "password" | "passphrase" | "pin";
 
 interface Options {
   length: number;
@@ -40,7 +38,7 @@ const DEFAULTS: Options = {
   pin: 6,
 };
 
-function generate(mode: SecretMode, options: Options): GeneratedSecret {
+function generate(mode: Mode, options: Options): GeneratedSecret {
   if (mode === "password") {
     return generatePassword({
       length: options.length,
@@ -68,7 +66,7 @@ export function Generator() {
 
   const result = useMemo((): GeneratedSecret | Error => {
     try {
-      return generate(mode === "address" ? "password" : mode, options);
+      return generate(mode, options);
     } catch (error) {
       return error instanceof Error ? error : new Error(String(error));
     }
@@ -115,7 +113,6 @@ export function Generator() {
           ["password", "gen.mode_random"],
           ["passphrase", "gen.mode_passphrase"],
           ["pin", "gen.mode_pin"],
-          ["address", "gen.mode_address"],
         ] as const
       ).map(([value, label]) => (
         <button
@@ -129,19 +126,6 @@ export function Generator() {
       ))}
     </div>
   );
-
-  if (mode === "address") {
-    return (
-      <section id="screen-generator" className="screen">
-        <header className="title-bar">
-          <IconButton icon="back" label={t("common.back")} onClick={showList} />
-          <h1>{t("gen.title")}</h1>
-        </header>
-        {modes}
-        <AddressGenerator />
-      </section>
-    );
-  }
 
   return (
     <section id="screen-generator" className="screen">

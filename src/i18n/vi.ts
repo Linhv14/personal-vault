@@ -803,12 +803,6 @@ export const vi: Catalogue = {
   "gen.capitalize": "Viết hoa đầu từ",
   "gen.append_digit": "Thêm một chữ số",
   "gen.regenerate": "Tạo lại",
-  "gen.mode_address": "Địa chỉ",
-  "gen.country_us": "Hoa Kỳ",
-  "gen.country_vn": "Việt Nam",
-  "gen.include_email": "Kèm email",
-  "gen.email_domain": "Tên miền email",
-  "gen.save_identity": "Lưu thành địa chỉ",
   "gen.entropy": "{bits} bit · {strength}",
 
   "share.title": "Chia sẻ",

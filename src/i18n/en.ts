@@ -810,12 +810,6 @@ export const en = {
   "gen.capitalize": "Capitalize words",
   "gen.append_digit": "Append a digit",
   "gen.regenerate": "Generate again",
-  "gen.mode_address": "Address",
-  "gen.country_us": "United States",
-  "gen.country_vn": "Vietnam",
-  "gen.include_email": "Include an email",
-  "gen.email_domain": "Email domain",
-  "gen.save_identity": "Save as address",
   "gen.entropy": "{bits} bits · {strength}",
 
   "share.title": "Share",

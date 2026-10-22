@@ -1229,47 +1229,6 @@ details.history .field-row {
   flex-direction: column;
   margin-top: 8px;
 }
-.gen-address {
-  margin-bottom: 12px;
-}
-.gen-address .gen-footer {
-  margin-top: 6px;
-}
-.gen-spacer {
-  flex: 1;
-}
-.gen-address .field .v {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.flag {
-  display: inline-block;
-  width: 18px;
-  height: 12px;
-  flex-shrink: 0;
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
-}
-.segmented.gen-countries {
-  margin-bottom: 4px;
-}
-.segmented.gen-countries .tab {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-label.gen-domain {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-}
-label.gen-domain input {
-  flex: 1;
-}
 
 .field-label {
   display: flex;

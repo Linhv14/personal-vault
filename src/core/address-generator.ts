@@ -3,8 +3,6 @@ import { randomInt } from "./generator.js";
 
 export type AddressCountry = "US" | "VN";
 
-export const ADDRESS_COUNTRIES: readonly AddressCountry[] = ["US", "VN"];
-
 export interface RandomAddress {
   code: AddressCountry;
   fullName: string;
