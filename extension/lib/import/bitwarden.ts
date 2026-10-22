@@ -1,7 +1,6 @@
-import { fromBase64 } from "../../../src/core/bytes.js";
+import { fromBase64, fromBase64Url, toBase64Url } from "../../../src/core/bytes.js";
 import { cardDigits } from "../item-types.js";
 import type { StoredPasskey } from "../passkey/authenticator.js";
-import { fromBase64Url, toBase64Url } from "../passkey/base64url.js";
 import { registrableDomain, type ItemDraft } from "../vault.js";
 import type { CustomField } from "../item-types.js";
 import {

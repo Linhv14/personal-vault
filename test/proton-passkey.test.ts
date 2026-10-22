@@ -5,7 +5,7 @@ import { planImport } from "../extension/lib/import/plan.js";
 import { readExport } from "../extension/lib/import/read-export.js";
 import { readProtonPasskey } from "../extension/lib/import/proton-passkey.js";
 import { signAssertion } from "../extension/lib/passkey/authenticator.js";
-import { fromBase64Url, toBase64Url } from "../extension/lib/passkey/base64url.js";
+import { fromBase64Url, toBase64Url } from "../src/core/bytes.js";
 import type { VaultItem } from "../extension/lib/vault.js";
 
 type Packable = null | number | string | Uint8Array | Packable[] | { [key: string]: Packable };

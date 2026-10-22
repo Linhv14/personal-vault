@@ -1,5 +1,5 @@
 import type { StoredPasskey } from "../passkey/authenticator.js";
-import { toBase64Url } from "../passkey/base64url.js";
+import { fromBase64, toBase64Url } from "../../../src/core/bytes.js";
 import { decodeMsgpack, type MsgpackValue } from "./msgpack.js";
 
 const P256 = 1;
@@ -60,13 +60,9 @@ function coseParams(key: MsgpackValue | undefined): Map<number, MsgpackValue | u
   return params;
 }
 
-function base64(value: string): Uint8Array {
-  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
-}
-
 export async function readProtonPasskey(input: ProtonPasskeyFields): Promise<StoredPasskey | null> {
   try {
-    const envelope = decodeMsgpack(base64(input.content));
+    const envelope = decodeMsgpack(fromBase64(input.content));
     const inner = bytes(field(envelope, "c"));
     if (field(envelope, "v") !== 1 || !inner) {
       return null;

@@ -1,4 +1,4 @@
-import { fromBase64Url, toBase64Url } from "./base64url.js";
+import { fromBase64Url, toBase64Url } from "../../../src/core/bytes.js";
 import { encodeCbor, type CborValue } from "./cbor.js";
 import { ES256, type AssertionJSON, type RegistrationJSON } from "./protocol.js";
 

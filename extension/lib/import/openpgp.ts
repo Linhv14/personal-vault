@@ -1,3 +1,5 @@
+import { fromBase64 } from "../../../src/core/bytes.js";
+
 export type OpenPgpErrorCode = "wrong_passphrase" | "unsupported" | "damaged";
 
 export class OpenPgpError extends Error {
@@ -49,7 +51,7 @@ export function dearmor(input: Uint8Array): Uint8Array {
     .split(/\r?\n/)
     .filter((line) => line && !line.startsWith("="))
     .join("");
-  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+  return fromBase64(base64);
 }
 
 function readPackets(data: Uint8Array): Packet[] {

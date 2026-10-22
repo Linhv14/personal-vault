@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
 import { encodeCbor } from "../extension/lib/passkey/cbor.js";
 import { AAGUID, createPasskey, signAssertion } from "../extension/lib/passkey/authenticator.js";
-import { fromBase64Url, toBase64Url } from "../extension/lib/passkey/base64url.js";
+import { fromBase64Url, toBase64Url } from "../src/core/bytes.js";
 import { resolveRpId } from "../extension/lib/passkey/relying-party.js";
 
 const origin = "https://login.example.com";

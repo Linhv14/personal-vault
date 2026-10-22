@@ -2,7 +2,7 @@ import { createCipheriv, createHmac, pbkdf2Sync, randomBytes, randomUUID } from 
 import { describe, expect, it } from "vitest";
 import { planImport } from "../extension/lib/import/plan.js";
 import { readExport } from "../extension/lib/import/read-export.js";
-import { fromBase64Url, toBase64Url } from "../extension/lib/passkey/base64url.js";
+import { fromBase64Url, toBase64Url } from "../src/core/bytes.js";
 import { makeZip } from "./zip-fixture.js";
 
 const TOTP_URI = "otpauth://totp/GitHub:me?secret=JBSWY3DPEHPK3PXP&issuer=GitHub";

@@ -10,6 +10,7 @@ import type {
   TotpPrompt,
 } from "../lib/autofill-protocol.js";
 import { icon, type IconName } from "../../src/ui/icons.js";
+import { fromBase64 } from "../../src/core/bytes.js";
 import { logo, wordmark } from "../../src/ui/logo.js";
 import { brandMark, flagMark } from "../../src/ui/marks.js";
 import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
@@ -792,8 +793,7 @@ async function scanForSetup(): Promise<void> {
         return null;
       }
       const [header = "", data = ""] = response.image.split(",");
-      const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0));
-      return new Blob([bytes], { type: header.slice(5).split(";")[0] });
+      return new Blob([fromBase64(data)], { type: header.slice(5).split(";")[0] });
     }));
   if (!found || found === totpSeen) {
     return;
