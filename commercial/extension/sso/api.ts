@@ -2,7 +2,7 @@ import { randomBytes, toBase64Url, utf8Encode } from "#core/bytes.js";
 import { isKdfParams, isSealedData, type KdfParams, type SealedData } from "#core/crypto.js";
 import { isBoolean, isFiniteNumber, isPlainObject, isString } from "#core/json.js";
 import { sha256 } from "#core/primitives.js";
-import { ApiError, requestChecked } from "#ext/lib/api.js";
+import { ApiError, hasField, requestChecked } from "#ext/lib/api.js";
 import type { DecryptionOption } from "#commercial/core/sso-model.js";
 
 export interface PreparedSso {
@@ -206,3 +206,40 @@ export const saveSsoPolicies = (
   orgId: string,
   policies: { requireSso: boolean; singleOrg: boolean },
 ) => send(orgId, "/policies", "PUT", policies);
+
+export interface SsoLinkStatus {
+  available: boolean;
+  onDomain: boolean;
+  twoFactor: boolean;
+  link: { linkedAt: number } | null;
+}
+
+function isLinkStatus(value: unknown): value is SsoLinkStatus {
+  return (
+    isPlainObject(value) &&
+    isBoolean(value.available) &&
+    isBoolean(value.onDomain) &&
+    isBoolean(value.twoFactor) &&
+    (value.link === null || (isPlainObject(value.link) && isFiniteNumber(value.link.linkedAt)))
+  );
+}
+
+export const ssoLinkStatus = (orgId: string) => requestChecked(`${base(orgId)}/link`, isLinkStatus);
+
+export async function startSsoLink(
+  orgId: string,
+  request: { currentAuthKey: string; code?: string; returnTo: string },
+): Promise<string> {
+  const { authorizeUrl } = await requestChecked(
+    `${base(orgId)}/link`,
+    hasField("authorizeUrl", isString),
+    { method: "POST", body: JSON.stringify(request) },
+  );
+  if (new URL(authorizeUrl).protocol !== "https:") {
+    throw new ApiError("error.api.bad_response", 200);
+  }
+  return authorizeUrl;
+}
+
+export const removeSsoLink = (orgId: string) =>
+  requestChecked(`${base(orgId)}/link`, isLinkStatus, { method: "DELETE" });

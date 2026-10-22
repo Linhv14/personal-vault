@@ -4,6 +4,7 @@ import {
   ConsoleHost,
   Icon,
   localeSignal,
+  relayLinkOutcome,
   setHumanCheck,
   setUiLocale,
   useT,
@@ -39,6 +40,15 @@ function App() {
   );
 }
 
+function LinkReturned() {
+  const t = useT();
+  return (
+    <main className="sign-in">
+      <p className="panel sign-in-card">{t("sso_link.close_window")}</p>
+    </main>
+  );
+}
+
 startWebSession();
 setHumanCheck((_apiUrl, siteKey) => turnstileToken(siteKey));
 setUiLocale(undefined);
@@ -46,4 +56,4 @@ const root = document.getElementById("app");
 if (!root) {
   throw new Error("Missing #app");
 }
-render(<App />, root);
+render(relayLinkOutcome() ? <LinkReturned /> : <App />, root);

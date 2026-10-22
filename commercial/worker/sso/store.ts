@@ -27,6 +27,13 @@ export interface SsoState {
   nonce: string;
   clientChallenge: string;
   returnTo: string;
+  linkAccountId: string | null;
+}
+
+export interface SsoLink {
+  issuer: string;
+  subject: string;
+  linkedAt: number;
 }
 
 export interface SsoGrant {
@@ -145,6 +152,10 @@ export class SsoStore {
         orgId,
       )
       .run();
+    await this.db
+      .prepare("DELETE FROM sso_links WHERE org_id = ? AND issuer != ?")
+      .bind(orgId, provider.issuer)
+      .run();
   }
 
   async setPolicies(
@@ -236,8 +247,9 @@ export class SsoStore {
       this.db
         .prepare(
           `INSERT INTO sso_states
-             (state_hash, org_id, code_verifier, nonce, client_challenge, return_to, expires_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             (state_hash, org_id, code_verifier, nonce, client_challenge, return_to,
+              link_account_id, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           stateHash,
@@ -246,6 +258,7 @@ export class SsoStore {
           state.nonce,
           state.clientChallenge,
           state.returnTo,
+          state.linkAccountId,
           at + ttlSeconds,
         ),
     ]);
@@ -255,7 +268,7 @@ export class SsoStore {
     const row = await this.db
       .prepare(
         `DELETE FROM sso_states WHERE state_hash = ? AND expires_at > ?
-         RETURNING org_id, code_verifier, nonce, client_challenge, return_to`,
+         RETURNING org_id, code_verifier, nonce, client_challenge, return_to, link_account_id`,
       )
       .bind(stateHash, now())
       .first<{
@@ -264,6 +277,7 @@ export class SsoStore {
         nonce: string;
         client_challenge: string;
         return_to: string;
+        link_account_id: string | null;
       }>();
     return row
       ? {
@@ -272,6 +286,7 @@ export class SsoStore {
           nonce: row.nonce,
           clientChallenge: row.client_challenge,
           returnTo: row.return_to,
+          linkAccountId: row.link_account_id,
         }
       : null;
   }
@@ -318,9 +333,13 @@ export class SsoStore {
            FROM org_members m
            JOIN sso_configs c ON c.org_id = m.org_id
            JOIN accounts a ON a.id = m.account_id
-           JOIN sso_domains d ON d.org_id = c.org_id AND d.verified_at IS NOT NULL
-            AND d.domain = lower(substr(a.email, instr(a.email, '@') + 1))
-          WHERE m.account_id = ? AND m.role = 'member' AND c.require_sso = 1 AND c.enabled = 1`,
+          WHERE m.account_id = ? AND m.role = 'member' AND c.require_sso = 1 AND c.enabled = 1
+            AND (EXISTS (SELECT 1 FROM sso_domains d
+                          WHERE d.org_id = c.org_id AND d.verified_at IS NOT NULL
+                            AND d.domain = lower(substr(a.email, instr(a.email, '@') + 1)))
+                 OR EXISTS (SELECT 1 FROM sso_links l
+                             WHERE l.org_id = c.org_id AND l.account_id = m.account_id
+                               AND l.issuer = c.issuer))`,
       )
       .bind(accountId)
       .all<{ orgId: string; identifier: string | null }>();
@@ -339,5 +358,70 @@ export class SsoStore {
       .bind(accountId)
       .all<{ orgId: string; role: string; singleOrg: number }>();
     return results.map((row) => ({ ...row, singleOrg: row.singleOrg === 1 }));
+  }
+
+  async link(orgId: string, accountId: string): Promise<SsoLink | null> {
+    return this.db
+      .prepare(
+        `SELECT issuer, subject, linked_at AS linkedAt FROM sso_links
+          WHERE org_id = ? AND account_id = ?`,
+      )
+      .bind(orgId, accountId)
+      .first<SsoLink>();
+  }
+
+  async linkedEmail(orgId: string, issuer: string, subject: string): Promise<string | null> {
+    const row = await this.db
+      .prepare(
+        `SELECT a.email FROM sso_links l JOIN accounts a ON a.id = l.account_id
+          WHERE l.org_id = ? AND l.issuer = ? AND l.subject = ?`,
+      )
+      .bind(orgId, issuer, subject)
+      .first<{ email: string }>();
+    return row?.email ?? null;
+  }
+
+  async hasLinkForEmail(orgId: string, issuer: string, email: string): Promise<boolean> {
+    const row = await this.db
+      .prepare(
+        `SELECT 1 AS found FROM sso_links l JOIN accounts a ON a.id = l.account_id
+          WHERE l.org_id = ? AND l.issuer = ? AND a.email = ?`,
+      )
+      .bind(orgId, issuer, email)
+      .first<{ found: number }>();
+    return row !== null;
+  }
+
+  async saveLink(
+    orgId: string,
+    accountId: string,
+    identity: { issuer: string; subject: string },
+  ): Promise<"ok" | "taken"> {
+    try {
+      await this.db
+        .prepare(
+          `INSERT INTO sso_links (org_id, account_id, issuer, subject, linked_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(org_id, account_id)
+           DO UPDATE SET issuer = excluded.issuer, subject = excluded.subject,
+                         linked_at = excluded.linked_at`,
+        )
+        .bind(orgId, accountId, identity.issuer, identity.subject, now())
+        .run();
+      return "ok";
+    } catch (error) {
+      if (String(error).includes("UNIQUE")) {
+        return "taken";
+      }
+      throw error;
+    }
+  }
+
+  async removeLink(orgId: string, accountId: string): Promise<boolean> {
+    const result = await this.db
+      .prepare("DELETE FROM sso_links WHERE org_id = ? AND account_id = ?")
+      .bind(orgId, accountId)
+      .run();
+    return result.meta.changes > 0;
   }
 }

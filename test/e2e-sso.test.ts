@@ -97,6 +97,7 @@ describe.skipIf(!enabled)("single sign-on with a local test identity provider", 
   const domain = `${identifier}.invalid`;
   const memberEmail = unique("sso-member").replace("@example.com", `@${domain}`);
   const outsiderEmail = unique("sso-outsider");
+  let outsiderInvite: string;
   let ownerToken: string;
   let orgId: string;
 
@@ -158,8 +159,41 @@ describe.skipIf(!enabled)("single sign-on with a local test identity provider", 
       body: json({ email: outsiderEmail, role: "member" }),
     });
     expect(invited.status).toBe(201);
+    outsiderInvite = invited.body.id;
     const { params } = await signInWithSso(outsiderEmail, identifier);
     expect(params.get("sso_error")).toBe("sso.email_not_allowed");
+  });
+
+  it("lets a member on another domain link the identity with the master password", async () => {
+    const outsider = await register(outsiderEmail, "outsider password for sso");
+    const accepted = await api(`/api/invites/${outsiderInvite}/accept`, {
+      method: "POST",
+      token: outsider.token,
+    });
+    expect(accepted.body.orgId).toBe(orgId);
+    const started = await api(`/api/orgs/${orgId}/sso/link`, {
+      method: "POST",
+      token: outsider.token,
+      body: json({ currentAuthKey: outsider.record.authKey, returnTo: `${BASE}/app/` }),
+    });
+    expect(started.status).toBe(200);
+    const authorize = new URL(started.body.authorizeUrl);
+    const code = await idToken({
+      sub: `sub-${outsiderEmail}`,
+      email: outsiderEmail,
+      email_verified: true,
+      nonce: authorize.searchParams.get("nonce"),
+    });
+    const query = new URLSearchParams({ code, state: authorize.searchParams.get("state") ?? "" });
+    const callback = await api(`/api/sso/callback?${query.toString()}`);
+    expect(new URL(callback.location!).hash).toBe("#sso_link=linked");
+
+    const { params, verifier } = await signInWithSso(outsiderEmail, identifier);
+    const session = await api("/api/sso/session", {
+      method: "POST",
+      body: json({ grant: params.get("sso_grant"), clientVerifier: verifier }),
+    });
+    expect(session.body).toMatchObject({ status: "signed_in", email: outsiderEmail, orgId });
   });
 
   it("refuses return addresses outside the allow-list", async () => {

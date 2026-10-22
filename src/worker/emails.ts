@@ -100,6 +100,15 @@ const STRINGS = {
       ignore:
         "If this wasn't you, someone knows your master password. Change it right away and turn two-factor authentication off and on again under Settings → Security.",
     },
+    ssoLinked: {
+      subject: (org: string) => `Single sign-on for ${org} was linked to your ${APP_NAME} account`,
+      preheader: (org: string) => `${org}'s identity provider can now sign you in.`,
+      heading: "Single sign-on linked",
+      intro: (org: string) =>
+        `Your ${APP_NAME} account can now sign in through ${org}'s identity provider, without your master password or a two-factor code at sign-in. Your vault still opens only with your master password.`,
+      ignore:
+        "If this wasn't you, change your master password and remove the link under the organization's settings in the console.",
+    },
     twoFactorOff: {
       subject: `Two-factor authentication was turned off for your ${APP_NAME} vault`,
       preheader: "Signing in now needs only your master password.",
@@ -197,6 +206,16 @@ const STRINGS = {
       intro: `Từ giờ đăng nhập kho ${APP_NAME} cần mật khẩu chính và mã từ ứng dụng xác thực. Mọi thiết bị khác đã bị đăng xuất.`,
       ignore:
         "Nếu không phải bạn, có người đang biết mật khẩu chính của bạn. Hãy đổi mật khẩu chính ngay, rồi tắt và bật lại xác thực hai lớp trong Cài đặt → Bảo mật.",
+    },
+    ssoLinked: {
+      subject: (org: string) =>
+        `Đã liên kết đăng nhập một lần của ${org} với tài khoản ${APP_NAME}`,
+      preheader: (org: string) => `Nhà cung cấp danh tính của ${org} giờ có thể đăng nhập cho bạn.`,
+      heading: "Đã liên kết đăng nhập một lần",
+      intro: (org: string) =>
+        `Tài khoản ${APP_NAME} của bạn giờ có thể đăng nhập qua nhà cung cấp danh tính của ${org}, không cần mật khẩu chính hay mã hai lớp khi đăng nhập. Kho vẫn chỉ mở được bằng mật khẩu chính.`,
+      ignore:
+        "Nếu không phải bạn, hãy đổi mật khẩu chính và gỡ liên kết trong phần cài đặt tổ chức ở console.",
     },
     twoFactorOff: {
       subject: `Đã tắt xác thực hai lớp cho kho ${APP_NAME}`,
@@ -371,6 +390,19 @@ export function twoFactorDisabledEmail(
     blocks: [
       { kind: "text", text: strings.intro },
       ...(byRecovery ? [{ kind: "text" as const, text: strings.recovered }] : []),
+      { kind: "text", text: strings.ignore, tone: "small" },
+    ],
+  });
+}
+
+export function ssoLinkedEmail(context: EmailContext, org: string): RenderedEmail {
+  const strings = STRINGS[context.locale].ssoLinked;
+  return renderEmail(context, {
+    subject: strings.subject(org),
+    preheader: strings.preheader(org),
+    heading: strings.heading,
+    blocks: [
+      { kind: "text", text: strings.intro(org) },
       { kind: "text", text: strings.ignore, tone: "small" },
     ],
   });

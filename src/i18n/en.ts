@@ -1222,7 +1222,11 @@ export const en = {
   "error.sso.failed": "The identity provider did not confirm the sign-in. Try again.",
   "error.sso.email_unverified": "Your identity provider has not verified this email address.",
   "error.sso.email_not_allowed":
-    "This email is not on a verified domain of the organization. Sign in with your master password instead.",
+    "This email is not on a verified domain of the organization and is not linked to it. Sign in with your master password, then link single sign-on in the organization's settings.",
+  "error.sso.link_email_mismatch":
+    "Your identity provider signed you in with a different email than this account. Sign in to it with the same address.",
+  "error.sso.link_taken":
+    "That identity provider account is already linked to someone else in this organization.",
   "sso.sign_in": "Sign in with SSO",
   "sso.sign_in_hint": "Use your company's identity provider",
   "sso.title": "Single sign-on",
@@ -1239,6 +1243,17 @@ export const en = {
     "{org} signed you in as {email}. Choose a master password to encrypt your new vault.",
   "sso.create": "Create vault and join",
   "sso.wrong_account": "Single sign-on returned {email}, which is not the account on this device.",
+  "sso_link.title": "Single sign-on",
+  "sso_link.text":
+    "Link your account to {org}'s identity provider to sign in through SSO. Signing in that way skips the master password and the two-factor code; your vault still opens only with your master password.",
+  "sso_link.link": "Link with SSO",
+  "sso_link.waiting": "Finish signing in with your identity provider…",
+  "sso_link.cancel": "Cancel",
+  "sso_link.linked": "Single sign-on linked",
+  "sso_link.linked_at": "Linked on {date}. You can sign in through SSO with this account.",
+  "sso_link.unlink": "Remove link",
+  "sso_link.unlinked": "Single sign-on link removed",
+  "sso_link.close_window": "Done. You can close this window.",
   "sso_admin.title": "Single sign-on",
   "sso_admin.text":
     "Members sign in through your identity provider. Their master password still decrypts their vault, so 7key never holds the keys.",
@@ -1287,6 +1302,8 @@ export const en = {
     "Members other than owners and admins cannot join other organizations, and people in other organizations cannot join this one.",
   "sso_admin.policies_saved": "Policies saved",
   "orgs.audit_member_joined_sso": "joined through single sign-on",
+  "orgs.audit_member_sso_linked": "linked single sign-on",
+  "orgs.audit_member_sso_unlinked": "removed the single sign-on link",
   "orgs.audit_sso_identifier_set": "set the SSO identifier to",
   "orgs.audit_sso_domain_added": "added the SSO domain",
   "orgs.audit_sso_domain_verified": "verified the domain",

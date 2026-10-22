@@ -83,8 +83,9 @@ master password after signing in. Trusted devices come in a later release.
 On the extension's first screen or on the web dashboard, choose **Sign in with
 SSO** and enter your work email or the identifier. Someone without a 7key
 account yet is asked to create a master password and joins the organization as
-a member. Addresses on other domains cannot use SSO, even when invited: they
-accept the invitation and sign in with their master password.
+a member. Addresses on other domains cannot use SSO on their own, even when
+invited: they accept the invitation, sign in with their master password, then
+choose **Link with SSO** under the organization's **Settings** in the console.
 
 When it works, choose the policies:
 
@@ -107,5 +108,6 @@ Every change on this page is recorded in the organization's activity log.
 | The provider's OpenID configuration could not be read       | Wrong issuer URL, or the provider does not publish discovery at `<issuer>/.well-known/openid-configuration`             |
 | The identity provider did not confirm the sign-in           | Wrong client secret or redirect URI, the person cancelled, or the ID token failed a check (signature, audience, expiry) |
 | Your identity provider has not verified this email address  | The ID token has no `email_verified: true` (for Entra, no `xms_edov: true`)                                             |
-| This email is not on a verified domain of the organization  | Verify the domain. Addresses on other domains sign in with their master password                                        |
+| This email is not on a verified domain of the organization  | Verify the domain. Addresses on other domains sign in with their master password and link SSO in the console            |
+| The identity provider returned a different email            | The member signed in to the IdP with another account than the one that matches their 7key email                         |
 | Single sign-on needs the enterprise plan or a valid licence | No enterprise plan and no valid `LICENSE_KEY`, or the licence expired                                                   |

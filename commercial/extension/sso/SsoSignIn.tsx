@@ -41,7 +41,7 @@ type Step =
   | { kind: "unlock"; session: Extract<SsoSession, { status: "signed_in" }> }
   | { kind: "create"; session: Extract<SsoSession, { status: "register" }> };
 
-function outcomeMessage(code: string): MessageKey {
+export function outcomeMessage(code: string): MessageKey {
   const key = `error.${code}`;
   return key in en ? (key as MessageKey) : "error.sso.failed";
 }

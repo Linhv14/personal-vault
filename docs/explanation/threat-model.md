@@ -318,9 +318,13 @@ server trusts, for sign-in only:
   `7key-verify=<token>` in the domain's TXT records, checked over Cloudflare's
   DNS over HTTPS, can serve SSO for addresses on it, and only one organization
   can hold a domain. Someone who controls the domain's DNS can claim it. An
-  address on another domain never signs in through SSO, even if it is invited or
-  already a member: an invitation is something the admin issues alone, so it
-  cannot stand for the person's consent to trust the admin's IdP.
+  address on another domain signs in through SSO only after its owner linked
+  it: an invitation or a membership is something the admin controls alone, so
+  it cannot stand for the person's consent to trust the admin's IdP. Linking
+  takes the master password (and the 2FA code), happens only from the account's
+  own session, needs the IdP to return the account's email, and is announced by
+  email. Once linked, the IdP's admins can sign that account in like any member
+  on a verified domain.
 - **The flow resists the usual OIDC attacks.** The Worker uses PKCE (`S256`)
   with the IdP, a one-time `state` that expires after ten minutes and a `nonce`
   checked in the ID token; it verifies the ID token's signature (RS256 or

@@ -1,7 +1,6 @@
-import { Hono, type Context, type MiddlewareHandler } from "hono";
-import { randomBytes, toBase64Url } from "#core/bytes.js";
+import { Hono, type MiddlewareHandler } from "hono";
 import { emailDomain } from "#core/org-model.js";
-import { openServerSecret, sealServerSecret } from "#worker/at-rest.js";
+import { openServerSecret } from "#worker/at-rest.js";
 import { now } from "#worker/clock.js";
 import { normalizeEmail } from "#worker/email-address.js";
 import { apiError, type ApiErrorCode } from "#worker/errors.js";
@@ -16,22 +15,26 @@ import {
   isAllowedReturn,
   normalizeIdentifier,
   returnTargets,
-  SSO_SCOPES,
 } from "#commercial/core/sso-model.js";
+import {
+  authorizationUrl,
+  backTo,
+  CLIENT_SECRET_PURPOSE,
+  CODE_VERIFIER_PURPOSE,
+  origin,
+  ready,
+  token,
+} from "./authorize.js";
 import { ssoAvailable } from "./availability.js";
 import { ssoEnv } from "./env.js";
 import { ssoFetcher } from "./fetcher.js";
+import { completeLink } from "./links.js";
 import { joinOrg } from "./membership.js";
 import { discover, exchangeCode, jwksSource, pkceChallenge, verifyIdToken } from "./oidc.js";
-import { SsoStore, type SsoConfig } from "./store.js";
+import { SsoStore } from "./store.js";
 
-type Ctx = Context<AppBindings>;
-
-const STATE_TTL_SECONDS = 600;
 const SESSION_GRANT_TTL_SECONDS = 120;
 const REGISTER_GRANT_TTL_SECONDS = 900;
-const CODE_VERIFIER_PURPOSE = "sso-code-verifier";
-export const CLIENT_SECRET_PURPOSE = "sso-client-secret";
 
 const routes = new Hono<AppBindings>();
 
@@ -44,17 +47,6 @@ const limitByClientIp: MiddlewareHandler<AppBindings> = async (c, next) => {
 };
 
 routes.use("*", limitByClientIp);
-
-const token = () => toBase64Url(randomBytes(32));
-const origin = (c: Ctx) => new URL(c.req.url).origin;
-
-function ready(config: SsoConfig | null): config is SsoConfig & {
-  issuer: string;
-  clientId: string;
-  clientSecret: string;
-} {
-  return Boolean(config?.enabled && config.issuer && config.clientId && config.clientSecret);
-}
 
 async function findConfig(store: SsoStore, body: Record<string, unknown>) {
   const identifier = normalizeIdentifier(body.identifier);
@@ -93,52 +85,21 @@ routes.post("/prepare", async (c) => {
   if (!(await ssoAvailable(c.env, c.req.url, org.plan))) {
     return c.json(apiError("license.required"), 403);
   }
-  const metadata = await discover(ssoFetcher(c.env, c.req.url), config.issuer);
-  if (!metadata) {
+  const authorizeUrl = await authorizationUrl(c, store, config, {
+    returnTo: body.returnTo,
+    clientChallenge: body.clientChallenge,
+    loginHint: normalizeEmail(body.email),
+    linkAccountId: null,
+  });
+  if (!authorizeUrl) {
     return c.json(apiError("sso.discovery_failed"), 502);
-  }
-  const state = token();
-  const nonce = token();
-  const codeVerifier = token();
-  await store.putState(
-    await hashToken(state),
-    {
-      orgId: config.orgId,
-      codeVerifier: await sealServerSecret(c.env, CODE_VERIFIER_PURPOSE, codeVerifier),
-      nonce,
-      clientChallenge: body.clientChallenge,
-      returnTo: body.returnTo,
-    },
-    STATE_TTL_SECONDS,
-  );
-  const authorize = new URL(metadata.authorizationEndpoint);
-  const params: Record<string, string> = {
-    response_type: "code",
-    client_id: config.clientId,
-    redirect_uri: callbackUrl(origin(c)),
-    scope: SSO_SCOPES,
-    state,
-    nonce,
-    code_challenge: await pkceChallenge(codeVerifier),
-    code_challenge_method: "S256",
-  };
-  const hint = normalizeEmail(body.email);
-  if (hint) {
-    params.login_hint = hint;
-  }
-  for (const [name, value] of Object.entries(params)) {
-    authorize.searchParams.set(name, value);
   }
   return c.json({
     orgName: org.name,
     identifier: config.identifier,
-    authorizeUrl: authorize.href,
+    authorizeUrl,
   });
 });
-
-function backTo(c: Ctx, returnTo: string, fragment: Record<string, string>) {
-  return c.redirect(`${returnTo}#${new URLSearchParams(fragment).toString()}`, 302);
-}
 
 routes.get("/callback", async (c) => {
   const state = c.req.query("state") ?? "";
@@ -192,14 +153,25 @@ routes.get("/callback", async (c) => {
   if (!checked.ok) {
     return fail(checked.code);
   }
-  if (!(await store.verifiedDomainOf(pending.orgId, emailDomain(checked.email)))) {
+  if (pending.linkAccountId) {
+    return completeLink(c, store, {
+      orgId: pending.orgId,
+      accountId: pending.linkAccountId,
+      returnTo: pending.returnTo,
+      identity: { issuer: metadata.issuer, subject: checked.subject, email: checked.email },
+    });
+  }
+  const email = (await store.verifiedDomainOf(pending.orgId, emailDomain(checked.email)))
+    ? checked.email
+    : await store.linkedEmail(pending.orgId, metadata.issuer, checked.subject);
+  if (!email) {
     return fail("sso.email_not_allowed");
   }
   const grant = token();
   await store.putGrant(
     await hashToken(grant),
     "session",
-    { orgId: pending.orgId, email: checked.email, clientChallenge: pending.clientChallenge },
+    { orgId: pending.orgId, email, clientChallenge: pending.clientChallenge },
     SESSION_GRANT_TTL_SECONDS,
   );
   return backTo(c, pending.returnTo, { sso_grant: grant });
@@ -217,13 +189,17 @@ routes.post("/session", async (c) => {
     return c.json(apiError("sso.expired"), 403);
   }
   const org = await store.orgPlan(claim.orgId);
-  if (!ready(await store.config(claim.orgId)) || !org) {
+  const config = await store.config(claim.orgId);
+  if (!ready(config) || !org) {
     return c.json(apiError("sso.not_found"), 404);
   }
   if (!(await ssoAvailable(c.env, c.req.url, org.plan))) {
     return c.json(apiError("license.required"), 403);
   }
-  if (!(await store.verifiedDomainOf(claim.orgId, emailDomain(claim.email)))) {
+  const trusted =
+    (await store.verifiedDomainOf(claim.orgId, emailDomain(claim.email))) ||
+    (await store.hasLinkForEmail(claim.orgId, config.issuer, claim.email));
+  if (!trusted) {
     return c.json(apiError("sso.email_not_allowed"), 403);
   }
   const account = await c.env.DB.prepare(

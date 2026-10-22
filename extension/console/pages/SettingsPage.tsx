@@ -7,7 +7,7 @@ import { Badge, Dialog, Field, PageHeader, PanelHead, RoleBadge, Usage } from ".
 import { useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";
 import { href, navigate } from "../router.js";
-import { SsoSettingsPanel } from "#ext/commercial.js";
+import { SsoLinkPanel, SsoSettingsPanel } from "#ext/commercial.js";
 import { DomainsPanel } from "./DomainsPanel.js";
 
 type Modal = "create" | "leave" | null;
@@ -44,6 +44,8 @@ export function SettingsPage() {
       {isOrgAdmin(org.role) && <DomainsPanel key={detail.org.allowedDomains.join()} />}
 
       {isOrgAdmin(org.role) && <SsoSettingsPanel key={org.id} />}
+
+      <SsoLinkPanel key={`link-${org.id}`} />
 
       <section className="panel">
         <PanelHead title={t("console.your_key")} text={t("console.your_key_hint")} />

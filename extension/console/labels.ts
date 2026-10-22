@@ -13,6 +13,8 @@ export const ACTION_LABEL: Record<string, MessageKey> = {
   "member.invited": "orgs.audit_member_invited",
   "member.joined": "orgs.audit_member_joined",
   "member.joined_sso": "orgs.audit_member_joined_sso",
+  "member.sso_linked": "orgs.audit_member_sso_linked",
+  "member.sso_unlinked": "orgs.audit_member_sso_unlinked",
   "org.sso_identifier_set": "orgs.audit_sso_identifier_set",
   "org.sso_domain_added": "orgs.audit_sso_domain_added",
   "org.sso_domain_verified": "orgs.audit_sso_domain_verified",

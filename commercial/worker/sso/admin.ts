@@ -16,11 +16,11 @@ import {
   MAX_SSO_DOMAINS,
   normalizeIdentifier,
 } from "#commercial/core/sso-model.js";
+import { CLIENT_SECRET_PURPOSE } from "./authorize.js";
 import { licenseStatus, ssoAvailable } from "./availability.js";
 import { txtRecords } from "./dns.js";
 import { ssoFetcher } from "./fetcher.js";
 import { discover, normalizeIssuer } from "./oidc.js";
-import { CLIENT_SECRET_PURPOSE } from "./routes.js";
 import { SsoStore } from "./store.js";
 
 const admin = new Hono<AppBindings>();

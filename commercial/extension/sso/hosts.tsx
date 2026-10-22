@@ -1,6 +1,11 @@
 import { useEffect } from "preact/hooks";
 import { setLocal } from "#ext/lib/storage.js";
-import { readOutcome, webReturnTarget } from "#commercial/core/sso-model.js";
+import {
+  LINK_CHANNEL,
+  readLinkOutcome,
+  readOutcome,
+  webReturnTarget,
+} from "#commercial/core/sso-model.js";
 import { SsoSignIn, type SsoHost } from "./SsoSignIn.js";
 
 type OpenVault = SsoHost["openVault"];
@@ -25,6 +30,53 @@ function openInTab(apiUrl: string, lookup: string): void {
 
 async function launchInBrowser(url: string): Promise<string | null> {
   return (await chrome.identity.launchWebAuthFlow({ url, interactive: true })) ?? null;
+}
+
+export interface LinkLauncher {
+  returnTo: string;
+  launch(url: string, signal: AbortSignal): Promise<string | null>;
+}
+
+function waitForPopup(url: string, signal: AbortSignal): Promise<string | null> {
+  return new Promise((resolve) => {
+    const channel = new BroadcastChannel(LINK_CHANNEL);
+    const finish = (result: string | null) => {
+      channel.close();
+      resolve(result);
+    };
+    channel.onmessage = (event: MessageEvent<unknown>) => {
+      if (typeof event.data === "string" && readLinkOutcome(event.data)) {
+        finish(event.data);
+      }
+    };
+    signal.addEventListener("abort", () => finish(null), { once: true });
+    if (!window.open(url, LINK_CHANNEL, "popup,width=520,height=720")) {
+      finish(null);
+    }
+  });
+}
+
+export function linkLauncher(): LinkLauncher {
+  if (typeof chrome !== "undefined" && typeof chrome.identity?.getRedirectURL === "function") {
+    return {
+      returnTo: chrome.identity.getRedirectURL(),
+      launch: (url) => launchInBrowser(url).catch(() => null),
+    };
+  }
+  return { returnTo: webReturnTarget(location.origin), launch: waitForPopup };
+}
+
+export function relayLinkOutcome(): boolean {
+  const url = location.href;
+  if (!readLinkOutcome(url)) {
+    return false;
+  }
+  history.replaceState(null, "", `${location.pathname}${location.search}`);
+  const channel = new BroadcastChannel(LINK_CHANNEL);
+  channel.postMessage(url);
+  channel.close();
+  window.close();
+  return true;
 }
 
 export function PopupSsoSignIn({

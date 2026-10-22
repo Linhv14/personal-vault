@@ -605,6 +605,165 @@ describe("trust in the identity provider", () => {
   });
 });
 
+describe("linking an account on another domain", () => {
+  let guest: Awaited<ReturnType<typeof signedInAccount>>;
+
+  const addMember = (accountId: string, role = "member") =>
+    worker.d1.db
+      .prepare("INSERT INTO org_members (org_id, account_id, role, joined_at) VALUES (?, ?, ?, ?)")
+      .run(ORG, accountId, role, T0);
+
+  beforeEach(async () => {
+    await start();
+    await configure();
+    guest = await signedInAccount(worker, "guest@partner.org");
+    addMember(guest.id);
+  });
+
+  const linkApi = (method: string, body?: unknown, token = guest.token) =>
+    worker
+      .fetch(`/api/orgs/${ORG}/sso/link`, { method, token, ...(body ? { json: body } : {}) })
+      .then(json);
+
+  async function startLink(account = guest, body: Record<string, unknown> = {}) {
+    const response = await linkApi(
+      "POST",
+      { currentAuthKey: account.record.authKey, returnTo: WEB_RETURN, ...body },
+      account.token,
+    );
+    expect(response.status).toBe(200);
+    const authorize = new URL(stringField(response.body, "authorizeUrl"));
+    return {
+      verifier: "",
+      authorize,
+      state: authorize.searchParams.get("state")!,
+      nonce: authorize.searchParams.get("nonce")!,
+      challenge: authorize.searchParams.get("code_challenge")!,
+    };
+  }
+
+  async function linkResult(started: Started, overrides: Record<string, unknown> = {}) {
+    const response = await callback(started, {
+      email: "guest@partner.org",
+      sub: "partner-sub",
+      ...overrides,
+    });
+    expect(response.status).toBe(302);
+    const location = new URL(response.headers.get("Location")!);
+    return Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+  }
+
+  async function ssoAs(sub: string, email = "guest@partner.org") {
+    const started = await prepared({ identifier: "acme" });
+    const result = outcome(await callback(started, { email, sub }));
+    return result.grant ? session(result.grant, started.verifier) : result.error;
+  }
+
+  const linkCount = () =>
+    (
+      worker.d1.db.prepare("SELECT COUNT(*) AS n FROM sso_links WHERE org_id = ?").get(ORG) as {
+        n: number;
+      }
+    ).n;
+
+  it("links after the master password and then signs in through that identity only", async () => {
+    expect((await linkApi("GET")).body).toMatchObject({
+      available: true,
+      onDomain: false,
+      twoFactor: false,
+      link: null,
+    });
+    expect(await ssoAs("partner-sub")).toBe("sso.email_not_allowed");
+
+    const started = await startLink();
+    expect(started.authorize.searchParams.get("login_hint")).toBe("guest@partner.org");
+    expect(await linkResult(started)).toEqual({ sso_link: "linked" });
+    expect((await linkApi("GET")).body.link).toEqual({ linkedAt: T0 });
+    expect(audit.calls.some((call) => call.args[1] === "member.sso_linked")).toBe(true);
+
+    const signedIn = await ssoAs("partner-sub");
+    expect(signedIn).toMatchObject({
+      status: 200,
+      body: { status: "signed_in", email: "guest@partner.org", orgId: ORG },
+    });
+    expect(await ssoAs("someone-else", "guest@partner.org")).toBe("sso.email_not_allowed");
+  });
+
+  it("asks for the master password, and the two-factor code when it is on", async () => {
+    const wrong = await linkApi("POST", {
+      currentAuthKey: owner.record.authKey,
+      returnTo: WEB_RETURN,
+    });
+    expect(wrong).toMatchObject({ status: 403, body: { code: "auth.invalid_credentials" } });
+    worker.d1.db.prepare("UPDATE accounts SET totp_enabled_at = ? WHERE id = ?").run(T0, guest.id);
+    expect((await linkApi("GET")).body.twoFactor).toBe(true);
+    const noCode = await linkApi("POST", {
+      currentAuthKey: guest.record.authKey,
+      returnTo: WEB_RETURN,
+    });
+    expect(noCode).toMatchObject({ status: 401, body: { code: "auth.invalid_2fa" } });
+    expect(linkCount()).toBe(0);
+  });
+
+  it("refuses an identity with another email or one already linked to someone else", async () => {
+    expect(await linkResult(await startLink(), { email: "boss@partner.org" })).toEqual({
+      sso_link_error: "sso.link_email_mismatch",
+    });
+    expect(linkCount()).toBe(0);
+
+    expect(await linkResult(await startLink())).toEqual({ sso_link: "linked" });
+    const other = await signedInAccount(worker, "other@partner.org");
+    addMember(other.id);
+    expect(
+      await linkResult(await startLink(other), { email: "other@partner.org", sub: "partner-sub" }),
+    ).toEqual({ sso_link_error: "sso.link_taken" });
+  });
+
+  it("is only for members, and not for addresses on a verified domain", async () => {
+    const outsider = await signedInAccount(worker, "outsider@partner.org");
+    expect((await linkApi("GET", undefined, outsider.token)).status).toBe(404);
+    const onDomain = await signedInAccount(worker, "dev@acme.com");
+    addMember(onDomain.id);
+    const refused = await linkApi(
+      "POST",
+      { currentAuthKey: onDomain.record.authKey, returnTo: WEB_RETURN },
+      onDomain.token,
+    );
+    expect(refused).toMatchObject({ status: 409, body: { code: "sso.invalid_request" } });
+    const evil = await linkApi("POST", {
+      currentAuthKey: guest.record.authKey,
+      returnTo: "https://evil.example/app/",
+    });
+    expect(evil.body.code).toBe("sso.invalid_return");
+  });
+
+  it("unlinks on request and when the member leaves the organization", async () => {
+    await linkResult(await startLink());
+    const unlinked = await linkApi("DELETE");
+    expect(unlinked.body.link).toBeNull();
+    expect(audit.calls.some((call) => call.args[1] === "member.sso_unlinked")).toBe(true);
+    expect(await ssoAs("partner-sub")).toBe("sso.email_not_allowed");
+
+    await linkResult(await startLink());
+    worker.d1.db
+      .prepare("DELETE FROM org_members WHERE org_id = ? AND account_id = ?")
+      .run(ORG, guest.id);
+    expect(linkCount()).toBe(0);
+  });
+
+  it("applies Require SSO to linked members", async () => {
+    await linkResult(await startLink());
+    await admin("/policies", "PUT", { requireSso: true, singleOrg: false });
+    const login = await worker
+      .fetch("/api/auth/login", {
+        method: "POST",
+        json: { email: "guest@partner.org", authKey: guest.record.authKey },
+      })
+      .then(json);
+    expect(login).toMatchObject({ status: 403, body: { code: "auth.sso_required" } });
+  });
+});
+
 describe("policies", () => {
   let member: Awaited<ReturnType<typeof signedInAccount>>;
   let admin2: Awaited<ReturnType<typeof signedInAccount>>;

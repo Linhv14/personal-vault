@@ -40,6 +40,8 @@ export type ApiErrorCode =
   | "sso.failed"
   | "sso.email_unverified"
   | "sso.email_not_allowed"
+  | "sso.link_email_mismatch"
+  | "sso.link_taken"
   | "two_factor.already_enabled"
   | "two_factor.not_enabled"
   | "two_factor.setup_expired"
@@ -140,7 +142,9 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "sso.failed": "The identity provider did not confirm the sign-in",
   "sso.email_unverified": "The identity provider has not verified this email address",
   "sso.email_not_allowed":
-    "This email is not on a verified domain of the organization and has no pending invitation",
+    "This email is not on a verified domain of the organization and is not linked to it",
+  "sso.link_email_mismatch": "The identity provider returned a different email than this account",
+  "sso.link_taken": "That identity is already linked to another account in this organization",
   "two_factor.already_enabled": "Two-factor authentication is already on",
   "two_factor.not_enabled": "Two-factor authentication is off",
   "two_factor.setup_expired": "The setup took too long; start again",

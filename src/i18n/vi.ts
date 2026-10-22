@@ -1211,7 +1211,11 @@ export const vi: Catalogue = {
   "error.sso.failed": "Nhà cung cấp danh tính chưa xác nhận đăng nhập. Vui lòng thử lại.",
   "error.sso.email_unverified": "Nhà cung cấp danh tính chưa xác minh địa chỉ email này.",
   "error.sso.email_not_allowed":
-    "Email này không thuộc domain đã xác minh của tổ chức. Hãy đăng nhập bằng mật khẩu chính.",
+    "Email này không thuộc domain đã xác minh của tổ chức và chưa được liên kết. Hãy đăng nhập bằng mật khẩu chính, rồi liên kết đăng nhập một lần trong phần cài đặt tổ chức.",
+  "error.sso.link_email_mismatch":
+    "Nhà cung cấp danh tính đăng nhập bằng email khác với tài khoản này. Hãy đăng nhập bằng đúng địa chỉ đó.",
+  "error.sso.link_taken":
+    "Tài khoản ở nhà cung cấp danh tính này đã được liên kết với người khác trong tổ chức.",
   "sso.sign_in": "Đăng nhập bằng SSO",
   "sso.sign_in_hint": "Dùng nhà cung cấp danh tính của công ty",
   "sso.title": "Đăng nhập một lần",
@@ -1227,6 +1231,17 @@ export const vi: Catalogue = {
   "sso.create_lead": "{org} đã xác thực bạn là {email}. Hãy chọn mật khẩu chính để mã hoá kho mới.",
   "sso.create": "Tạo kho và tham gia",
   "sso.wrong_account": "Đăng nhập một lần trả về {email}, không phải tài khoản trên thiết bị này.",
+  "sso_link.title": "Đăng nhập một lần",
+  "sso_link.text":
+    "Liên kết tài khoản với nhà cung cấp danh tính của {org} để đăng nhập qua SSO. Đăng nhập cách này không cần mật khẩu chính và mã hai lớp; kho vẫn chỉ mở được bằng mật khẩu chính.",
+  "sso_link.link": "Liên kết SSO",
+  "sso_link.waiting": "Hãy hoàn tất đăng nhập ở nhà cung cấp danh tính…",
+  "sso_link.cancel": "Huỷ",
+  "sso_link.linked": "Đã liên kết đăng nhập một lần",
+  "sso_link.linked_at": "Đã liên kết lúc {date}. Bạn có thể đăng nhập tài khoản này qua SSO.",
+  "sso_link.unlink": "Gỡ liên kết",
+  "sso_link.unlinked": "Đã gỡ liên kết đăng nhập một lần",
+  "sso_link.close_window": "Xong. Bạn có thể đóng cửa sổ này.",
   "sso_admin.title": "Đăng nhập một lần",
   "sso_admin.text":
     "Thành viên đăng nhập qua nhà cung cấp danh tính của bạn. Mật khẩu chính của họ vẫn giải mã kho, nên 7key không bao giờ giữ khoá.",
@@ -1275,6 +1290,8 @@ export const vi: Catalogue = {
     "Thành viên không phải chủ sở hữu hoặc quản trị viên không thể tham gia tổ chức khác, và người thuộc tổ chức khác không thể tham gia tổ chức này.",
   "sso_admin.policies_saved": "Đã lưu chính sách",
   "orgs.audit_member_joined_sso": "đã tham gia qua đăng nhập một lần",
+  "orgs.audit_member_sso_linked": "đã liên kết đăng nhập một lần",
+  "orgs.audit_member_sso_unlinked": "đã gỡ liên kết đăng nhập một lần",
   "orgs.audit_sso_identifier_set": "đã đặt mã định danh SSO thành",
   "orgs.audit_sso_domain_added": "đã thêm domain SSO",
   "orgs.audit_sso_domain_verified": "đã xác minh domain",

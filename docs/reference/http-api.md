@@ -493,7 +493,10 @@ The provider's redirect. An unknown, used or expired `state` answers
 consumed and the browser is sent to the stored `returnTo` with a fragment:
 `#sso_grant=<grant>` on success, or `#sso_error=<code>` with `sso.failed`,
 `sso.email_unverified`, `sso.email_not_allowed`, `sso.not_found` or
-`license.required`. The grant is single-use and lives two minutes.
+`license.required`. The grant is single-use and lives two minutes. A state from
+`POST /api/orgs/:id/sso/link` never yields a grant: it ends with
+`#sso_link=linked`, or `#sso_link_error=<code>` with the codes above,
+`sso.link_email_mismatch` or `sso.link_taken`.
 
 ### `POST /api/sso/session`
 
@@ -525,6 +528,16 @@ All need an owner or admin session.
 
 Each change is recorded in the organization's audit log. Every write returns
 the same overview as `GET`.
+
+### Linking a member's account
+
+Any member's session. For addresses that are not on a verified domain.
+
+| Method and path                 | Does                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/orgs/:id/sso/link`    | `{ "available", "onDomain", "twoFactor", "link": { "linkedAt" } \| null }`                                                                                                                                                                                                                                                   |
+| `POST /api/orgs/:id/sso/link`   | `{ "currentAuthKey", "code"?, "returnTo" }`; `code` is required when 2FA is on. Returns `{ "authorizeUrl" }` to open in the browser. `403 auth.invalid_credentials`, `401 auth.invalid_2fa`, `400 sso.invalid_return`, `409 sso.invalid_request` (address on a verified domain), `404 sso.not_found`, `403 license.required` |
+| `DELETE /api/orgs/:id/sso/link` | Removes the link and returns the same status as `GET`                                                                                                                                                                                                                                                                        |
 
 ## Team vaults
 
@@ -752,4 +765,6 @@ Errors: `400 shares.invalid_code`, `400 shares.code_expired`, `404 shares.gone`.
 | `sso.expired`                 | 400, 403      | State or grant unknown, used, expired, or verifier wrong         |
 | `sso.failed`                  | redirect      | The code exchange or the ID token check failed                   |
 | `sso.email_unverified`        | redirect      | The ID token does not say the email is verified                  |
-| `sso.email_not_allowed`       | redirect, 403 | Email not on a verified domain of the organization               |
+| `sso.email_not_allowed`       | redirect, 403 | Email not on a verified domain and identity not linked           |
+| `sso.link_email_mismatch`     | redirect      | The IdP returned another email than the account being linked     |
+| `sso.link_taken`              | redirect      | The IdP identity is linked to another member already             |

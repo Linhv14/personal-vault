@@ -7,7 +7,29 @@ vi.mock("../extension/lib/master-password.js", () => ({
   checkNewMasterPassword: vi.fn(async () => null),
 }));
 
+const linkApi = vi.hoisted(() => ({
+  ssoLinkStatus: vi.fn(),
+  startSsoLink: vi.fn(),
+  removeSsoLink: vi.fn(),
+}));
+const launcher = vi.hoisted(() => ({
+  returnTo: "https://vault.example/app/",
+  launch: vi.fn(),
+}));
+const reauth = vi.hoisted(() => ({ currentAuthKey: vi.fn() }));
+
+vi.mock("../commercial/extension/sso/api.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../commercial/extension/sso/api.js")>()),
+  ...linkApi,
+}));
+vi.mock("../commercial/extension/sso/hosts.js", () => ({ linkLauncher: () => launcher }));
+vi.mock("../extension/lib/reauth.js", () => reauth);
+vi.mock("../extension/console/data.js", () => ({
+  useConsole: () => ({ detail: { org: { id: "org-1", name: "Acme" } } }),
+}));
+
 const { SsoSignIn } = await import("../commercial/extension/sso/SsoSignIn.js");
+const { SsoLinkPanel } = await import("../commercial/extension/sso/SsoLinkPanel.js");
 const { challengeOf } = await import("../commercial/extension/sso/api.js");
 
 const API = "https://vault.example";
@@ -126,7 +148,7 @@ describe("SSO sign-in", () => {
     );
     expect(
       await screen.findByText(
-        "This email is not on a verified domain of the organization. Sign in with your master password instead.",
+        "This email is not on a verified domain of the organization and is not linked to it. Sign in with your master password, then link single sign-on in the organization's settings.",
       ),
     ).toBeTruthy();
     expect(requests).toEqual([]);
@@ -180,5 +202,83 @@ describe("SSO sign-in", () => {
     expect(delegate).toHaveBeenCalledWith("acme");
     expect(requests).toEqual([]);
     expect(fake.launch).not.toHaveBeenCalled();
+  });
+});
+
+const UNLINKED = { available: true, onDomain: false, twoFactor: false, link: null };
+const LINKED = { ...UNLINKED, link: { linkedAt: 1_800_000_000 } };
+
+describe("SSO link panel", () => {
+  beforeEach(() => {
+    linkApi.ssoLinkStatus.mockResolvedValue(UNLINKED);
+    linkApi.startSsoLink.mockResolvedValue("https://idp.example/authorize?state=s");
+    linkApi.removeSsoLink.mockResolvedValue(UNLINKED);
+    launcher.launch.mockResolvedValue("https://vault.example/app/#sso_link=linked");
+    reauth.currentAuthKey.mockResolvedValue("auth-key");
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function submit(password = "correct horse", code?: string) {
+    const input = await screen.findByLabelText("Current master password");
+    fireEvent.input(input, { target: { value: password } });
+    if (code !== undefined) {
+      fireEvent.input(screen.getByLabelText("Enter the code from your authenticator app"), {
+        target: { value: code },
+      });
+    }
+    fireEvent.submit(input.closest("form")!);
+  }
+
+  it("stays hidden when SSO is off or the address is on a verified domain", async () => {
+    linkApi.ssoLinkStatus.mockResolvedValueOnce({ ...UNLINKED, onDomain: true });
+    const { container } = render(h(SsoLinkPanel, {}));
+    await waitFor(() => expect(linkApi.ssoLinkStatus).toHaveBeenCalled());
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("proves the master password and the 2FA code, then links through the provider", async () => {
+    linkApi.ssoLinkStatus.mockResolvedValueOnce({ ...UNLINKED, twoFactor: true });
+    linkApi.ssoLinkStatus.mockResolvedValueOnce(LINKED);
+    render(h(SsoLinkPanel, {}));
+    await submit("correct horse", "123456");
+    expect(await screen.findByText(/^Linked on /)).toBeTruthy();
+    expect(reauth.currentAuthKey).toHaveBeenCalledWith("correct horse");
+    expect(linkApi.startSsoLink).toHaveBeenCalledWith("org-1", {
+      currentAuthKey: "auth-key",
+      returnTo: launcher.returnTo,
+      code: "123456",
+    });
+    expect(launcher.launch).toHaveBeenCalledWith(
+      "https://idp.example/authorize?state=s",
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("stops at a wrong master password", async () => {
+    reauth.currentAuthKey.mockResolvedValueOnce(null);
+    render(h(SsoLinkPanel, {}));
+    await submit("wrong");
+    expect(await screen.findByText("That is not the current master password")).toBeTruthy();
+    expect(linkApi.startSsoLink).not.toHaveBeenCalled();
+  });
+
+  it("explains a refusal from the provider round trip", async () => {
+    launcher.launch.mockResolvedValueOnce(
+      "https://vault.example/app/#sso_link_error=sso.link_email_mismatch",
+    );
+    render(h(SsoLinkPanel, {}));
+    await submit();
+    expect(await screen.findByText(/different email than this account/)).toBeTruthy();
+  });
+
+  it("removes the link", async () => {
+    linkApi.ssoLinkStatus.mockResolvedValueOnce(LINKED);
+    render(h(SsoLinkPanel, {}));
+    fireEvent.click(await screen.findByText("Remove link"));
+    expect(await screen.findByLabelText("Current master password")).toBeTruthy();
+    expect(linkApi.removeSsoLink).toHaveBeenCalledWith("org-1");
   });
 });

@@ -47,8 +47,9 @@ by `LICENSE_COMMERCIAL.md`; the AGPL core only knows how to mount it.
 3. The provider redirects to the callback. The Worker exchanges the code with the
    PKCE verifier, verifies the ID token's signature against the provider's JWKS,
    `iss`, `aud`, `exp`, `nonce`, and that `email_verified` is true and the email
-   is on a verified domain of the organization. Membership or a pending
-   invitation is not enough (see _Trust in the identity provider_ below).
+   is on a verified domain of the organization, or that the ID token's `sub`
+   is linked to a member's account. Membership or a pending invitation is not
+   enough (see _Trust in the identity provider_ below).
 4. The Worker issues a short-lived, single-use SSO grant and redirects to the
    client, which trades it for a session at `POST /api/sso/session`.
 5. What happens next depends on the decryption option: ask for the master
@@ -105,11 +106,24 @@ option):
   addresses or members on other domains would let an admin invite anyone on the
   server and sign in to their account, without their password or 2FA, and sign
   in as an owner on another domain. People on other domains join through the
-  invitation and keep signing in with their master password; Require SSO does
-  not apply to them. The domain is checked again when the grant is redeemed, so
-  removing a domain takes effect within the grant's two minutes. Linking an
-  account on another domain to its IdP identity, with the master password as
-  proof, is planned for a later phase.
+  invitation and sign in with their master password until they link their
+  account. The domain is checked again when the grant is redeemed, so removing
+  a domain takes effect within the grant's two minutes.
+- **Linked accounts.** A member on another domain can opt in from the
+  organization's settings in the console. The member proves the account with
+  the master password (and the 2FA code when it is on); `POST
+/api/orgs/:id/sso/link` then starts an authorization whose `state` names the
+  account. On the callback the ID token's email must equal the account's email,
+  and the Worker stores `(organization, issuer, sub) → account` in `sso_links`
+  instead of issuing a grant, so a linking round trip can never sign anyone in.
+  After that, an ID token with that `sub` from that issuer signs the account
+  in, whatever email it carries. The state is created only by the account's
+  own reauthenticated session, which is what makes the link the person's
+  consent; requiring the same email stops a browser that is signed in to
+  someone else's IdP account from linking it. A link ends when the member
+  removes it, leaves the organization, or the provider's issuer changes. Require
+  SSO applies to linked members, and the member is emailed when a link is
+  made.
 - **Seats.** Joining through a verified domain counts against the larger of the
   plan's seats and the licence's seats.
 - **Policies.** Owners and admins are exempt from both. Require SSO needs an
