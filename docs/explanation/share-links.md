@@ -23,6 +23,20 @@ and a limited number of views, while the server stays unable to read it.
 
 The server sees the ciphertext and the id. The key exists only in the link.
 
+The key is written in base64url (RFC 4648 section 5). Standard base64 uses `+`
+and `/`, which get percent-encoded in a URL and would corrupt the key by the
+time the page reads `location.hash`. The page strips the leading `#` before
+decoding, and never logs the key or puts it in a request.
+
+Because every fetch of the ciphertext spends a view, the page is careful about
+order. A link that needs a passphrase ends in a marker, so the page asks for the
+passphrase before fetching anything, and a mistyped passphrase is retried
+against the ciphertext already in memory rather than fetched again. A failed
+AES-GCM check on such a link is reported as a wrong passphrase, which is almost
+always the cause, rather than as a damaged link. Copying a value from the page
+clears the clipboard 30 seconds later: the clipboard is shared with every
+running application, and clipboard managers often keep a history.
+
 The page leaves the key in the address bar, so a recipient can reload a link
 that still has views. The full link therefore stays in that browser's history
 until the link expires, which is no more than the recipient could keep by

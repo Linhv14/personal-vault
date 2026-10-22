@@ -1,11 +1,3 @@
-/**
- * Password generation. All randomness comes from `crypto.getRandomValues()`.
- *
- * NEVER use `Math.random()` here: it is not a CSPRNG, its internal state can be
- * recovered from a handful of outputs, so passwords become predictable to an
- * attacker who sees any sample produced by the same context.
- */
-
 import { VaultError } from "./errors.js";
 import { EFF_SHORT_WORDLIST } from "./wordlist.js";
 
@@ -14,10 +6,6 @@ const UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGITS = "0123456789";
 const SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?";
 
-/**
- * Characters easily confused when a password has to be read aloud or retyped
- * from another screen. Dropping them does not add security, only fewer mistakes.
- */
 const AMBIGUOUS = new Set([..."0OoIl1|`'\"{}[]()"]);
 
 export interface PasswordOptions {
@@ -31,18 +19,9 @@ export interface PasswordOptions {
 
 export interface GeneratedSecret {
   value: string;
-  /** Entropy in bits — the only trustworthy measure of strength. */
   entropyBits: number;
 }
 
-/**
- * A uniformly distributed integer in [0, max).
- *
- * The common mistake is `randomValue % max`: when `max` does not divide 2^32
- * evenly, low values occur slightly more often. That is modulo bias, and it
- * reduces the real entropy of generated passwords. Rejection sampling discards
- * the values in the ragged tail so the rest is exactly uniform.
- */
 export function randomInt(max: number): number {
   if (!Number.isInteger(max) || max <= 0) {
     throw new VaultError("generator.invalid_max", {}, `max must be a positive integer, got ${max}`);
@@ -65,7 +44,6 @@ function pick<T>(items: readonly T[]): T {
   return items[randomInt(items.length)]!;
 }
 
-/** Fisher-Yates driven by randomInt, so the shuffle is unbiased too. */
 function shuffle<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i--) {
     const j = randomInt(i + 1);
@@ -106,15 +84,6 @@ export function buildAlphabet(options: PasswordOptions = {}): string {
   return alphabet;
 }
 
-/**
- * Generate a random password containing at least one character from every
- * selected set.
- *
- * Plenty of sites demand "an uppercase letter, a digit and a symbol", so without
- * this guarantee you would be hitting regenerate every few tries. The approach:
- * take one mandatory character per set, fill the rest from the full alphabet,
- * then shuffle — which keeps every position uniformly random.
- */
 export function generatePassword(options: PasswordOptions = {}): GeneratedSecret {
   const { length = 20 } = options;
   const alphabet = buildAlphabet(options);
@@ -138,8 +107,6 @@ export function generatePassword(options: PasswordOptions = {}): GeneratedSecret
 
   return {
     value: shuffle(chars).join(""),
-    // An upper bound: the "one per set" constraint narrows the space slightly.
-    // At length >= 16 the difference is under one bit, which is negligible.
     entropyBits: round(length * Math.log2(alphabet.length)),
   };
 }
@@ -180,16 +147,6 @@ export interface PassphraseOptions {
   wordlist?: readonly string[];
 }
 
-/**
- * A passphrase like "acid-zone-tulip-cargo". Longer, but far easier to retype by
- * hand — useful for passwords you must enter on a TV, a console, or read aloud
- * over the phone.
- *
- * The default is 8 words, not 5. The short word list carries only 10.34 bits per
- * word, so 5 words is 51.7 bits — which `rateStrength` calls weak, and which is
- * within reach of offline brute force. 8 words gives 82.7 bits, about the same
- * as a random 13-character password.
- */
 export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSecret {
   const {
     words = 8,
@@ -215,8 +172,6 @@ export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSe
   });
 
   let value = chosen.join(separator);
-  // Entropy is computed from the actual list length, so swapping word lists
-  // never makes the displayed figure wrong.
   let entropyBits = words * Math.log2(wordlist.length);
 
   if (appendDigit) {
@@ -227,7 +182,6 @@ export function generatePassphrase(options: PassphraseOptions = {}): GeneratedSe
   return { value, entropyBits: round(entropyBits) };
 }
 
-/** A numeric PIN — for screen locks, bank cards, safes. */
 export function generatePin(length = 6): GeneratedSecret {
   if (length < 3 || length > 32) {
     throw new VaultError(
@@ -242,10 +196,6 @@ export function generatePin(length = 6): GeneratedSecret {
 
 export type Strength = "very_weak" | "weak" | "fair" | "strong" | "very_strong";
 
-/**
- * Rate by entropy, not by "has an uppercase and a digit" rules. Anything from
- * 75 bits up is beyond the reach of present-day offline brute force.
- */
 export function rateStrength(entropyBits: number): Strength {
   if (entropyBits < 40) {
     return "very_weak";

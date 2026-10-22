@@ -75,7 +75,6 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-/** The SVG body of an icon: constant markup from this file, never user data. */
 export function iconMarkup(name: IconName): string {
   return ICONS[name];
 }

@@ -1,16 +1,3 @@
-/**
- * Encryption for share links.
- *
- * The rule: the key lives in the URL fragment (`#...`), the one part of a URL a
- * browser never sends to the server. The Worker holds ciphertext only. Even a
- * full dump of D1 decrypts to nothing without the links.
- *
- * The remaining limitation: whatever channel carries the link — a chat app,
- * email — can read the fragment too, because to them a link is just text. Hence
- * the optional extra passphrase below: delivered over a different channel, one
- * compromised channel is no longer enough.
- */
-
 import { fromBase64Url, randomBytes, toBase64Url, utf8Decode, utf8Encode } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
 import { open, seal, type SealedData } from "./crypto.js";
@@ -85,20 +72,11 @@ export function parseSharePayload(value: unknown): SharePayload | null {
 
 export interface CreatedShare {
   sealed: SealedData;
-  /** The string to place after `#` in the link. Never sent to a server. */
   fragment: string;
 }
 
-/** Suffix marking a link that needs a passphrase, so the page can ask first. */
 const PASSPHRASE_MARKER = ".p";
 
-/**
- * Derive the real key from the link key and the optional passphrase.
- *
- * HKDF with the passphrase as salt: both are required to reach the same key. The
- * passphrase does not need to be strong — the link key already carries 256 bits
- * of entropy — it is a second factor, not a source of entropy.
- */
 async function deriveShareKey(keyMaterial: Bytes, passphrase?: string): Promise<CryptoKey> {
   const hkdfKey = await crypto.subtle.importKey("raw", keyMaterial, "HKDF", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
@@ -131,7 +109,6 @@ export async function createShare(
   };
 }
 
-/** The recipient page calls this to decide whether to prompt for a passphrase. */
 export function fragmentNeedsPassphrase(fragment: string): boolean {
   return stripHash(fragment).endsWith(PASSPHRASE_MARKER);
 }
@@ -165,8 +142,6 @@ export async function openShare(
   try {
     plaintext = await open(key, sealed);
   } catch {
-    // GCM tag mismatch. For a passphrase-protected link that is almost always a
-    // mistyped passphrase rather than a damaged link.
     throw new VaultError(
       needsPassphrase ? "share.wrong_passphrase" : "share.undecryptable",
       {},

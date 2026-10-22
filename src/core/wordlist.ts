@@ -1,13 +1,3 @@
-/**
- * EFF Short Wordlist #1 — 1296 words, from
- * https://www.eff.org/files/2016/09/08/eff_short_wordlist_1.txt
- *
- * The short list (1296 words) is used instead of the long one (7776): each word
- * carries log2(1296) = 10.34 bits rather than 12.92, but the words are shorter
- * and much easier to type. The generator compensates with more words, and it
- * computes entropy from the list length itself — so swapping in another list
- * never makes the displayed figure wrong.
- */
 
 export const EFF_SHORT_WORDLIST: readonly string[] = [
   "acid",

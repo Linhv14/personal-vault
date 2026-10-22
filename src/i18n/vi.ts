@@ -1,15 +1,7 @@
-/**
- * Vietnamese message catalogue.
- *
- * Typed as `Catalogue`, so leaving a key out of this file is a compile error
- * rather than a string that silently shows up in English at runtime.
- */
-
 import { APP_NAME } from "../core/brand.js";
 import type { Catalogue } from "./en.js";
 
 export const vi: Catalogue = {
-  // --- Errors thrown by src/core -------------------------------------------
   "error.base32.invalid_character": 'Khoá 2FA có ký tự không hợp lệ: "{char}"',
   "error.totp.empty_secret": "Chưa nhập khoá 2FA",
   "error.totp.invalid_uri": "URI không hợp lệ",
@@ -34,7 +26,6 @@ export const vi: Catalogue = {
   "error.generator.pin_length_out_of_range": "PIN phải dài từ {min} đến {max} số",
   "error.generator.invalid_max": "max phải là số nguyên dương",
 
-  // --- Errors surfaced by the API client -----------------------------------
   "error.api.no_server": "Chưa cấu hình địa chỉ server",
   "error.api.not_signed_in": "Bạn chưa đăng nhập",
   "error.api.offline": "Không kết nối được server. Dữ liệu đã lưu vẫn xem được bình thường.",
@@ -43,7 +34,6 @@ export const vi: Catalogue = {
   "error.api.bad_response":
     "Server trả về dữ liệu mà 7key không đọc được. Hãy thử lại hoặc cập nhật 7key.",
 
-  // --- Error codes returned by the Worker ----------------------------------
   "error.auth.bad_registration_token": "Sai mã đăng ký",
   "error.auth.invalid_body": "Yêu cầu không hợp lệ",
   "error.auth.invalid_email": "Email không hợp lệ",
@@ -81,7 +71,6 @@ export const vi: Catalogue = {
   "error.server.not_found": "Không có endpoint này",
   "error.server.error": "Server gặp lỗi",
 
-  // --- Shared --------------------------------------------------------------
   "common.copy": "Sao chép",
   "common.copied": "Đã sao chép {what} · tự xoá sau 30 giây",
   "common.show": "Hiện",
@@ -100,7 +89,6 @@ export const vi: Catalogue = {
   "strength.strong": "mạnh",
   "strength.very_strong": "rất mạnh",
 
-  // --- Setup ---------------------------------------------------------------
   "setup.tagline": "Mật khẩu và mã 2FA, mã hoá ngay trên máy bạn.",
   "setup.mode_create": "Tạo kho mới",
   "setup.mode_create_hint": "Lần đầu dùng 7key? Tạo kho để cất mật khẩu",
@@ -130,7 +118,6 @@ export const vi: Catalogue = {
   "password.checking": "Đang kiểm tra rò rỉ…",
   "password.strength": "Độ mạnh: {strength}",
 
-  // --- Unlock --------------------------------------------------------------
   "pin.title": "Mở khoá bằng PIN",
   "pin.hint":
     "Chỉ dùng trên thiết bị này. Sai 5 lần PIN sẽ tự tắt; sau 30 ngày cần nhập lại mật khẩu chính.",
@@ -628,7 +615,6 @@ export const vi: Catalogue = {
     "Xoá cấu hình và dữ liệu lưu trên máy này? Kho trên server vẫn giữ nguyên.",
   "unlock.offline": "Offline · đang mở bản lưu trên máy",
 
-  // --- Item list -----------------------------------------------------------
   "list.search": "Tìm…",
   "list.add": "Thêm mục",
   "list.generator": "Tạo mật khẩu",
@@ -776,7 +762,6 @@ export const vi: Catalogue = {
   "list.clock_behind": "chậm",
   "list.clock_ahead": "nhanh",
 
-  // --- Add / edit ----------------------------------------------------------
   "edit.edit_title": "Sửa",
   "edit.name": "Tên",
   "edit.totp_secret": "Khoá 2FA",
@@ -803,7 +788,6 @@ export const vi: Catalogue = {
   "edit.added": "Đã thêm mục",
   "edit.deleted": "Đã xoá",
 
-  // --- Generator -----------------------------------------------------------
   "gen.title": "Tạo mật khẩu",
   "gen.mode_random": "Ngẫu nhiên",
   "gen.mode_passphrase": "Passphrase",
@@ -826,7 +810,6 @@ export const vi: Catalogue = {
   "gen.save_identity": "Lưu thành địa chỉ",
   "gen.entropy": "{bits} bit · {strength}",
 
-  // --- Sharing -------------------------------------------------------------
   "share.title": "Chia sẻ",
   "share.expires_in": "Hết hạn",
   "share.ttl_1h": "1 giờ",
@@ -842,7 +825,6 @@ export const vi: Catalogue = {
   "share.copy_link": "Sao chép link",
   "share.result_note_passphrase": "Nhớ gửi mật khẩu mở link qua kênh khác.",
 
-  // --- Settings ------------------------------------------------------------
   "share.ttl_30d": "30 ngày",
   "share.access": "Ai được mở",
   "share.access_anyone": "Bất kỳ ai có link",
@@ -1092,7 +1074,6 @@ export const vi: Catalogue = {
   "settings.sessions_revoke_others_confirm": "Đăng xuất mọi thiết bị trừ thiết bị này?",
   "settings.sessions_revoked_others": "Đã đăng xuất các thiết bị khác",
 
-  // --- Share recipient page ------------------------------------------------
   "common.close": "Đóng",
   "list.autofill_promo": "Để 7key tự điền và lưu mật khẩu trên trang web thay cho trình duyệt",
   "list.autofill_enable": "Bật",

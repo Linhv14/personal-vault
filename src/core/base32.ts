@@ -1,17 +1,8 @@
-/**
- * base32 per RFC 4648 §6 — the encoding every site uses to show a TOTP secret
- * ("JBSWY3DPEHPK3PXP"). Not base32hex, not Crockford.
- */
-
 import type { Bytes } from "./bytes.js";
 import { VaultError } from "./errors.js";
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-/**
- * Decode base32, being forgiving about what a human pastes in: strip spaces and
- * dashes (sites often display "jbsw y3dp ehpk"), accept lowercase, drop padding.
- */
 export function base32Decode(input: string): Bytes {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
   if (clean.length === 0) {
@@ -31,8 +22,6 @@ export function base32Decode(input: string): Bytes {
         `Invalid base32 character: ${char}`,
       );
     }
-    // Each base32 character carries exactly 5 bits. Accumulate, then drain in
-    // 8-bit chunks.
     buffer = (buffer << 5) | value;
     bitsInBuffer += 5;
     if (bitsInBuffer >= 8) {
@@ -41,7 +30,6 @@ export function base32Decode(input: string): Bytes {
     }
   }
 
-  // Leftover bits are the final character's padding — discard them, per the RFC.
   return new Uint8Array(out);
 }
 
@@ -67,14 +55,12 @@ export function base32Encode(bytes: Uint8Array): string {
     out += ALPHABET[(buffer << (5 - bitsInBuffer)) & 0x1f];
   }
 
-  // Pad to a multiple of 8 characters.
   while (out.length % 8 !== 0) {
     out += "=";
   }
   return out;
 }
 
-/** Validate a string before treating it as a TOTP secret. */
 export function isValidBase32(input: string): boolean {
   const clean = input.replace(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
   if (clean.length === 0) {

@@ -1,15 +1,3 @@
-/**
- * The share recipient page. Runs entirely in the recipient's browser.
- *
- * Two rules drive the order of everything below:
- *
- * 1. The key lives in `location.hash`, and a fragment is never sent to a server.
- *    Do not log it and never put it in a request.
- * 2. Every GET of the share spends one view. So a link that needs a passphrase
- *    must prompt *before* fetching, and retries must reuse the response already
- *    in memory rather than asking again.
- */
-
 import { fragmentNeedsPassphrase, openShare, type SharePayload } from "../src/core/share.js";
 import { generateTotp, secondsRemaining, TOTP_DEFAULTS } from "../src/core/totp.js";
 import {
@@ -472,7 +460,6 @@ function noteField(value: string): HTMLElement {
   return wrap;
 }
 
-/** Live 2FA code, computed locally per RFC 6238 — no network involved. */
 function totpField(config: NonNullable<SharePayload["totp"]>): HTMLElement {
   const period = config.period || TOTP_DEFAULTS.period;
   const { wrap, body } = field(t("view.totp_label"));
@@ -545,10 +532,6 @@ function createRing(): { svg: SVGSVGElement; update: (ratio: number) => void } {
   };
 }
 
-/**
- * Copy, then clear the clipboard after 30 seconds. The clipboard is shared with
- * every running application, and clipboard managers often persist history.
- */
 let toastTimer: number | undefined;
 
 function showToast(message: string): void {

@@ -1,16 +1,5 @@
-/**
- * English message catalogue — the source of truth.
- *
- * `MessageKey` is derived from this object, and every other locale is typed as
- * `Record<MessageKey, string>`. Adding a key here without translating it is a
- * compile error, so a locale can never silently fall back to English.
- *
- * Placeholders use `{name}` and are substituted by `translator()`.
- */
-
 import { APP_NAME } from "../core/brand.js";
 export const en = {
-  // --- Errors thrown by src/core -------------------------------------------
   "error.base32.invalid_character": 'Invalid character in base32 secret: "{char}"',
   "error.totp.empty_secret": "The 2FA secret is empty",
   "error.totp.invalid_uri": "That is not a valid URI",
@@ -35,7 +24,6 @@ export const en = {
   "error.generator.pin_length_out_of_range": "PIN length must be between {min} and {max}",
   "error.generator.invalid_max": "max must be a positive integer",
 
-  // --- Errors surfaced by the API client -----------------------------------
   "error.api.no_server": "No server address configured",
   "error.api.not_signed_in": "Not signed in",
   "error.api.offline": "Cannot reach the server. Data already saved is still readable.",
@@ -43,7 +31,6 @@ export const en = {
   "error.api.generic": "Error {status}",
   "error.api.bad_response": "The server sent a reply 7key cannot read. Try again or update 7key.",
 
-  // --- Error codes returned by the Worker ----------------------------------
   "error.auth.bad_registration_token": "That registration token is not correct",
   "error.auth.invalid_body": "The request was malformed",
   "error.auth.invalid_email": "That email address is not valid",
@@ -82,7 +69,6 @@ export const en = {
   "error.server.not_found": "No such endpoint",
   "error.server.error": "Server error",
 
-  // --- Shared --------------------------------------------------------------
   "common.copy": "Copy",
   "common.copied": "Copied {what} · clears in 30s",
   "common.show": "Show",
@@ -101,7 +87,6 @@ export const en = {
   "strength.strong": "strong",
   "strength.very_strong": "very strong",
 
-  // --- Setup ---------------------------------------------------------------
   "setup.tagline": "Passwords and 2FA codes, encrypted on your device.",
   "setup.mode_create": "Create a new vault",
   "setup.mode_create_hint": "First time here: set up where your passwords live",
@@ -133,7 +118,6 @@ export const en = {
   "password.checking": "Checking against known breaches…",
   "password.strength": "Strength: {strength}",
 
-  // --- Unlock --------------------------------------------------------------
   "pin.title": "Unlock with a PIN",
   "pin.hint":
     "On this device only. 5 wrong tries turn it off; the master password is needed again when the session ends after 30 days.",
@@ -635,7 +619,6 @@ export const en = {
     "Erase the configuration and data cached on this machine? The vault on the server is untouched.",
   "unlock.offline": "Offline · opened the saved copy",
 
-  // --- Item list -----------------------------------------------------------
   "list.search": "Search…",
   "list.add": "Add item",
   "list.generator": "Generate a password",
@@ -784,7 +767,6 @@ export const en = {
   "list.clock_behind": "behind",
   "list.clock_ahead": "ahead",
 
-  // --- Add / edit ----------------------------------------------------------
   "edit.edit_title": "Edit",
   "edit.name": "Name",
   "edit.totp_secret": "2FA secret",
@@ -812,7 +794,6 @@ export const en = {
   "edit.added": "Item added",
   "edit.deleted": "Deleted",
 
-  // --- Generator -----------------------------------------------------------
   "gen.title": "Generator",
   "gen.mode_random": "Random",
   "gen.mode_passphrase": "Passphrase",
@@ -835,7 +816,6 @@ export const en = {
   "gen.save_identity": "Save as address",
   "gen.entropy": "{bits} bits · {strength}",
 
-  // --- Sharing -------------------------------------------------------------
   "share.title": "Share",
   "share.expires_in": "Expires",
   "share.ttl_1h": "1 hour",
@@ -851,7 +831,6 @@ export const en = {
   "share.copy_link": "Copy link",
   "share.result_note_passphrase": "Send the link password through a different channel.",
 
-  // --- Settings ------------------------------------------------------------
   "share.ttl_30d": "30 days",
   "share.access": "Who can open",
   "share.access_anyone": "Anyone with the link",
@@ -1110,7 +1089,6 @@ export const en = {
   "settings.sessions_revoke_others_confirm": "Sign out every device except this one?",
   "settings.sessions_revoked_others": "Other devices signed out",
 
-  // --- Share recipient page ------------------------------------------------
   "common.close": "Close",
   "list.autofill_promo": "Use 7key to fill and save passwords on websites, instead of the browser",
   "list.autofill_enable": "Turn on",
