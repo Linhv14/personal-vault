@@ -52,7 +52,8 @@ vi.stubGlobal(
   }),
 );
 
-const { handleAutofill, trustedSender } = await import("../extension/lib/autofill-service.js");
+const { handleAutofill } = await import("../extension/lib/autofill-service.js");
+const { trustedSender } = await import("../extension/lib/autofill/senders.js");
 const { rememberCardFrame } = await import("../extension/lib/card-frames.js");
 const { rememberFrameCard } = await import("../extension/lib/form-save.js");
 const { saveItem } = await import("../extension/lib/vault/store.js");

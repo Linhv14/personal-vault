@@ -41,7 +41,7 @@ vi.stubGlobal(
 );
 
 const { handlePasskey } = await import("../extension/lib/passkey/service.js");
-const { trustedSender } = await import("../extension/lib/autofill-service.js");
+const { trustedSender } = await import("../extension/lib/autofill/senders.js");
 const { decryptAll } = await import("../extension/lib/vault/decrypt.js");
 
 const page = trustedSender(

@@ -1,4 +1,4 @@
-import type { TrustedSender } from "../autofill-service.js";
+import type { TrustedSender } from "../autofill/senders.js";
 import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
 import { registrableDomain } from "../../../src/core/site.js";

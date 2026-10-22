@@ -7,7 +7,7 @@ import type {
   CardFrameCapture,
   FormPrompt,
 } from "./autofill-protocol.js";
-import type { TrustedSender } from "./autofill-service.js";
+import type { TrustedSender } from "./autofill/senders.js";
 import { isCardFrame } from "./card-frames.js";
 import {
   addressPreview,

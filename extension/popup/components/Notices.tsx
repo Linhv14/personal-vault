@@ -1,12 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import type { PendingPrompt } from "../../lib/autofill-protocol.js";
-import {
-  forgetMissedSave,
-  handleAutofill,
-  missedSave,
-  tabSender,
-  type TrustedSender,
-} from "../../lib/autofill-service.js";
+import { forgetMissedSave, handleAutofill, missedSave } from "../../lib/autofill-service.js";
+import { tabSender, type TrustedSender } from "../../lib/autofill/senders.js";
 import type { IconName } from "../../../src/ui/icons.js";
 import { biometricLabel } from "../../lib/biometric.js";
 import { Icon } from "../../ui/components/Icon.js";

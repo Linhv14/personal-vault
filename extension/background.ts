@@ -9,12 +9,8 @@ import {
   isAutofillRequest,
   isCardFrameCapture,
 } from "./lib/autofill-protocol.js";
-import {
-  forgetTab,
-  handleAutofill,
-  trustedSender,
-  type TrustedSender,
-} from "./lib/autofill-service.js";
+import { forgetTab, handleAutofill } from "./lib/autofill-service.js";
+import { trustedSender, type TrustedSender } from "./lib/autofill/senders.js";
 import { isPasskeyRequest } from "./lib/passkey/protocol.js";
 import { handlePasskey } from "./lib/passkey/service.js";
 import { forgetCardFrames, rememberCardFrame } from "./lib/card-frames.js";

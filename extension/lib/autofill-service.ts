@@ -20,7 +20,9 @@ import { boundToSite } from "./form-capture.js";
 import { handleFormRequest } from "./form-save.js";
 import { siteWarning } from "./site-warning.js";
 import { getLocal } from "./storage.js";
-import { registrableDomain, siteOf } from "../../src/core/site.js";
+import { registrableDomain } from "../../src/core/site.js";
+import { fetchQrImage } from "./autofill/qr-image.js";
+import { formsAllowed, isVaultServer, type TrustedSender } from "./autofill/senders.js";
 import { byLastUsed } from "./vault/search.js";
 import { markUsed, newItemId, saveItem } from "./vault/store.js";
 import { matchesSite, sameSite } from "./vault/site-match.js";
@@ -38,48 +40,6 @@ interface PendingCapture {
   at: number;
   confirmed?: boolean;
   dismissed?: boolean;
-}
-
-export interface TrustedSender {
-  tabId: number;
-  url: string;
-  domain: string;
-  site?: string;
-}
-
-function isFillableUrl(url: URL): boolean {
-  if (url.protocol === "https:") {
-    return true;
-  }
-  return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-}
-
-function senderFor(tabId: number, rawUrl: string | undefined): TrustedSender | null {
-  let url: URL;
-  try {
-    url = new URL(rawUrl ?? "");
-  } catch {
-    return null;
-  }
-  const domain = registrableDomain(url.href);
-  if (!isFillableUrl(url) || !domain) {
-    return null;
-  }
-  return { tabId, url: url.href, domain, site: siteOf(url.href) ?? domain };
-}
-
-export function trustedSender(
-  sender: chrome.runtime.MessageSender,
-  extensionId: string,
-): TrustedSender | null {
-  if (sender.id !== extensionId || sender.frameId !== 0 || sender.tab?.id === undefined) {
-    return null;
-  }
-  return senderFor(sender.tab.id, sender.url ?? sender.tab.url);
-}
-
-export function tabSender(tab: chrome.tabs.Tab | undefined): TrustedSender | null {
-  return tab?.id === undefined ? null : senderFor(tab.id, tab.url);
 }
 
 function pendingKey(tabId: number): string {
@@ -180,10 +140,6 @@ function bySiteBound(domain: string) {
   return (a: VaultItem, b: VaultItem) => rank(a) - rank(b) || byLastUsed(a, b);
 }
 
-async function formsAllowed(sender: TrustedSender): Promise<boolean> {
-  return isFillableUrl(new URL(sender.url)) && !(await isVaultServer(sender.url));
-}
-
 function totpTarget(items: VaultItem[], pageUrl: string): VaultItem | undefined {
   return items
     .filter((item) => isPersonal(item) && matchesSite(item, pageUrl) && sameSite(item, pageUrl))
@@ -193,38 +149,6 @@ function totpTarget(items: VaultItem[], pageUrl: string): VaultItem | undefined 
 async function currentCode(config: TotpConfig): Promise<string> {
   const { clockSkew = 0 } = await getLocal();
   return generateTotp(config, Date.now() + clockSkew * 1000);
-}
-
-const MAX_QR_IMAGE_BYTES = 512 * 1024;
-
-async function fetchQrImage(url: string): Promise<string | null> {
-  let target: URL;
-  try {
-    target = new URL(url);
-  } catch {
-    return null;
-  }
-  if (target.protocol !== "https:") {
-    return null;
-  }
-  try {
-    const response = await fetch(target, { credentials: "omit", redirect: "error" });
-    const type = response.headers.get("content-type") ?? "";
-    if (!response.ok || !/^image\/(png|gif|jpeg|webp|svg\+xml)\b/.test(type)) {
-      return null;
-    }
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length > MAX_QR_IMAGE_BYTES) {
-      return null;
-    }
-    let binary = "";
-    for (const byte of bytes) {
-      binary += String.fromCharCode(byte);
-    }
-    return `data:${type.split(";")[0]};base64,${btoa(binary)}`;
-  } catch {
-    return null;
-  }
 }
 
 async function readPendingTotp(sender: TrustedSender): Promise<PendingTotp | null> {
@@ -301,18 +225,6 @@ function promptFor(
     update: Boolean(existing),
     confirmed: Boolean(pending.confirmed),
   };
-}
-
-async function isVaultServer(url: string): Promise<boolean> {
-  const { apiUrl } = await getLocal();
-  if (!apiUrl) {
-    return false;
-  }
-  try {
-    return new URL(url).origin === new URL(apiUrl).origin;
-  } catch {
-    return false;
-  }
 }
 
 export async function handleAutofill(
