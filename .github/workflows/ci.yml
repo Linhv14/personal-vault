@@ -72,12 +72,17 @@ jobs:
         run: |
           printf 'REGISTRATION_TOKEN=token-dev-local\nEMAIL_PROBE_SECRET=ci-probe\nAT_REST_SECRET=ci-at-rest\n' > .dev.vars
           jwks=$(node -e 'const k=require("./test/fixtures/ci-test-key.json");process.stdout.write(Buffer.from(JSON.stringify([{kid:k.kid,kty:k.kty,n:k.n,e:k.e}])).toString("base64url"))')
+          license_public=$(node -p 'require("./test/fixtures/license-test-key.json").publicKey')
+          license=$(LICENSE_SIGNING_KEY="$(node -p 'require("./test/fixtures/license-test-key.json").privateKeyPem')" \
+            node commercial/scripts/issue-license.ts issue --licensee CI --seats 100 --expires 2099-12-31)
           status=0
           for file in test/e2e*.test.ts; do
             state="$RUNNER_TEMP/state-$(basename "$file" .test.ts)"
             npx wrangler d1 migrations apply vault --local --persist-to "$state" > /dev/null
             npx wrangler dev --local --port 8787 --persist-to "$state" \
               --var "CI_TEST_JWKS:$jwks" --var "CI_TEST_ISSUER:https://ci-test.invalid" \
+              --var "SSO_TEST_ISSUER:https://idp.test.invalid" --var "SSO_TEST_LICENSE_KEY:$license_public" \
+              --var "LICENSE_KEY:$license" \
               --var "MIGRATION_TOKEN:local-migration-token" > "$RUNNER_TEMP/worker.log" 2>&1 &
             worker=$!
             ready=0
