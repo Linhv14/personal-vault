@@ -67,8 +67,12 @@ async function call<T>(
   init: RequestInit & { token?: string } = {},
 ): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body) headers.set("Content-Type", "application/json");
-  if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
   let response: Response;
   try {
     response = await request(`${server}${path}`, { ...init, headers });
@@ -218,7 +222,9 @@ export function findEnvironment(
   const environment = content.environments.find((entry) =>
     wanted.name ? refersTo(wanted.name, entry) : entry.id === wanted.id,
   );
-  if (environment) return environment;
+  if (environment) {
+    return environment;
+  }
   const names = content.environments.map((entry) => entry.name).join(", ");
   throw new AgentError(
     wanted.name
@@ -251,7 +257,9 @@ export async function listProjects(
   const choices: ProjectChoice[] = [];
   for (const team of detail.teams) {
     const listed = detail.projects[team.id];
-    if (!team.wrappedKey || !listed) continue;
+    if (!team.wrappedKey || !listed) {
+      continue;
+    }
     const teamKey = new Uint8Array(
       await unwrapForRecipient(
         session.identity,
@@ -315,11 +323,15 @@ export async function loadEnvironment(
   environmentName?: string,
 ): Promise<Selected> {
   const org = (await listOrgs(session)).find((entry) => entry.id === ref.orgId);
-  if (!org) throw new AgentError("The linked organization is gone or you left it; run 7key link");
+  if (!org) {
+    throw new AgentError("The linked organization is gone or you left it; run 7key link");
+  }
   const choice = (await listProjects(session, org)).find(
     (entry) => entry.projectId === ref.projectId && entry.teamId === ref.teamId,
   );
-  if (!choice) throw new AgentError("The linked project is gone or out of reach; run 7key link");
+  if (!choice) {
+    throw new AgentError("The linked project is gone or out of reach; run 7key link");
+  }
   const environment = findEnvironment(choice.content, {
     id: ref.environmentId,
     name: environmentName,
@@ -356,19 +368,41 @@ export async function selectEnvironment(
   return openEnvironment(session, choice, environment);
 }
 
+const ACCESS_RETRY_DELAYS_MS = [500, 2000];
+
+function worthRetrying(error: unknown): boolean {
+  if (!(error instanceof ServerRefusal)) {
+    return true;
+  }
+  return error.status === 429 || error.status >= 500;
+}
+
 export async function noteAccess(
   session: Session,
   selected: Selected,
   access: SecretAccess,
+  pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
 ): Promise<void> {
-  await call(
-    session.request,
-    session.server,
-    `/api/orgs/${selected.orgId}/teams/${selected.teamId}/projects/${selected.projectId}/access`,
-    {
-      method: "POST",
-      token: session.token,
-      body: JSON.stringify({ events: [{ environmentId: selected.environment.id, access }] }),
-    },
-  ).catch(() => {});
+  const path = `/api/orgs/${selected.orgId}/teams/${selected.teamId}/projects/${selected.projectId}/access`;
+  const body = JSON.stringify({ events: [{ environmentId: selected.environment.id, access }] });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await call(session.request, session.server, path, {
+        method: "POST",
+        token: session.token,
+        body,
+      });
+      return;
+    } catch (error) {
+      const delay = ACCESS_RETRY_DELAYS_MS[attempt];
+      if (delay === undefined || !worthRetrying(error)) {
+        const reason = error instanceof Error ? error.message : String(error);
+        process.stderr.write(
+          `7key: could not record this access in the activity log (${reason})\n`,
+        );
+        return;
+      }
+      await pause(delay);
+    }
+  }
 }

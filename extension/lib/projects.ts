@@ -21,7 +21,8 @@ import {
   type SecretContent,
 } from "../../src/core/projects.js";
 import { toBase64 } from "../../src/core/bytes.js";
-import { request } from "./api.js";
+import { ApiError, request } from "./api.js";
+import { warn } from "./log.js";
 import { teamKey, type OrgMember, type Team } from "./orgs.js";
 
 export interface Project {
@@ -223,7 +224,9 @@ export async function upgradeLegacySecrets(
   secrets: Secret[],
 ): Promise<number> {
   const legacy = secrets.filter((secret) => secret.legacy);
-  if (legacy.length === 0) return 0;
+  if (legacy.length === 0) {
+    return 0;
+  }
   await saveSecrets(
     orgId,
     project,
@@ -261,9 +264,14 @@ export async function saveSecrets(
     writes.map(
       async ({ id = crypto.randomUUID(), environmentId, name, value, note, kind, hosts }) => {
         const content: SecretContent = { name, value };
-        if (note) content.note = note;
-        if (kind === "variable") content.kind = kind;
-        else if (hosts && hosts.length > 0) content.hosts = hosts;
+        if (note) {
+          content.note = note;
+        }
+        if (kind === "variable") {
+          content.kind = kind;
+        } else if (hosts && hosts.length > 0) {
+          content.hosts = hosts;
+        }
         return {
           id,
           environmentId,
@@ -308,12 +316,32 @@ export async function importSecrets(
 }
 
 const ACCESS_FLUSH_MS = 3000;
-const accessQueue = new Map<
-  string,
-  { orgId: string; project: Project; events: { environmentId: string; access: SecretAccess }[] }
->();
+const ACCESS_RETRY_MS = 30_000;
+const ACCESS_QUEUE_LIMIT = 100;
+
+type AccessEvent = { environmentId: string; access: SecretAccess };
+
+const accessQueue = new Map<string, { orgId: string; project: Project; events: AccessEvent[] }>();
 const accessSeen = new Set<string>();
 let accessTimer: ReturnType<typeof setTimeout> | undefined;
+
+function queueAccess(orgId: string, project: Project, events: AccessEvent[]): void {
+  const key = `${orgId}:${project.id}`;
+  const entry = accessQueue.get(key) ?? { orgId, project, events: [] };
+  entry.events = [...entry.events, ...events].slice(-ACCESS_QUEUE_LIMIT);
+  accessQueue.set(key, entry);
+}
+
+function scheduleAccessFlush(delay: number): void {
+  clearTimeout(accessTimer);
+  accessTimer = setTimeout(() => void flushAccess(), delay);
+}
+
+function worthRetrying(error: unknown): boolean {
+  return (
+    error instanceof ApiError && (error.status === 0 || error.status === 429 || error.status >= 500)
+  );
+}
 
 export function noteAccess(
   orgId: string,
@@ -323,14 +351,12 @@ export function noteAccess(
   secretId = "",
 ): void {
   const once = `${project.id}:${environmentId}:${access}:${secretId}`;
-  if (accessSeen.has(once)) return;
+  if (accessSeen.has(once)) {
+    return;
+  }
   accessSeen.add(once);
-  const key = `${orgId}:${project.id}`;
-  const entry = accessQueue.get(key) ?? { orgId, project, events: [] };
-  entry.events.push({ environmentId, access });
-  accessQueue.set(key, entry);
-  clearTimeout(accessTimer);
-  accessTimer = setTimeout(() => void flushAccess(), ACCESS_FLUSH_MS);
+  queueAccess(orgId, project, [{ environmentId, access }]);
+  scheduleAccessFlush(ACCESS_FLUSH_MS);
 }
 
 export async function flushAccess(keepalive = false): Promise<void> {
@@ -338,14 +364,25 @@ export async function flushAccess(keepalive = false): Promise<void> {
   const pending = [...accessQueue.values()];
   accessQueue.clear();
   await Promise.all(
-    pending.map(({ orgId, project, events }) =>
-      request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/access`, {
-        method: "POST",
-        keepalive,
-        body: json({ events }),
-      }).catch(() => {}),
-    ),
+    pending.map(async ({ orgId, project, events }) => {
+      try {
+        await request(`${teamPath(orgId, project.teamId)}/projects/${project.id}/access`, {
+          method: "POST",
+          keepalive,
+          body: json({ events }),
+        });
+      } catch (error) {
+        if (worthRetrying(error)) {
+          queueAccess(orgId, project, events);
+        } else {
+          warn("Dropped secret access events the server refused", error);
+        }
+      }
+    }),
   );
+  if (accessQueue.size > 0 && !keepalive) {
+    scheduleAccessFlush(ACCESS_RETRY_MS);
+  }
 }
 
 export async function deleteSecrets(
@@ -448,7 +485,9 @@ export async function rekeyTeam(
   const wrappedKeys: Record<string, WrappedKey> = {};
   for (const accountId of team.members) {
     const publicKey = members.find((member) => member.accountId === accountId)?.publicKey;
-    if (!publicKey) throw new Error("member has no key yet");
+    if (!publicKey) {
+      throw new Error("member has no key yet");
+    }
     wrappedKeys[accountId] = await wrapForRecipient(
       publicKey,
       newKey,
@@ -481,7 +520,9 @@ export async function rekeyTeam(
       const content = await openSecret(before, at(current), secret.sealed);
       secrets[secret.id] = await sealSecret(after, at(generation), content);
       for (const version of vault.versions?.filter((entry) => entry.secretId === secret.id) ?? []) {
-        if (!versions) break;
+        if (!versions) {
+          break;
+        }
         try {
           const old = await openSecret(before, at(current), version.sealed);
           versions[version.id] = await sealSecret(after, at(generation), old);
