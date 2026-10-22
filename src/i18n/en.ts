@@ -152,7 +152,7 @@ export const en = {
     "Set up a PIN or fingerprint under ChromeOS Settings → Security and privacy → Lock screen, then reopen this page.",
   "bio.setup_other":
     "This browser can't use the device's screen lock here. Use a PIN or your master password instead.",
-  "bio.promo": "Unlock with {method} instead of your master password",
+  "bio.promo": "Unlock quickly with {method}",
   "bio.promo_action": "Turn on",
   "bio.title": "Unlock with {method}",
   "bio.hint":
