@@ -62,7 +62,8 @@ async function settled(done: () => boolean = () => false): Promise<void> {
   }
 }
 
-const { handleAutofill, trustedSender } = await import("../extension/lib/autofill-service.js");
+const { forgetMissedSave, handleAutofill, missedSave, tabSender, trustedSender } =
+  await import("../extension/lib/autofill-service.js");
 const { saveItem, decryptAll } = await import("../extension/lib/vault.js");
 
 const EXTENSION_ID = "vault-extension";
@@ -605,6 +606,50 @@ describe("capture and save", () => {
     expect(updated?.passwordHistory).toEqual([
       { password: GITHUB.password, changedAt: expect.any(Number) },
     ]);
+  });
+
+  it("keeps a dismissed save for the popup and stores it from there", async () => {
+    await unlockWith([]);
+    const page = sender("https://news.example.com/login")!;
+    await handleAutofill(
+      { type: "autofill:capture", username: "reader", password: "fresh-password" },
+      page,
+    );
+    await handleAutofill({ type: "autofill:confirm" }, page);
+    await handleAutofill({ type: "autofill:dismiss" }, page);
+
+    expect(await handleAutofill({ type: "autofill:pending" }, page)).toEqual({
+      ok: true,
+      prompt: null,
+    });
+    const tab = tabSender({ id: 7, url: "https://news.example.com/home" } as chrome.tabs.Tab)!;
+    expect(await missedSave(tab)).toEqual({
+      domain: "news.example.com",
+      username: "reader",
+      update: false,
+      confirmed: true,
+    });
+    expect(await missedSave(tabSender({ id: 8, url: page.url } as chrome.tabs.Tab)!)).toBeNull();
+
+    expect(await handleAutofill({ type: "autofill:save" }, tab)).toEqual({ ok: true, saved: true });
+    const [saved] = await decryptAll(key);
+    expect(saved).toMatchObject({ username: "reader", password: "fresh-password" });
+    expect(await missedSave(tab)).toBeNull();
+  });
+
+  it("drops a capture for good when the login failed or the popup offer is closed", async () => {
+    await unlockWith([]);
+    const page = sender("https://news.example.com/login")!;
+    const tab = tabSender({ id: 7, url: page.url } as chrome.tabs.Tab)!;
+    await handleAutofill({ type: "autofill:capture", password: "wrong-password" }, page);
+    await handleAutofill({ type: "autofill:dismiss" }, page);
+    expect(await missedSave(tab)).toBeNull();
+
+    await handleAutofill({ type: "autofill:capture", password: "fresh-password" }, page);
+    await handleAutofill({ type: "autofill:confirm" }, page);
+    await handleAutofill({ type: "autofill:dismiss" }, page);
+    await forgetMissedSave(tab);
+    expect(await missedSave(tab)).toBeNull();
   });
 
   it("does not carry a pending save over to a different site", async () => {

@@ -1,4 +1,12 @@
-import { useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
+import type { PendingPrompt } from "../../lib/autofill-protocol.js";
+import {
+  forgetMissedSave,
+  handleAutofill,
+  missedSave,
+  tabSender,
+  type TrustedSender,
+} from "../../lib/autofill-service.js";
 import type { IconName } from "../../../src/ui/icons.js";
 import { biometricLabel } from "../../lib/biometric.js";
 import { Icon } from "../../ui/components/Icon.js";
@@ -6,7 +14,15 @@ import { IconButton } from "../../ui/components/IconButton.js";
 import { Logo } from "../../ui/components/Logo.js";
 import { useT } from "../../ui/i18n.js";
 import { acceptPromo, activePromo, dismissPromo, orgSnapshot, refreshPromos } from "../promos.js";
-import { openConsole, clockWarning, syncing, syncProblem, vaultKey } from "../state.js";
+import {
+  openConsole,
+  clockWarning,
+  reloadItems,
+  syncing,
+  syncProblem,
+  toast,
+  vaultKey,
+} from "../state.js";
 
 function PromoBanner() {
   const t = useT();
@@ -55,6 +71,62 @@ function PromoBanner() {
   );
 }
 
+function MissedSave() {
+  const t = useT();
+  const [missed, setMissed] = useState<{ sender: TrustedSender; prompt: PendingPrompt } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!vaultKey.value) {
+      return;
+    }
+    void chrome.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
+      const sender = tabSender(tab);
+      const prompt = sender ? await missedSave(sender) : null;
+      setMissed(sender && prompt ? { sender, prompt } : null);
+    });
+  }, [vaultKey.value]);
+
+  if (!missed) {
+    return null;
+  }
+  const { sender, prompt } = missed;
+  const save = async () => {
+    setMissed(null);
+    const response = await handleAutofill({ type: "autofill:save" }, sender);
+    if (response.ok && "saved" in response && response.saved) {
+      await reloadItems();
+      toast(t("autofill.saved"));
+    } else {
+      toast(t("autofill.save_failed"));
+    }
+  };
+
+  return (
+    <div className="promo">
+      <span className="promo-icon">
+        <Icon name="key" />
+      </span>
+      <span className="promo-text">
+        {t(prompt.update ? "autofill.update_title" : "autofill.save_title", {
+          domain: prompt.domain,
+        })}
+      </span>
+      <button className="link" onClick={() => void save()}>
+        {t(prompt.update ? "autofill.update" : "autofill.save")}
+      </button>
+      <IconButton
+        icon="close"
+        label={t("common.close")}
+        onClick={() => {
+          setMissed(null);
+          void forgetMissedSave(sender);
+        }}
+      />
+    </div>
+  );
+}
+
 export function Notices() {
   const problem = syncProblem.value;
   useEffect(() => {
@@ -73,6 +145,7 @@ export function Notices() {
         </p>
       )}
       {clockWarning.value && <p className="notice-line warn">{clockWarning.value}</p>}
+      <MissedSave />
       <PromoBanner />
     </>
   );

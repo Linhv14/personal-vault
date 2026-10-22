@@ -44,6 +44,7 @@ interface PendingCapture {
   password: string;
   at: number;
   confirmed?: boolean;
+  dismissed?: boolean;
 }
 
 export interface TrustedSender {
@@ -60,16 +61,10 @@ function isFillableUrl(url: URL): boolean {
   return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
 }
 
-export function trustedSender(
-  sender: chrome.runtime.MessageSender,
-  extensionId: string,
-): TrustedSender | null {
-  if (sender.id !== extensionId || sender.frameId !== 0 || sender.tab?.id === undefined) {
-    return null;
-  }
+function senderFor(tabId: number, rawUrl: string | undefined): TrustedSender | null {
   let url: URL;
   try {
-    url = new URL(sender.url ?? sender.tab.url ?? "");
+    url = new URL(rawUrl ?? "");
   } catch {
     return null;
   }
@@ -77,7 +72,21 @@ export function trustedSender(
   if (!isFillableUrl(url) || !domain) {
     return null;
   }
-  return { tabId: sender.tab.id, url: url.href, domain, site: siteOf(url.href) ?? domain };
+  return { tabId, url: url.href, domain, site: siteOf(url.href) ?? domain };
+}
+
+export function trustedSender(
+  sender: chrome.runtime.MessageSender,
+  extensionId: string,
+): TrustedSender | null {
+  if (sender.id !== extensionId || sender.frameId !== 0 || sender.tab?.id === undefined) {
+    return null;
+  }
+  return senderFor(sender.tab.id, sender.url ?? sender.tab.url);
+}
+
+export function tabSender(tab: chrome.tabs.Tab | undefined): TrustedSender | null {
+  return tab?.id === undefined ? null : senderFor(tab.id, tab.url);
 }
 
 function pendingKey(tabId: number): string {
@@ -351,7 +360,7 @@ export async function handleAutofill(
 
     case "autofill:pending": {
       const pending = await readPending(sender);
-      if (!pending) {
+      if (!pending || pending.dismissed) {
         return { ok: true, prompt: null };
       }
       const vault = await openVault();
@@ -404,9 +413,17 @@ export async function handleAutofill(
       return { ok: true, saved: true };
     }
 
-    case "autofill:dismiss":
-      await chrome.storage.session.remove(pendingKey(sender.tabId));
+    case "autofill:dismiss": {
+      const pending = await readPending(sender);
+      if (pending?.confirmed && !pending.dismissed) {
+        await chrome.storage.session.set({
+          [pendingKey(sender.tabId)]: { ...pending, dismissed: true },
+        });
+      } else {
+        await chrome.storage.session.remove(pendingKey(sender.tabId));
+      }
       return { ok: true, saved: false };
+    }
 
     case "autofill:codes": {
       const vault = await openVault();
@@ -619,4 +636,17 @@ export async function handleAutofill(
       await chrome.action.openPopup?.().catch(() => {});
       return { ok: true, saved: false };
   }
+}
+
+export async function missedSave(sender: TrustedSender): Promise<PendingPrompt | null> {
+  const pending = await readPending(sender);
+  if (!pending?.dismissed) {
+    return null;
+  }
+  const vault = await openVault();
+  return vault ? promptFor(pending, sender.url, vault.items) : null;
+}
+
+export async function forgetMissedSave(sender: TrustedSender): Promise<void> {
+  await chrome.storage.session.remove(pendingKey(sender.tabId));
 }
