@@ -201,10 +201,10 @@ export class UserStore extends DurableObject<Env> {
   }
 
   async exportState(): Promise<StoreDump> {
-    return Promise.resolve(dumpStore(this.sql));
+    return dumpStore(this.sql);
   }
 
   async importState(dump: StoreDump): Promise<number> {
-    return Promise.resolve(restoreStore(this.ctx.storage, dump));
+    return restoreStore(this.ctx.storage, dump);
   }
 }
