@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { itemType, TYPE_ICON, type ItemType } from "../../lib/item-types.js";
+import { itemType, type ItemType } from "../../lib/item-types.js";
+import { TYPE_ICON } from "../../ui/item-icons.js";
 import type { IconName } from "../../../src/ui/icons.js";
 import type { VaultDef, VaultItem } from "../../lib/vault/types.js";
 import { Icon } from "../../ui/components/Icon.js";

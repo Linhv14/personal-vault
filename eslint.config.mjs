@@ -62,6 +62,32 @@ export default defineConfig(
               target: "share/**",
               from: "extension/**",
             },
+            {
+              target: "./web",
+              from: "./extension",
+              except: ["./web-host.ts"],
+              message:
+                "The web dashboard reaches the extension only through extension/web-host.ts.",
+            },
+            {
+              target: "./extension/settings",
+              from: "./extension/console",
+              message: "Move what settings needs from the console into extension/ui.",
+            },
+            {
+              target: [
+                "extension/console/*.ts",
+                "extension/console/!(main).tsx",
+                "extension/console/pages/**",
+              ],
+              from: "./extension/settings",
+              message: "Only the console entry (main.tsx) may compose settings pages.",
+            },
+            {
+              target: "./extension/lib",
+              from: ["./extension/ui", "./src/ui"],
+              message: "Library modules must not depend on UI modules.",
+            },
           ],
         },
       ],

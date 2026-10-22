@@ -2,8 +2,8 @@ import { signal } from "@preact/signals";
 import { resumeUnlock } from "../lib/resume.js";
 import { getLocal, type LocalState } from "../lib/storage.js";
 import { setUiLocale } from "../ui/i18n.js";
+import { toast } from "../ui/store/feedback.js";
 import { refreshSession } from "../ui/store/session.js";
-import { toast } from "../console/data.js";
 
 export const localState = signal<LocalState>({});
 

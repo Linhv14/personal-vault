@@ -4,7 +4,7 @@ import { setHumanCheck } from "../lib/api.js";
 import { resumeUnlock } from "../lib/resume.js";
 import { defaultServer } from "../lib/server.js";
 import { getLocal, getUnlocked, loadPendingSignup } from "../lib/storage.js";
-import { frameTurnstileToken } from "../lib/turnstile-frame.js";
+import { frameTurnstileToken } from "../ui/turnstile-frame.js";
 import { Toast } from "../ui/components/Toast.js";
 import { localeSignal, setUiLocale } from "../ui/i18n.js";
 import { Editor } from "./screens/Editor.js";

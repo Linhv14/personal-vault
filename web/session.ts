@@ -9,13 +9,21 @@ import {
 } from "../src/core/crypto.js";
 import { toBase64 } from "../src/core/bytes.js";
 import { signal } from "@preact/signals";
-import * as api from "../extension/lib/api.js";
-import { upgradeKdf } from "../extension/lib/kdf-upgrade.js";
-import { assertMasterPasswordPolicy } from "../extension/lib/master-password.js";
-import { memoryArea, usePlatform } from "../extension/lib/platform.js";
-import { getUnlocked, lock, setLocal, touch, unlock } from "../extension/lib/storage.js";
-import { localeSignal } from "../extension/ui/i18n.js";
-import { refreshSession, vaultKeySignal } from "../extension/ui/store/session.js";
+import {
+  api,
+  assertMasterPasswordPolicy,
+  getUnlocked,
+  localeSignal,
+  lock,
+  memoryArea,
+  refreshSession,
+  setLocal,
+  touch,
+  unlock,
+  upgradeKdf,
+  usePlatform,
+  vaultKeySignal,
+} from "../extension/web-host.js";
 
 export const IDLE_MINUTES = 15;
 export const accountEmail = signal<string | null>(null);

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { frameTurnstileToken, turnstileFrameUrl } from "../extension/lib/turnstile-frame.js";
+import { frameTurnstileToken, turnstileFrameUrl } from "../extension/ui/turnstile-frame.js";
 import { turnstileSlot } from "../src/ui/turnstile.js";
 
 const API = "https://7key.online";

@@ -1,10 +1,14 @@
 import { render } from "preact";
 import { useEffect } from "preact/hooks";
-import { ConsoleHost } from "../extension/console/ConsoleHost.js";
-import { setHumanCheck } from "../extension/lib/api.js";
-import { Icon } from "../extension/ui/components/Icon.js";
-import { localeSignal, setUiLocale, useT } from "../extension/ui/i18n.js";
-import { vaultKeySignal } from "../extension/ui/store/session.js";
+import {
+  ConsoleHost,
+  Icon,
+  localeSignal,
+  setHumanCheck,
+  setUiLocale,
+  useT,
+  vaultKeySignal,
+} from "../extension/web-host.js";
 import { turnstileToken } from "../src/ui/turnstile.js";
 import { SignIn } from "./SignIn.js";
 import { accountEmail, signOut, startWebSession } from "./session.js";
