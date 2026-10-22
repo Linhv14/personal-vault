@@ -10,6 +10,7 @@
 import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
 import { fromBase64, toBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
+import { registrableDomain, siteHostname, siteOf } from "../../src/core/site.js";
 import type { StoredPasskey } from "./passkey/authenticator.js";
 import {
   cardDigits,
@@ -529,86 +530,6 @@ export function newItemId(): string {
   return crypto.randomUUID();
 }
 
-/**
- * The comparable part of a hostname.
- *
- * No Public Suffix List — that is a few thousand lines needing regular updates —
- * so `a.github.io` and `b.github.io` are treated as one domain. The consequence
- * is an irrelevant suggestion in a list, not a security hole: this only ranks
- * suggestions, it never fills anything into a page.
- */
-const SHARED_HOSTING_SUFFIXES = new Set([
-  "github.io",
-  "gitlab.io",
-  "vercel.app",
-  "netlify.app",
-  "pages.dev",
-  "workers.dev",
-  "web.app",
-  "firebaseapp.com",
-  "herokuapp.com",
-  "appspot.com",
-  "blogspot.com",
-  "azurewebsites.net",
-  "cloudfront.net",
-  "onrender.com",
-  "fly.dev",
-  "glitch.me",
-  "ngrok.io",
-  "ngrok-free.app",
-  "repl.co",
-  "surge.sh",
-]);
-
-export function registrableDomain(rawUrl: string): string | null {
-  let hostname: string;
-  try {
-    hostname = new URL(rawUrl.includes("://") ? rawUrl : `https://${rawUrl}`).hostname;
-  } catch {
-    return null;
-  }
-  if (/^[\d.]+$/.test(hostname) || hostname.includes(":")) {
-    return hostname;
-  }
-  const labels = hostname.replace(/^www\./, "").split(".");
-  if (labels.length <= 2) {
-    return labels.join(".");
-  }
-  if (SHARED_HOSTING_SUFFIXES.has(labels.slice(-2).join("."))) {
-    return labels.slice(-3).join(".");
-  }
-
-  // Common two-level suffixes: com.vn, co.uk, ac.jp...
-  const twoPartTlds = new Set(["com", "net", "org", "edu", "gov", "co", "ac"]);
-  const secondLast = labels.at(-2);
-  const last = labels.at(-1);
-  if (last && secondLast && last.length === 2 && twoPartTlds.has(secondLast)) {
-    return labels.slice(-3).join(".");
-  }
-  return labels.slice(-2).join(".");
-}
-
-const SIGN_IN_PREFIXES = new Set([
-  "accounts",
-  "account",
-  "login",
-  "signin",
-  "auth",
-  "sso",
-  "id",
-  "secure",
-]);
-
-export function siteOf(rawUrl: string): string | null {
-  const host = hostname(rawUrl);
-  const domain = registrableDomain(rawUrl);
-  if (!host || !domain || host === domain || !host.endsWith(`.${domain}`)) {
-    return host ?? domain;
-  }
-  const [first, ...rest] = host.split(".");
-  return first && SIGN_IN_PREFIXES.has(first) && rest.join(".") === domain ? domain : host;
-}
-
 export function sameSite(
   item: Pick<VaultItem, "url" | "urls">,
   pageUrl: string,
@@ -631,17 +552,6 @@ export function sameSite(
   return best;
 }
 
-function hostname(rawUrl: string): string | null {
-  try {
-    return new URL(rawUrl.includes("://") ? rawUrl : `https://${rawUrl}`).hostname.replace(
-      /^www\./,
-      "",
-    );
-  } catch {
-    return null;
-  }
-}
-
 export function itemSites(item: Pick<VaultItem, "url" | "urls">): string[] {
   return [item.url, ...(item.urls ?? [])].filter((url): url is string => Boolean(url));
 }
@@ -657,9 +567,9 @@ export function matchesSite(
   if (!domain) {
     return false;
   }
-  const host = hostname(pageUrl);
+  const host = siteHostname(pageUrl);
   return itemSites(item).some((site) =>
-    item.urlMatch === "host" ? hostname(site) === host : registrableDomain(site) === domain,
+    item.urlMatch === "host" ? siteHostname(site) === host : registrableDomain(site) === domain,
   );
 }
 

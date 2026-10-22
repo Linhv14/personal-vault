@@ -1,14 +1,7 @@
 import type { Translate } from "../../src/i18n/index.js";
 import { itemType, lastFour, unusedCodes } from "./item-types.js";
-import { registrableDomain, type VaultItem } from "./vault.js";
-
-function hostLabel(url: string): string | null {
-  try {
-    return new URL(url.includes("://") ? url : `https://${url}`).host;
-  } catch {
-    return null;
-  }
-}
+import { parseSiteUrl, registrableDomain } from "../../src/core/site.js";
+import type { VaultItem } from "./vault.js";
 
 function keyComment(publicKey: string | undefined): string {
   return publicKey?.trim().split(/\s+/).slice(2).join(" ") ?? "";
@@ -38,7 +31,7 @@ export function itemSubtitle(item: VaultItem, t: Translate): string {
     case "note":
       return (item.note ?? "").split("\n")[0] ?? "";
     case "api":
-      return item.username || (item.url ? (hostLabel(item.url) ?? item.url) : "");
+      return item.username || (item.url ? (parseSiteUrl(item.url)?.host ?? item.url) : "");
     case "ssh":
       return item.sshFingerprint ?? keyComment(item.sshPublicKey);
     case "bank": {

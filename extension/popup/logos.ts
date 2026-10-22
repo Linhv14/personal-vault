@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals";
 import * as api from "../lib/api.js";
+import { parseSiteUrl } from "../../src/core/site.js";
 
 const MAX_PARALLEL = 6;
 
@@ -44,12 +45,10 @@ export function logoDomainOf(url: string | undefined): string | null {
   if (!url) {
     return null;
   }
-  try {
-    const host = new URL(url.includes("://") ? url : `https://${url}`).hostname.toLowerCase();
-    return /^[a-z0-9.-]+\.[a-z][a-z0-9-]*$/.test(host) && !/^\d+(\.\d+){3}$/.test(host)
-      ? host.replace(/^www\./, "")
-      : null;
-  } catch {
-    return null;
-  }
+  const host = parseSiteUrl(url)?.hostname.toLowerCase();
+  return host !== undefined &&
+    /^[a-z0-9.-]+\.[a-z][a-z0-9-]*$/.test(host) &&
+    !/^\d+(\.\d+){3}$/.test(host)
+    ? host.replace(/^www\./, "")
+    : null;
 }

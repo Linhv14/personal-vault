@@ -64,6 +64,11 @@ unrelated sites apart:
   `alice.github.io` never sees `mallory.github.io`'s login.
 - **IP addresses** match only themselves.
 
+The registrable domain comes from a short built-in list in `src/core/site.ts`, not
+the Public Suffix List, which is thousands of lines and needs regular updates. So
+subdomains of a shared host missing from the list count as one site; the cost is an
+irrelevant suggestion, because matching only ranks suggestions.
+
 ## Saving and updating
 
 When a form with a password is submitted, the page script sends the username

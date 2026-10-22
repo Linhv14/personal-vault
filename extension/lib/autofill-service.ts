@@ -20,15 +20,14 @@ import { boundToSite } from "./form-capture.js";
 import { handleFormRequest } from "./form-save.js";
 import { siteWarning } from "./site-warning.js";
 import { getLocal } from "./storage.js";
+import { registrableDomain, siteOf } from "../../src/core/site.js";
 import {
   byLastUsed,
   markUsed,
   matchesSite,
   newItemId,
   openVault,
-  registrableDomain,
   sameSite,
-  siteOf,
   saveItem,
   type OpenVault,
   type VaultItem,

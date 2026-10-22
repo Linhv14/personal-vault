@@ -24,14 +24,8 @@ import {
 } from "./form-capture.js";
 import { CARD_BRAND_NAMES, cardBrand, lastFour } from "./item-types.js";
 import { getLocal, setLocal } from "./storage.js";
-import {
-  isPersonal,
-  newItemId,
-  openVault,
-  registrableDomain,
-  saveItem,
-  type VaultItem,
-} from "./vault.js";
+import { registrableDomain } from "../../src/core/site.js";
+import { isPersonal, newItemId, openVault, saveItem, type VaultItem } from "./vault.js";
 
 const PENDING_TTL_MS = 5 * 60_000;
 const FRAME_TTL_MS = 10 * 60_000;

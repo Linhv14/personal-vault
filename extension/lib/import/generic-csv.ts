@@ -1,4 +1,5 @@
-import { registrableDomain, type ItemDraft } from "../vault.js";
+import { registrableDomain } from "../../../src/core/site.js";
+import type { ItemDraft } from "../vault.js";
 import { customFields, firstTotp, type ImportSource } from "./source.js";
 
 const COLUMNS = {

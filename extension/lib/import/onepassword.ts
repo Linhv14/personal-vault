@@ -1,5 +1,6 @@
 import { cardDigits, type CustomField } from "../item-types.js";
-import { registrableDomain, type ItemDraft } from "../vault.js";
+import { registrableDomain } from "../../../src/core/site.js";
+import type { ItemDraft } from "../vault.js";
 import {
   cardExpiry,
   countSkip,

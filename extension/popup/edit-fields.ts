@@ -18,7 +18,8 @@ import {
   type TextFieldKey,
 } from "../lib/item-types.js";
 import { parseRecoveryCodes } from "../lib/recovery-codes.js";
-import { registrableDomain, type VaultItem } from "../lib/vault.js";
+import { registrableDomain } from "../../src/core/site.js";
+import type { VaultItem } from "../lib/vault.js";
 
 export type EditedFields = Partial<
   Pick<VaultItem, TextFieldKey | "totp" | "codes" | "urls" | "urlMatch" | "fields" | "tags">

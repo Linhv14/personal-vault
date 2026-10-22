@@ -1,3 +1,5 @@
+import { parseSiteUrl } from "./site.js";
+
 export type LookalikeReason = "confusable" | "embedded" | "typo";
 
 export interface LookalikeMatch {
@@ -264,11 +266,11 @@ function cleanHost(raw: string): string | null {
     return null;
   }
   if (host.includes("://") || host.includes("/")) {
-    try {
-      host = new URL(host.includes("://") ? host : `https://${host}`).hostname;
-    } catch {
+    const url = parseSiteUrl(host);
+    if (!url) {
       return null;
     }
+    host = url.hostname;
   }
   host = host.replace(/\.$/, "").replace(/^www\./, "");
   if (!host.includes(".") || /^[\d.]+$/.test(host) || host.includes(":")) {

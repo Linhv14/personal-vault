@@ -1,7 +1,8 @@
 import { countryOf, foldText } from "../../src/core/address-data.js";
 import type { AddressData, CapturedCard } from "./autofill-protocol.js";
 import { cardDigits, itemType, normalizeExpiry } from "./item-types.js";
-import { itemSites, registrableDomain, type VaultItem } from "./vault.js";
+import { registrableDomain } from "../../src/core/site.js";
+import { itemSites, type VaultItem } from "./vault.js";
 
 export interface CleanCard {
   number: string;
