@@ -82,6 +82,36 @@ describe("Turnstile deploy option", () => {
   });
 });
 
+describe("site service option", () => {
+  it("reads and clears the Worker name", () => {
+    expect(parseDeployFlags(["--site-service", "7key-site"])).toEqual({
+      siteService: "7key-site",
+    });
+    expect(parseDeployFlags(["--site-service", "none"])).toEqual({ siteService: null });
+    expect(() => parseDeployFlags(["--site-service", "Not A Worker"])).toThrow(/Worker name/);
+  });
+
+  it("binds no site by default, so self-hosted servers serve their own home page", () => {
+    expect(DEFAULT_DEPLOY_OPTIONS.siteService).toBeNull();
+    expect(render().services).toBeUndefined();
+  });
+
+  it("binds SITE to the named Worker", () => {
+    expect(render({ siteService: "7key-site" }).services).toEqual([
+      { binding: "SITE", service: "7key-site" },
+    ]);
+    expect(() => render({ siteService: "bad name" })).toThrow(/Worker name/);
+  });
+
+  it("picks the site service up from deploy/production.json", () => {
+    const production = JSON.parse(
+      readFileSync(new URL("../deploy/production.json", import.meta.url), "utf8"),
+    ) as Record<string, unknown>;
+    expect(resolveDeployOptions(production).siteService).toBe("7key-site");
+    expect(resolveDeployOptions({}).siteService).toBeNull();
+  });
+});
+
 describe("resolveDeployOptions", () => {
   it("lets flags override what the last deploy saved, and ignores unrelated state", () => {
     expect(

@@ -7,6 +7,7 @@ export interface DeployOptions {
   emailFrom: string | null;
   emailProvider: EmailProvider;
   turnstileSiteKey: string | null;
+  siteService: string | null;
 }
 
 type EmailProvider = (typeof EMAIL_PROVIDERS)[number];
@@ -20,6 +21,7 @@ export const DEFAULT_DEPLOY_OPTIONS: Readonly<DeployOptions> = Object.freeze({
   emailFrom: null,
   emailProvider: "resend",
   turnstileSiteKey: null,
+  siteService: null,
 });
 
 function isEmailProvider(value: string): value is EmailProvider {
@@ -28,6 +30,7 @@ function isEmailProvider(value: string): value is EmailProvider {
 const HOSTNAME = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TURNSTILE_SITE_KEY = /^[0-9a-zA-Z_-]{10,64}$/;
+const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 function clearable(value: string): string | null {
   return value === "none" ? null : value;
@@ -84,6 +87,14 @@ export function parseDeployFlags(argv: readonly string[]): Partial<DeployOptions
         flags.turnstileSiteKey = siteKey;
         break;
       }
+      case "--site-service": {
+        const service = clearable(takeValue());
+        if (service && !WORKER_NAME.test(service)) {
+          throw new Error(`Not a Worker name: ${service}`);
+        }
+        flags.siteService = service;
+        break;
+      }
       default:
         throw new Error(`Unknown option: ${flag}`);
     }
@@ -122,6 +133,7 @@ interface WranglerConfig {
   workers_dev?: boolean;
   send_email?: { name: string }[];
   secrets?: { required: string[] };
+  services?: { binding: string; service: string }[];
 }
 
 export function renderConfig(
@@ -162,6 +174,16 @@ export function renderConfig(
 
   if (options.turnstileSiteKey) {
     vars.TURNSTILE_SITE_KEY = options.turnstileSiteKey;
+  }
+
+  if (options.siteService) {
+    if (!WORKER_NAME.test(options.siteService)) {
+      throw new Error(`Not a Worker name: ${options.siteService}`);
+    }
+    config.services = [
+      ...(config.services ?? []).filter((service) => service.binding !== "SITE"),
+      { binding: "SITE", service: options.siteService },
+    ];
   }
 
   config.secrets = { required: requiredSecrets(options) };

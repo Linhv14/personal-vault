@@ -7,5 +7,6 @@
   "emailFrom": "no-reply@7key.online",
   "emailProvider": "resend",
   "aliasDomains": [],
-  "turnstileSiteKey": "0x4AAAAAAFdd_eUW6Xwzs8Yu"
+  "turnstileSiteKey": "0x4AAAAAAFdd_eUW6Xwzs8Yu",
+  "siteService": "7key-site"
 }
