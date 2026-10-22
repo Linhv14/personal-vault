@@ -92,10 +92,19 @@ describe("local state normalisation", () => {
     expect(normalizeLocalState({ email: "me@example.com" })).not.toHaveProperty("autoLockMinutes");
   });
 
-  it("forgets the sync point when the item cache is malformed, forcing a full sync", () => {
-    const state = normalizeLocalState({ ...VALID, items: [{ id: "a" }] });
-    expect(state).not.toHaveProperty("items");
+  it("keeps the valid cached items and forgets the sync point when one is malformed", () => {
+    const state = normalizeLocalState({ ...VALID, items: [...VALID.items, { id: "a" }] });
+    expect(state.items).toEqual(VALID.items);
     expect(state).not.toHaveProperty("lastSync");
+  });
+
+  it("writes the repair back so later cache writes cannot revive the old sync point", async () => {
+    const local = memoryArea({ ...VALID, items: [...VALID.items, { id: "a" }] });
+    usePlatform({ local, session: memoryArea(), scheduleLock: async () => {} });
+    await getLocal();
+    const stored = await local.get(null);
+    expect(stored.items).toEqual(VALID.items);
+    expect(stored).not.toHaveProperty("lastSync");
   });
 
   it("is what getLocal returns", async () => {

@@ -1,17 +1,17 @@
 import { isKdfParams, isSealedData } from "../../src/core/crypto.js";
 import { isWrappedForRecipient } from "../../src/core/identity.js";
-import { isPlainObject, isStringArray } from "../../src/core/json.js";
+import {
+  isBoolean,
+  isFiniteNumber,
+  isPlainObject,
+  isPositiveInteger,
+  isString,
+  isStringArray,
+} from "../../src/core/json.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
 import type { CachedItem, CachedSharedVault, LocalState } from "./storage.js";
 
 type Guard<T> = (value: unknown) => value is T;
-
-const isString = (value: unknown): value is string => typeof value === "string";
-const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
-const isFiniteNumber = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value);
-const isPositiveInteger = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
 
 function isHttpUrl(value: unknown): value is string {
   if (typeof value !== "string") {
@@ -125,6 +125,14 @@ const FIELDS: { [K in keyof LocalState]-?: Guard<NonNullable<LocalState[K]>> } =
   sharedGenerations: isGenerations,
 };
 
+function itemCount(items: unknown): number {
+  return Array.isArray(items) ? items.length : -1;
+}
+
+export function needsCacheRepair(raw: Record<string, unknown>, state: LocalState): boolean {
+  return raw.lastSync !== undefined && state.lastSync === undefined;
+}
+
 export function normalizeLocalState(raw: Record<string, unknown>): LocalState {
   const state: Record<string, unknown> = {};
   for (const [key, guard] of Object.entries<Guard<unknown>>(FIELDS)) {
@@ -133,7 +141,10 @@ export function normalizeLocalState(raw: Record<string, unknown>): LocalState {
       state[key] = value;
     }
   }
-  if (state.items === undefined) {
+  if (Array.isArray(raw.items) && state.items === undefined) {
+    state.items = raw.items.filter(isCachedItem);
+  }
+  if (state.items === undefined || (state.items as unknown[]).length !== itemCount(raw.items)) {
     delete state.lastSync;
   }
   if (raw.autoLockMinutes !== undefined && state.autoLockMinutes === undefined) {

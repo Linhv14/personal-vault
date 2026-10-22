@@ -1,7 +1,7 @@
 import type { KdfParams, SealedData } from "../../src/core/crypto.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
 import { isPlainObject } from "../../src/core/json.js";
-import { normalizeLocalState } from "./local-state.js";
+import { needsCacheRepair, normalizeLocalState } from "./local-state.js";
 import { platform } from "./platform.js";
 
 export interface CachedItem {
@@ -112,7 +112,13 @@ export async function clearPendingSignup(): Promise<void> {
 }
 
 export async function getLocal(): Promise<LocalState> {
-  return normalizeLocalState(await platform().local.get(null));
+  const raw = await platform().local.get(null);
+  const state = normalizeLocalState(raw);
+  if (needsCacheRepair(raw, state)) {
+    await platform().local.set({ items: state.items ?? [] });
+    await platform().local.remove("lastSync");
+  }
+  return state;
 }
 
 export async function setLocal(patch: Partial<LocalState>): Promise<void> {
