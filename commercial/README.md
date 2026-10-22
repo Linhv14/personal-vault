@@ -5,12 +5,12 @@ Everything under `commercial/` is covered by the
 modify and run it to develop, evaluate or audit 7key; production use needs a
 subscription or the enterprise plan on 7key.online.
 
-| Folder       | Contents                                                                   |
-| ------------ | -------------------------------------------------------------------------- |
+| Folder       | Contents                                                                    |
+| ------------ | --------------------------------------------------------------------------- |
 | `core/`      | Pure helpers shared by the Worker and the clients: licence check, SSO model |
 | `worker/`    | Worker routes for single sign-on, mounted by `src/worker/index.ts`          |
 | `extension/` | Sign-in and admin screens, mounted through `extension/commercial.ts`        |
-| `scripts/`   | `issue-license.ts`, which signs licence keys                               |
+| `scripts/`   | `issue-license.ts`, which signs licence keys                                |
 
 The AGPL code reaches this folder only through two seams, `src/worker/index.ts`
 and `extension/commercial.ts`; ESLint (`import/no-restricted-paths`) rejects any
