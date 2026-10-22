@@ -11,10 +11,11 @@ import {
 } from "../../ui/components/ConsoleKit.js";
 import { attempt } from "../../ui/store/feedback.js";
 import { itemSubtitle } from "../../lib/item-subtitle.js";
-import { itemType, TYPE_ICON } from "../../lib/item-types.js";
+import { itemType } from "../../lib/item-types.js";
 import { daysUntilPurge, deleteFromTrash, restoreFromTrash } from "../../lib/trash.js";
 import { decryptEverything, type VaultDef, type VaultItem } from "../../lib/vault.js";
 import { Icon } from "../../ui/components/Icon.js";
+import { TYPE_ICON } from "../../ui/item-icons.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
 import { vaultKeySignal } from "../../ui/store/session.js";

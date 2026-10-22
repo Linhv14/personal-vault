@@ -1,5 +1,4 @@
 import type { MessageKey } from "../../src/i18n/index.js";
-import type { IconName } from "../../src/ui/icons.js";
 import type { VaultItem } from "./vault.js";
 
 export const ITEM_TYPES = [
@@ -182,20 +181,6 @@ export const NEW_LABEL: Record<ItemType, MessageKey> = {
   bank: "new.bank",
   document: "new.document",
   license: "new.license",
-};
-
-export const TYPE_ICON: Record<ItemType, IconName> = {
-  login: "key",
-  note: "note",
-  card: "card",
-  identity: "person",
-  recovery: "life-buoy",
-  wifi: "wifi",
-  api: "braces",
-  ssh: "terminal",
-  bank: "bank",
-  document: "id-card",
-  license: "badge",
 };
 
 export const HAS_PASSWORD_HISTORY: ReadonlySet<ItemType> = new Set(["login", "wifi", "api"]);

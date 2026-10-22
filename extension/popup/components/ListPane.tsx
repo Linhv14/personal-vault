@@ -1,6 +1,7 @@
 import { Icon } from "../../ui/components/Icon.js";
 import { useEffect } from "preact/hooks";
-import { ITEM_TYPES, NEW_LABEL, TYPE_ICON, TYPE_LABEL } from "../../lib/item-types.js";
+import { ITEM_TYPES, NEW_LABEL, TYPE_LABEL } from "../../lib/item-types.js";
+import { TYPE_ICON } from "../../ui/item-icons.js";
 import { siteWarning } from "../../lib/site-warning.js";
 import { registrableDomain } from "../../../src/core/site.js";
 import { localeSignal, useT } from "../../ui/i18n.js";
