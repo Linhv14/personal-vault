@@ -16,6 +16,7 @@
 import { concat, fromBase64, randomBytes, toBase64, utf8Decode, utf8Encode } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
 import { VaultError } from "./errors.js";
+import { isPlainObject } from "./json.js";
 
 export type KdfType = "pbkdf2-sha256";
 
@@ -38,6 +39,23 @@ const KEY_BYTES = 32;
 export interface SealedData {
   ciphertext: string; // base64
   nonce: string; // base64
+}
+
+export function isKdfParams(value: unknown): value is KdfParams {
+  return (
+    isPlainObject(value) &&
+    value.type === "pbkdf2-sha256" &&
+    typeof value.iterations === "number" &&
+    Number.isInteger(value.iterations) &&
+    value.iterations > 0 &&
+    typeof value.salt === "string"
+  );
+}
+
+export function isSealedData(value: unknown): value is SealedData {
+  return (
+    isPlainObject(value) && typeof value.ciphertext === "string" && typeof value.nonce === "string"
+  );
 }
 
 /** Everything the server stores for an account. None of it can decrypt a vault. */

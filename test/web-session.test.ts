@@ -34,12 +34,12 @@ vi.stubGlobal(
       }
       return server.twoFactor
         ? json({ twoFactor: "required", challenge: "challenge-1", expiresAt: 0 })
-        : json({ token: "web-token", wrappedVaultKey: record.wrappedVaultKey });
+        : json({ token: "web-token", expiresAt: 0, wrappedVaultKey: record.wrappedVaultKey });
     }
     if (url.pathname === "/api/auth/login/2fa") {
       const body = JSON.parse(String(init?.body));
       return body.challenge === "challenge-1" && body.code === "246810"
-        ? json({ token: "web-token-2fa", wrappedVaultKey: record.wrappedVaultKey })
+        ? json({ token: "web-token-2fa", expiresAt: 0, wrappedVaultKey: record.wrappedVaultKey })
         : json({ code: "auth.invalid_2fa" }, 401);
     }
     if (url.pathname === "/api/auth/logout") {

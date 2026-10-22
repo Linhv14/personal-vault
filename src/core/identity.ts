@@ -1,5 +1,6 @@
 import { concat, fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "./bytes.js";
-import { open, seal, type SealedData } from "./crypto.js";
+import { isSealedData, open, seal, type SealedData } from "./crypto.js";
+import { isPlainObject } from "./json.js";
 
 const CURVE = { name: "ECDH", namedCurve: "P-256" } as const;
 const WRAP_INFO = utf8Encode("personal-vault/key-wrap/v1");
@@ -13,6 +14,14 @@ export interface Identity {
 export interface WrappedForRecipient {
   ephemeralPublicKey: string;
   sealed: SealedData;
+}
+
+export function isWrappedForRecipient(value: unknown): value is WrappedForRecipient {
+  return (
+    isPlainObject(value) &&
+    typeof value.ephemeralPublicKey === "string" &&
+    isSealedData(value.sealed)
+  );
 }
 
 async function exportBytes(format: "spki" | "pkcs8", key: CryptoKey): Promise<Bytes> {

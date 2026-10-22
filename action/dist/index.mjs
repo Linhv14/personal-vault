@@ -54,8 +54,16 @@ var VaultError = class extends Error {
   params;
 };
 
+// src/core/json.ts
+function isPlainObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 // src/core/crypto.ts
 var KEY_BYTES = 32;
+function isSealedData(value) {
+  return isPlainObject(value) && typeof value.ciphertext === "string" && typeof value.nonce === "string";
+}
 async function importAesKey(raw) {
   return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
@@ -84,6 +92,9 @@ async function importVaultKey(raw) {
 // src/core/identity.ts
 var CURVE = { name: "ECDH", namedCurve: "P-256" };
 var WRAP_INFO = utf8Encode("personal-vault/key-wrap/v1");
+function isWrappedForRecipient(value) {
+  return isPlainObject(value) && typeof value.ephemeralPublicKey === "string" && isSealedData(value.sealed);
+}
 async function importPublic(spki) {
   return crypto.subtle.importKey("spki", fromBase64(spki), CURVE, false, []);
 }
@@ -151,6 +162,11 @@ function parseLinkReference(text) {
 function linkKeyContext(linkId, generation) {
   return utf8Encode(`personal-vault/link-key/${linkId}/${generation}`);
 }
+function isCiResponse(value) {
+  return isPlainObject(value) && typeof value.projectId === "string" && typeof value.environmentId === "string" && typeof value.generation === "number" && isWrappedForRecipient(value.wrappedKey) && Array.isArray(value.secrets) && value.secrets.every(
+    (secret) => isPlainObject(secret) && typeof secret.id === "string" && isSealedData(secret.sealed)
+  );
+}
 async function openCiResponse(repoKey, linkId, response) {
   const environmentKey = new Uint8Array(
     await unwrapForRecipient(
@@ -196,8 +212,9 @@ async function githubIdToken(audience, env = process.env, request = fetch) {
   if (!response.ok) {
     throw new CiError(`GitHub refused an OIDC token (${response.status})`);
   }
-  const { value } = await response.json();
-  if (!value) {
+  const body = await response.json();
+  const value = isPlainObject(body) ? body.value : void 0;
+  if (typeof value !== "string" || !value) {
     throw new CiError("GitHub returned an empty OIDC token");
   }
   return value;
@@ -219,7 +236,11 @@ async function fetchSecrets(options) {
     const { error } = await response.json().catch(() => ({}));
     throw new CiError(`7key refused the request (${response.status}): ${error ?? "unknown error"}`);
   }
-  return openCiResponse(options.repoKey, reference.linkId, await response.json());
+  const body = await response.json();
+  if (!isCiResponse(body)) {
+    throw new CiError("7key sent a response this version cannot read; update the action");
+  }
+  return openCiResponse(options.repoKey, reference.linkId, body);
 }
 function maskCommands(secrets) {
   return secrets.filter((secret) => secret.kind !== "variable").flatMap((secret) => secret.value.split(/\r?\n/)).filter((line) => line.trim().length > 0).map((line) => `::add-mask::${line}`);

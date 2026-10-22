@@ -1,16 +1,21 @@
 import type { Bytes } from "../../src/core/bytes.js";
-import { rewrapVaultKey, type SealedData } from "../../src/core/crypto.js";
+import { isSealedData, rewrapVaultKey } from "../../src/core/crypto.js";
 import {
   generateRecoveryCode,
   openWithRecovery,
   recoveryAuthKey,
   sealForRecovery,
 } from "../../src/core/recovery.js";
-import { ApiError, request } from "./api.js";
+import { ApiError, hasField, isNumber, request, requestChecked } from "./api.js";
 import { assertMasterPasswordPolicy } from "./master-password.js";
 
+const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
+
 export async function recoveryCreatedAt(): Promise<number | null> {
-  const { createdAt } = await request<{ createdAt: number | null }>("/api/account/recovery");
+  const { createdAt } = await requestChecked(
+    "/api/account/recovery",
+    hasField("createdAt", (value): value is number | null => value === null || isNumber(value)),
+  );
   return createdAt;
 }
 
@@ -20,10 +25,14 @@ export async function createRecoveryCode(
 ): Promise<{ code: string; createdAt: number }> {
   const code = generateRecoveryCode();
   const material = await sealForRecovery(code, vaultKeyRaw);
-  const { createdAt } = await request<{ createdAt: number }>("/api/account/recovery", {
-    method: "PUT",
-    body: JSON.stringify({ currentAuthKey, ...material }),
-  });
+  const { createdAt } = await requestChecked(
+    "/api/account/recovery",
+    hasField("createdAt", isNumber),
+    {
+      method: "PUT",
+      body: JSON.stringify({ currentAuthKey, ...material }),
+    },
+  );
   return { code, createdAt };
 }
 
@@ -39,12 +48,16 @@ export async function requestRecoveryEmail(
   code: string,
   locale: string,
 ): Promise<boolean> {
-  const { required } = await request<{ required: boolean }>("/api/auth/recover/email", {
-    method: "POST",
-    auth: false,
-    humanCheck: true,
-    body: JSON.stringify({ email, recoveryAuthKey: await recoveryAuthKey(code), locale }),
-  });
+  const { required } = await requestChecked(
+    "/api/auth/recover/email",
+    hasField("required", isBoolean),
+    {
+      method: "POST",
+      auth: false,
+      humanCheck: true,
+      body: JSON.stringify({ email, recoveryAuthKey: await recoveryAuthKey(code), locale }),
+    },
+  );
   return required;
 }
 
@@ -57,8 +70,9 @@ export async function recoverAccount(
 ): Promise<{ code: string; twoFactorDisabled: boolean }> {
   assertMasterPasswordPolicy(newPassword, email);
   const authKey = await recoveryAuthKey(code);
-  const { wrappedVaultKey } = await request<{ wrappedVaultKey: SealedData }>(
+  const { wrappedVaultKey } = await requestChecked(
     "/api/auth/recover/start",
+    hasField("wrappedVaultKey", isSealedData),
     {
       method: "POST",
       auth: false,

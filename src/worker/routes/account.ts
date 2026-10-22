@@ -1,9 +1,11 @@
 import { Hono } from "hono";
+import { isSealedData } from "../../core/crypto.js";
 import { isPublicKey } from "../../core/identity.js";
+import { parseJsonAs } from "../../core/json.js";
 import { protectAuthKey, protectWrappedKey, recoveryScope, verifyAuthKey } from "../at-rest.js";
 import { twoFactorDisabledEmail, twoFactorEnabledEmail } from "../emails.js";
 import { apiError } from "../errors.js";
-import { inBackground, now } from "../http.js";
+import { inBackground, now, readJson } from "../http.js";
 import { createMailer } from "../mailer.js";
 import { clientIp, requestLocale } from "../request.js";
 import { revokeOtherSessions } from "../session.js";
@@ -35,17 +37,14 @@ account.get("/identity", async (c) => {
   return c.json({
     identity: {
       publicKey: row.public_key,
-      wrappedPrivateKey: JSON.parse(row.wrapped_private_key) as unknown,
+      wrappedPrivateKey: parseJsonAs(row.wrapped_private_key, isSealedData),
     },
   });
 });
 
 account.put("/identity", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as {
-    publicKey?: unknown;
-    wrappedPrivateKey?: unknown;
-  } | null;
-  if (!isPublicKey(body?.publicKey) || !isSealed(body?.wrappedPrivateKey, 512)) {
+  const body = await readJson(c);
+  if (!isPublicKey(body.publicKey) || !isSealed(body.wrappedPrivateKey, 512)) {
     return c.json(apiError("auth.invalid_body"), 400);
   }
   const { ciphertext, nonce } = body.wrappedPrivateKey;
@@ -89,15 +88,15 @@ account.get("/recovery", async (c) => {
 });
 
 account.put("/recovery", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const body = await readJson(c);
   const { accountId } = c.get("session");
-  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+  if (!(await reauthenticated(c.env, accountId, body.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
-  if (!isBase64(body?.authKey, 32)) {
+  if (!isBase64(body.authKey, 32)) {
     return c.json(apiError("auth.invalid_auth_key"), 400);
   }
-  if (!isSealed(body?.wrappedVaultKey, 64)) {
+  if (!isSealed(body.wrappedVaultKey, 64)) {
     return c.json(apiError("auth.invalid_wrapped_key"), 400);
   }
   const createdAt = now();
@@ -119,9 +118,9 @@ account.put("/recovery", async (c) => {
 });
 
 account.delete("/recovery", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const body = await readJson(c);
   const { accountId } = c.get("session");
-  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+  if (!(await reauthenticated(c.env, accountId, body.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
   await c.env.DB.prepare(
@@ -182,9 +181,9 @@ async function checkCode(
 }
 
 account.post("/2fa/setup", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const body = await readJson(c);
   const { accountId } = c.get("session");
-  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+  if (!(await reauthenticated(c.env, accountId, body.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
   if ((await twoFactorStatus(c.env, accountId)).enabled) {
@@ -195,12 +194,12 @@ account.post("/2fa/setup", async (c) => {
 });
 
 account.post("/2fa/enable", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const body = await readJson(c);
   const { accountId, tokenHash } = c.get("session");
-  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+  if (!(await reauthenticated(c.env, accountId, body.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
-  const result = await confirmSetup(c.env, accountId, body?.code, now());
+  const result = await confirmSetup(c.env, accountId, body.code, now());
   if (!result.ok) {
     if (result.reason === "enabled") {
       return c.json(apiError("two_factor.already_enabled"), 409);
@@ -211,39 +210,39 @@ account.post("/2fa/enable", async (c) => {
     return c.json(apiError("auth.invalid_2fa"), 400);
   }
   await revokeOtherSessions(c.env, accountId, tokenHash);
-  notify(c, await accountEmail(c.env, accountId), body?.locale, twoFactorEnabledEmail);
+  notify(c, await accountEmail(c.env, accountId), body.locale, twoFactorEnabledEmail);
   c.header("Cache-Control", "no-store");
   return c.json({ enabledAt: result.enabledAt, backupCodes: result.backupCodes });
 });
 
 account.post("/2fa/disable", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const body = await readJson(c);
   const { accountId } = c.get("session");
-  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+  if (!(await reauthenticated(c.env, accountId, body.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
   if (!(await twoFactorStatus(c.env, accountId)).enabled) {
     return c.json(apiError("two_factor.not_enabled"), 409);
   }
-  const refused = await checkCode(c, accountId, body?.code);
+  const refused = await checkCode(c, accountId, body.code);
   if (refused) {
     return refused;
   }
   await c.env.DB.batch(disableStatements(c.env, accountId));
-  notify(c, await accountEmail(c.env, accountId), body?.locale, twoFactorDisabledEmail);
+  notify(c, await accountEmail(c.env, accountId), body.locale, twoFactorDisabledEmail);
   return c.json({ ok: true });
 });
 
 account.post("/2fa/backup-codes", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+  const body = await readJson(c);
   const { accountId } = c.get("session");
-  if (!(await reauthenticated(c.env, accountId, body?.currentAuthKey))) {
+  if (!(await reauthenticated(c.env, accountId, body.currentAuthKey))) {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
   if (!(await twoFactorStatus(c.env, accountId)).enabled) {
     return c.json(apiError("two_factor.not_enabled"), 409);
   }
-  const refused = await checkCode(c, accountId, body?.code);
+  const refused = await checkCode(c, accountId, body.code);
   if (refused) {
     return refused;
   }

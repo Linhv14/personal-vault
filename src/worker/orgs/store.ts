@@ -1,6 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
 import type { SealedData } from "../../core/crypto.js";
+import { isWrappedForRecipient } from "../../core/identity.js";
+import { parseJsonAs } from "../../core/json.js";
 import { MAX_SECRETS_PER_PROJECT, type SecretAccess } from "../../core/projects.js";
 import { MAX_TEAM_ITEMS, MAX_TEAM_VAULT_BYTES } from "../../core/team-items.js";
 import {
@@ -269,7 +271,7 @@ export class OrgStore extends DurableObject<Env> {
               .map(({ account_id, access }) => ({ accountId: account_id, access })),
             generation: team.key_generation,
             rekeyNeeded: team.rekey_needed === 1,
-            wrappedKey: mine ? (JSON.parse(mine.wrapped_key) as WrappedKey) : null,
+            wrappedKey: mine ? parseJsonAs(mine.wrapped_key, isWrappedForRecipient) : null,
           };
         }),
       ),
@@ -1098,7 +1100,7 @@ export class OrgStore extends DurableObject<Env> {
           generation: row.key_generation,
           rekeyNeeded: row.rekey_needed === 1,
           viewOnly: row.access === "view" && !isOrgAdmin(principal.role),
-          wrappedKey: JSON.parse(row.wrapped_key) as WrappedKey,
+          wrappedKey: parseJsonAs(row.wrapped_key, isWrappedForRecipient),
           items: this.items.ofTeam(row.id),
         })),
       ),

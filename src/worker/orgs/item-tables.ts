@@ -1,4 +1,5 @@
-import type { SealedData } from "../../core/crypto.js";
+import { isSealedData, type SealedData } from "../../core/crypto.js";
+import { parseJsonAs } from "../../core/json.js";
 
 export interface TeamItemRecord {
   id: string;
@@ -12,7 +13,7 @@ type ItemRow = { id: string; sealed: string; updated_at: number; updated_by: str
 function itemRecord(row: ItemRow): TeamItemRecord {
   return {
     id: row.id,
-    sealed: JSON.parse(row.sealed) as SealedData,
+    sealed: parseJsonAs(row.sealed, isSealedData),
     updatedAt: row.updated_at,
     updatedBy: row.updated_by,
   };

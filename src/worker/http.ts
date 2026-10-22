@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { apiError, type ApiErrorCode } from "./errors.js";
 import { logError } from "./log.js";
 import type { AppBindings } from "./types.js";
+import { isPlainObject } from "../core/json.js";
 
 type Params = Record<string, string | number>;
 
@@ -27,9 +28,19 @@ export function respond<T>(c: Context<AppBindings>, result: Result<T>, status: 2
     : c.json(apiError(result.code, result.params), result.status);
 }
 
+export class InvalidBodyError extends Error {
+  constructor() {
+    super("Request body is not a JSON object");
+    this.name = "InvalidBodyError";
+  }
+}
+
 export async function readJson(c: Context<AppBindings>): Promise<Record<string, unknown>> {
-  const body = (await c.req.json().catch(() => null)) as unknown;
-  return typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+  const body: unknown = await c.req.json().catch(() => null);
+  if (!isPlainObject(body)) {
+    throw new InvalidBodyError();
+  }
+  return body;
 }
 
 export function now(): number {

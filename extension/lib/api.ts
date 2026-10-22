@@ -3,7 +3,14 @@
  * function in this file sees plaintext or takes a key.
  */
 
-import type { AccountCryptoRecord, KdfParams, SealedData } from "../../src/core/crypto.js";
+import {
+  isKdfParams,
+  isSealedData,
+  type AccountCryptoRecord,
+  type KdfParams,
+  type SealedData,
+} from "../../src/core/crypto.js";
+import { isPlainObject } from "../../src/core/json.js";
 import { getLocal, getUnlocked, lock, setToken, type CachedItem } from "./storage.js";
 
 /**
@@ -116,6 +123,30 @@ export async function request<T>(
   }
 }
 
+export async function requestChecked<T>(
+  path: string,
+  guard: (value: unknown) => value is T,
+  init: Parameters<typeof request>[1] = {},
+): Promise<T> {
+  const body = await request<unknown>(path, init);
+  if (!guard(body)) {
+    throw new ApiError("error.api.bad_response", 200);
+  }
+  return body;
+}
+
+export function hasField<K extends string, T>(
+  key: K,
+  check: (value: unknown) => value is T,
+): (value: unknown) => value is Record<K, T> {
+  return (value): value is Record<K, T> => isPlainObject(value) && check(value[key]);
+}
+
+const isString = (value: unknown): value is string => typeof value === "string";
+export const isNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+const isList = (value: unknown): value is unknown[] => Array.isArray(value);
+
 function serverError(text: string): ServerError {
   let parsed: unknown;
   try {
@@ -137,10 +168,14 @@ function serverError(text: string): ServerError {
 }
 
 export async function resumeKey(token: string): Promise<string> {
-  const { resumeKey } = await request<{ resumeKey: string }>("/api/auth/resume-key", {
-    auth: false,
-    extraHeaders: { Authorization: `Bearer ${token}` },
-  });
+  const { resumeKey } = await requestChecked(
+    "/api/auth/resume-key",
+    hasField("resumeKey", isString),
+    {
+      auth: false,
+      extraHeaders: { Authorization: `Bearer ${token}` },
+    },
+  );
   return resumeKey;
 }
 
@@ -174,22 +209,30 @@ export async function register(
   verificationCode?: string,
   inviteId?: string,
 ): Promise<{ accountId: string; token: string; orgId?: string }> {
-  const result = await request<{ accountId: string; token: string; orgId?: string }>(
-    "/api/auth/register",
-    {
-      method: "POST",
-      auth: false,
-      humanCheck: true,
-      extraHeaders: { "X-Registration-Token": registrationToken },
-      body: JSON.stringify({ email, ...record, verificationCode, inviteId }),
-    },
-  );
+  const result = await requestChecked("/api/auth/register", isRegistered, {
+    method: "POST",
+    auth: false,
+    humanCheck: true,
+    extraHeaders: { "X-Registration-Token": registrationToken },
+    body: JSON.stringify({ email, ...record, verificationCode, inviteId }),
+  });
   await setToken(result.token);
   return result;
 }
 
+function isRegistered(
+  value: unknown,
+): value is { accountId: string; token: string; orgId?: string } {
+  return (
+    isPlainObject(value) &&
+    isString(value.accountId) &&
+    isString(value.token) &&
+    (value.orgId === undefined || isString(value.orgId))
+  );
+}
+
 export async function prelogin(email: string): Promise<KdfParams> {
-  const result = await request<{ kdf: KdfParams }>("/api/auth/prelogin", {
+  const result = await requestChecked("/api/auth/prelogin", hasField("kdf", isKdfParams), {
     method: "POST",
     auth: false,
     body: JSON.stringify({ email }),
@@ -216,15 +259,32 @@ export function needsSecondFactor(
   return "twoFactor" in result && result.twoFactor === "required";
 }
 
-function checkedLogin(result: unknown): LoginSuccess | TwoFactorChallenge {
-  const body = (result ?? {}) as Partial<LoginSuccess & TwoFactorChallenge>;
-  if (body.twoFactor === "required" && typeof body.challenge === "string") {
-    return body as TwoFactorChallenge;
+function checkedLogin(body: unknown): LoginSuccess | TwoFactorChallenge {
+  if (!isPlainObject(body)) {
+    throw new ApiError("error.api.bad_response", 200);
+  }
+  if (body.twoFactor === "required") {
+    if (!isString(body.challenge) || !isNumber(body.expiresAt)) {
+      throw new ApiError("error.api.bad_response", 200);
+    }
+    return { twoFactor: "required", challenge: body.challenge, expiresAt: body.expiresAt };
   }
   if (typeof body.token !== "string" || !body.wrappedVaultKey) {
     throw new ApiError("error.auth.client_outdated", 200);
   }
-  return body as LoginSuccess;
+  if (
+    !isNumber(body.expiresAt) ||
+    !isSealedData(body.wrappedVaultKey) ||
+    (body.upgradeKdf !== undefined && typeof body.upgradeKdf !== "boolean")
+  ) {
+    throw new ApiError("error.api.bad_response", 200);
+  }
+  return {
+    token: body.token,
+    expiresAt: body.expiresAt,
+    wrappedVaultKey: body.wrappedVaultKey,
+    ...(body.upgradeKdf === undefined ? {} : { upgradeKdf: body.upgradeKdf }),
+  };
 }
 
 export async function login(
@@ -282,8 +342,37 @@ export interface SessionInfo {
   current: boolean;
 }
 
+const SESSION_KINDS: readonly SessionInfo["kind"][] = ["browser", "cli", "ci", "unknown"];
+
+function sessionInfo(value: unknown): SessionInfo | null {
+  if (
+    !isPlainObject(value) ||
+    !isString(value.id) ||
+    !isString(value.label) ||
+    !isNumber(value.createdAt) ||
+    !(value.lastSeenAt === null || isNumber(value.lastSeenAt)) ||
+    typeof value.current !== "boolean"
+  ) {
+    return null;
+  }
+  const kind = SESSION_KINDS.find((known) => known === value.kind) ?? "unknown";
+  return {
+    id: value.id,
+    label: value.label,
+    kind,
+    createdAt: value.createdAt,
+    lastSeenAt: value.lastSeenAt,
+    current: value.current,
+  };
+}
+
 export async function listSessions(): Promise<SessionInfo[]> {
-  return (await request<{ sessions: SessionInfo[] }>("/api/auth/sessions")).sessions;
+  const { sessions } = await requestChecked("/api/auth/sessions", hasField("sessions", isList));
+  const parsed = sessions.map(sessionInfo);
+  if (parsed.some((session) => session === null)) {
+    throw new ApiError("error.api.bad_response", 200);
+  }
+  return parsed.filter((session) => session !== null);
 }
 
 export async function revokeSession(id: string): Promise<void> {

@@ -1,13 +1,19 @@
 import { Hono } from "hono";
 import { utf8Encode } from "../../core/bytes.js";
 import { apiError } from "../errors.js";
-import type { StoreDump } from "../migration.js";
+import { readJson } from "../http.js";
+import { isPlainObject } from "../../core/json.js";
+import { isStoreDump, type StoreDump } from "../migration.js";
 import { orgStore, userStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
 
 interface Snapshot {
   users: Record<string, StoreDump>;
   orgs: Record<string, StoreDump>;
+}
+
+function isDumps(value: unknown): value is Record<string, StoreDump> {
+  return isPlainObject(value) && Object.values(value).every(isStoreDump);
 }
 
 const migration = new Hono<AppBindings>();
@@ -43,10 +49,11 @@ migration.get("/export", async (c) => {
 });
 
 migration.post("/import", async (c) => {
-  const snapshot = (await c.req.json().catch(() => null)) as Snapshot | null;
-  if (!snapshot?.users || !snapshot.orgs) {
+  const { users, orgs } = await readJson(c);
+  if (!isDumps(users) || !isDumps(orgs)) {
     return c.json(apiError("auth.invalid_body"), 400);
   }
+  const snapshot: Snapshot = { users, orgs };
   let rows = 0;
   try {
     for (const [id, dump] of Object.entries(snapshot.users)) {

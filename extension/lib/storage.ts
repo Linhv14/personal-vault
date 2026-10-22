@@ -12,6 +12,8 @@
 
 import type { KdfParams, SealedData } from "../../src/core/crypto.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
+import { isPlainObject } from "../../src/core/json.js";
+import { normalizeLocalState } from "./local-state.js";
 import { platform } from "./platform.js";
 
 /** An item exactly as the server stores it — always ciphertext. */
@@ -92,6 +94,16 @@ export interface PendingSignup {
 }
 
 const PENDING_SIGNUP_KEY = "pendingSignup";
+
+function isPendingSignup(value: unknown): value is PendingSignup {
+  return (
+    isPlainObject(value) &&
+    typeof value.apiUrl === "string" &&
+    typeof value.email === "string" &&
+    typeof value.registrationToken === "string" &&
+    typeof value.sentAt === "number"
+  );
+}
 const PENDING_SIGNUP_TTL_MS = 15 * 60_000;
 
 export async function savePendingSignup(signup: PendingSignup): Promise<void> {
@@ -99,9 +111,8 @@ export async function savePendingSignup(signup: PendingSignup): Promise<void> {
 }
 
 export async function loadPendingSignup(): Promise<PendingSignup | null> {
-  const signup = (await platform().session.get(PENDING_SIGNUP_KEY))[PENDING_SIGNUP_KEY] as
-    PendingSignup | undefined;
-  if (!signup) {
+  const signup = (await platform().session.get(PENDING_SIGNUP_KEY))[PENDING_SIGNUP_KEY];
+  if (!isPendingSignup(signup)) {
     return null;
   }
   if (Date.now() - signup.sentAt > PENDING_SIGNUP_TTL_MS) {
@@ -116,7 +127,7 @@ export async function clearPendingSignup(): Promise<void> {
 }
 
 export async function getLocal(): Promise<LocalState> {
-  return await platform().local.get(null);
+  return normalizeLocalState(await platform().local.get(null));
 }
 
 export async function setLocal(patch: Partial<LocalState>): Promise<void> {
@@ -140,7 +151,13 @@ export async function clearAccountData(): Promise<void> {
 }
 
 async function getSession(): Promise<SessionState> {
-  return await platform().session.get(null);
+  const { vaultKeyRaw, token, lockAt, focusItem } = await platform().session.get(null);
+  return {
+    ...(typeof vaultKeyRaw === "string" ? { vaultKeyRaw } : {}),
+    ...(typeof token === "string" ? { token } : {}),
+    ...(typeof lockAt === "number" ? { lockAt } : {}),
+    ...(typeof focusItem === "string" ? { focusItem } : {}),
+  };
 }
 
 export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: string } | null> {

@@ -1,5 +1,6 @@
 import { fromBase64Url, utf8Decode, utf8Encode, type Bytes } from "../core/bytes.js";
 import type { GithubClaims } from "../core/ci.js";
+import { isPlainObject } from "../core/json.js";
 
 export const GITHUB_ISSUER = "https://token.actions.githubusercontent.com";
 const JWKS_URL = `${GITHUB_ISSUER}/.well-known/jwks`;
@@ -15,6 +16,20 @@ export interface Jwk {
 
 export type JwksSource = () => Promise<Jwk[]>;
 
+function isJwk(value: unknown): value is Jwk {
+  return (
+    isPlainObject(value) &&
+    typeof value.kid === "string" &&
+    typeof value.kty === "string" &&
+    typeof value.n === "string" &&
+    typeof value.e === "string"
+  );
+}
+
+export function validJwks(value: unknown): Jwk[] {
+  return Array.isArray(value) ? value.filter(isJwk) : [];
+}
+
 export const githubJwks: JwksSource = async () => {
   const cached: RequestInit & { cf: { cacheTtl: number; cacheEverything: boolean } } = {
     cf: { cacheTtl: 3600, cacheEverything: true },
@@ -23,14 +38,14 @@ export const githubJwks: JwksSource = async () => {
   if (!response.ok) {
     return [];
   }
-  const { keys } = (await response.json()) as { keys?: Jwk[] };
-  return keys ?? [];
+  const body: unknown = await response.json();
+  return validJwks(isPlainObject(body) ? body.keys : null);
 };
 
 function decodeJson(part: string): Record<string, unknown> | null {
   try {
-    const value = JSON.parse(utf8Decode(fromBase64Url(part))) as unknown;
-    return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+    const value: unknown = JSON.parse(utf8Decode(fromBase64Url(part)));
+    return isPlainObject(value) ? value : null;
   } catch {
     return null;
   }

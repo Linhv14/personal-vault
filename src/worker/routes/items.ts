@@ -3,7 +3,7 @@ import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { userStore } from "../stores.js";
 import type { AppBindings } from "../types.js";
-import { isBase64, isUuid } from "../validate.js";
+import { isSealed, isUuid } from "../validate.js";
 
 const items = new Hono<AppBindings>();
 
@@ -16,9 +16,8 @@ interface SealedRow {
   nonce: string;
 }
 
-function isSealedItem(value: unknown): boolean {
-  const { ciphertext, nonce } = (value ?? {}) as Record<string, unknown>;
-  return isBase64(ciphertext, MAX_ITEM_BYTES) && isBase64(nonce, 12);
+function isSealedItem(value: unknown): value is { ciphertext: string; nonce: string } {
+  return isSealed(value, MAX_ITEM_BYTES);
 }
 
 items.get("/", async (c) => {
@@ -49,7 +48,7 @@ items.put("/:id", async (c) => {
     return c.json(apiError("items.invalid_payload"), 400);
   }
   const { accountId } = c.get("session");
-  const sealed = { ciphertext: body.ciphertext as string, nonce: body.nonce as string };
+  const sealed = { ciphertext: body.ciphertext, nonce: body.nonce };
   return respond(c, await userStore(c.env, accountId).put(accountId, id, sealed, ifUpdatedAt));
 });
 

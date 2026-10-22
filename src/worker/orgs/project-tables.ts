@@ -1,4 +1,5 @@
-import type { SealedData } from "../../core/crypto.js";
+import { isSealedData, type SealedData } from "../../core/crypto.js";
+import { parseJsonAs } from "../../core/json.js";
 
 export interface ProjectRecord {
   id: string;
@@ -34,7 +35,7 @@ function secretRecord(row: SecretRow): SecretRecord {
     id: row.id,
     projectId: row.project_id,
     environmentId: row.environment_id,
-    sealed: JSON.parse(row.sealed) as SealedData,
+    sealed: parseJsonAs(row.sealed, isSealedData),
     updatedAt: row.updated_at,
     updatedBy: row.updated_by,
   };
@@ -129,7 +130,7 @@ export class ProjectTables {
       .toArray()
       .map((row) => ({
         id: row.id,
-        sealed: JSON.parse(row.sealed) as SealedData,
+        sealed: parseJsonAs(row.sealed, isSealedData),
         createdAt: row.created_at,
         secretCount: row.secret_count,
         updatedAt: Math.max(row.updated_at ?? 0, row.created_at),
@@ -298,7 +299,7 @@ export class ProjectTables {
       .map((row) => ({
         id: row.id,
         secretId,
-        sealed: JSON.parse(row.sealed) as SealedData,
+        sealed: parseJsonAs(row.sealed, isSealedData),
         updatedAt: row.updated_at,
         updatedBy: row.updated_by,
       }));
@@ -317,7 +318,7 @@ export class ProjectTables {
       .map((row) => ({
         id: row.id,
         secretId: row.secret_id,
-        sealed: JSON.parse(row.sealed) as SealedData,
+        sealed: parseJsonAs(row.sealed, isSealedData),
       }));
   }
 

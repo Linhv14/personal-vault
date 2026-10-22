@@ -9,7 +9,7 @@ import {
   verifyAuthKey,
 } from "../at-rest.js";
 import { apiError } from "../errors.js";
-import { inBackground, now } from "../http.js";
+import { inBackground, now, readJson } from "../http.js";
 import {
   consumeCode,
   emailVerificationEnabled,
@@ -51,6 +51,7 @@ import {
 } from "../two-factor.js";
 import type { AppBindings, Env } from "../types.js";
 import { isBase64, isUuid } from "../validate.js";
+import { isPlainObject } from "../../core/json.js";
 import { OrgDirectory } from "../orgs/directory.js";
 import { joinFromInvite } from "../orgs/invitations.js";
 import { orgStore, userStore } from "../stores.js";
@@ -113,19 +114,8 @@ async function sameSecret(provided: string, expected: string): Promise<boolean> 
 }
 
 auth.post("/register", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  if (typeof body !== "object" || body === null) {
-    return c.json(apiError("auth.invalid_body"), 400);
-  }
-
-  const {
-    email: rawEmail,
-    kdf,
-    authKey,
-    wrappedVaultKey,
-    verificationCode,
-    inviteId,
-  } = body as Record<string, unknown>;
+  const body = await readJson(c);
+  const { email: rawEmail, kdf, authKey, wrappedVaultKey, verificationCode, inviteId } = body;
   const email = normalizeEmail(rawEmail);
   const directory = new OrgDirectory(c.env.DB);
   const invite = isUuid(inviteId) ? await directory.preview(inviteId) : null;
@@ -221,14 +211,14 @@ auth.post("/verify-email", async (c) => {
     return c.json({ ok: true, required: false });
   }
 
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const email = normalizeEmail(body?.email);
+  const body = await readJson(c);
+  const email = normalizeEmail(body.email);
   if (!email) {
     return c.json(apiError("auth.invalid_email"), 400);
   }
   const request = {
     email,
-    locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+    locale: body.locale === "vi" ? ("vi" as const) : ("en" as const),
     siteUrl: new URL(c.req.url).origin,
   };
 
@@ -250,8 +240,7 @@ auth.post("/verify-email", async (c) => {
  * vault that address is half of the target.
  */
 auth.post("/prelogin", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const email = normalizeEmail((body as Record<string, unknown> | null)?.email);
+  const email = normalizeEmail((await readJson(c)).email);
   if (!email) {
     return c.json(apiError("auth.invalid_email"), 400);
   }
@@ -281,8 +270,8 @@ async function decoyKdf(env: Env, email: string): Promise<KdfBody> {
 }
 
 auth.post("/login", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const { email: rawEmail, authKey } = (body ?? {}) as Record<string, unknown>;
+  const body = await readJson(c);
+  const { email: rawEmail, authKey } = body;
   const email = normalizeEmail(rawEmail);
   if (!email || !isBase64(authKey, 32)) {
     return c.json(apiError("auth.invalid_credentials"), 400);
@@ -330,7 +319,7 @@ auth.post("/login", async (c) => {
       )
       .run();
   }
-  const locale = requestLocale(c, (body as Record<string, unknown>).locale);
+  const locale = requestLocale(c, body.locale);
   if (row.totp_enabled_at !== null) {
     c.header("Cache-Control", "no-store");
     return c.json({
@@ -376,8 +365,8 @@ async function signedIn(
 }
 
 auth.post("/login/2fa", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const { challenge: token, code } = body ?? {};
+  const body = await readJson(c);
+  const { challenge: token, code } = body;
   if (typeof token !== "string" || token.length > 128) {
     return c.json(apiError("auth.two_factor_expired"), 401);
   }
@@ -414,8 +403,7 @@ auth.post("/login/2fa", async (c) => {
 });
 
 auth.post("/delete-account", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const { currentAuthKey } = (body ?? {}) as Record<string, unknown>;
+  const { currentAuthKey } = await readJson(c);
   if (!isBase64(currentAuthKey, 32)) {
     return c.json(apiError("auth.invalid_credentials"), 400);
   }
@@ -462,11 +450,7 @@ auth.post("/logout", async (c) => {
  * vault key itself, so the server only swaps three columns — no item is touched.
  */
 auth.post("/change-password", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const { currentAuthKey, kdf, authKey, wrappedVaultKey, keepSession } = (body ?? {}) as Record<
-    string,
-    unknown
-  >;
+  const { currentAuthKey, kdf, authKey, wrappedVaultKey, keepSession } = await readJson(c);
   if (!isBase64(currentAuthKey, 32)) {
     return c.json(apiError("auth.invalid_credentials"), 400);
   }
@@ -578,9 +562,9 @@ async function emailCodeError(
 }
 
 auth.post("/recover/email", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const email = normalizeEmail(body?.email);
-  if (!email || !isBase64(body?.recoveryAuthKey, 32)) {
+  const body = await readJson(c);
+  const email = normalizeEmail(body.email);
+  if (!email || !isBase64(body.recoveryAuthKey, 32)) {
     return c.json(apiError("auth.invalid_recovery_code"), 400);
   }
   const timestamp = now();
@@ -601,7 +585,7 @@ auth.post("/recover/email", async (c) => {
   }
   const request = {
     email,
-    locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+    locale: body.locale === "vi" ? ("vi" as const) : ("en" as const),
     siteUrl: new URL(c.req.url).origin,
   };
   inBackground(c, "recovery_code_email_failed", () =>
@@ -611,9 +595,9 @@ auth.post("/recover/email", async (c) => {
 });
 
 auth.post("/recover/start", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const email = normalizeEmail(body?.email);
-  if (!email || !isBase64(body?.recoveryAuthKey, 32)) {
+  const body = await readJson(c);
+  const email = normalizeEmail(body.email);
+  if (!email || !isBase64(body.recoveryAuthKey, 32)) {
     return c.json(apiError("auth.invalid_recovery_code"), 400);
   }
   const timestamp = now();
@@ -634,10 +618,10 @@ auth.post("/recover/start", async (c) => {
 });
 
 auth.post("/recover/finish", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const email = normalizeEmail(body?.email);
-  const { recoveryAuthKey, kdf, authKey, wrappedVaultKey, recovery } = body ?? {};
-  const next = (recovery ?? {}) as Record<string, unknown>;
+  const body = await readJson(c);
+  const email = normalizeEmail(body.email);
+  const { recoveryAuthKey, kdf, authKey, wrappedVaultKey, recovery } = body;
+  const next = isPlainObject(recovery) ? recovery : {};
   if (!email || !isBase64(recoveryAuthKey, 32)) {
     return c.json(apiError("auth.invalid_recovery_code"), 400);
   }
@@ -659,7 +643,7 @@ auth.post("/recover/finish", async (c) => {
   if (!row) {
     return c.json(apiError("auth.invalid_recovery_code"), 401);
   }
-  const codeError = await emailCodeError(c.env, row.id, body?.emailCode, timestamp);
+  const codeError = await emailCodeError(c.env, row.id, body.emailCode, timestamp);
   if (codeError) {
     return c.json(apiError(codeError), 400);
   }
@@ -701,7 +685,7 @@ auth.post("/recover/finish", async (c) => {
   const mailer = createMailer(c.env);
   if (mailer) {
     const context = {
-      locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+      locale: body.locale === "vi" ? ("vi" as const) : ("en" as const),
       siteUrl: new URL(c.req.url).origin,
     };
     const message = accountRecoveredEmail(context);

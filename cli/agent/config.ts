@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { isPlainObject } from "../../src/core/json.js";
 
 export interface Remembered {
   email?: string;
@@ -17,11 +18,19 @@ export function remembered(env: NodeJS.ProcessEnv): Remembered {
   if (!existsSync(file)) {
     return {};
   }
+  let value: unknown;
   try {
-    return JSON.parse(readFileSync(file, "utf8")) as Remembered;
+    value = JSON.parse(readFileSync(file, "utf8"));
   } catch {
     return {};
   }
+  if (!isPlainObject(value)) {
+    return {};
+  }
+  return {
+    ...(typeof value.email === "string" ? { email: value.email } : {}),
+    ...(typeof value.server === "string" ? { server: value.server } : {}),
+  };
 }
 
 export function remember(env: NodeJS.ProcessEnv, value: Remembered): void {

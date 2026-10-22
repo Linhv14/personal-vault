@@ -1,5 +1,5 @@
 import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
-import type { CardData, CardFrameCapture } from "../lib/autofill-protocol.js";
+import { isCardFrameFill, type CardFrameCapture } from "../lib/autofill-protocol.js";
 import { detectFields, fillCard, isCardKind, setFieldValue, type FormField } from "./forms.js";
 import { fillState, readCard, type FilledFields } from "./form-capture.js";
 
@@ -38,12 +38,11 @@ function reportCard(submit: boolean): void {
 
 if (inPaymentFrame()) {
   void chrome.runtime.sendMessage({ type: "autofill:card-frame" }).catch(() => {});
-  chrome.runtime.onMessage.addListener((message: unknown) => {
-    const request = message as { type?: string; card?: CardData } | null;
-    if (request?.type !== "7key:card-frame-fill" || !request.card) {
+  chrome.runtime.onMessage.addListener((message: unknown, sender) => {
+    if (sender.id !== chrome.runtime.id || sender.tab || !isCardFrameFill(message)) {
       return;
     }
-    fillCard(detectFields(document), request.card, trackValue);
+    fillCard(detectFields(document), message.card, trackValue);
   });
   document.addEventListener(
     "change",

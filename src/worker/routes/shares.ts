@@ -3,11 +3,12 @@ import type { Context } from "hono";
 import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "../../core/bytes.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
-import { inBackground, now } from "../http.js";
+import { inBackground, now, readJson } from "../http.js";
 import { createMailer } from "../mailer.js";
 import { isCode } from "../one-time-code.js";
 import { hashToken } from "../session.js";
 import { isBase64 } from "../validate.js";
+import { isPlainObject } from "../../core/json.js";
 import { consumeShareCode, MAX_RECIPIENTS, recipientHash, sendShareCode } from "../share-access.js";
 import type { AppBindings } from "../types.js";
 
@@ -82,11 +83,7 @@ function parseRecipients(value: unknown): string[] | null {
 }
 
 shares.post("/", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const { ciphertext, nonce, ttlSeconds, maxViews, recipients } = (body ?? {}) as Record<
-    string,
-    unknown
-  >;
+  const { ciphertext, nonce, ttlSeconds, maxViews, recipients } = await readJson(c);
 
   if (!isBase64(ciphertext, MAX_SHARE_BYTES) || !isBase64(nonce, 12)) {
     return c.json(apiError("shares.invalid_payload"), 400);
@@ -146,8 +143,8 @@ shares.post("/", async (c) => {
 });
 
 shares.post("/status", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as { shares?: unknown } | null;
-  const requested = Array.isArray(body?.shares) ? body.shares : null;
+  const { shares: list } = await readJson(c);
+  const requested: unknown[] | null = Array.isArray(list) ? list : null;
   if (!requested || requested.length > MAX_STATUS_LOOKUPS) {
     return c.json(apiError("shares.invalid_payload"), 400);
   }
@@ -155,7 +152,7 @@ shares.post("/status", async (c) => {
   const timestamp = now();
   const statuses = await Promise.all(
     requested.map(async (entry: unknown) => {
-      const { id, revokeToken } = (entry ?? {}) as Record<string, unknown>;
+      const { id, revokeToken } = isPlainObject(entry) ? entry : {};
       if (typeof id !== "string" || typeof revokeToken !== "string") {
         return null;
       }
@@ -223,8 +220,8 @@ shares.get("/:id", async (c) => {
 });
 
 shares.post("/:id/code", async (c) => {
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const email = normalizeEmail(body?.email);
+  const body = await readJson(c);
+  const email = normalizeEmail(body.email);
   if (!email) {
     return c.json(apiError("auth.invalid_email"), 400);
   }
@@ -234,7 +231,7 @@ shares.post("/:id/code", async (c) => {
     const request = {
       shareId: c.req.param("id"),
       email,
-      locale: body?.locale === "vi" ? ("vi" as const) : ("en" as const),
+      locale: body.locale === "vi" ? ("vi" as const) : ("en" as const),
       siteUrl: new URL(c.req.url).origin,
     };
     const timestamp = now();
@@ -247,9 +244,9 @@ shares.post("/:id/code", async (c) => {
 
 shares.post("/:id/open", async (c) => {
   const id = c.req.param("id");
-  const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
-  const email = normalizeEmail(body?.email);
-  if (!email || !isCode(body?.code)) {
+  const body = await readJson(c);
+  const email = normalizeEmail(body.email);
+  if (!email || !isCode(body.code)) {
     return c.json(apiError("shares.invalid_code"), 400);
   }
 
