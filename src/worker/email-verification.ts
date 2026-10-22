@@ -77,11 +77,13 @@ export async function consumeCode(
   timestamp: number,
 ): Promise<CheckResult> {
   const row = await env.DB.prepare(
-    "SELECT code_hash, expires_at, attempts FROM email_verifications WHERE email = ?",
+    `UPDATE email_verifications SET attempts = attempts + 1
+      WHERE email = ? AND expires_at > ? AND attempts < ?
+      RETURNING code_hash`,
   )
-    .bind(email)
-    .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) {
+    .bind(email, timestamp, CODE_MAX_ATTEMPTS)
+    .first<{ code_hash: string }>();
+  if (!row) {
     return "expired";
   }
 
@@ -90,14 +92,15 @@ export async function consumeCode(
     utf8Encode(row.code_hash),
   );
   if (!matches) {
-    await env.DB.prepare("UPDATE email_verifications SET attempts = attempts + 1 WHERE email = ?")
-      .bind(email)
-      .run();
     return "invalid";
   }
 
-  await env.DB.prepare("DELETE FROM email_verifications WHERE email = ?").bind(email).run();
-  return "ok";
+  const consumed = await env.DB.prepare(
+    "DELETE FROM email_verifications WHERE email = ? RETURNING email",
+  )
+    .bind(email)
+    .first();
+  return consumed ? "ok" : "expired";
 }
 
 export async function verificationCodeError(

@@ -63,26 +63,28 @@ export async function checkRecoveryEmailCode(
   timestamp: number,
 ): Promise<"ok" | "invalid" | "expired"> {
   const row = await env.DB.prepare(
-    "SELECT code_hash, expires_at, attempts FROM recovery_email_codes WHERE account_id = ?",
+    `UPDATE recovery_email_codes SET attempts = attempts + 1
+      WHERE account_id = ? AND expires_at > ? AND attempts < ?
+      RETURNING code_hash`,
   )
-    .bind(accountId)
-    .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) {
+    .bind(accountId, timestamp, CODE_MAX_ATTEMPTS)
+    .first<{ code_hash: string }>();
+  if (!row) {
     return "expired";
   }
   const matches = timingSafeEqual(
     utf8Encode(await codeHash(env, accountId, code)),
     utf8Encode(row.code_hash),
   );
-  if (matches) {
-    return "ok";
+  if (!matches) {
+    return "invalid";
   }
   await env.DB.prepare(
-    "UPDATE recovery_email_codes SET attempts = attempts + 1 WHERE account_id = ?",
+    "UPDATE recovery_email_codes SET attempts = attempts - 1 WHERE account_id = ? AND attempts > 0",
   )
     .bind(accountId)
     .run();
-  return "invalid";
+  return "ok";
 }
 
 export async function clearRecoveryEmailCode(env: Env, accountId: string): Promise<void> {
