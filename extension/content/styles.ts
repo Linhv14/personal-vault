@@ -102,6 +102,8 @@ button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px
 .row.armed { background: var(--danger-soft); }
 .row.armed .text small { color: var(--danger); font-weight: 600; }
 
+.banner .text small.reused { color: var(--danger); font-weight: 600; }
+
 .banner .check {
   display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--text); cursor: pointer;
 }

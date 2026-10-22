@@ -1137,6 +1137,7 @@ export const vi: Catalogue = {
   "autofill.totp_saved_filled": "Đã lưu và điền sẵn mã hiện tại.",
   "autofill.save_title": "Lưu mật khẩu cho {domain}?",
   "autofill.update_title": "Cập nhật mật khẩu cho {domain}?",
+  "autofill.reused": "{count, plural, other {Đang dùng cho # tài khoản khác}}",
   "autofill.save": "Lưu",
   "autofill.update": "Cập nhật",
   "autofill.fill_whole_form": "Điền cả biểu mẫu",

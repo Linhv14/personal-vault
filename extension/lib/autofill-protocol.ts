@@ -79,6 +79,7 @@ export interface PendingPrompt {
   password: string;
   update: boolean;
   confirmed: boolean;
+  reused?: number;
 }
 
 export interface TotpPrompt {

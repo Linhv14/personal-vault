@@ -134,6 +134,11 @@ describe("describeError", () => {
     expect(en("links.views_left", { views: 4 })).toBe("4 views left");
     expect(en("share.protection_emails", { count: 2 })).toBe("2 emails");
     expect(createTranslator("vi")("links.views_left", { views: 4 })).toBe("Còn 4 lượt xem");
+    expect(en("autofill.reused", { count: 1 })).toBe("Also used for 1 other login");
+    expect(en("autofill.reused", { count: 3 })).toBe("Also used for 3 other logins");
+    expect(createTranslator("vi")("autofill.reused", { count: 3 })).toBe(
+      "Đang dùng cho 3 tài khoản khác",
+    );
   });
 
   it("states numbers exactly, never with (s) or an approximation", () => {

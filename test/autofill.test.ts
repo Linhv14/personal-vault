@@ -605,6 +605,44 @@ describe("capture and save", () => {
     expect(response).toEqual({ ok: true, prompt: null });
   });
 
+  it("tells only how many other logins already use the password", async () => {
+    await unlockWith([GITHUB, { ...EVIL, password: GITHUB.password }, PAGES]);
+    const page = sender("https://news.example.com/signup")!;
+    const captured = await handleAutofill(
+      { type: "autofill:capture", username: "reader", password: GITHUB.password },
+      page,
+    );
+    expect(captured).toEqual({
+      ok: true,
+      prompt: {
+        domain: "news.example.com",
+        username: "reader",
+        password: GITHUB.password,
+        update: false,
+        confirmed: false,
+        reused: 2,
+      },
+    });
+    expect(await handleAutofill({ type: "autofill:confirm" }, page)).toMatchObject({
+      prompt: { confirmed: true, reused: 2 },
+    });
+  });
+
+  it("counts reuse on an update without the login being updated", async () => {
+    await unlockWith([GITHUB, PAGES]);
+    const captured = await handleAutofill(
+      { type: "autofill:capture", username: GITHUB.username, password: PAGES.password },
+      sender("https://github.com/session")!,
+    );
+    expect(captured).toMatchObject({ prompt: { update: true, reused: 1 } });
+    const fresh = await handleAutofill(
+      { type: "autofill:capture", username: GITHUB.username, password: "unique-password" },
+      sender("https://github.com/settings")!,
+    );
+    expect(fresh).toMatchObject({ prompt: { update: true } });
+    expect(fresh).not.toHaveProperty("prompt.reused");
+  });
+
   it("stays quiet when the username differs only in case or spacing", async () => {
     await unlockWith([GITHUB]);
     const response = await handleAutofill(

@@ -73,6 +73,11 @@ export function reusedGroups(items: VaultItem[]): VaultItem[][] {
   return [...byPassword.values()].filter((group) => group.length > 1);
 }
 
+export function reuseCount(items: VaultItem[], password: string, except?: string): number {
+  return withPasswords(items).filter((item) => item.password === password && item.id !== except)
+    .length;
+}
+
 async function sha1Hex(text: string): Promise<string> {
   const digest = await sha1(utf8Encode(text));
   return [...digest]

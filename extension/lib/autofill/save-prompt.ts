@@ -1,4 +1,5 @@
 import type { PendingPrompt } from "../autofill-protocol.js";
+import { reuseCount } from "../health.js";
 import { withPasswordHistory } from "../item-types.js";
 import { neverSaves, stopSaving } from "../never-save.js";
 import { isPersonal, openVault } from "../vault/decrypt.js";
@@ -90,12 +91,14 @@ function promptFor(
     return null;
   }
   const existing = items && existingLogin(items, pageUrl, pending.username);
+  const reused = items ? reuseCount(items, pending.password, existing?.id) : 0;
   return {
     domain: pending.site ?? pending.domain,
     username: pending.username ?? existing?.username,
     password: pending.password,
     update: Boolean(existing),
     confirmed: Boolean(pending.confirmed),
+    ...(reused > 0 ? { reused } : {}),
   };
 }
 

@@ -4,6 +4,7 @@ import {
   breachCounts,
   passwordEntropy,
   reusedGroups,
+  reuseCount,
   WEAK_BELOW_BITS,
   weakItems,
 } from "../extension/lib/health.js";
@@ -47,6 +48,18 @@ describe("password health", () => {
     expect(reusedGroups(items).map((group) => group.map((found) => found.id))).toEqual([
       ["a", "c"],
     ]);
+  });
+
+  it("counts the other items that already use a password", () => {
+    const items = [
+      item("a", "same-Password-1!x"),
+      item("b", "same-Password-1!x", "card"),
+      item("c", "same-Password-1!x"),
+      item("d", "other-Password-2!y"),
+    ];
+    expect(reuseCount(items, "same-Password-1!x")).toBe(2);
+    expect(reuseCount(items, "same-Password-1!x", "a")).toBe(1);
+    expect(reuseCount(items, "fresh-Password-3!z")).toBe(0);
   });
 
   it("sends only the first five characters of each SHA-1 and counts matches", async () => {

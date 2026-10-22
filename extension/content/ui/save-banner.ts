@@ -113,7 +113,14 @@ export function showBanner(prompt: PendingPrompt): void {
 
   const text = document.createElement("div");
   text.className = "text";
-  text.append(title, detail, never);
+  text.append(title);
+  if (prompt.reused) {
+    const reused = document.createElement("small");
+    reused.className = "reused";
+    reused.textContent = t("autofill.reused", { count: prompt.reused });
+    text.append(reused);
+  }
+  text.append(detail, never);
   const actions = document.createElement("div");
   actions.className = "actions";
   actions.append(dismiss, save);

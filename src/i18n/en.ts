@@ -1149,6 +1149,8 @@ export const en = {
   "autofill.totp_saved_filled": "Saved. The current code is filled in.",
   "autofill.save_title": "Save password for {domain}?",
   "autofill.update_title": "Update password for {domain}?",
+  "autofill.reused":
+    "{count, plural, one {Also used for # other login} other {Also used for # other logins}}",
   "autofill.save": "Save",
   "autofill.update": "Update",
   "autofill.fill_whole_form": "Fill the whole form",
