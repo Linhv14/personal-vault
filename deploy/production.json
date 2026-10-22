@@ -2,7 +2,7 @@
   "accountId": "1784ddbc646ae15517b735e8c7239dc2",
   "databaseId": "dd394371-f298-4788-978d-30702675afe1",
   "workerUrl": "https://7key.online",
-  "registrationMode": "token",
+  "registrationMode": "open",
   "customDomain": "7key.online",
   "emailFrom": "no-reply@7key.online",
   "emailProvider": "resend",
