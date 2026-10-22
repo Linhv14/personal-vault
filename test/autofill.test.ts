@@ -437,7 +437,7 @@ describe("last used", () => {
     expect(conditions).toEqual([String(cachedRow.updatedAt)]);
     const work = (await decryptAll(key)).find((item) => item.id === WORK.id)!;
     expect(work.lastUsedAt).toBeGreaterThan(0);
-    expect(work.updatedAt).toBe(workBefore!.updatedAt);
+    expect(work.editedAt ?? work.updatedAt).toBe(workBefore!.editedAt ?? workBefore!.updatedAt);
 
     expect(await handleAutofill({ type: "autofill:suggest" }, page)).toMatchObject({
       suggestions: [{ id: WORK.id }, { id: GITHUB.id }],
