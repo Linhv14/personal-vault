@@ -25,6 +25,8 @@ function isHttpUrl(value: unknown): value is string {
   }
 }
 
+const SAFE_AUTO_LOCK_MINUTES = 15;
+
 function isAutoLock(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= -1;
 }
@@ -133,6 +135,9 @@ export function normalizeLocalState(raw: Record<string, unknown>): LocalState {
   }
   if (state.items === undefined) {
     delete state.lastSync;
+  }
+  if (raw.autoLockMinutes !== undefined && state.autoLockMinutes === undefined) {
+    state.autoLockMinutes = SAFE_AUTO_LOCK_MINUTES;
   }
   return state;
 }

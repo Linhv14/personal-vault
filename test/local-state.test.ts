@@ -67,9 +67,6 @@ describe("local state normalisation", () => {
     ["kdf", { type: "argon2", iterations: 3, salt: "x" }],
     ["kdf", { type: "pbkdf2-sha256", iterations: "600000", salt: "x" }],
     ["wrappedVaultKey", { ciphertext: "x" }],
-    ["autoLockMinutes", "15"],
-    ["autoLockMinutes", -5],
-    ["autoLockMinutes", 1.5],
     ["locale", "fr"],
     ["pin", { token: "t", salt: "s", iterations: 0, sealed: SEALED }],
     ["biometric", { token: "t", credentialId: "c", sealed: SEALED }],
@@ -82,6 +79,17 @@ describe("local state normalisation", () => {
     const state = normalizeLocalState({ ...VALID, [key]: value });
     expect(state).not.toHaveProperty(key);
     expect(state.email ?? state.apiUrl).toBeDefined();
+  });
+
+  it.each([["15"], [-5], [1.5]])(
+    "locks after 15 minutes when the auto-lock setting is malformed (%s)",
+    (value) => {
+      expect(normalizeLocalState({ ...VALID, autoLockMinutes: value }).autoLockMinutes).toBe(15);
+    },
+  );
+
+  it("keeps the default when no auto-lock setting is stored", () => {
+    expect(normalizeLocalState({ email: "me@example.com" })).not.toHaveProperty("autoLockMinutes");
   });
 
   it("forgets the sync point when the item cache is malformed, forcing a full sync", () => {
