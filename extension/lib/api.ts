@@ -37,9 +37,13 @@ export function setHumanCheck(check: HumanCheck | null): void {
 }
 
 export async function humanCheckHeaders(apiUrl: string): Promise<Record<string, string>> {
-  if (!humanCheck) return {};
+  if (!humanCheck) {
+    return {};
+  }
   const { turnstileSiteKey } = await serverConfig(apiUrl);
-  if (!turnstileSiteKey) return {};
+  if (!turnstileSiteKey) {
+    return {};
+  }
   try {
     return { "X-Turnstile-Token": await humanCheck(apiUrl, turnstileSiteKey) };
   } catch {
@@ -56,10 +60,14 @@ export async function request<T>(
   } = {},
 ): Promise<T> {
   const { apiUrl } = await getLocal();
-  if (!apiUrl) throw new ApiError("error.api.no_server", 0);
+  if (!apiUrl) {
+    throw new ApiError("error.api.no_server", 0);
+  }
 
   const headers = new Headers(init.extraHeaders);
-  if (init.body) headers.set("Content-Type", "application/json");
+  if (init.body) {
+    headers.set("Content-Type", "application/json");
+  }
   if (init.humanCheck) {
     for (const [name, value] of Object.entries(await humanCheckHeaders(apiUrl))) {
       headers.set(name, value);
@@ -68,7 +76,9 @@ export async function request<T>(
 
   if (init.auth !== false) {
     const session = await getUnlocked();
-    if (!session?.token) throw new ApiError("error.api.not_signed_in", 401);
+    if (!session?.token) {
+      throw new ApiError("error.api.not_signed_in", 401);
+    }
     headers.set("Authorization", `Bearer ${session.token}`);
   }
 
@@ -87,17 +97,43 @@ export async function request<T>(
   }
 
   const text = await response.text();
-  const body = text ? (JSON.parse(text) as unknown) : null;
 
   if (!response.ok) {
-    const { code, params } = (body ?? {}) as ServerError;
+    const { code, params } = serverError(text);
     throw new ApiError(
       code ? `error.${code}` : "error.api.generic",
       response.status,
       params ?? { status: response.status },
     );
   }
-  return body as T;
+  if (!text) {
+    return null as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError("error.api.generic", response.status, { status: response.status });
+  }
+}
+
+function serverError(text: string): ServerError {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    return {};
+  }
+  const { code, params } = parsed as Record<string, unknown>;
+  return {
+    code: typeof code === "string" ? code : undefined,
+    params:
+      typeof params === "object" && params !== null
+        ? (params as Record<string, string | number>)
+        : undefined,
+  };
 }
 
 export async function resumeKey(token: string): Promise<string> {
@@ -114,13 +150,17 @@ export function asSession(token: string) {
 
 export async function fetchLogo(domain: string): Promise<Blob | null> {
   const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
-  if (!apiUrl || !session?.token) return null;
+  if (!apiUrl || !session?.token) {
+    return null;
+  }
   try {
     const response = await fetch(
       `${apiUrl.replace(/\/$/, "")}/api/logo?domain=${encodeURIComponent(domain)}`,
       { headers: { Authorization: `Bearer ${session.token}` }, cache: "no-store" },
     );
-    if (!response.ok || !response.headers.get("Content-Type")?.startsWith("image/")) return null;
+    if (!response.ok || !response.headers.get("Content-Type")?.startsWith("image/")) {
+      return null;
+    }
     return await response.blob();
   } catch {
     return null;
@@ -209,7 +249,9 @@ export async function loginSecondFactor(challenge: string, code: string): Promis
       body: JSON.stringify({ challenge, code }),
     }),
   );
-  if (needsSecondFactor(result)) throw new ApiError("error.auth.client_outdated", 200);
+  if (needsSecondFactor(result)) {
+    throw new ApiError("error.auth.client_outdated", 200);
+  }
   return result;
 }
 
@@ -268,7 +310,9 @@ export interface ServerConfig {
 const SERVER_CONFIG_TIMEOUT_MS = 3000;
 
 export async function serverConfig(apiUrl: string): Promise<ServerConfig> {
-  if (!apiUrl) return { registrationOpen: false, emailVerification: false };
+  if (!apiUrl) {
+    return { registrationOpen: false, emailVerification: false };
+  }
   try {
     const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/config`, {
       signal: AbortSignal.timeout(SERVER_CONFIG_TIMEOUT_MS),
@@ -371,7 +415,9 @@ export type ShareStatus =
 export async function shareStatuses(
   shares: { id: string; revokeToken: string }[],
 ): Promise<ShareStatus[]> {
-  if (shares.length === 0) return [];
+  if (shares.length === 0) {
+    return [];
+  }
   const result = await request<{ shares: ShareStatus[] }>("/api/shares/status", {
     method: "POST",
     body: JSON.stringify({ shares }),
@@ -388,7 +434,9 @@ export async function revokeShareLink(id: string, revokeToken: string): Promise<
 
 export async function measureClockSkew(): Promise<number | null> {
   const { apiUrl } = await getLocal();
-  if (!apiUrl) return null;
+  if (!apiUrl) {
+    return null;
+  }
   try {
     const response = await fetch(`${apiUrl.replace(/\/$/, "")}/api/time`);
     const { serverTime } = (await response.json()) as { serverTime: number };
