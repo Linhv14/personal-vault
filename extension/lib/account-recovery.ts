@@ -6,15 +6,17 @@ import {
   recoveryAuthKey,
   sealForRecovery,
 } from "../../src/core/recovery.js";
-import { ApiError, hasField, isNumber, request, requestChecked } from "./api.js";
+import { isBoolean, isFiniteNumber } from "../../src/core/json.js";
+import { ApiError, hasField, request, requestChecked } from "./api.js";
 import { assertMasterPasswordPolicy } from "./master-password.js";
-
-const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
 
 export async function recoveryCreatedAt(): Promise<number | null> {
   const { createdAt } = await requestChecked(
     "/api/account/recovery",
-    hasField("createdAt", (value): value is number | null => value === null || isNumber(value)),
+    hasField(
+      "createdAt",
+      (value): value is number | null => value === null || isFiniteNumber(value),
+    ),
   );
   return createdAt;
 }
@@ -27,7 +29,7 @@ export async function createRecoveryCode(
   const material = await sealForRecovery(code, vaultKeyRaw);
   const { createdAt } = await requestChecked(
     "/api/account/recovery",
-    hasField("createdAt", isNumber),
+    hasField("createdAt", isFiniteNumber),
     {
       method: "PUT",
       body: JSON.stringify({ currentAuthKey, ...material }),

@@ -5,7 +5,7 @@ import {
   type KdfParams,
   type SealedData,
 } from "../../src/core/crypto.js";
-import { isPlainObject } from "../../src/core/json.js";
+import { isFiniteNumber, isPlainObject, isString } from "../../src/core/json.js";
 import { getLocal, getUnlocked, lock, setToken, type CachedItem } from "./storage.js";
 
 export class ApiError extends Error {
@@ -130,9 +130,6 @@ export function hasField<K extends string, T>(
   return (value): value is Record<K, T> => isPlainObject(value) && check(value[key]);
 }
 
-const isString = (value: unknown): value is string => typeof value === "string";
-export const isNumber = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value);
 const isList = (value: unknown): value is unknown[] => Array.isArray(value);
 
 function serverError(text: string): ServerError {
@@ -142,16 +139,13 @@ function serverError(text: string): ServerError {
   } catch {
     return {};
   }
-  if (typeof parsed !== "object" || parsed === null) {
+  if (!isPlainObject(parsed)) {
     return {};
   }
-  const { code, params } = parsed as Record<string, unknown>;
+  const { code, params } = parsed;
   return {
     code: typeof code === "string" ? code : undefined,
-    params:
-      typeof params === "object" && params !== null
-        ? (params as Record<string, string | number>)
-        : undefined,
+    params: isPlainObject(params) ? (params as Record<string, string | number>) : undefined,
   };
 }
 
@@ -252,7 +246,7 @@ function checkedLogin(body: unknown): LoginSuccess | TwoFactorChallenge {
     throw new ApiError("error.api.bad_response", 200);
   }
   if (body.twoFactor === "required") {
-    if (!isString(body.challenge) || !isNumber(body.expiresAt)) {
+    if (!isString(body.challenge) || !isFiniteNumber(body.expiresAt)) {
       throw new ApiError("error.api.bad_response", 200);
     }
     return { twoFactor: "required", challenge: body.challenge, expiresAt: body.expiresAt };
@@ -261,7 +255,7 @@ function checkedLogin(body: unknown): LoginSuccess | TwoFactorChallenge {
     throw new ApiError("error.auth.client_outdated", 200);
   }
   if (
-    !isNumber(body.expiresAt) ||
+    !isFiniteNumber(body.expiresAt) ||
     !isSealedData(body.wrappedVaultKey) ||
     (body.upgradeKdf !== undefined && typeof body.upgradeKdf !== "boolean")
   ) {
@@ -335,8 +329,8 @@ function sessionInfo(value: unknown): SessionInfo | null {
     !isPlainObject(value) ||
     !isString(value.id) ||
     !isString(value.label) ||
-    !isNumber(value.createdAt) ||
-    !(value.lastSeenAt === null || isNumber(value.lastSeenAt)) ||
+    !isFiniteNumber(value.createdAt) ||
+    !(value.lastSeenAt === null || isFiniteNumber(value.lastSeenAt)) ||
     typeof value.current !== "boolean"
   ) {
     return null;

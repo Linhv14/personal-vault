@@ -2,7 +2,7 @@ import { base32Decode, base32Encode, isValidBase32 } from "./base32.js";
 import { randomBytes } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
 import { VaultError } from "./errors.js";
-import { isPlainObject } from "./json.js";
+import { isPlainObject, isPositiveInteger, isString } from "./json.js";
 
 export type TotpAlgorithm = "SHA-1" | "SHA-256" | "SHA-512";
 
@@ -27,9 +27,6 @@ function optional<T>(value: unknown, check: (value: unknown) => value is T): boo
   return value === undefined || check(value);
 }
 
-const isString = (value: unknown): value is string => typeof value === "string";
-const isPositiveInteger = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
 const isAlgorithm = (value: unknown): value is TotpAlgorithm => ALGORITHMS.includes(value);
 
 export function parseTotpConfig(value: unknown): TotpConfig | null {
