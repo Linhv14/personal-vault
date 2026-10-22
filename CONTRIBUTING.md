@@ -17,12 +17,16 @@ VAULT_E2E=1 npx vitest run test/e2e.test.ts
 ## Before opening a pull request
 
 ```bash
-npm run typecheck      # two projects: browser and Worker
+npm run lint
+npm run knip
+npm run typecheck
 npm run format
 npm test
+npm run build
 ```
 
-CI runs exactly these, plus `npm run build`.
+CI runs the same checks, with `npm run format:check` in place of
+`npm run format`.
 
 ## House rules
 
@@ -40,9 +44,13 @@ missing key fails the build rather than silently falling back.
 `data-i18n-placeholder` or `data-i18n-title`; in TypeScript call `t()`. A test
 asserts that every `data-i18n` element renders non-empty.
 
-**Comment the decision, not the code.** A comment should record something a
-reader would otherwise get wrong — why `HMAC-SHA1`, why a tombstone instead of
-a DELETE. Comments restating the line below them get removed.
+**No comments in code, config or migrations.** Name things so the code reads
+on its own. When a reader would otherwise get something wrong — why
+`HMAC-SHA1`, why a tombstone instead of a DELETE — explain the decision in
+`docs/explanation/` (or record the fact in `docs/reference/`), not in a comment.
+`npm run lint` fails on any comment it finds; the only exceptions are tool
+directives such as a shebang, `/// <reference />`, `// @vitest-environment`,
+and the version notes Renovate keeps next to pinned actions in workflow files.
 
 **Tests assert behaviour and invariants.** Prefer a test that pins a security
 property (no plaintext in a request, key never in `storage.local`) over one that

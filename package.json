@@ -8,7 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:browser": "npm run build && playwright test",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint . --max-warnings 0 && node scripts/check-comments.ts",
     "knip": "knip --include files,exports,dependencies,devDependencies,unlisted",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.scripts.json && tsc --noEmit -p e2e-browser/tsconfig.json",
     "build": "node scripts/build.ts",
