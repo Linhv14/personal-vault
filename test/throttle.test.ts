@@ -167,7 +167,7 @@ describe("throttle", () => {
     });
   });
 
-  it.fails("counts parallel failures from the same pair separately", async () => {
+  it("counts parallel failures from the same pair separately", async () => {
     const guards = await Promise.all(Array.from({ length: 8 }, () => guard()));
     await Promise.all(guards.map((held) => held.fail()));
     expect((await guard()).retryAfter).not.toBeNull();

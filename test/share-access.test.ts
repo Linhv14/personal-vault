@@ -216,7 +216,7 @@ describe("share access codes", () => {
     }
   });
 
-  it.fails("caps parallel guesses at the attempt limit", async () => {
+  it("caps parallel guesses at the attempt limit", async () => {
     await send(ALICE);
     const code = lastCode();
     const guesses = Array.from({ length: 20 }, (_, index) =>

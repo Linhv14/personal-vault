@@ -55,16 +55,6 @@ export async function throttle(
       : { failures: 0, window_start: timestamp };
 
   const slowdownMs = accountDelayMs(account.failures);
-  const upsert = (key: string, failures: number, windowStart: number, blockedUntil: number) =>
-    env.DB.prepare(
-      `INSERT INTO auth_throttle (key, failures, window_start, blocked_until, updated_at)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(key) DO UPDATE
-         SET failures = excluded.failures,
-             window_start = excluded.window_start,
-             blocked_until = excluded.blocked_until,
-             updated_at = excluded.updated_at`,
-    ).bind(key, failures, windowStart, blockedUntil, timestamp);
 
   return {
     retryAfter: pair.blocked_until > timestamp ? pair.blocked_until - timestamp : null,
@@ -75,10 +65,32 @@ export async function throttle(
       }
     },
     async fail() {
-      const failures = pair.failures + 1;
+      const counted = await env.DB.prepare(
+        `INSERT INTO auth_throttle (key, failures, window_start, blocked_until, updated_at)
+         VALUES (?1, 1, ?2, 0, ?2)
+         ON CONFLICT(key) DO UPDATE
+           SET failures = CASE WHEN ?2 - updated_at < ?3 THEN failures + 1 ELSE 1 END,
+               window_start = CASE WHEN ?2 - updated_at < ?3 THEN window_start ELSE ?2 END,
+               blocked_until = CASE WHEN ?2 - updated_at < ?3 THEN blocked_until ELSE 0 END,
+               updated_at = ?2
+         RETURNING failures`,
+      )
+        .bind(pairKey, timestamp, PAIR_MEMORY_SECONDS)
+        .first<{ failures: number }>();
+      const failures = counted?.failures ?? 1;
       await env.DB.batch([
-        upsert(pairKey, failures, pair.window_start, timestamp + pairDelaySeconds(failures)),
-        upsert(accountKey, account.failures + 1, account.window_start, 0),
+        env.DB.prepare(
+          "UPDATE auth_throttle SET blocked_until = MAX(blocked_until, ?) WHERE key = ?",
+        ).bind(timestamp + pairDelaySeconds(failures), pairKey),
+        env.DB.prepare(
+          `INSERT INTO auth_throttle (key, failures, window_start, blocked_until, updated_at)
+           VALUES (?1, 1, ?2, 0, ?2)
+           ON CONFLICT(key) DO UPDATE
+             SET failures = CASE WHEN ?2 - window_start < ?3 THEN failures + 1 ELSE 1 END,
+                 window_start = CASE WHEN ?2 - window_start < ?3 THEN window_start ELSE ?2 END,
+                 blocked_until = 0,
+                 updated_at = ?2`,
+        ).bind(accountKey, timestamp, ACCOUNT_WINDOW_SECONDS),
       ]);
     },
     async clear() {

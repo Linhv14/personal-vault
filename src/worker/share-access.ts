@@ -85,27 +85,26 @@ export async function consumeShareCode(
 ): Promise<ShareCodeResult> {
   const emailHash = await recipientHash(env, email);
   const row = await env.DB.prepare(
-    "SELECT code_hash, expires_at, attempts FROM share_codes WHERE share_id = ? AND email_hash = ?",
+    `UPDATE share_codes SET attempts = attempts + 1
+      WHERE share_id = ? AND email_hash = ? AND expires_at > ? AND attempts < ?
+      RETURNING code_hash`,
   )
-    .bind(shareId, emailHash)
-    .first<{ code_hash: string; expires_at: number; attempts: number }>();
-  if (!row || row.expires_at <= timestamp || row.attempts >= CODE_MAX_ATTEMPTS) {
+    .bind(shareId, emailHash, timestamp, CODE_MAX_ATTEMPTS)
+    .first<{ code_hash: string }>();
+  if (!row) {
     return "expired";
   }
 
   const expected = utf8Encode(row.code_hash);
   const provided = utf8Encode(await codeHash(env, shareId, emailHash, code));
   if (!timingSafeEqual(provided, expected)) {
-    await env.DB.prepare(
-      "UPDATE share_codes SET attempts = attempts + 1 WHERE share_id = ? AND email_hash = ?",
-    )
-      .bind(shareId, emailHash)
-      .run();
     return "invalid";
   }
 
-  await env.DB.prepare("DELETE FROM share_codes WHERE share_id = ? AND email_hash = ?")
+  const consumed = await env.DB.prepare(
+    "DELETE FROM share_codes WHERE share_id = ? AND email_hash = ? RETURNING share_id",
+  )
     .bind(shareId, emailHash)
-    .run();
-  return "ok";
+    .first();
+  return consumed ? "ok" : "expired";
 }
