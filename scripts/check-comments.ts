@@ -18,7 +18,7 @@ const SOURCE_FOLDERS = [
   "e2e-browser/",
 ];
 const SOURCE_EXTENSIONS = /\.(ts|tsx|mts|cts|js|mjs|cjs)$/;
-const EXCLUDED_PREFIXES = ["action/dist/", "dist/", "node_modules/", "tools/demo-video/site/"];
+const EXCLUDED_PREFIXES = ["action/dist/", "dist/", "node_modules/"];
 const ROOT_SOURCE_FILES = new Set([
   "eslint.config.mjs",
   "vitest.config.ts",

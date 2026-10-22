@@ -11,7 +11,6 @@ export default defineConfig(
       "dist/**",
       "action/dist/**",
       "e2e-browser/.artifacts/**",
-      "tools/demo-video/site/**",
       "node_modules/**",
       ".wrangler/**",
       "coverage/**",
@@ -98,19 +97,13 @@ export default defineConfig(
     files: ["**/*.{ts,tsx}"],
   })),
   {
-    files: ["eslint.config.mjs", "tools/demo-video/**/*.mjs"],
+    files: ["eslint.config.mjs", "tools/brand/**/*.mjs"],
     languageOptions: {
       globals: globals.node,
     },
   },
   {
-    files: ["tools/demo-video/stills.mjs"],
-    languageOptions: {
-      globals: globals.browser,
-    },
-  },
-  {
-    files: ["tools/demo-video/cdp.mjs"],
+    files: ["tools/brand/cdp.mjs"],
     languageOptions: {
       globals: {
         WebSocket: "readonly",
@@ -173,7 +166,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["cli/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "tools/demo-video/**/*.mjs"],
+    files: ["cli/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "tools/brand/**/*.mjs"],
     rules: {
       "no-console": "off",
     },

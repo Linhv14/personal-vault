@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { launch } from "../demo-video/cdp.mjs";
+import { launch } from "./cdp.mjs";
 import { logoSvg } from "../../src/ui/logo.ts";
 
 const root = path.resolve(import.meta.dirname, "..", "..");

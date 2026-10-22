@@ -12,11 +12,9 @@
     "extension/passkey/bridge.ts",
     "web/main.tsx",
     "share/main.ts",
-    "share/landing.ts",
     "cli/bin.ts",
     "action/main.ts",
     "scripts/*.ts",
-    "tools/demo-video/*.{mjs,mts}",
     "test/**/*.test.ts",
     "e2e-browser/**/*.spec.ts"
   ],
