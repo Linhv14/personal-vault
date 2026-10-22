@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { randomBytes, toBase64 } from "../src/core/bytes.js";
 import { hashAuthKey } from "../src/core/crypto.js";
-import { protectAuthKey, protectWrappedKey } from "../src/worker/at-rest.js";
 import { deviceKind, deviceLabel } from "../src/worker/device-label.js";
 import { newSignInEmail } from "../src/worker/emails.js";
 import { securityTxt } from "../src/worker/security-headers.js";
@@ -14,24 +13,24 @@ import {
   readJsonObject,
   stringField,
 } from "./helpers.js";
-import { REGISTRATION_TOKEN, startWorker, type TestWorker } from "./worker-harness.js";
+import {
+  accountRecord,
+  freezeClockAtT0,
+  insertAccount,
+  REGISTRATION_TOKEN,
+  setTime,
+  startWorker,
+  T0,
+  wrongKey,
+  type AccountRecord,
+  type TestWorker,
+} from "./worker-harness.js";
 
 const CHROME_MAC =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 const FIREFOX_WINDOWS =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0";
-const T0 = Date.UTC(2026, 9, 20, 12) / 1000;
 const DAY = 86_400;
-
-function record(iterations = 600_000) {
-  return {
-    kdf: { type: "pbkdf2-sha256", iterations, salt: toBase64(randomBytes(16)) },
-    authKey: toBase64(randomBytes(32)),
-    wrappedVaultKey: { ciphertext: toBase64(randomBytes(48)), nonce: toBase64(randomBytes(12)) },
-  };
-}
-
-type AccountRecord = ReturnType<typeof record>;
 
 async function register(worker: TestWorker, email: string, data: AccountRecord, ua = CHROME_MAC) {
   return worker.fetch("/api/auth/register", {
@@ -62,46 +61,7 @@ async function login(
   return { status: response.status, body: await readJsonObject(response) };
 }
 
-async function insertAccount(
-  worker: TestWorker,
-  email: string,
-  data: AccountRecord,
-  authHash?: string,
-) {
-  const id = crypto.randomUUID();
-  worker.d1.db
-    .prepare(
-      `INSERT INTO accounts (id, email, kdf_type, kdf_iterations, kdf_salt, auth_key_hash,
-         wrapped_vault_key, wrap_nonce, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      email,
-      data.kdf.type,
-      data.kdf.iterations,
-      data.kdf.salt,
-      authHash ?? (await protectAuthKey(worker.env, data.authKey)),
-      await protectWrappedKey(worker.env, id, data.wrappedVaultKey.ciphertext),
-      data.wrappedVaultKey.nonce,
-      T0,
-    );
-  return id;
-}
-
-const wrongKey = () => toBase64(randomBytes(32));
-
-function setTime(seconds: number) {
-  vi.setSystemTime(seconds * 1000);
-}
-
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  setTime(T0);
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
+freezeClockAtT0();
 
 describe("login throttling", () => {
   it("backs off exponentially per address and network, capped at an hour", () => {
@@ -118,7 +78,7 @@ describe("login throttling", () => {
 
   it("blocks the guessing network without locking out the owner elsewhere", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     await register(worker, "owner@example.com", owner);
     const attacker = "198.51.100.7";
 
@@ -142,7 +102,7 @@ describe("login throttling", () => {
 
   it("doubles the wait after each further failure from the same pair", async () => {
     const worker = await startWorker();
-    await register(worker, "owner@example.com", record());
+    await register(worker, "owner@example.com", accountRecord());
     const attacker = "198.51.100.8";
     let clock = T0;
     const waits: number[] = [];
@@ -162,7 +122,7 @@ describe("login throttling", () => {
 
   it("treats unknown addresses exactly like wrong passwords", async () => {
     const worker = await startWorker();
-    await register(worker, "owner@example.com", record());
+    await register(worker, "owner@example.com", accountRecord());
     const known = await login(worker, "owner@example.com", wrongKey());
     const unknown = await login(worker, "nobody@example.com", wrongKey());
     expect(unknown).toEqual(known);
@@ -175,7 +135,7 @@ describe("login throttling", () => {
   it("keeps letting the owner in while many networks fail against the account", async () => {
     vi.useRealTimers();
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     await register(worker, "owner@example.com", owner);
     for (let i = 0; i < 21; i++) {
       await login(worker, "owner@example.com", wrongKey(), { ip: `10.0.0.${i}` });
@@ -188,7 +148,7 @@ describe("login throttling", () => {
 
   it("throttles recovery codes the same way, separately from passwords", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     await register(worker, "owner@example.com", owner);
     const attempt = (ip: string) =>
       worker.fetch("/api/auth/recover/start", {
@@ -211,29 +171,29 @@ describe("login throttling", () => {
 describe("KDF floor", () => {
   it("refuses new accounts and new passwords below 600,000 iterations", async () => {
     const worker = await startWorker();
-    const weak = await register(worker, "weak@example.com", record(599_999));
+    const weak = await register(worker, "weak@example.com", accountRecord(599_999));
     expect(weak.status).toBe(400);
     expect(((await weak.json()) as { code: string }).code).toBe("auth.invalid_kdf");
 
-    const owner = record();
+    const owner = accountRecord();
     const token = await tokenOf(await register(worker, "owner@example.com", owner));
     const change = await worker.fetch("/api/auth/change-password", {
       method: "POST",
       token,
-      json: { currentAuthKey: owner.authKey, ...record(300_000) },
+      json: { currentAuthKey: owner.authKey, ...accountRecord(300_000) },
     });
     expect(change.status).toBe(400);
   });
 
   it("lets old accounts sign in and asks the client to upgrade", async () => {
     const worker = await startWorker();
-    const old = record(100_000);
+    const old = accountRecord(100_000);
     await insertAccount(worker, "old@example.com", old);
     const result = await login(worker, "old@example.com", old.authKey);
     expect(result.status).toBe(200);
     expect(result.body.upgradeKdf).toBe(true);
 
-    const current = record();
+    const current = accountRecord();
     await insertAccount(worker, "new@example.com", current);
     const fresh = await login(worker, "new@example.com", current.authKey);
     expect(fresh.body).not.toHaveProperty("upgradeKdf");
@@ -241,11 +201,11 @@ describe("KDF floor", () => {
 
   it("upgrades through change-password while keeping the session that asked", async () => {
     const worker = await startWorker();
-    const old = record(100_000);
+    const old = accountRecord(100_000);
     await insertAccount(worker, "old@example.com", old);
     const other = await login(worker, "old@example.com", old.authKey, { ua: FIREFOX_WINDOWS });
     const mine = await login(worker, "old@example.com", old.authKey);
-    const upgraded = record();
+    const upgraded = accountRecord();
     const change = await worker.fetch("/api/auth/change-password", {
       method: "POST",
       token: stringField(mine.body, "token"),
@@ -261,12 +221,12 @@ describe("KDF floor", () => {
 
   it("still signs every device out on an ordinary password change", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     const token = await tokenOf(await register(worker, "owner@example.com", owner));
     const change = await worker.fetch("/api/auth/change-password", {
       method: "POST",
       token,
-      json: { currentAuthKey: owner.authKey, ...record() },
+      json: { currentAuthKey: owner.authKey, ...accountRecord() },
     });
     expect(change.status).toBe(200);
     expect((await worker.fetch("/api/auth/sessions", { token })).status).toBe(401);
@@ -276,9 +236,9 @@ describe("KDF floor", () => {
 describe("account enumeration", () => {
   it("answers a duplicate sign-up like a new one and changes nothing", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     const first = await register(worker, "owner@example.com", owner);
-    const intruder = record();
+    const intruder = accountRecord();
     const second = await register(worker, "owner@example.com", intruder);
     expect(second.status).toBe(first.status);
     const firstBody = (await first.json()) as Record<string, unknown>;
@@ -298,7 +258,7 @@ describe("account enumeration", () => {
 
   it("returns plausible KDF params for unknown addresses", async () => {
     const worker = await startWorker();
-    await register(worker, "owner@example.com", record());
+    await register(worker, "owner@example.com", accountRecord());
     const prelogin = async (email: string) => {
       const response = await worker.fetch("/api/auth/prelogin", {
         method: "POST",
@@ -314,7 +274,7 @@ describe("account enumeration", () => {
 
   it("answers recovery attempts the same for unknown addresses", async () => {
     const worker = await startWorker();
-    await register(worker, "owner@example.com", record());
+    await register(worker, "owner@example.com", accountRecord());
     const attempt = async (email: string) => {
       const response = await worker.fetch("/api/auth/recover/start", {
         method: "POST",
@@ -328,7 +288,7 @@ describe("account enumeration", () => {
 });
 
 async function signedIn(worker: TestWorker, email: string, ua = CHROME_MAC) {
-  const owner = record();
+  const owner = accountRecord();
   await insertAccount(worker, email, owner);
   const { body } = await login(worker, email, owner.authKey, { ua });
   return { owner, token: body.token as string };
@@ -385,7 +345,7 @@ describe("uniform responses", () => {
 
   it("answers a sign-up code request without checking whether the address is registered", async () => {
     const worker = await startWorker({ mailer: true });
-    await insertAccount(worker, "taken@example.com", record());
+    await insertAccount(worker, "taken@example.com", accountRecord());
 
     const ask = async (email: string) => {
       const release = worker.d1.hold(/FROM accounts/);
@@ -415,7 +375,7 @@ describe("uniform responses", () => {
 describe("legacy auth key hashes", () => {
   it("are accepted only by sign-in, which upgrades them", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     const id = await insertAccount(
       worker,
       "legacy@example.com",
@@ -434,7 +394,7 @@ describe("legacy auth key hashes", () => {
     const change = await worker.fetch("/api/auth/change-password", {
       method: "POST",
       token,
-      json: { currentAuthKey: owner.authKey, ...record() },
+      json: { currentAuthKey: owner.authKey, ...accountRecord() },
     });
     expect(change.status).toBe(403);
 
@@ -505,7 +465,7 @@ describe("sessions", () => {
 
   it("lists, revokes one, and signs out every other device", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     await register(worker, "owner@example.com", owner);
     const cli = await login(worker, "owner@example.com", owner.authKey, { ua: "node" });
     setTime(T0 + 60);
@@ -549,8 +509,8 @@ describe("sessions", () => {
 
   it("cannot revoke someone else's session", async () => {
     const worker = await startWorker();
-    const tokenA = await tokenOf(await register(worker, "a@example.com", record()));
-    const tokenB = await tokenOf(await register(worker, "b@example.com", record()));
+    const tokenA = await tokenOf(await register(worker, "a@example.com", accountRecord()));
+    const tokenB = await tokenOf(await register(worker, "b@example.com", accountRecord()));
     const listB = (await (await worker.fetch("/api/auth/sessions", { token: tokenB })).json()) as {
       sessions: { id: string }[];
     };
@@ -564,7 +524,7 @@ describe("sessions", () => {
 
   it("expires after 14 idle days, and after 30 days regardless of use", async () => {
     const worker = await startWorker();
-    const owner = record();
+    const owner = accountRecord();
     const idle = await tokenOf(await register(worker, "owner@example.com", owner));
     const busy = stringField(
       (await login(worker, "owner@example.com", owner.authKey)).body,
@@ -585,7 +545,7 @@ describe("sessions", () => {
 
   it("keeps sessions created before last-seen tracking existed", async () => {
     const worker = await startWorker();
-    const token = await tokenOf(await register(worker, "owner@example.com", record()));
+    const token = await tokenOf(await register(worker, "owner@example.com", accountRecord()));
     worker.d1.db.prepare("UPDATE sessions SET last_seen_at = NULL").run();
     setTime(T0 + 20 * DAY);
     expect((await worker.fetch("/api/auth/sessions", { token })).status).toBe(200);
@@ -615,7 +575,7 @@ describe("sessions", () => {
 
   it("stays quiet on the first sign-in of an account that predates device tracking", async () => {
     const worker = await startWorker({ mailer: true });
-    const owner = record();
+    const owner = accountRecord();
     await insertAccount(worker, "owner@example.com", owner);
     await login(worker, "owner@example.com", owner.authKey, { ua: FIREFOX_WINDOWS });
     await worker.settle();

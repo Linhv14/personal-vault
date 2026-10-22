@@ -1,53 +1,31 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { parseSecondFactor } from "../src/core/account-two-factor.js";
 import { randomBytes, toBase64 } from "../src/core/bytes.js";
 import { generateTotp, parseOtpauthUri } from "../src/core/totp.js";
-import { protectAuthKey, protectWrappedKey } from "../src/worker/at-rest.js";
 import { numberField, readJsonObject, stringArrayField, stringField } from "./helpers.js";
-import { startWorker, type TestWorker } from "./worker-harness.js";
+import {
+  accountRecord,
+  freezeClockAtT0,
+  insertAccount,
+  setTime,
+  startWorker,
+  T0,
+  wrongKey,
+  type AccountRecord,
+  type TestWorker,
+} from "./worker-harness.js";
 
-const T0 = Date.UTC(2026, 9, 20, 12) / 1000;
 const EMAIL = "owner@example.com";
 
-function record() {
-  return {
-    kdf: { type: "pbkdf2-sha256", iterations: 600_000, salt: toBase64(randomBytes(16)) },
-    authKey: toBase64(randomBytes(32)),
-    wrappedVaultKey: { ciphertext: toBase64(randomBytes(48)), nonce: toBase64(randomBytes(12)) },
-  };
-}
-
-type Account = ReturnType<typeof record> & { token: string };
-
-const wrongKey = () => toBase64(randomBytes(32));
-
-function setTime(seconds: number) {
-  vi.setSystemTime(seconds * 1000);
-}
+type Account = AccountRecord & { token: string };
 
 async function json(response: Response) {
   return { status: response.status, body: await readJsonObject(response) };
 }
 
 async function register(worker: TestWorker, email = EMAIL): Promise<Account> {
-  const data = record();
-  const id = crypto.randomUUID();
-  worker.d1.db
-    .prepare(
-      `INSERT INTO accounts (id, email, kdf_type, kdf_iterations, kdf_salt, auth_key_hash,
-         wrapped_vault_key, wrap_nonce, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      id,
-      email,
-      data.kdf.type,
-      data.kdf.iterations,
-      data.kdf.salt,
-      await protectAuthKey(worker.env, data.authKey),
-      await protectWrappedKey(worker.env, id, data.wrappedVaultKey.ciphertext),
-      data.wrappedVaultKey.nonce,
-      T0,
-    );
+  const data = accountRecord();
+  await insertAccount(worker, email, data);
   const { body } = await login(worker, data.authKey, { email });
   return { ...data, token: stringField(body, "token") };
 }
@@ -88,14 +66,7 @@ async function enable(worker: TestWorker, account: Account) {
   return { secret, backupCodes: stringArrayField(enabled.body, "backupCodes"), enabled };
 }
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  setTime(T0);
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
+freezeClockAtT0();
 
 describe("enrollment", () => {
   it("asks for the master password, then a working code, before turning on", async () => {
@@ -453,7 +424,7 @@ describe("account recovery", () => {
     expect(saved.status).toBe(200);
     await enable(worker, account);
 
-    const next = record();
+    const next = accountRecord();
     const finished = await worker
       .fetch("/api/auth/recover/finish", {
         method: "POST",

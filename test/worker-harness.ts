@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { timingSafeEqual } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import { afterEach, beforeEach, vi } from "vitest";
+import { randomBytes, toBase64 } from "../src/core/bytes.js";
+import { protectAuthKey, protectWrappedKey } from "../src/worker/at-rest.js";
 
 type Value = string | number | null;
 
@@ -196,3 +199,57 @@ export async function startWorker({ mailer = false, vars = {} } = {}) {
 }
 
 export type TestWorker = Awaited<ReturnType<typeof startWorker>>;
+
+export const T0 = Date.UTC(2026, 9, 20, 12) / 1000;
+
+export function setTime(seconds: number): void {
+  vi.setSystemTime(seconds * 1000);
+}
+
+export function freezeClockAtT0(): void {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    setTime(T0);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+}
+
+export function accountRecord(iterations = 600_000) {
+  return {
+    kdf: { type: "pbkdf2-sha256", iterations, salt: toBase64(randomBytes(16)) },
+    authKey: toBase64(randomBytes(32)),
+    wrappedVaultKey: { ciphertext: toBase64(randomBytes(48)), nonce: toBase64(randomBytes(12)) },
+  };
+}
+
+export type AccountRecord = ReturnType<typeof accountRecord>;
+
+export const wrongKey = (): string => toBase64(randomBytes(32));
+
+export async function insertAccount(
+  worker: TestWorker,
+  email: string,
+  data: AccountRecord,
+  authHash?: string,
+): Promise<string> {
+  const id = crypto.randomUUID();
+  worker.d1.db
+    .prepare(
+      `INSERT INTO accounts (id, email, kdf_type, kdf_iterations, kdf_salt, auth_key_hash,
+         wrapped_vault_key, wrap_nonce, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      id,
+      email,
+      data.kdf.type,
+      data.kdf.iterations,
+      data.kdf.salt,
+      authHash ?? (await protectAuthKey(worker.env, data.authKey)),
+      await protectWrappedKey(worker.env, id, data.wrappedVaultKey.ciphertext),
+      data.wrappedVaultKey.nonce,
+      T0,
+    );
+  return id;
+}
