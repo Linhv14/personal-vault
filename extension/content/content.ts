@@ -20,16 +20,14 @@ import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import type { PasskeyOption } from "../lib/passkey/protocol.js";
 import { CONTENT_STYLES } from "./styles.js";
 import {
-  countryHint,
   detectFields,
-  fillAddress,
-  fillCard,
   formKindOf,
   isCardKind,
-  setFieldValue,
   type FormField,
   type FormKind,
-} from "./forms.js";
+} from "./forms/classify.js";
+import { fillAddress, fillCard, setFieldValue } from "./forms/fill.js";
+import { countryHint } from "./forms/values.js";
 import {
   fillState,
   isSubmitLike,

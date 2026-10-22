@@ -7,7 +7,7 @@ import {
   readCard,
   type FilledFields,
 } from "../extension/content/form-capture.js";
-import { detectFields, type FormField } from "../extension/content/forms.js";
+import { detectFields, type FormField } from "../extension/content/forms/classify.js";
 import {
   addressPreview,
   addressWorthSaving,

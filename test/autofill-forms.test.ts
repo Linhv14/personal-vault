@@ -1,18 +1,18 @@
 import { Window } from "happy-dom";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import {
-  chooseOption,
   classifyField,
   detectFields,
-  fillAddress,
-  fillCard,
-  formatExpiry,
   formKindOf,
-  setFieldValue,
+  type FormField,
+} from "../extension/content/forms/classify.js";
+import { fillAddress, fillCard, setFieldValue } from "../extension/content/forms/fill.js";
+import {
+  chooseOption,
+  formatExpiry,
   splitExpiry,
   splitName,
-  type FormField,
-} from "../extension/content/forms.js";
+} from "../extension/content/forms/values.js";
 import type { AddressData, CardData } from "../extension/lib/autofill-protocol.js";
 import { cardBrand } from "../extension/lib/item-types.js";
 
