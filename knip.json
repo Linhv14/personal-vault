@@ -18,17 +18,10 @@
     "scripts/*.ts",
     "tools/demo-video/*.{mjs,mts}",
     "test/**/*.test.ts",
-    "e2e-browser/**/*.spec.ts",
-    "e2e-browser/worker.ts"
+    "e2e-browser/**/*.spec.ts"
   ],
   "project": ["**/*.{ts,tsx,mjs,mts}"],
-  "ignore": [
-    "dist/**",
-    "action/dist/**",
-    "tools/demo-video/site/**",
-    "tools/brand/**",
-    "test/stubs/**"
-  ],
+  "ignore": ["action/dist/**", "tools/brand/**"],
   "ignoreExportsUsedInFile": true,
-  "ignoreDependencies": ["cloudflare", "wrangler"]
+  "ignoreDependencies": ["cloudflare"]
 }

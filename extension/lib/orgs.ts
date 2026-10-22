@@ -1,5 +1,4 @@
 import {
-  fingerprint,
   randomKey,
   unwrapForRecipient,
   wrapForRecipient,
@@ -245,8 +244,6 @@ export interface AuditPage {
 export async function auditLog(orgId: string, before?: number): Promise<AuditPage> {
   return request(`/api/orgs/${orgId}/audit${before ? `?before=${before}` : ""}`);
 }
-
-export { fingerprint };
 
 export async function setAllowedDomains(orgId: string, domains: string[]): Promise<string[]> {
   return (
