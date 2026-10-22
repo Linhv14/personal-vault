@@ -156,7 +156,7 @@ async function buildSharePage() {
     await injectTokens(filled, "share/security.html"),
   );
   const apiDocs = security
-    .replace("<title>Security · 7KEY</title>", "<title>API · 7KEY</title>")
+    .replace("<title>Security · 7key</title>", "<title>API · 7key</title>")
     .replace(
       "<!-- markdown:docs/explanation/threat-model.md -->",
       renderMarkdown(await readFile(path.join(root, "docs", "reference", "http-api.md"), "utf8")),
