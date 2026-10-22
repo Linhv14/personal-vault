@@ -96,7 +96,8 @@ export const vi: Catalogue = {
   "setup.mode_signin": "Đăng nhập kho có sẵn",
   "setup.mode_signin_hint": "Đã có kho, giờ dùng thêm trên máy này",
   "setup.server_unreachable": "Không kết nối được server. Kiểm tra mạng hoặc địa chỉ server.",
-  "setup.hint_create": "7key không giữ mật khẩu chính. Vào kho rồi nhớ tạo mã khôi phục.",
+  "setup.hint_create":
+    "7key không lưu mật khẩu chính và không thể khôi phục nếu bạn quên. Hãy tạo mã khôi phục ngay sau khi vào kho.",
   "setup.server": "Server",
   "setup.custom_server": "Dùng server riêng",
   "setup.email": "Email",

@@ -95,7 +95,7 @@ export const en = {
   "setup.server_unreachable":
     "Cannot reach the server. Check your connection or the server address.",
   "setup.hint_create":
-    "7key never holds your master password. Create a recovery code once you're in.",
+    "7key never stores your master password and cannot recover it if you forget it. Create a recovery code right after you sign in.",
   "setup.server": "Server",
   "setup.custom_server": "Use your own server",
   "setup.email": "Email",
