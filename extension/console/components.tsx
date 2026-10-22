@@ -4,6 +4,7 @@ import type { IconName } from "../../src/ui/icons.js";
 import type { OrgRole } from "../../src/core/org-model.js";
 import { Fingerprint } from "../ui/components/Fingerprint.js";
 import { Icon } from "../ui/components/Icon.js";
+import { formatRelative } from "../ui/format.js";
 import { localeSignal, useT } from "../ui/i18n.js";
 import {
   ConsoleContext,
@@ -419,26 +420,6 @@ export function Badge({
   return <span className={`badge ${tone}`}>{children}</span>;
 }
 
-const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
-  ["year", 31_536_000],
-  ["month", 2_592_000],
-  ["week", 604_800],
-  ["day", 86_400],
-  ["hour", 3_600],
-  ["minute", 60],
-];
-
-export function relativeTime(epochSeconds: number, locale: string): string {
-  const delta = epochSeconds - Math.floor(Date.now() / 1000);
-  const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  for (const [unit, seconds] of UNITS) {
-    if (Math.abs(delta) >= seconds) {
-      return format.format(Math.round(delta / seconds), unit);
-    }
-  }
-  return format.format(0, "minute");
-}
-
 export function When({ at }: { at: number }) {
   const locale = localeSignal.value;
   return (
@@ -446,7 +427,7 @@ export function When({ at }: { at: number }) {
       dateTime={new Date(at * 1000).toISOString()}
       title={new Date(at * 1000).toLocaleString(locale)}
     >
-      {relativeTime(at, locale)}
+      {formatRelative(at, locale, { smallest: "minute" })}
     </time>
   );
 }

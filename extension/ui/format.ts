@@ -12,7 +12,11 @@ const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["minute", 60],
 ];
 
-export function formatRelative(epochSeconds: number, locale: string, now = Date.now()): string {
+export function formatRelative(
+  epochSeconds: number,
+  locale: string,
+  { now = Date.now(), smallest = "second" }: { now?: number; smallest?: "second" | "minute" } = {},
+): string {
   const delta = epochSeconds - Math.floor(now / 1000);
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   for (const [unit, seconds] of RELATIVE_STEPS) {
@@ -20,5 +24,5 @@ export function formatRelative(epochSeconds: number, locale: string, now = Date.
       return format.format(Math.round(delta / seconds), unit);
     }
   }
-  return format.format(0, "second");
+  return format.format(0, smallest);
 }

@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { relativeTime } from "../extension/console/components.js";
 import { href, parseHash } from "../extension/console/router.js";
 
 const ORG = "b12e963c-f0dc-4a12-8093-05cc2e0d8926";
@@ -25,12 +24,5 @@ describe("console routes", () => {
   it("falls back to the projects list for an empty or unknown hash", () => {
     expect(parseHash("")).toEqual({ orgId: null, route: { page: "projects" } });
     expect(parseHash(`#/${ORG}/nowhere`)).toEqual({ orgId: ORG, route: { page: "projects" } });
-  });
-
-  it("describes times relative to now", () => {
-    const now = Math.floor(Date.now() / 1000);
-    expect(relativeTime(now - 7200, "en")).toBe("2 hours ago");
-    expect(relativeTime(now + 3 * 86400, "en")).toBe("in 3 days");
-    expect(relativeTime(now, "en")).toBe("this minute");
   });
 });
