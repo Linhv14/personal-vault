@@ -2,23 +2,22 @@ import { Hono } from "hono";
 import { isSealedData } from "#core/crypto.js";
 import { isPublicKey } from "#core/identity.js";
 import { parseJsonAs } from "#core/json.js";
-import { protectAuthKey, protectWrappedKey, recoveryScope, verifyAuthKey } from "../at-rest.js";
+import { protectAuthKey, protectWrappedKey, recoveryScope } from "../at-rest.js";
 import { twoFactorDisabledEmail, twoFactorEnabledEmail } from "../emails.js";
 import { apiError } from "../errors.js";
 import { now } from "../clock.js";
 import { inBackground, readJson } from "../http.js";
 import { createMailer } from "../mailer.js";
 import { configuredPrivacyUrl } from "../privacy-link.js";
-import { clientIp, requestLocale } from "../request.js";
+import { requestLocale } from "../request.js";
+import { accountEmail, checkSecondFactor, reauthenticated } from "../reauth.js";
 import { revokeOtherSessions } from "../session.js";
-import { throttle } from "../throttle.js";
 import {
   confirmSetup,
   disableStatements,
   regenerateBackupCodes,
   startSetup,
   twoFactorStatus,
-  verifySecondFactor,
 } from "../two-factor.js";
 import { isBase64, isSealed } from "../validate.js";
 import type { Context } from "hono";
@@ -66,20 +65,6 @@ account.put("/identity", async (c) => {
   }
   return c.json({ ok: true });
 });
-
-async function reauthenticated(
-  env: AppBindings["Bindings"],
-  accountId: string,
-  currentAuthKey: unknown,
-): Promise<boolean> {
-  if (!isBase64(currentAuthKey, 32)) {
-    return false;
-  }
-  const row = await env.DB.prepare("SELECT auth_key_hash FROM accounts WHERE id = ?")
-    .bind(accountId)
-    .first<{ auth_key_hash: string }>();
-  return row !== null && (await verifyAuthKey(env, currentAuthKey, row.auth_key_hash)).matches;
-}
 
 account.get("/recovery", async (c) => {
   const row = await c.env.DB.prepare("SELECT recovery_created_at FROM accounts WHERE id = ?")
@@ -141,13 +126,6 @@ account.get("/2fa", async (c) => {
   return c.json(await twoFactorStatus(c.env, c.get("session").accountId));
 });
 
-async function accountEmail(env: AppBindings["Bindings"], accountId: string): Promise<string> {
-  const row = await env.DB.prepare("SELECT email FROM accounts WHERE id = ?")
-    .bind(accountId)
-    .first<{ email: string }>();
-  return row?.email ?? "";
-}
-
 function notify(
   c: Context<AppBindings>,
   email: string,
@@ -164,26 +142,6 @@ function notify(
     privacyUrl: configuredPrivacyUrl(c.env),
   });
   inBackground(c, "two_factor_email_failed", () => mailer.send({ to: email, ...message }));
-}
-
-async function checkCode(
-  c: Context<AppBindings>,
-  accountId: string,
-  code: unknown,
-): Promise<Response | null> {
-  const timestamp = now();
-  const email = await accountEmail(c.env, accountId);
-  const guard = await throttle(c.env, "two_factor", email, clientIp(c), timestamp);
-  if (guard.retryAfter) {
-    return c.json(apiError("auth.rate_limited", { seconds: guard.retryAfter }), 429);
-  }
-  await guard.slowDown();
-  if (!(await verifySecondFactor(c.env, accountId, code, timestamp))) {
-    await guard.fail();
-    return c.json(apiError("auth.invalid_2fa"), 401);
-  }
-  await guard.clear();
-  return null;
 }
 
 account.post("/2fa/setup", async (c) => {
@@ -230,7 +188,7 @@ account.post("/2fa/disable", async (c) => {
   if (!(await twoFactorStatus(c.env, accountId)).enabled) {
     return c.json(apiError("two_factor.not_enabled"), 409);
   }
-  const refused = await checkCode(c, accountId, body.code);
+  const refused = await checkSecondFactor(c, accountId, body.code);
   if (refused) {
     return refused;
   }
@@ -248,7 +206,7 @@ account.post("/2fa/backup-codes", async (c) => {
   if (!(await twoFactorStatus(c.env, accountId)).enabled) {
     return c.json(apiError("two_factor.not_enabled"), 409);
   }
-  const refused = await checkCode(c, accountId, body.code);
+  const refused = await checkSecondFactor(c, accountId, body.code);
   if (refused) {
     return refused;
   }
