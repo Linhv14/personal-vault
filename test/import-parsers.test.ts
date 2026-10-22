@@ -227,7 +227,11 @@ describe("Bitwarden parser", () => {
       );
     });
 
-    it.todo("caps the iteration count so a hostile export cannot hang the extension");
+    it("caps the iteration count so a hostile export cannot hang the extension", async () => {
+      expect(await importCode(bitwardenFromJson({ ...base, kdfIterations: 1e9 }, "pw"))).toBe(
+        "unsupported_encryption",
+      );
+    });
   });
 
   it("reads the CSV export and keeps quoted secrets intact", async () => {
@@ -365,7 +369,7 @@ describe("1Password parser", () => {
     expectNoPollution();
   });
 
-  it.fails("does not throw on an out-of-range date field", () => {
+  it("does not throw on an out-of-range date field", () => {
     const parsed = {
       accounts: [
         {

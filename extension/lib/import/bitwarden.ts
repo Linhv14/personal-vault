@@ -58,6 +58,8 @@ async function hkdfExpand(prk: Uint8Array, info: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.sign("HMAC", key, input));
 }
 
+const MAX_PBKDF2_ITERATIONS = 2_000_000;
+
 interface ExportKey {
   encryption: CryptoKey;
   mac: CryptoKey;
@@ -68,7 +70,12 @@ async function exportKey(passphrase: string, file: JsonObject): Promise<ExportKe
     throw new ImportError("argon2");
   }
   const iterations = file.kdfIterations;
-  if (file.kdfType !== KDF_PBKDF2 || typeof iterations !== "number" || iterations < 1) {
+  if (
+    file.kdfType !== KDF_PBKDF2 ||
+    typeof iterations !== "number" ||
+    iterations < 1 ||
+    iterations > MAX_PBKDF2_ITERATIONS
+  ) {
     throw new ImportError("unsupported_encryption");
   }
   const material = await crypto.subtle.importKey(

@@ -56,8 +56,10 @@ function fieldValue(kind: string, raw: unknown): string {
       const digits = text(raw);
       return digits.length === 6 ? `${digits.slice(4)}/${digits.slice(0, 4)}` : digits;
     }
-    case "date":
-      return typeof raw === "number" ? new Date(raw * 1000).toISOString().slice(0, 10) : "";
+    case "date": {
+      const date = typeof raw === "number" ? new Date(raw * 1000) : null;
+      return date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : "";
+    }
     case "sshKey":
       return text(object(raw).privateKey);
     default:
