@@ -14,6 +14,6 @@
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["scripts/**/*.ts"],
+  "include": ["scripts/**/*.ts", "commercial/scripts/**/*.ts"],
   "exclude": ["scripts/make-share-link.ts"]
 }

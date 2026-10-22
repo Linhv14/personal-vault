@@ -15,6 +15,7 @@
     "cli/bin.ts",
     "action/main.ts",
     "scripts/*.ts",
+    "commercial/scripts/*.ts",
     "test/**/*.test.ts",
     "e2e-browser/**/*.spec.ts"
   ],

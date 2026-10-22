@@ -27,6 +27,9 @@
     "web/**/*.ts",
     "web/**/*.tsx",
     "cli/**/*.ts",
-    "action/**/*.ts"
+    "action/**/*.ts",
+    "commercial/core/**/*.ts",
+    "commercial/extension/**/*.ts",
+    "commercial/extension/**/*.tsx"
   ]
 }

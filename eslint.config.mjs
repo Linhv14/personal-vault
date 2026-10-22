@@ -5,6 +5,65 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
+const CORE_ZONES = [
+  { target: "./src/core", from: ".", except: ["./src/core"] },
+  {
+    target: "src/worker/**",
+    from: ["extension/**", "web/**", "src/ui/**", "src/i18n/**"],
+  },
+  {
+    target: "cli/**",
+    from: "extension/**",
+  },
+  {
+    target: "share/**",
+    from: "extension/**",
+  },
+  {
+    target: "./web",
+    from: "./extension",
+    except: ["./web-host.ts"],
+    message: "The web dashboard reaches the extension only through extension/web-host.ts.",
+  },
+  {
+    target: "./extension/settings",
+    from: "./extension/console",
+    message: "Move what settings needs from the console into extension/ui.",
+  },
+  {
+    target: [
+      "extension/console/*.ts",
+      "extension/console/!(main).tsx",
+      "extension/console/pages/**",
+    ],
+    from: "./extension/settings",
+    message: "Only the console entry (main.tsx) may compose settings pages.",
+  },
+  {
+    target: "./extension/lib",
+    from: ["./extension/ui", "./src/ui"],
+    message: "Library modules must not depend on UI modules.",
+  },
+  {
+    target: "commercial/worker/**",
+    from: ["extension/**", "web/**", "src/ui/**", "src/i18n/**", "commercial/extension/**"],
+  },
+  {
+    target: "./commercial/core",
+    from: ".",
+    except: ["./commercial/core", "./src/core"],
+  },
+];
+
+const COMMERCIAL_SEAMS = ["src/worker/index.ts", "extension/commercial.ts"];
+
+const COMMERCIAL_ZONE = {
+  target: ["./src", "./extension", "./web", "./cli", "./share", "./action", "./scripts"],
+  from: "./commercial",
+  message:
+    "AGPL code reaches commercial/ only through src/worker/index.ts and extension/commercial.ts.",
+};
+
 export default defineConfig(
   {
     ignores: [
@@ -47,49 +106,15 @@ export default defineConfig(
         "error",
         {
           basePath: import.meta.dirname,
-          zones: [
-            { target: "./src/core", from: ".", except: ["./src/core"] },
-            {
-              target: "src/worker/**",
-              from: ["extension/**", "web/**", "src/ui/**", "src/i18n/**"],
-            },
-            {
-              target: "cli/**",
-              from: "extension/**",
-            },
-            {
-              target: "share/**",
-              from: "extension/**",
-            },
-            {
-              target: "./web",
-              from: "./extension",
-              except: ["./web-host.ts"],
-              message:
-                "The web dashboard reaches the extension only through extension/web-host.ts.",
-            },
-            {
-              target: "./extension/settings",
-              from: "./extension/console",
-              message: "Move what settings needs from the console into extension/ui.",
-            },
-            {
-              target: [
-                "extension/console/*.ts",
-                "extension/console/!(main).tsx",
-                "extension/console/pages/**",
-              ],
-              from: "./extension/settings",
-              message: "Only the console entry (main.tsx) may compose settings pages.",
-            },
-            {
-              target: "./extension/lib",
-              from: ["./extension/ui", "./src/ui"],
-              message: "Library modules must not depend on UI modules.",
-            },
-          ],
+          zones: [...CORE_ZONES, COMMERCIAL_ZONE],
         },
       ],
+    },
+  },
+  {
+    files: COMMERCIAL_SEAMS,
+    rules: {
+      "import/no-restricted-paths": ["error", { basePath: import.meta.dirname, zones: CORE_ZONES }],
     },
   },
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({
@@ -246,6 +271,7 @@ export default defineConfig(
       "src/**/*.{ts,tsx}",
       "cli/**/*.{ts,tsx}",
       "share/**/*.ts",
+      "commercial/**/*.{ts,tsx}",
     ],
     ignores: ["src/core/**"],
     rules: {
@@ -256,7 +282,7 @@ export default defineConfig(
             {
               group: ["../../*"],
               message:
-                "Use a # import from package.json (#core, #ui, #i18n, #worker, #ext) instead of climbing two folders.",
+                "Use a # import from package.json (#core, #ui, #i18n, #worker, #ext, #commercial) instead of climbing two folders.",
             },
           ],
         },
@@ -270,6 +296,8 @@ export default defineConfig(
       "src/worker/at-rest.ts",
       "src/worker/webauthn.ts",
       "src/worker/jwt.ts",
+      "commercial/core/license.ts",
+      "commercial/scripts/**",
       "extension/lib/passkey/authenticator.ts",
       "extension/lib/import/bitwarden.ts",
       "extension/lib/import/openpgp.ts",
@@ -291,7 +319,7 @@ export default defineConfig(
     },
   },
   {
-    files: ["extension/background.ts", "src/worker/**/*.ts"],
+    files: ["extension/background.ts", "src/worker/**/*.ts", "commercial/worker/**/*.ts"],
     rules: {
       "no-restricted-globals": [
         "error",

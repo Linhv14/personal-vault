@@ -1,0 +1,5 @@
+{
+  "description": "Test-only Ed25519 licence signing key. Never trusted in production.",
+  "privateKeyPem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIJDP8H9pSuUXxWZ96ZPzIjabf8zabbkx0KZd+ERcb01t\n-----END PRIVATE KEY-----\n",
+  "publicKey": "F5SYE3vw-Ruw2QmW4t2ZO0VciyG3T4bar009OSE6eJY"
+}

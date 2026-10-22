@@ -62,6 +62,7 @@
     "#ui/*": "./src/ui/*",
     "#i18n/*": "./src/i18n/*",
     "#worker/*": "./src/worker/*",
-    "#ext/*": "./extension/*"
+    "#ext/*": "./extension/*",
+    "#commercial/*": "./commercial/*"
   }
 }

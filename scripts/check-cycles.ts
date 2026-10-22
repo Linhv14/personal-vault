@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-const SOURCE_FOLDERS = ["extension/", "src/", "web/", "cli/", "share/"];
+const SOURCE_FOLDERS = ["extension/", "src/", "web/", "cli/", "share/", "commercial/"];
 const SOURCE_EXTENSIONS = /\.(ts|tsx)$/;
 const RESOLVE_SUFFIXES = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"];
 

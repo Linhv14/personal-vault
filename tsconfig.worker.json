@@ -13,5 +13,10 @@
     "noEmit": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/worker/**/*.ts", "src/core/**/*.ts"]
+  "include": [
+    "src/worker/**/*.ts",
+    "src/core/**/*.ts",
+    "commercial/worker/**/*.ts",
+    "commercial/core/**/*.ts"
+  ]
 }

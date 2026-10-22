@@ -16,6 +16,7 @@ const SOURCE_FOLDERS = [
   "tools/",
   "test/",
   "e2e-browser/",
+  "commercial/",
 ];
 const SOURCE_EXTENSIONS = /\.(ts|tsx|mts|cts|js|mjs|cjs)$/;
 const EXCLUDED_PREFIXES = ["action/dist/", "dist/", "node_modules/"];
