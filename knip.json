@@ -1,0 +1,34 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "extension/popup/main.tsx",
+    "extension/background.ts",
+    "extension/offscreen/offscreen.ts",
+    "extension/import/main.tsx",
+    "extension/console/main.tsx",
+    "extension/content/content.ts",
+    "extension/content/card-frame.ts",
+    "extension/passkey/page.ts",
+    "extension/passkey/bridge.ts",
+    "web/main.tsx",
+    "share/main.ts",
+    "share/landing.ts",
+    "cli/bin.ts",
+    "action/main.ts",
+    "scripts/*.ts",
+    "tools/demo-video/*.{mjs,mts}",
+    "test/**/*.test.ts",
+    "e2e-browser/**/*.spec.ts",
+    "e2e-browser/worker.ts"
+  ],
+  "project": ["**/*.{ts,tsx,mjs,mts}"],
+  "ignore": [
+    "dist/**",
+    "action/dist/**",
+    "tools/demo-video/site/**",
+    "tools/brand/**",
+    "test/stubs/**"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["cloudflare", "wrangler"]
+}

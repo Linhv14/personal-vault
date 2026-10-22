@@ -94,17 +94,3 @@ export function hydrateIcons(root: ParentNode): void {
     slot.replaceWith(icon(slot.dataset.icon as IconName));
   }
 }
-
-export function iconButton(name: IconName, label: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "icon-button";
-  button.title = label;
-  button.setAttribute("aria-label", label);
-  button.append(icon(name));
-  button.addEventListener("click", (event) => {
-    event.stopPropagation();
-    onClick();
-  });
-  return button;
-}

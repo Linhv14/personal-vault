@@ -14,7 +14,6 @@ export function logoSvg(_id = "", animated = false, bare = false): string {
 }
 
 export const LOGO_SVG = logoSvg();
-export const MARK_SVG = logoSvg("", false, true);
 
 export function logo(size: number, animated = false, bare = false): HTMLElement {
   const mark = document.createElement("span");

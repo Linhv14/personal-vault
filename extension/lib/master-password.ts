@@ -37,7 +37,9 @@ export class MasterPasswordRejected extends Error {
 
 export function assertMasterPasswordPolicy(password: string, email: string): void {
   const issue = masterPasswordIssue(password, email);
-  if (issue) throw new MasterPasswordRejected(issue);
+  if (issue) {
+    throw new MasterPasswordRejected(issue);
+  }
 }
 
 export function checkNewMasterPassword(
@@ -50,13 +52,4 @@ export function checkNewMasterPassword(
     email,
     async (candidate) => (await breachCounts([candidate], fetchRange)).get(candidate) ?? 0,
   );
-}
-
-export async function assertNewMasterPassword(
-  password: string,
-  email: string,
-  fetchRange?: FetchRange,
-): Promise<void> {
-  const issue = await checkNewMasterPassword(password, email, fetchRange);
-  if (issue) throw new MasterPasswordRejected(issue);
 }
