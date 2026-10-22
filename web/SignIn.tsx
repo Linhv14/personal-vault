@@ -1,17 +1,21 @@
 import { useEffect, useState } from "preact/hooks";
 import { formText } from "../src/ui/form-data.js";
 import type { MasterPasswordIssue } from "../src/core/master-password.js";
-import { previewInvite, type InvitePreview } from "../extension/lib/orgs.js";
-import * as api from "../extension/lib/api.js";
-import { checkNewMasterPassword } from "../extension/lib/master-password.js";
-import { MasterPasswordInput } from "../extension/ui/components/MasterPasswordInput.js";
-import { Spinner } from "../extension/console/components.js";
-import { ROLE_LABEL } from "../extension/console/labels.js";
-import { Wordmark } from "../extension/ui/components/Logo.js";
+import {
+  api,
+  checkNewMasterPassword,
+  localeSignal,
+  MasterPasswordInput,
+  previewInvite,
+  ROLE_LABEL,
+  Spinner,
+  TwoFactorStep,
+  useT,
+  Wordmark,
+  type InvitePreview,
+} from "../extension/web-host.js";
 import { describeError } from "../src/i18n/index.js";
 import { logoSvg } from "../src/ui/logo.js";
-import { localeSignal, useT } from "../extension/ui/i18n.js";
-import { TwoFactorStep } from "../extension/ui/components/TwoFactorStep.js";
 import { registerFromInvite, signIn, signInWithCode, type PendingSignIn } from "./session.js";
 
 type Mode = "sign-in" | "register";
