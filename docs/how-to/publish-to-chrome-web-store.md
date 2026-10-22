@@ -64,19 +64,24 @@ codes, end-to-end encrypted.
 
 **Permission justifications:**
 
-| Permission                                       | Justification                                                                                                                                                                              |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `storage`                                        | Keeps the encrypted vault on the device for offline use, and the unlocked key in session memory only.                                                                                      |
-| `unlimitedStorage`                               | Lets the encrypted copy of large personal and team vaults stay on the device for offline use, beyond the default 10 MB.                                                                    |
-| `alarms`                                         | Locks the vault after the chosen idle time and clears copied secrets from the clipboard after 30 seconds.                                                                                  |
-| `activeTab`                                      | Reads the address of the current tab to list matching logins, and captures it when the user asks to scan a 2FA QR code.                                                                    |
-| `offscreen`                                      | Clears the clipboard after 30 seconds even when the popup has closed.                                                                                                                      |
-| `clipboardWrite`                                 | Writes the empty value that clears a copied password from the clipboard.                                                                                                                   |
-| `scripting`                                      | Registers the autofill and passkey scripts only after the user turns on "Autofill and passkeys on websites".                                                                               |
-| Optional host access `https://*/*`, `http://*/*` | Requested only when the user turns on autofill and passkeys, to show the fill icon in login forms, offer to save new logins, and create or use passkeys the user approves. Off by default. |
-| Optional `privacy`                               | Requested together with site access when the user turns on autofill, to turn off the browser's own offer to save passwords so only 7key asks; returned when they turn autofill off.        |
+| Permission                                       | Justification                                                                                                                                                                                                                                                       |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`                                        | Keeps the encrypted vault on the device for offline use, and the unlocked key in session memory only.                                                                                                                                                               |
+| `unlimitedStorage`                               | Lets the encrypted copy of large personal and team vaults stay on the device for offline use, beyond the default 10 MB.                                                                                                                                             |
+| `alarms`                                         | Locks the vault after the chosen idle time and clears copied secrets from the clipboard after 30 seconds.                                                                                                                                                           |
+| `activeTab`                                      | Reads the address of the current tab to list matching logins, and captures it when the user asks to scan a 2FA QR code.                                                                                                                                             |
+| `offscreen`                                      | Clears the clipboard after 30 seconds even when the popup has closed.                                                                                                                                                                                               |
+| `clipboardWrite`                                 | Writes the empty value that clears a copied password from the clipboard.                                                                                                                                                                                            |
+| `scripting`                                      | Registers the autofill and passkey scripts only after the user turns on "Autofill and passkeys on websites".                                                                                                                                                        |
+| `identity`                                       | Opens the organization's identity provider in a browser window for "Sign in with SSO" (`chrome.identity.launchWebAuthFlow`) and receives the result at the extension's own `chromiumapp.org` address. It shows no install warning and reads no Google account data. |
+| Optional host access `https://*/*`, `http://*/*` | Requested only when the user turns on autofill and passkeys, to show the fill icon in login forms, offer to save new logins, and create or use passkeys the user approves. Off by default.                                                                          |
+| Optional `privacy`                               | Requested together with site access when the user turns on autofill, to turn off the browser's own offer to save passwords so only 7key asks; returned when they turn autofill off.                                                                                 |
 
 **Remote code:** No. All code ships in the package.
+
+Adding `identity` (for single sign-on) is a new permission: the Web Store
+reviews the update again, but Chrome does not ask existing users to re-approve
+the extension, since `identity` carries no permission warning.
 
 **Data usage disclosures:**
 

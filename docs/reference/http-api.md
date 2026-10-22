@@ -103,20 +103,21 @@ Header `X-Registration-Token` is required when `registration` is `token`,
 unless `inviteId` names a pending invitation for the same address: an invitation
 is the admin's consent, so invited people can sign up on a token-only server.
 
-| Field              | Type   | Notes                                                                                  |
-| ------------------ | ------ | -------------------------------------------------------------------------------------- |
-| `email`            | string | Normalized to lower case                                                               |
-| `kdf`              | object | `{ "type": "pbkdf2-sha256", "iterations": 600000–5000000, "salt": base64 ≤ 64 bytes }` |
-| `authKey`          | string | base64, 32 bytes                                                                       |
-| `wrappedVaultKey`  | sealed | The vault key sealed under the wrapping key                                            |
-| `verificationCode` | string | 6 digits; required when `emailVerification` is on                                      |
-| `inviteId`         | string | Optional. A pending invitation for `email`; the new account joins that organization    |
+| Field              | Type   | Notes                                                                                              |
+| ------------------ | ------ | -------------------------------------------------------------------------------------------------- |
+| `email`            | string | Normalized to lower case                                                                           |
+| `kdf`              | object | `{ "type": "pbkdf2-sha256", "iterations": 600000–5000000, "salt": base64 ≤ 64 bytes }`             |
+| `authKey`          | string | base64, 32 bytes                                                                                   |
+| `wrappedVaultKey`  | sealed | The vault key sealed under the wrapping key                                                        |
+| `verificationCode` | string | 6 digits; required when `emailVerification` is on                                                  |
+| `inviteId`         | string | Optional. A pending invitation for `email`; the new account joins that organization                |
+| `ssoGrant`         | string | Optional. A registration grant from `POST /api/sso/session`; see [Single sign-on](#single-sign-on) |
 
 | Status | Body / code                                                                                                                                                  |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 201    | `{ "accountId": string, "token": string, "expiresAt": number, "orgId"?: string }`, `orgId` when an invitation was accepted                                   |
 | 400    | `auth.invalid_body`, `auth.invalid_email`, `auth.invalid_kdf`, `auth.invalid_auth_key`, `auth.invalid_wrapped_key`, `auth.invalid_code`, `auth.code_expired` |
-| 403    | `auth.bad_registration_token`                                                                                                                                |
+| 403    | `auth.bad_registration_token`, `sso.expired` (the `ssoGrant` is unknown, used, expired or for another address)                                               |
 | 409    | `auth.email_taken`, only when `emailVerification` is on and the code was valid                                                                               |
 | 429    | `auth.registration_limit`                                                                                                                                    |
 
@@ -164,6 +165,11 @@ instead, with no token and no wrapped key. A client that does not know this
 field finds no `token` and fails closed. Wrong credentials answer exactly as
 above, so the response never reveals whether 2FA is on before the password is
 right.
+
+A correct password for a member (not an owner or admin) of an organization
+that requires single sign-on answers `403 auth.sso_required` with
+`params.identifier`, the organization identifier to start SSO with. The same
+check runs again in `login/2fa`.
 
 ### `POST /api/auth/login/2fa`
 
@@ -445,8 +451,80 @@ one gets `409 orgs.stale_team_key`, and every write is refused with
 | `GET /api/orgs/:id/audit?before=<seq>`                                                                                                                         | admins                                           | 100 most recent events before `seq`, and whether the hash chain verifies                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `GET /api/invites`                                                                                                                                             | anyone                                           | Invitations for the caller's email                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `GET /api/invites/:id/preview`                                                                                                                                 | no session (rate-limited)                        | Organization name, inviter, role, expiry, the invited address, `hasAccount` and `domainAllowed`, so the link can open on account creation or sign-in. `404` once accepted, declined, withdrawn or expired                                                                                                                                                                                                                                                                                                                        |
-| `POST /api/invites/:id/accept`                                                                                                                                 | the invited address                              | Joins the organization with the invited role. `403 orgs.invite_domain_blocked` when the organization no longer accepts the address's domain                                                                                                                                                                                                                                                                                                                                                                                      |
+| `POST /api/invites/:id/accept`                                                                                                                                 | the invited address                              | Joins the organization with the invited role. `403 orgs.invite_domain_blocked` when the organization no longer accepts the address's domain; `403 orgs.single_org` when a Single organization policy forbids it                                                                                                                                                                                                                                                                                                                  |
 | `DELETE /api/invites/:id`                                                                                                                                      | the invited address                              | Declines                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+## Single sign-on
+
+Commercial; see [Single sign-on](../explanation/sso.md). Every route below
+answers `403 license.required` when the organization is neither on the
+`enterprise` plan nor covered by a valid `LICENSE_KEY`, except the read-only
+overview, which reports the licence instead.
+
+### `POST /api/sso/prepare`
+
+No session; rate-limited per network.
+
+| Field             | Type   | Notes                                                                                                    |
+| ----------------- | ------ | -------------------------------------------------------------------------------------------------------- |
+| `email`           | string | A work email; its domain must be verified by one organization. Ignored when `identifier` is given        |
+| `identifier`      | string | The organization identifier                                                                              |
+| `returnTo`        | string | Exactly `<server>/app/` or `https://<extension id>.chromiumapp.org/` for an allowed extension            |
+| `clientChallenge` | string | base64url SHA-256 of a random verifier the client keeps; the grant is only redeemable with that verifier |
+
+| Status | Body / code                                                                   |
+| ------ | ----------------------------------------------------------------------------- |
+| 200    | `{ "orgName": string, "identifier": string \| null, "authorizeUrl": string }` |
+| 400    | `sso.invalid_return`, `sso.invalid_request`                                   |
+| 403    | `license.required`                                                            |
+| 404    | `sso.not_found` (no organization, or its provider is missing or off)          |
+| 502    | `sso.discovery_failed`                                                        |
+
+The server stores a one-time `state` (10 minutes) with the sealed PKCE code
+verifier it will send to the provider, the `nonce` and the client challenge.
+`authorizeUrl` carries `response_type=code`, `scope=openid email profile`,
+`state`, `nonce`, `code_challenge` (`S256`) and the fixed
+`redirect_uri=<server>/api/sso/callback`.
+
+### `GET /api/sso/callback?code=…&state=…`
+
+The provider's redirect. An unknown, used or expired `state` answers
+`400 sso.expired` as JSON and redirects nowhere. Otherwise the state is
+consumed and the browser is sent to the stored `returnTo` with a fragment:
+`#sso_grant=<grant>` on success, or `#sso_error=<code>` with `sso.failed`,
+`sso.email_unverified`, `sso.email_not_allowed`, `sso.not_found` or
+`license.required`. The grant is single-use and lives two minutes.
+
+### `POST /api/sso/session`
+
+Request `{ "grant": string, "clientVerifier": string, "locale"?: "en" | "vi" }`.
+The grant is consumed even when the verifier is wrong.
+
+| Status | Body / code                                                                                                                                                                              |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 200    | `{ "status": "signed_in", "email", "orgId", "kdf", "token", "expiresAt", "wrappedVaultKey" }` for an existing account; the client asks for the master password to open `wrappedVaultKey` |
+| 200    | `{ "status": "register", "email", "orgName", "registrationGrant" }` for a new address; pass `registrationGrant` as `ssoGrant` to `POST /api/auth/register` within 15 minutes             |
+| 403    | `sso.expired`, `orgs.single_org`, `orgs.seat_limit`, `sso.email_not_allowed`, `license.required`                                                                                         |
+
+Account two-factor authentication is not asked for here; the identity
+provider's sign-in stands in for it.
+
+### Organization settings
+
+All need an owner or admin session.
+
+| Method and path                                 | Does                                                                                                                                                                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/orgs/:id/sso`                         | Licence status, identifier, domains with their TXT record, provider (without the secret), policies                                                                                                            |
+| `PUT /api/orgs/:id/sso/identifier`              | `{ "identifier" }`, 3–32 of `[a-z0-9-]`; `409 sso.identifier_taken`                                                                                                                                           |
+| `POST /api/orgs/:id/sso/domains`                | `{ "domain" }`; issues the token for `7key-verify=<token>`; `409 sso.domain_taken`, `sso.domain_limit`                                                                                                        |
+| `POST /api/orgs/:id/sso/domains/:domain/verify` | Looks the TXT record up over DNS over HTTPS; `400 sso.domain_not_verified`, `409 sso.domain_taken`                                                                                                            |
+| `DELETE /api/orgs/:id/sso/domains/:domain`      | Removes the domain                                                                                                                                                                                            |
+| `PUT /api/orgs/:id/sso/provider`                | `{ "issuer", "clientId", "clientSecret"?, "enabled", "decryption": "master_password" }`; the issuer must be https and its discovery document must name it; `400 sso.invalid_provider`, `sso.discovery_failed` |
+| `PUT /api/orgs/:id/sso/policies`                | `{ "requireSso", "singleOrg" }`; Require SSO needs an enabled provider                                                                                                                                        |
+
+Each change is recorded in the organization's audit log. Every write returns
+the same overview as `GET`.
 
 ## Team vaults
 
@@ -657,3 +735,21 @@ Errors: `400 shares.invalid_code`, `400 shares.code_expired`, `404 shares.gone`.
 | `server.rate_limited`         | 429           | Rate limit reached                                               |
 | `server.not_found`            | 404           | No such endpoint                                                 |
 | `server.error`                | 500           | Unexpected failure; details go to the Worker log only            |
+| `auth.sso_required`           | 403           | The organization requires SSO; `params.identifier` names it      |
+| `license.required`            | 403           | SSO needs the enterprise plan or a valid `LICENSE_KEY`           |
+| `orgs.single_org`             | 403           | A Single organization policy forbids joining                     |
+| `sso.not_found`               | 404           | No enabled SSO for that email or identifier                      |
+| `sso.invalid_request`         | 400           | Missing email or identifier, or a malformed field                |
+| `sso.invalid_return`          | 400           | `returnTo` is not on the allow-list                              |
+| `sso.invalid_identifier`      | 400           | Identifier is not 3–32 of `[a-z0-9-]`                            |
+| `sso.identifier_taken`        | 409           | Another organization uses the identifier                         |
+| `sso.invalid_domain`          | 400           | Not a domain name                                                |
+| `sso.domain_limit`            | 409           | Twenty domains already                                           |
+| `sso.domain_taken`            | 409           | Another organization verified the domain                         |
+| `sso.domain_not_verified`     | 400           | The TXT record was not found                                     |
+| `sso.invalid_provider`        | 400           | Issuer, client ID, secret or decryption option invalid           |
+| `sso.discovery_failed`        | 400, 502      | The provider's discovery document could not be read or matched   |
+| `sso.expired`                 | 400, 403      | State or grant unknown, used, expired, or verifier wrong         |
+| `sso.failed`                  | redirect      | The code exchange or the ID token check failed                   |
+| `sso.email_unverified`        | redirect      | The ID token does not say the email is verified                  |
+| `sso.email_not_allowed`       | redirect, 403 | Email not on a verified domain, not a member, not invited        |

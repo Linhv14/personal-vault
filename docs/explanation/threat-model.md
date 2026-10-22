@@ -292,6 +292,52 @@ the team, the key generation and the object.
   invent one. The popup ignores a team key generation older than the newest it
   has seen.
 
+## Single sign-on
+
+With SSO an organization adds its identity provider (IdP) to the parties the
+server trusts, for sign-in only:
+
+- **The IdP can sign members in, not decrypt them.** A valid ID token gets a
+  session and the member's wrapped vault key, exactly what a correct password
+  gets today. Opening that key still needs the master password, which never
+  leaves the device, so a compromised or malicious IdP, or a stolen IdP account,
+  can read nothing it could not already read with a stolen 7key password. It can
+  create accounts for new addresses on the organization's verified domains and
+  join them to the organization as members.
+- **The IdP replaces 7key two-factor authentication for SSO sign-ins**, as in
+  Bitwarden: a member with 2FA who signs in through SSO is not asked for a code,
+  because the organization's IdP is where it enforces MFA. Password sign-in
+  still asks for the code.
+- **Which IdP a member trusts is set by the organization's owners and admins.**
+  An admin can point the organization at an IdP they control and sign in as any
+  member whose email is on a verified domain. They would still need that
+  member's master password to read the member's vault, and anything they
+  already have access to as an admin is shared with them anyway.
+- **Domains are claimed with DNS.** Only an organization that published
+  `7key-verify=<token>` in the domain's TXT records, checked over Cloudflare's
+  DNS over HTTPS, can serve SSO for addresses on it, and only one organization
+  can hold a domain. Someone who controls the domain's DNS can claim it. An
+  address on another domain can sign in only if it was invited or is already a
+  member.
+- **The flow resists the usual OIDC attacks.** The Worker uses PKCE (`S256`)
+  with the IdP, a one-time `state` that expires after ten minutes and a `nonce`
+  checked in the ID token; it verifies the ID token's signature (RS256 or
+  ES256) against the IdP's published keys, its issuer, audience (`azp` when
+  there are several), expiry and issue time, and requires `email_verified`
+  (`xms_edov` for Microsoft Entra ID). The redirect URI is fixed, and the result
+  goes only to the web app or an allowed extension, never to an address taken
+  from the request. The grant in that redirect is single-use, lives two
+  minutes and can only be redeemed with a verifier that the client that started
+  the attempt kept, so a grant leaked from a URL is useless on its own.
+- **Server-held secrets.** The IdP client secret and each pending PKCE verifier
+  are encrypted with `AT_REST_SECRET`. Discovery documents and key sets are
+  fetched with a five-second timeout and a 64 KB cap, over https only and
+  without following redirects.
+- **Policies are enforced by the server.** Require SSO refuses password
+  sign-in to members other than owners and admins, who keep it so a broken IdP
+  cannot lock the organization out. Single organization refuses invitations.
+  Neither revokes sessions that already exist.
+
 ## Audit log
 
 Each organization's Durable Object appends an event for every recorded action

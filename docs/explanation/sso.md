@@ -47,7 +47,8 @@ by `LICENSE_COMMERCIAL.md`; the AGPL core only knows how to mount it.
 3. The provider redirects to the callback. The Worker exchanges the code with the
    PKCE verifier, verifies the ID token's signature against the provider's JWKS,
    `iss`, `aud`, `exp`, `nonce`, and that `email_verified` is true and the email
-   is on a verified domain of the organization (or an accepted invitation).
+   is on a verified domain of the organization, belongs to one of its members,
+   or has a pending invitation to it.
 4. The Worker issues a short-lived, single-use SSO grant and redirects to the
    client, which trades it for a session at `POST /api/sso/session`.
 5. What happens next depends on the decryption option: ask for the master
@@ -62,6 +63,54 @@ SAML follows the same shape with an HTTP-POST binding to
 match the audience and recipient, be inside its validity window and carry a
 `InResponseTo` we issued. Signature checks verify the exact element that is read
 (no XML Signature Wrapping), and DOCTYPE and external entities are rejected.
+
+## Phase 1 decisions
+
+These refine the design for the first release (OIDC with the master password
+option):
+
+- **Storage.** Identifiers, domains, provider settings and policies live in D1
+  (`sso_configs`, `sso_domains`), because sign-in looks organizations up by
+  identifier or email domain across all of them. A partial unique index lets
+  several organizations start claiming a domain but only one verify it. One-time
+  states and grants live in D1 too (`sso_states`, `sso_grants`) and are taken
+  with `DELETE … RETURNING`, so each can be used once even under concurrent
+  requests. Changes are recorded in the organization's audit log in its Durable
+  Object.
+- **Two PKCE bindings.** The Worker holds the PKCE verifier for the code
+  exchange with the provider (sealed with `AT_REST_SECRET`). Separately, the
+  client sends the SHA-256 of its own random verifier to `prepare`; the grant
+  that comes back through the redirect is only redeemable with that verifier, so
+  a grant leaked from a URL or browser history is useless.
+- **Return targets.** The callback sends the browser only to `<server>/app/` or
+  to `https://<extension id>.chromiumapp.org/`, the address
+  `chrome.identity.launchWebAuthFlow` intercepts, for the official extension or
+  the ids in `SSO_EXTENSION_IDS`. The target is fixed at `prepare` and matched
+  exactly. A browser popup closes when the provider's window takes focus, so the
+  extension runs SSO from its sign-in screen opened in a tab.
+- **Two-factor authentication.** As in Bitwarden, the IdP's sign-in stands in
+  for 7key's account 2FA: an SSO sign-in is not asked for a 2FA code. Password
+  sign-in, which owners and admins keep under Require SSO, still is.
+- **New members.** A first SSO sign-in for an unknown address returns a second,
+  15-minute registration grant. The client creates the account keys and the
+  master password exactly as normal registration does and calls
+  `POST /api/auth/register` with `ssoGrant`, which replaces the registration
+  token and the email code (the IdP verified the address). The account then
+  joins through its pending invitation, with the invited role and teams, or as a
+  member through the verified domain, within the seat limit.
+- **Seats.** Joining through a verified domain counts against the larger of the
+  plan's seats and the licence's seats.
+- **Policies.** Owners and admins are exempt from both. Require SSO needs an
+  enabled provider and stops applying when the provider is switched off or SSO
+  stops being available, so an expired licence cannot lock members out.
+  Single organization works both ways: a member of such an organization cannot
+  accept an invitation elsewhere, and someone who belongs to another
+  organization cannot join one that has it.
+- **Microsoft Entra ID** does not send `email_verified`; for issuers on
+  `login.microsoftonline.com` the Worker accepts `xms_edov: true` instead.
+- **Licence status** is readable by admins without a licence, so the console
+  can explain what is missing; every other SSO route answers
+  `403 license.required`.
 
 ## Account recovery administration
 
