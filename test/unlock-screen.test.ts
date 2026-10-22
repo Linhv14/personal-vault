@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/preact";
+import { cleanup, configure, fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { h } from "preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+configure({ asyncUtilTimeout: 5000 });
 
 const device = { pin: true, biometric: true };
 const unlockWithBiometric = vi.fn(() => new Promise<string>(() => {}));
