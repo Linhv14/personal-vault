@@ -54,6 +54,8 @@ const SIGN_UP_BUTTON =
 let t: Translate = createTranslator("en");
 let activeInput: HTMLInputElement | null = null;
 let cardFrame: HTMLIFrameElement | null = null;
+let filling = false;
+let following = false;
 let lastCapture = { password: "", at: 0 };
 let outcomeTimer: ReturnType<typeof setInterval> | undefined;
 let siteWarning: LookalikeMatch | null = null;
@@ -211,7 +213,12 @@ function isCodeField(input: HTMLInputElement): boolean {
   return isOneTimeCodeField(input) && formKind(input) !== "card";
 }
 
+const TEXT_INPUT_TYPES = new Set(["text", "email", "tel", "password", "search", "url", "number"]);
+
 function isDecoratable(input: HTMLInputElement): boolean {
+  if (filling || !TEXT_INPUT_TYPES.has(input.type)) {
+    return false;
+  }
   if (input.type === "password" || wantsPasskey(input) || isCodeField(input)) {
     return true;
   }
@@ -228,11 +235,35 @@ function pageRect(element: Element): DOMRect {
   );
 }
 
+function fillFrom(origin: HTMLInputElement, fill: () => void): void {
+  filling = true;
+  try {
+    fill();
+  } finally {
+    filling = false;
+  }
+  activeInput = origin;
+  placeTrigger();
+}
+
+function followAnchor(): void {
+  if (trigger.hidden) {
+    following = false;
+    return;
+  }
+  placeTrigger();
+  requestAnimationFrame(followAnchor);
+}
+
 function placeTrigger(): void {
   const anchor = activeInput ?? cardFrame;
   if (!anchor || !anchor.isConnected || !isVisible(anchor)) {
     trigger.hidden = true;
     return;
+  }
+  if (!following) {
+    following = true;
+    requestAnimationFrame(followAnchor);
   }
   const rect = pageRect(anchor);
   const size = Math.min(24, Math.max(18, rect.height - 10));
@@ -407,7 +438,7 @@ async function fillCardItem(id: string, input: HTMLInputElement): Promise<void> 
   if (!response.ok || !("card" in response)) {
     return;
   }
-  fillCard(detectFields(scopeOf(input)), response.card, setValue);
+  fillFrom(input, () => fillCard(detectFields(scopeOf(input)), response.card, setValue));
 }
 
 async function fillAddressFrom(request: AutofillRequest, input: HTMLInputElement): Promise<void> {
@@ -418,7 +449,9 @@ async function fillAddressFrom(request: AutofillRequest, input: HTMLInputElement
   }
   const data: AddressData = response.identity;
   const random = request.type === "autofill:random-address";
-  fillAddress(detectFields(scopeOf(input)), data, random ? setRandomValue : setValue);
+  fillFrom(input, () =>
+    fillAddress(detectFields(scopeOf(input)), data, random ? setRandomValue : setValue),
+  );
 }
 
 async function openFrameCardMenu(frame: HTMLIFrameElement, onlyIfUseful: boolean): Promise<void> {
