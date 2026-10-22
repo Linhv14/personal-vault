@@ -8,5 +8,6 @@
   "emailProvider": "resend",
   "aliasDomains": [],
   "turnstileSiteKey": "0x4AAAAAAFdd_eUW6Xwzs8Yu",
-  "siteService": "7key-site"
+  "siteService": "7key-site",
+  "privacyUrl": "https://7key.online/privacy"
 }

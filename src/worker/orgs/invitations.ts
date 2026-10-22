@@ -1,6 +1,7 @@
 import type { InvitableRole } from "#core/org-model.js";
 import { orgInviteEmail, ownershipEmail } from "../emails.js";
 import { createMailer } from "../mailer.js";
+import { configuredPrivacyUrl } from "../privacy-link.js";
 import type { Env } from "../types.js";
 import { orgStore } from "../durable-objects.js";
 import type { OrgDirectory } from "./directory.js";
@@ -35,7 +36,7 @@ export async function sendInvitation(
     return false;
   }
   const message = orgInviteEmail(
-    { locale: invite.locale, siteUrl: invite.siteUrl },
+    { locale: invite.locale, siteUrl: invite.siteUrl, privacyUrl: configuredPrivacyUrl(env) },
     {
       org: org.name,
       inviter,
@@ -90,7 +91,11 @@ export async function notifyNewOwner(
     return;
   }
   const message = ownershipEmail(
-    { locale: transfer.locale, siteUrl: transfer.siteUrl },
+    {
+      locale: transfer.locale,
+      siteUrl: transfer.siteUrl,
+      privacyUrl: configuredPrivacyUrl(env),
+    },
     {
       org: org.name,
       previous,

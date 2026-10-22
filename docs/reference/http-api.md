@@ -50,6 +50,8 @@ sender and a mail provider are configured. When Turnstile is configured, the
 response also carries `turnstileSiteKey`, and `register`, `verify-email`,
 `recover/email`, `recover/start` and `POST /api/shares/:id/code` need a token
 in the `X-Turnstile-Token` header, or answer `403 auth.bot_check_failed`.
+When `PRIVACY_URL` is set, the response carries it as `privacyUrl`; clients
+link the privacy policy only when it is present.
 
 ### `GET /api/time`
 

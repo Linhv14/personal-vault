@@ -21,6 +21,7 @@ export interface Env extends StoreEnv {
   ALIAS_ORIGINS?: string;
   READ_ONLY?: string;
   SECURITY_CONTACT?: string;
+  PRIVACY_URL?: string;
   CI_TEST_JWKS?: string;
   CI_TEST_ISSUER?: string;
   TURNSTILE_SITE_KEY?: string;

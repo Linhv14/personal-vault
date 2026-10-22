@@ -10,6 +10,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Privacy policy links on the share page, `/security`, `/api-docs`, email
+  footers and the extension's Account page appear only when the operator sets
+  `PRIVACY_URL` (`--privacy-url`), and point there instead of `/privacy` on the
+  server.
 - `/` shows a short built-in home page linking to the web app, the extension,
   `/security` and `/api-docs`.
 - 7key is now licensed under the GNU AGPL-3.0 instead of the MIT License; releases

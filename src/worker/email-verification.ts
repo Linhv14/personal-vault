@@ -1,6 +1,7 @@
 import { timingSafeEqual, utf8Encode } from "#core/bytes.js";
 import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
+import { configuredPrivacyUrl } from "./privacy-link.js";
 import { createMailer, type Mailer } from "./mailer.js";
 import {
   CODE_MAX_ATTEMPTS,
@@ -62,9 +63,8 @@ export async function sendCode(
   const existing = await env.DB.prepare("SELECT 1 FROM accounts WHERE email = ?")
     .bind(email)
     .first();
-  const message = existing
-    ? existingAccountEmail({ locale, siteUrl })
-    : verificationCodeEmail({ locale, siteUrl }, code);
+  const context = { locale, siteUrl, privacyUrl: configuredPrivacyUrl(env) };
+  const message = existing ? existingAccountEmail(context) : verificationCodeEmail(context, code);
   await mailer.send({ to: email, ...message });
 }
 

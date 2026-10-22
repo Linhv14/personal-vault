@@ -1,5 +1,6 @@
 import { timingSafeEqual, utf8Encode } from "#core/bytes.js";
-import { recoveryCodeEmail, type EmailLocale } from "./emails.js";
+import type { EmailContext } from "./email/kit.js";
+import { recoveryCodeEmail } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import { createMailer, type Mailer } from "./mailer.js";
 import {
@@ -47,12 +48,12 @@ export async function issueRecoveryEmailCode(
 
 export async function sendRecoveryEmailCode(
   mailer: Mailer,
-  request: { email: string; locale: EmailLocale; siteUrl: string },
+  request: EmailContext & { email: string },
   code: string,
 ): Promise<void> {
   await mailer.send({
     to: request.email,
-    ...recoveryCodeEmail({ locale: request.locale, siteUrl: request.siteUrl }, code),
+    ...recoveryCodeEmail(request, code),
   });
 }
 

@@ -482,6 +482,8 @@ if (!command || !(command in COMMANDS)) {
                                  share codes; needs the TURNSTILE_SECRET secret ("none" to drop)
            --site-service <name>  bind the SITE Worker that serves /, /vi, /privacy and
                                  /media/* ("none" to drop; deploy that Worker first)
+           --privacy-url <url>   link this https privacy policy from the share page,
+                                 /security, emails and the extension ("none" to drop)
   ci       Deploy from Workers Builds with deploy/production.json: migrate,
            build and deploy. Secrets must already be set on the Worker.
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787

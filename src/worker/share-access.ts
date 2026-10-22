@@ -2,6 +2,7 @@ import { timingSafeEqual, utf8Encode } from "#core/bytes.js";
 import { shareAccessEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import type { Mailer } from "./mailer.js";
+import { configuredPrivacyUrl } from "./privacy-link.js";
 import { CODE_MAX_ATTEMPTS, CODE_RESEND_COOLDOWN_SECONDS, generateCode } from "./one-time-code.js";
 import type { Env } from "./types.js";
 
@@ -70,7 +71,7 @@ export async function sendShareCode(
 
   await mailer.send({
     to: email,
-    ...shareAccessEmail({ locale, siteUrl }, code),
+    ...shareAccessEmail({ locale, siteUrl, privacyUrl: configuredPrivacyUrl(env) }, code),
   });
 }
 

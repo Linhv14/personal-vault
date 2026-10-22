@@ -4,6 +4,7 @@ import { deviceLabel } from "./device-label.js";
 import { newSignInEmail } from "./emails.js";
 import { inBackground } from "./http.js";
 import { createMailer } from "./mailer.js";
+import { configuredPrivacyUrl } from "./privacy-link.js";
 import { createSession, noteDevice } from "./session.js";
 import type { AppBindings } from "./types.js";
 import { MIN_KDF_ITERATIONS } from "./validate.js";
@@ -29,7 +30,7 @@ export async function signedIn(
   const mailer = createMailer(c.env);
   if ((await noteDevice(c.env, accountId, label, timestamp)) === "new" && mailer) {
     const message = newSignInEmail(
-      { locale, siteUrl: new URL(c.req.url).origin },
+      { locale, siteUrl: new URL(c.req.url).origin, privacyUrl: configuredPrivacyUrl(c.env) },
       { device: label, at: timestamp },
     );
     inBackground(c, "new_sign_in_email_failed", () => mailer.send({ to: email, ...message }));
