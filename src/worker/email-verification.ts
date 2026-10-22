@@ -2,7 +2,12 @@ import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
 import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import { createMailer, type Mailer } from "./mailer.js";
-import { CODE_MAX_ATTEMPTS, CODE_RESEND_COOLDOWN_SECONDS, generateCode } from "./one-time-code.js";
+import {
+  CODE_MAX_ATTEMPTS,
+  CODE_RESEND_COOLDOWN_SECONDS,
+  generateCode,
+  isCode,
+} from "./one-time-code.js";
 import type { Env } from "./types.js";
 
 const CODE_TTL_SECONDS = 15 * 60;
@@ -93,4 +98,26 @@ export async function consumeCode(
 
   await env.DB.prepare("DELETE FROM email_verifications WHERE email = ?").bind(email).run();
   return "ok";
+}
+
+export async function verificationCodeError(
+  env: Env,
+  email: string,
+  code: unknown,
+  timestamp: number,
+): Promise<"auth.invalid_code" | "auth.code_expired" | null> {
+  if (!emailVerificationEnabled(env)) {
+    return null;
+  }
+  if (!isCode(code)) {
+    return "auth.invalid_code";
+  }
+  const verified = await consumeCode(env, email, code, timestamp);
+  if (verified === "invalid") {
+    return "auth.invalid_code";
+  }
+  if (verified === "expired") {
+    return "auth.code_expired";
+  }
+  return null;
 }

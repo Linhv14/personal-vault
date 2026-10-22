@@ -4,6 +4,8 @@ import type { WrappedKey } from "../core/org-model.js";
 import { MAX_PROJECT_BYTES, MAX_SECRET_BYTES } from "../core/projects.js";
 import { MAX_TEAM_ITEM_BYTES } from "../core/team-items.js";
 
+export const MIN_KDF_ITERATIONS = 600_000;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: unknown): value is string {
@@ -70,4 +72,24 @@ export function isSealedSecret(value: unknown): value is SealedData {
 
 export function isSealedTeamItem(value: unknown): value is SealedData {
   return isSealed(value, MAX_TEAM_ITEM_BYTES);
+}
+
+export interface KdfBody {
+  type: "pbkdf2-sha256";
+  iterations: number;
+  salt: string;
+}
+
+export function isKdf(value: unknown): value is KdfBody {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const { type, iterations, salt } = value as Record<string, unknown>;
+  return (
+    type === "pbkdf2-sha256" &&
+    typeof iterations === "number" &&
+    iterations >= MIN_KDF_ITERATIONS &&
+    iterations <= 5_000_000 &&
+    isBase64(salt, 64)
+  );
 }
