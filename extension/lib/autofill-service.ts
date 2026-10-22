@@ -134,10 +134,8 @@ function suggestionOf(item: VaultItem, vault: OpenVault): Suggestion {
   };
 }
 
-const MIN_CARD_DIGITS = 12;
-
 function isCard(item: VaultItem): boolean {
-  return itemType(item) === "card" && cardDigits(item.cardNumber).length >= MIN_CARD_DIGITS;
+  return itemType(item) === "card" && cardDigits(item.cardNumber).length > 0;
 }
 
 function isIdentity(item: VaultItem): boolean {

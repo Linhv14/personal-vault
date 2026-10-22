@@ -277,6 +277,16 @@ describe("cards and addresses", () => {
     expect(JSON.stringify(response)).not.toContain("123");
   });
 
+  it("suggests a short test card such as the Shopify bogus gateway number", async () => {
+    const TEST_CARD = { ...CARD, id: "00000000-0000-4000-8000-000000000010", cardNumber: "1" };
+    await unlockWith([TEST_CARD]);
+    const response = await handleAutofill(
+      { type: "autofill:cards" },
+      sender("https://shop.example/checkout")!,
+    );
+    expect(response).toMatchObject({ cards: [{ id: TEST_CARD.id, last4: "1" }] });
+  });
+
   it("hands over the full card only when one is picked", async () => {
     await unlockWith([CARD]);
     const response = await handleAutofill(
