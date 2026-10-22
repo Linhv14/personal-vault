@@ -128,11 +128,16 @@ function describe(input: HTMLInputElement): string {
   );
 }
 
+const USERNAME_INPUTS =
+  'input[type="email"], input[type="text"], input[type="tel"], input:not([type])';
+
+function namesAccount(input: HTMLInputElement): boolean {
+  return /username|email/.test(input.autocomplete) || USERNAME_HINT.test(describe(input));
+}
+
 function findUsernameField(password: HTMLInputElement): HTMLInputElement | null {
   const candidates = [
-    ...scopeOf(password).querySelectorAll<HTMLInputElement>(
-      'input[type="email"], input[type="text"], input[type="tel"], input:not([type])',
-    ),
+    ...scopeOf(password).querySelectorAll<HTMLInputElement>(USERNAME_INPUTS),
   ].filter(
     (input) =>
       isVisible(input) &&
@@ -141,7 +146,7 @@ function findUsernameField(password: HTMLInputElement): HTMLInputElement | null 
   const nearestFirst = candidates.reverse();
   return (
     nearestFirst.find((input) => /username|email/.test(input.autocomplete)) ??
-    nearestFirst.find((input) => USERNAME_HINT.test(describe(input))) ??
+    nearestFirst.find(namesAccount) ??
     nearestFirst[0] ??
     null
   );
@@ -874,15 +879,8 @@ function capturedPassword(scope: ParentNode): string {
 }
 
 function rememberIdentifier(scope: ParentNode): void {
-  const field = [
-    ...scope.querySelectorAll<HTMLInputElement>(
-      'input[type="email"], input[type="text"], input[type="tel"], input:not([type])',
-    ),
-  ].find(
-    (input) =>
-      isVisible(input) &&
-      input.value.trim() &&
-      (/username|email/.test(input.autocomplete) || USERNAME_HINT.test(describe(input))),
+  const field = [...scope.querySelectorAll<HTMLInputElement>(USERNAME_INPUTS)].find(
+    (input) => isVisible(input) && input.value.trim() && namesAccount(input),
   );
   if (field) {
     void send({ type: "autofill:identifier", username: field.value.trim() });

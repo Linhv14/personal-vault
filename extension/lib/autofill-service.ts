@@ -274,7 +274,8 @@ function existingLogin(items: VaultItem[], pageUrl: string, username?: string) {
   );
   const candidates = onSite.filter((item) => sameUsername(item.username, username));
   const logins = onSite.filter((item) => item.password);
-  const fallback = !username && candidates.length === 0 ? logins.sort(byLastUsed).slice(0, 1) : [];
+  const fallback =
+    !username && candidates.length === 0 ? [...logins].sort(byLastUsed).slice(0, 1) : [];
   const pool = candidates.length > 0 ? candidates : fallback;
   return (
     pool.find((item) => sameSite(item, pageUrl) === "exact") ??
@@ -688,4 +689,8 @@ export async function missedSave(sender: TrustedSender): Promise<PendingPrompt |
 
 export async function forgetMissedSave(sender: TrustedSender): Promise<void> {
   await chrome.storage.session.remove(pendingKey(sender.tabId));
+}
+
+export async function forgetTab(tabId: number): Promise<void> {
+  await chrome.storage.session.remove([pendingKey(tabId), identifierKey(tabId), totpKey(tabId)]);
 }

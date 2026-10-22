@@ -9,7 +9,12 @@ import {
   isAutofillRequest,
   isCardFrameCapture,
 } from "./lib/autofill-protocol.js";
-import { handleAutofill, trustedSender, type TrustedSender } from "./lib/autofill-service.js";
+import {
+  forgetTab,
+  handleAutofill,
+  trustedSender,
+  type TrustedSender,
+} from "./lib/autofill-service.js";
 import { isPasskeyRequest } from "./lib/passkey/protocol.js";
 import { handlePasskey } from "./lib/passkey/service.js";
 import { forgetCardFrames, rememberCardFrame } from "./lib/card-frames.js";
@@ -91,6 +96,7 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
 });
 chrome.tabs.onRemoved.addListener((tabId) => void forgetCardFrames(tabId));
 chrome.tabs.onRemoved.addListener((tabId) => void forgetFrameCards(tabId));
+chrome.tabs.onRemoved.addListener((tabId) => void forgetTab(tabId));
 
 chrome.permissions.onAdded.addListener((permissions) => {
   if (grantsAutofill(permissions)) {

@@ -19,7 +19,11 @@ function area(store: Map<string, unknown>) {
         store.set(key, value);
       }
     },
-    remove: async (key: string) => void store.delete(key),
+    remove: async (keys: string | string[]) => {
+      for (const key of [keys].flat()) {
+        store.delete(key);
+      }
+    },
     clear: async () => store.clear(),
   };
 }
@@ -62,7 +66,7 @@ async function settled(done: () => boolean = () => false): Promise<void> {
   }
 }
 
-const { forgetMissedSave, handleAutofill, missedSave, tabSender, trustedSender } =
+const { forgetMissedSave, forgetTab, handleAutofill, missedSave, tabSender, trustedSender } =
   await import("../extension/lib/autofill-service.js");
 const { saveItem, decryptAll } = await import("../extension/lib/vault.js");
 
@@ -734,6 +738,16 @@ describe("capture and save", () => {
     await handleAutofill({ type: "autofill:dismiss" }, page);
     await forgetMissedSave(tab);
     expect(await missedSave(tab)).toBeNull();
+  });
+
+  it("forgets everything held for a tab once it closes", async () => {
+    await unlockWith([]);
+    const page = sender("https://news.example.com/login")!;
+    await handleAutofill({ type: "autofill:identifier", username: "reader" }, page);
+    await handleAutofill({ type: "autofill:capture", password: "fresh-password" }, page);
+    expect(sessionArea.size).toBeGreaterThan(2);
+    await forgetTab(7);
+    expect([...sessionArea.keys()].filter((key) => key.endsWith(":7"))).toEqual([]);
   });
 
   it("does not carry a pending save over to a different site", async () => {
