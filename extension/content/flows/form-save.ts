@@ -1,9 +1,26 @@
 import { hasPaymentFrames, passwordFields } from "../detect.js";
 import { fillState, isSubmitLike, readAddress, readCard } from "../forms/read.js";
-import { detectFields, formKindOf, isCardKind } from "../forms/classify.js";
+import { detectFields, formKindOf, isCardKind, type DetectedField } from "../forms/classify.js";
 import { send } from "../send.js";
 import { filled, state } from "../state.js";
 import { showFormBanner } from "../ui/form-banner.js";
+import { isStandalonePhone } from "./address.js";
+
+function lonePhone(fields: DetectedField[]): string | undefined {
+  const withValue = fields.filter(({ element }) => element.value.trim());
+  const only = withValue.length === 1 ? withValue[0] : undefined;
+  if (
+    !only ||
+    only.kind !== "tel" ||
+    !(only.element instanceof HTMLInputElement) ||
+    !isStandalonePhone(only.element) ||
+    formKindOf(only.element, fields) !== null ||
+    !fillState([only], filled).typed
+  ) {
+    return undefined;
+  }
+  return only.element.value.trim();
+}
 
 async function captureForm(scope: ParentNode): Promise<void> {
   if (location.protocol !== "https:") {
@@ -23,10 +40,11 @@ async function captureForm(scope: ParentNode): Promise<void> {
   const card = typedCard || framed ? readCard(cardFields) : undefined;
   const address =
     kind && (placeState.typed || placeState.random) ? readAddress(placeFields) : undefined;
-  if (!card && !address) {
+  const phone = card || address ? undefined : lonePhone(placeFields);
+  if (!card && !address && !phone) {
     return;
   }
-  const key = JSON.stringify([card, address]);
+  const key = JSON.stringify([card, address, phone]);
   if (key === state.lastFormCapture.key && Date.now() - state.lastFormCapture.at < 3000) {
     return;
   }
@@ -35,6 +53,7 @@ async function captureForm(scope: ParentNode): Promise<void> {
     type: "autofill:form-capture",
     ...(card ? { card, untouched: !cardState.typed } : {}),
     ...(address ? { address, random: placeState.random } : {}),
+    ...(phone ? { address: { phone }, lonePhone: true } : {}),
   });
   if (response.ok && "form" in response && response.form) {
     showFormBanner(response.form);

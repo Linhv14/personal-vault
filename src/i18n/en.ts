@@ -1164,6 +1164,8 @@ export const en = {
   "autofill.save_address_title": "Save this address?",
   "autofill.update_address_title": "Update this address?",
   "autofill.keep_identity_title": "Keep these details for {domain}?",
+  "autofill.save_phone_title": "Save this phone number?",
+  "autofill.add_phone_title": "Add this phone number to {title}?",
   "autofill.save_cvv": "Save CVV too",
   "autofill.never_here": "Never ask on this site",
   "autofill.skip": "Skip",

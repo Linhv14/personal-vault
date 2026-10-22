@@ -37,7 +37,8 @@ type PendingForm = {
   domain: string;
   at: number;
 } & (
-  { kind: "card"; card: CleanCard } | { kind: "address"; address: AddressData; random?: boolean }
+  | { kind: "card"; card: CleanCard }
+  | { kind: "address"; address: AddressData; random?: boolean; lonePhone?: boolean }
 );
 
 interface FrameParts {
@@ -142,19 +143,22 @@ async function readPending(sender: TrustedSender): Promise<PendingForm | null> {
   return pending.domain === sender.domain ? pending : null;
 }
 
-function personalMatch(match: Match<VaultItem>): Match<VaultItem> {
-  return match.status === "changed" && !isPersonal(match.item) ? { status: "same" } : match;
+function personalMatch(match: Match<VaultItem>, lonePhone = false): Match<VaultItem> {
+  if (match.status !== "changed" || isPersonal(match.item)) {
+    return match;
+  }
+  return lonePhone ? { status: "new" } : { status: "same" };
 }
 
 function matchOf(pending: PendingForm, items: VaultItem[] | null): Match<VaultItem> {
   if (!items) {
     return { status: "new" };
   }
-  return personalMatch(
-    pending.kind === "card"
-      ? matchCard(items, pending.card)
-      : matchIdentity(items, pending.address),
-  );
+  if (pending.kind === "card") {
+    return personalMatch(matchCard(items, pending.card));
+  }
+  const lonePhone = pending.lonePhone === true;
+  return personalMatch(matchIdentity(items, pending.address, lonePhone), lonePhone);
 }
 
 function promptOf(pending: PendingForm, items: VaultItem[] | null): FormPrompt | null {
@@ -173,6 +177,16 @@ function promptOf(pending: PendingForm, items: VaultItem[] | null): FormPrompt |
       last4: lastFour(card.number),
       ...(card.expiry ? { expiry: card.expiry } : {}),
       hasCvv: Boolean(card.cvv),
+    };
+  }
+  if (pending.lonePhone) {
+    return {
+      kind: "address",
+      domain: pending.domain,
+      update,
+      phone: true,
+      preview: pending.address.phone ?? "",
+      ...(match.status === "changed" ? { target: match.item.title } : {}),
     };
   }
   const country = countryOf(pending.address.country)?.code;
@@ -208,11 +222,14 @@ async function capture(
     }
   } else if (request.address) {
     const address = cleanAddress(request.address);
-    if (addressWorthSaving(address, request.random)) {
+    const lonePhone = request.lonePhone === true;
+    const random = !lonePhone && request.random === true;
+    if (addressWorthSaving(address, random, lonePhone)) {
       pending = {
         kind: "address",
         address,
-        ...(request.random ? { random: true } : {}),
+        ...(random ? { random: true } : {}),
+        ...(lonePhone ? { lonePhone: true } : {}),
         domain: sender.domain,
         at: Date.now(),
       };

@@ -11,6 +11,9 @@ function formLeading(prompt: FormPrompt): HTMLElement {
   if (prompt.kind === "card") {
     return prompt.brand && prompt.brand !== "card" ? brandMark(prompt.brand) : badge("card");
   }
+  if (prompt.phone) {
+    return badge("phone");
+  }
   if (prompt.country) {
     return flagMark(prompt.country);
   }
@@ -22,6 +25,11 @@ function formTitle(prompt: FormPrompt): string {
     return t(prompt.update ? "autofill.update_card_title" : "autofill.save_card_title", {
       last4: prompt.last4 ?? "",
     });
+  }
+  if (prompt.phone) {
+    return prompt.update && prompt.target
+      ? t("autofill.add_phone_title", { title: prompt.target })
+      : t("autofill.save_phone_title");
   }
   if (prompt.random && !prompt.update) {
     return t("autofill.keep_identity_title", { domain: prompt.domain });

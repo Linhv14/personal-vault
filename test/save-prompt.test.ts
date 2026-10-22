@@ -221,6 +221,46 @@ describe("card and address capture", () => {
     }
   });
 
+  it("sends a number typed into a lone phone field, and nothing for a profile form", async () => {
+    pageUrl("https://shop.example/contact");
+    try {
+      await load();
+      document.body.innerHTML = `
+        <form id="callback">
+          <input type="tel" name="phone" value="0912 000 111" />
+          <button type="submit">Submit</button>
+        </form>
+        <form id="profile">
+          <input autocomplete="name" value="" />
+          <input type="tel" name="phone" value="0912 000 222" />
+          <button type="submit">Save</button>
+        </form>`;
+      for (const id of ["callback", "profile"]) {
+        document
+          .querySelector<HTMLFormElement>(`#${id}`)!
+          .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        await vi.advanceTimersByTimeAsync(0);
+      }
+      expect(captures()).toContainEqual({
+        type: "autofill:form-capture",
+        address: { phone: "0912 000 111" },
+        lonePhone: true,
+      });
+      expect(captures()).toContainEqual({
+        type: "autofill:form-capture",
+        address: { phone: "0912 000 222" },
+        random: false,
+      });
+      expect(captures()).not.toContainEqual({
+        type: "autofill:form-capture",
+        address: { phone: "0912 000 222" },
+        lonePhone: true,
+      });
+    } finally {
+      pageUrl("about:blank");
+    }
+  });
+
   it("leaves login forms to the password prompt", async () => {
     pageUrl("https://shop.example/login");
     try {

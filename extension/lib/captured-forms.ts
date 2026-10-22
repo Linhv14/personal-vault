@@ -27,6 +27,12 @@ const ADDRESS_KEYS = [
   "country",
 ] as const;
 
+const MIN_PHONE_DIGITS = 7;
+
+function phoneDigits(phone: string | undefined): string {
+  return (phone ?? "").replace(/\D/g, "");
+}
+
 export function luhnValid(digits: string): boolean {
   if (!/^\d{12,19}$/.test(digits)) {
     return false;
@@ -117,8 +123,11 @@ export function cleanAddress(data: AddressData): AddressData {
   return clean;
 }
 
-export function addressWorthSaving(data: AddressData, random = false): boolean {
+export function addressWorthSaving(data: AddressData, random = false, lonePhone = false): boolean {
   const filled = ADDRESS_KEYS.filter((key) => data[key]).length;
+  if (lonePhone) {
+    return filled === 1 && phoneDigits(data.phone).length >= MIN_PHONE_DIGITS;
+  }
   if (random) {
     return filled >= 2;
   }
@@ -128,7 +137,7 @@ export function addressWorthSaving(data: AddressData, random = false): boolean {
   return Boolean(data.fullName && (data.email || data.phone));
 }
 
-const phoneKey = (phone: string | undefined) => (phone ?? "").replace(/\D/g, "").slice(-9);
+const phoneKey = (phone: string | undefined) => phoneDigits(phone).slice(-9);
 const emailKey = (email: string | undefined) => (email ?? "").trim().toLowerCase();
 const textKey = (text: string | undefined) => foldText(text ?? "");
 const streetKey = (address: string | undefined) => textKey(address?.split("\n")[0]);
@@ -176,10 +185,20 @@ function sameIdentity(item: VaultItem, data: AddressData): boolean {
   );
 }
 
-export function matchIdentity(items: VaultItem[], data: AddressData): Match<VaultItem> {
+function onlyIdentityWithoutPhone(items: VaultItem[]): VaultItem | undefined {
+  const without = items.filter((item) => itemType(item) === "identity" && !item.phone?.trim());
+  return without.length === 1 ? without[0] : undefined;
+}
+
+export function matchIdentity(
+  items: VaultItem[],
+  data: AddressData,
+  lonePhone = false,
+): Match<VaultItem> {
   const existing = items.find((item) => itemType(item) === "identity" && sameIdentity(item, data));
   if (!existing) {
-    return { status: "new" };
+    const target = lonePhone ? onlyIdentityWithoutPhone(items) : undefined;
+    return target ? { status: "changed", item: target } : { status: "new" };
   }
   const changed = ADDRESS_KEYS.some((key) => {
     const value = data[key];

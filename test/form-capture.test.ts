@@ -147,6 +147,29 @@ describe("address values", () => {
     expect(addressWorthSaving({ email: "a@b.c" }, true)).toBe(false);
   });
 
+  it("asks for a lone phone number only when it is the only value and looks like a number", () => {
+    expect(addressWorthSaving({ phone: "090 123 4567" }, false, true)).toBe(true);
+    expect(addressWorthSaving({ phone: "12345" }, false, true)).toBe(false);
+    expect(addressWorthSaving({ phone: "0901234567", email: "a@b.c" }, false, true)).toBe(false);
+    expect(addressWorthSaving({ phone: "0901234567" })).toBe(false);
+  });
+
+  it("matches a lone phone to a saved one, or to the only identity without a phone", () => {
+    const work: VaultItem = { ...HOME, id: "work", title: "Work", phone: undefined };
+    expect(matchIdentity([HOME, work], { phone: "+84 90 123 4567" }, true)).toEqual({
+      status: "same",
+    });
+    expect(matchIdentity([HOME, work], { phone: "0912 000 111" }, true)).toEqual({
+      status: "changed",
+      item: work,
+    });
+    expect(matchIdentity([HOME, work], { phone: "0912 000 111" })).toEqual({ status: "new" });
+    expect(
+      matchIdentity([HOME, work, { ...work, id: "other" }], { phone: "0912 000 111" }, true),
+    ).toEqual({ status: "new" });
+    expect(matchIdentity([HOME], { phone: "0912 000 111" }, true)).toEqual({ status: "new" });
+  });
+
   it("matches on name and street, ignoring case and accents", () => {
     expect(
       matchIdentity([HOME], { fullName: "nguyen van an", address: "12 le loi", city: "Quận 1" }),

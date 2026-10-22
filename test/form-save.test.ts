@@ -383,6 +383,76 @@ describe("saving addresses", () => {
   });
 });
 
+describe("phone numbers typed into a lone phone field", () => {
+  const phoneCapture = (phone: string, extra: object = {}) => ({
+    type: "autofill:form-capture" as const,
+    address: { phone, ...extra },
+    lonePhone: true,
+  });
+  const WORK = {
+    id: "00000000-0000-4000-8000-0000000000a2",
+    type: "identity" as const,
+    title: "Work",
+    fullName: "Nguyễn Văn An",
+    email: "an@work.example",
+  };
+
+  it("offers a new identity titled with the site when every identity has a phone", async () => {
+    await unlockWith([HOME]);
+    const page = sender(SHOP);
+    expect(await handleAutofill(phoneCapture("0912 000 111"), page)).toEqual({
+      ok: true,
+      form: {
+        kind: "address",
+        domain: "example.com",
+        update: false,
+        phone: true,
+        preview: "0912 000 111",
+      },
+    });
+    await handleAutofill({ type: "autofill:form-save" }, page);
+    const saved = (await decryptAll(key)).find((item) => item.id !== HOME.id);
+    expect(saved).toMatchObject({ type: "identity", title: "example.com", phone: "0912 000 111" });
+    expect(saved!.url).toBeUndefined();
+  });
+
+  it("adds the number to the only identity without a phone", async () => {
+    await unlockWith([HOME, WORK]);
+    const page = sender(SHOP);
+    expect(await handleAutofill(phoneCapture("0912 000 111"), page)).toMatchObject({
+      form: { phone: true, update: true, target: "Work" },
+    });
+    await handleAutofill({ type: "autofill:form-save" }, page);
+    expect(puts).toEqual([WORK.id]);
+    const updated = (await decryptAll(key)).find((item) => item.id === WORK.id);
+    expect(updated).toMatchObject({ title: "Work", email: WORK.email, phone: "0912 000 111" });
+  });
+
+  it("stays quiet for a saved number, a short one or anything beyond the phone", async () => {
+    await unlockWith([HOME, WORK]);
+    const page = sender(SHOP);
+    for (const request of [
+      phoneCapture("+84 90 123 4567"),
+      phoneCapture("12345"),
+      phoneCapture("0912 000 111", { email: "x@example.com" }),
+    ]) {
+      expect(await handleAutofill(request, page)).toEqual({ ok: true, form: null });
+    }
+  });
+
+  it("never asks on plain http or on a site turned off", async () => {
+    await unlockWith([]);
+    expect(
+      await handleAutofill(phoneCapture("0912 000 111"), sender("http://localhost:5173/")),
+    ).toEqual({ ok: true, form: null });
+    localArea.set("neverAskForms", ["example.com"]);
+    expect(await handleAutofill(phoneCapture("0912 000 111"), sender(SHOP))).toEqual({
+      ok: true,
+      form: null,
+    });
+  });
+});
+
 describe("random details remembered per site", () => {
   it("keeps a random identity for the site and suggests it first there", async () => {
     await unlockWith([HOME]);

@@ -71,6 +71,8 @@ export interface FormPrompt {
   hasCvv?: boolean;
   preview?: string;
   country?: string;
+  phone?: boolean;
+  target?: string;
 }
 
 export interface PendingPrompt {
@@ -117,6 +119,7 @@ export type AutofillRequest =
       untouched?: boolean;
       address?: AddressData;
       random?: boolean;
+      lonePhone?: boolean;
     }
   | { type: "autofill:form-pending" }
   | { type: "autofill:form-save"; cvv?: boolean }

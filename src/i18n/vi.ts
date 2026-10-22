@@ -1151,6 +1151,8 @@ export const vi: Catalogue = {
   "autofill.save_address_title": "Lưu địa chỉ này?",
   "autofill.update_address_title": "Cập nhật địa chỉ này?",
   "autofill.keep_identity_title": "Giữ thông tin này cho {domain}?",
+  "autofill.save_phone_title": "Lưu số điện thoại này?",
+  "autofill.add_phone_title": "Thêm số điện thoại này vào {title}?",
   "autofill.save_cvv": "Lưu cả CVV",
   "autofill.never_here": "Không hỏi lại trên trang này",
   "autofill.skip": "Bỏ qua",
