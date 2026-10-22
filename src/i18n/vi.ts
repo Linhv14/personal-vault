@@ -40,6 +40,8 @@ export const vi: Catalogue = {
   "error.api.offline": "Không kết nối được server. Dữ liệu đã lưu vẫn xem được bình thường.",
   "error.api.session_expired": "Phiên đã hết hạn. Mở khoá lại để tiếp tục.",
   "error.api.generic": "Lỗi {status}",
+  "error.api.bad_response":
+    "Server trả về dữ liệu mà 7key không đọc được. Hãy thử lại hoặc cập nhật 7key.",
 
   // --- Error codes returned by the Worker ----------------------------------
   "error.auth.bad_registration_token": "Sai mã đăng ký",

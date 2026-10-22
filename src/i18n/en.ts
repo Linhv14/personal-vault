@@ -41,6 +41,7 @@ export const en = {
   "error.api.offline": "Cannot reach the server. Data already saved is still readable.",
   "error.api.session_expired": "Your session expired — unlock the vault again",
   "error.api.generic": "Error {status}",
+  "error.api.bad_response": "The server sent a reply 7key cannot read. Try again or update 7key.",
 
   // --- Error codes returned by the Worker ----------------------------------
   "error.auth.bad_registration_token": "That registration token is not correct",

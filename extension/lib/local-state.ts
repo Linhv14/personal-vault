@@ -1,4 +1,4 @@
-import { isSealedData, type KdfParams } from "../../src/core/crypto.js";
+import { isKdfParams, isSealedData } from "../../src/core/crypto.js";
 import { isWrappedForRecipient } from "../../src/core/identity.js";
 import { isPlainObject, isStringArray } from "../../src/core/json.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
@@ -23,15 +23,6 @@ function isHttpUrl(value: unknown): value is string {
   } catch {
     return false;
   }
-}
-
-function isKdf(value: unknown): value is KdfParams {
-  return (
-    isPlainObject(value) &&
-    value.type === "pbkdf2-sha256" &&
-    isPositiveInteger(value.iterations) &&
-    typeof value.salt === "string"
-  );
 }
 
 function isAutoLock(value: unknown): value is number {
@@ -99,7 +90,7 @@ function isGenerations(value: unknown): value is Record<string, number> {
 const FIELDS: { [K in keyof LocalState]-?: Guard<NonNullable<LocalState[K]>> } = {
   apiUrl: isHttpUrl,
   email: isString,
-  kdf: isKdf,
+  kdf: isKdfParams,
   wrappedVaultKey: isSealedData,
   items: arrayOf(isCachedItem),
   lastSync: isFiniteNumber,

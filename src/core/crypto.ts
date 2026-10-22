@@ -41,6 +41,17 @@ export interface SealedData {
   nonce: string; // base64
 }
 
+export function isKdfParams(value: unknown): value is KdfParams {
+  return (
+    isPlainObject(value) &&
+    value.type === "pbkdf2-sha256" &&
+    typeof value.iterations === "number" &&
+    Number.isInteger(value.iterations) &&
+    value.iterations > 0 &&
+    typeof value.salt === "string"
+  );
+}
+
 export function isSealedData(value: unknown): value is SealedData {
   return (
     isPlainObject(value) && typeof value.ciphertext === "string" && typeof value.nonce === "string"
