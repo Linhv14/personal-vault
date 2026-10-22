@@ -86,7 +86,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   handle(trusted)
     .then(sendResponse)
-    .catch((error: unknown) => sendResponse({ ok: false, error: String(error) }));
+    .catch((error: unknown) => {
+      warn("Message handler failed:", error);
+      sendResponse({ ok: false, error: "unavailable" });
+    });
   return true;
 });
 

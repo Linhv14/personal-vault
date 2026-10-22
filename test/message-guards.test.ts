@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   isCardData,
   isCardFrameCapture,
@@ -40,5 +40,54 @@ describe("card frame messages", () => {
     expect(isCardFrameCapture({ ...capture, card: "4242" })).toBe(false);
     expect(isCardFrameCapture({ ...capture, submit: "yes" })).toBe(false);
     expect(isCardFrameCapture({ ...capture, untouched: undefined })).toBe(false);
+  });
+});
+
+vi.mock("../extension/lib/autofill-service.js", () => ({
+  handleAutofill: vi.fn(async () => {
+    throw new Error("internal detail that must not leak");
+  }),
+  trustedSender: vi.fn(() => ({
+    tabId: 1,
+    url: "https://example.com/",
+    domain: "example.com",
+    site: "example.com",
+  })),
+}));
+
+describe("background message errors", () => {
+  it("answers a failed handler with a stable code instead of the error text", async () => {
+    type Listener = (
+      message: unknown,
+      sender: unknown,
+      respond: (value: unknown) => void,
+    ) => unknown;
+    let onMessage: Listener | null = null;
+    const event = { addListener: vi.fn() };
+    vi.stubGlobal("chrome", {
+      runtime: {
+        id: "ext",
+        onInstalled: event,
+        onStartup: event,
+        onMessage: {
+          addListener: (listener: Listener) => {
+            onMessage = listener;
+          },
+        },
+      },
+      alarms: { onAlarm: event },
+      tabs: { onUpdated: event, onRemoved: event },
+      permissions: { onAdded: event, onRemoved: event },
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await import("../extension/background.js");
+    expect(onMessage).not.toBeNull();
+
+    const reply = await new Promise((resolve) => {
+      const keepOpen = onMessage!({ type: "autofill:query" }, { id: "ext" }, resolve);
+      expect(keepOpen).toBe(true);
+    });
+    expect(reply).toEqual({ ok: false, error: "unavailable" });
+    vi.unstubAllGlobals();
   });
 });
