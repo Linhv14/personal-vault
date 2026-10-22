@@ -57,6 +57,13 @@ function routed(input: RequestInfo | URL, init?: RequestInit, raw = ""): Respons
   if (path === "/api/invites") {
     return body({ invites: [] });
   }
+  if (path === "/api/config") {
+    return body({
+      registration: "token",
+      emailVerification: false,
+      privacyUrl: "https://example.test/privacy",
+    });
+  }
   return body({ shares: [] });
 }
 
@@ -145,6 +152,16 @@ describe("personal settings in the console", () => {
       () => document.body.textContent?.includes("PIN is on for this device") ?? false,
       "the PIN state",
     );
+  });
+
+  it("links the privacy policy the server publishes from Account", async () => {
+    history.replaceState(null, "", "#/me/account");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await waitFor(() => heading() === "Account", "the account page");
+    const link = () => document.querySelector<HTMLAnchorElement>(".about a");
+    await waitFor(() => link() !== null, "the privacy link");
+    expect(link()!.getAttribute("href")).toBe("https://example.test/privacy");
+    expect(link()!.textContent).toBe("Privacy policy");
   });
 
   it("lists the personal pages and the organization entry side by side", () => {

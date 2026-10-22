@@ -8,6 +8,7 @@ export type EmailLocale = "en" | "vi";
 export interface EmailContext {
   locale: EmailLocale;
   siteUrl: string;
+  privacyUrl?: string | undefined;
 }
 
 export interface RenderedEmail {
@@ -92,8 +93,9 @@ function blockText(block: Block): string {
 }
 
 function layout(context: EmailContext, spec: EmailSpec): string {
-  const privacy = FOOTER[context.locale].privacy;
-  const privacyUrl = `${context.siteUrl}/privacy`;
+  const privacy = context.privacyUrl
+    ? ` &nbsp;·&nbsp; <a href="${escape(context.privacyUrl)}" style="color:${COLORS.muted}">${escape(FOOTER[context.locale].privacy)}</a>`
+    : "";
   const wordmark = `<span style="color:${COLORS.accent}">${escape(WORDMARK.accent)}</span>${escape(WORDMARK.rest)}`;
   return `<!doctype html>
 <html lang="${context.locale}">
@@ -113,7 +115,7 @@ function layout(context: EmailContext, spec: EmailSpec): string {
 <h1 style="margin:0 0 16px;font:600 20px/1.35 ${FONT};color:${COLORS.text}">${escape(spec.heading)}</h1>
 ${spec.blocks.map(blockHtml).join("\n")}
 </td></tr>
-<tr><td style="padding:20px 32px 0;font:400 12px/1.6 ${FONT};color:${COLORS.muted}">${escape(APP_NAME)} &nbsp;·&nbsp; <a href="${escape(context.siteUrl)}" style="color:${COLORS.muted}">${escape(siteHost(context.siteUrl))}</a> &nbsp;·&nbsp; <a href="${escape(privacyUrl)}" style="color:${COLORS.muted}">${escape(privacy)}</a></td></tr>
+<tr><td style="padding:20px 32px 0;font:400 12px/1.6 ${FONT};color:${COLORS.muted}">${escape(APP_NAME)} &nbsp;·&nbsp; <a href="${escape(context.siteUrl)}" style="color:${COLORS.muted}">${escape(siteHost(context.siteUrl))}</a>${privacy}</td></tr>
 </table>
 </td></tr>
 </table>
@@ -125,7 +127,7 @@ export function renderEmail(context: EmailContext, spec: EmailSpec): RenderedEma
   const footer = [
     "—",
     `${APP_NAME} · ${siteHost(context.siteUrl)}`,
-    `${FOOTER[context.locale].privacy}: ${context.siteUrl}/privacy`,
+    ...(context.privacyUrl ? [`${FOOTER[context.locale].privacy}: ${context.privacyUrl}`] : []),
   ];
   return {
     subject: spec.subject,

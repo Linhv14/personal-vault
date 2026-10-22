@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { CONTENT_SIGNAL, MARKDOWN_PAGES, wantsMarkdown } from "./markdown-negotiation.js";
 import { HOME_LINKS } from "./discovery.js";
+import { configuredPrivacyUrl, fillPrivacyLink } from "./privacy-link.js";
 import { PUBLIC_PAGE_CSP, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import type { AppBindings } from "./types.js";
 
@@ -42,14 +43,26 @@ export async function serveFromSite(c: Context<AppBindings>, site: Fetcher): Pro
   return withHomeLinks(c, response);
 }
 
+async function htmlPage(c: Context<AppBindings>): Promise<Response> {
+  const asset = await c.env.ASSETS.fetch(c.req.raw);
+  if (asset.status !== 200 || !asset.headers.get("Content-Type")?.includes("text/html")) {
+    return withVary(asset);
+  }
+  const html = fillPrivacyLink(await asset.text(), configuredPrivacyUrl(c.env));
+  const response = new Response(c.req.method === "HEAD" ? null : html, asset);
+  response.headers.delete("Content-Length");
+  response.headers.delete("ETag");
+  return withVary(response);
+}
+
 async function negotiate(c: Context<AppBindings>): Promise<Response> {
   const source = MARKDOWN_PAGES[c.req.path];
   if (!source || !wantsMarkdown(c.req.header("Accept"))) {
-    return withVary(await c.env.ASSETS.fetch(c.req.raw));
+    return htmlPage(c);
   }
   const asset = await c.env.ASSETS.fetch(new URL(source, c.req.url));
   if (!asset.ok) {
-    return withVary(await c.env.ASSETS.fetch(c.req.raw));
+    return htmlPage(c);
   }
   const text = await asset.text();
   return new Response(c.req.method === "HEAD" ? null : text, {

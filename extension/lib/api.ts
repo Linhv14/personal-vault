@@ -6,6 +6,7 @@ import {
   type SealedData,
 } from "#core/crypto.js";
 import { isFiniteNumber, isPlainObject, isString } from "#core/json.js";
+import { privacyUrl } from "#core/privacy-url.js";
 import { getLocal, getUnlocked, lock, setToken, type CachedItem } from "./storage.js";
 
 export class ApiError extends Error {
@@ -374,6 +375,7 @@ export interface ServerConfig {
   registrationOpen: boolean;
   emailVerification: boolean;
   turnstileSiteKey?: string;
+  privacyUrl?: string;
 }
 
 const SERVER_CONFIG_TIMEOUT_MS = 3000;
@@ -390,13 +392,16 @@ export async function serverConfig(apiUrl: string): Promise<ServerConfig> {
       registration?: string;
       emailVerification?: boolean;
       turnstileSiteKey?: unknown;
+      privacyUrl?: unknown;
     };
+    const privacy = privacyUrl(body.privacyUrl);
     return {
       registrationOpen: body.registration === "open",
       emailVerification: body.emailVerification === true,
       ...(typeof body.turnstileSiteKey === "string" && body.turnstileSiteKey
         ? { turnstileSiteKey: body.turnstileSiteKey }
         : {}),
+      ...(privacy ? { privacyUrl: privacy } : {}),
     };
   } catch {
     return { registrationOpen: false, emailVerification: false };

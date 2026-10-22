@@ -14,6 +14,7 @@ import { apiError } from "#worker/errors.js";
 import { inBackground, now, readJson } from "#worker/http.js";
 import { createMailer } from "#worker/mailer.js";
 import { CODE_RESEND_COOLDOWN_SECONDS } from "#worker/one-time-code.js";
+import { configuredPrivacyUrl } from "#worker/privacy-link.js";
 import {
   clearRecoveryEmailCode,
   issueRecoveryEmailCode,
@@ -91,6 +92,7 @@ routes.post("/recover/email", async (c) => {
     email,
     locale: body.locale === "vi" ? ("vi" as const) : ("en" as const),
     siteUrl: new URL(c.req.url).origin,
+    privacyUrl: configuredPrivacyUrl(c.env),
   };
   inBackground(c, "recovery_code_email_failed", () =>
     sendRecoveryEmailCode(mailer, request, issued.code),
@@ -191,6 +193,7 @@ routes.post("/recover/finish", async (c) => {
     const context = {
       locale: body.locale === "vi" ? ("vi" as const) : ("en" as const),
       siteUrl: new URL(c.req.url).origin,
+      privacyUrl: configuredPrivacyUrl(c.env),
     };
     const message = accountRecoveredEmail(context);
     inBackground(c, "recovery_email_failed", () => mailer.send({ to: email, ...message }));

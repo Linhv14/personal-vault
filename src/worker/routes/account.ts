@@ -7,6 +7,7 @@ import { twoFactorDisabledEmail, twoFactorEnabledEmail } from "../emails.js";
 import { apiError } from "../errors.js";
 import { inBackground, now, readJson } from "../http.js";
 import { createMailer } from "../mailer.js";
+import { configuredPrivacyUrl } from "../privacy-link.js";
 import { clientIp, requestLocale } from "../request.js";
 import { revokeOtherSessions } from "../session.js";
 import { throttle } from "../throttle.js";
@@ -156,7 +157,11 @@ function notify(
   if (!mailer || !email) {
     return;
   }
-  const message = render({ locale: requestLocale(c, locale), siteUrl: new URL(c.req.url).origin });
+  const message = render({
+    locale: requestLocale(c, locale),
+    siteUrl: new URL(c.req.url).origin,
+    privacyUrl: configuredPrivacyUrl(c.env),
+  });
   inBackground(c, "two_factor_email_failed", () => mailer.send({ to: email, ...message }));
 }
 

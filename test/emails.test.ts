@@ -23,9 +23,16 @@ describe("verificationCodeEmail", () => {
     expect(email.text).toContain("042917");
   });
 
-  it("links the privacy policy on the site that sent it, and loads nothing remote", () => {
-    expect(email.html).toContain('href="https://7key.online/privacy"');
-    expect(email.text).toContain("https://7key.online/privacy");
+  it("leaves the privacy policy out unless the server names one, and loads nothing remote", () => {
+    expect(email.html).not.toContain("Privacy policy");
+    expect(email.text).not.toContain("Privacy policy");
+    const linked = verificationCodeEmail(
+      { ...context, privacyUrl: "https://example.test/privacy?a=1&b=2" },
+      "042917",
+    );
+    expect(linked.html).toContain('href="https://example.test/privacy?a=1&#38;b=2"');
+    expect(linked.html).toContain(">Privacy policy</a>");
+    expect(linked.text).toContain("Privacy policy: https://example.test/privacy?a=1&b=2");
     expect(email.html).not.toMatch(/url\(/);
     const sources = [...email.html.matchAll(/src="([^"]*)"/g)].map((match) => match[1]);
     expect(sources).toEqual(["cid:7key-logo"]);

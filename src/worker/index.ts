@@ -20,6 +20,7 @@ import { resolveSession, SESSION_IDLE_SECONDS } from "./session.js";
 import { securityTxt, SHARE_PAGE_HEADERS, STRICT_TRANSPORT_SECURITY } from "./security-headers.js";
 import { PAIR_MEMORY_SECONDS } from "./throttle-policy.js";
 import { apiCatalog } from "./discovery.js";
+import { configuredPrivacyUrl, fillPrivacyLink } from "./privacy-link.js";
 import { MARKDOWN_PAGES, SITE_PAGES } from "./markdown-negotiation.js";
 import { serveFromSite, servePage } from "./markdown-pages.js";
 import {
@@ -165,10 +166,12 @@ app.on("DELETE", "/api/shares/*", limitWritesByAccount);
 
 app.get("/api/config", (c) => {
   const siteKey = turnstileSiteKey(c.env);
+  const privacy = configuredPrivacyUrl(c.env);
   return c.json({
     registration: isOpenRegistration(c.env) ? "open" : "token",
     emailVerification: emailVerificationEnabled(c.env),
     ...(siteKey ? { turnstileSiteKey: siteKey } : {}),
+    ...(privacy ? { privacyUrl: privacy } : {}),
   });
 });
 
@@ -205,7 +208,10 @@ app.get("/.well-known/api-catalog", (c) =>
 
 app.get("/s/:id", async (c) => {
   const asset = await c.env.ASSETS.fetch(new URL("/share.html", c.req.url));
-  const html = (await asset.text()).replaceAll("{{origin}}", new URL(c.req.url).origin);
+  const html = fillPrivacyLink(
+    (await asset.text()).replaceAll("{{origin}}", new URL(c.req.url).origin),
+    configuredPrivacyUrl(c.env),
+  );
   const response = new Response(html, asset);
   response.headers.set("Content-Type", "text/html; charset=utf-8");
   response.headers.set("Cache-Control", "no-store");
@@ -240,6 +246,7 @@ for (const page of SITE_PAGES) {
 for (const page of Object.keys(MARKDOWN_PAGES).filter((page) => !SITE_PAGES.includes(page))) {
   app.get(page, servePage);
 }
+app.get("/api-docs", servePage);
 
 app.get("/.well-known/security.txt", (c) => {
   const url = new URL(c.req.url);

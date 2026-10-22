@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, request } from "../extension/lib/api.js";
+import { ApiError, request, serverConfig } from "../extension/lib/api.js";
 import { memoryArea, usePlatform } from "../extension/lib/platform.js";
 
 function respond(body: string | null, status: number, type = "application/json"): void {
@@ -60,5 +60,21 @@ describe("api client", () => {
     await expect(request("/api/config", { auth: false })).resolves.toEqual({ ok: true });
     respond(null, 204);
     await expect(request("/api/config", { auth: false })).resolves.toBeNull();
+  });
+
+  it("keeps the privacy link from the server config only when it is an https address", async () => {
+    const config = { registration: "open", emailVerification: true };
+    respond(JSON.stringify({ ...config, privacyUrl: "https://example.test/privacy" }), 200);
+    await expect(serverConfig("https://vault.test")).resolves.toEqual({
+      registrationOpen: true,
+      emailVerification: true,
+      privacyUrl: "https://example.test/privacy",
+    });
+    for (const privacyUrl of ["http://example.test/privacy", "javascript:alert(1)", 42, ""]) {
+      respond(JSON.stringify({ ...config, privacyUrl }), 200);
+      expect(await serverConfig("https://vault.test")).not.toHaveProperty("privacyUrl");
+    }
+    respond(JSON.stringify(config), 200);
+    expect(await serverConfig("https://vault.test")).not.toHaveProperty("privacyUrl");
   });
 });

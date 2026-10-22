@@ -119,6 +119,11 @@
                     "turnstileSiteKey": {
                       "type": "string",
                       "description": "Present only when Turnstile is configured"
+                    },
+                    "privacyUrl": {
+                      "type": "string",
+                      "format": "uri",
+                      "description": "The operator's privacy policy; present only when `PRIVACY_URL` is set to an https URL"
                     }
                   },
                   "required": ["registration", "emailVerification"]

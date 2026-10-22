@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { formText } from "#ui/form-data.js";
 import { describeError } from "#i18n/index.js";
 import * as api from "#ext/lib/api.js";
@@ -18,6 +18,22 @@ export function Account() {
   const local = localState.value;
   const signedIn = isSignedIn(local);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [privacyUrl, setPrivacyUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setPrivacyUrl(null);
+    if (local.apiUrl) {
+      void api.serverConfig(local.apiUrl).then((config) => {
+        if (active) {
+          setPrivacyUrl(config.privacyUrl ?? null);
+        }
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [local.apiUrl]);
 
   const handleLogout = async () => {
     if (!confirm(t("settings.logout_confirm"))) {
@@ -119,11 +135,14 @@ export function Account() {
         </Card>
       )}
       <p className="about">
-        <span>7key v{chrome.runtime.getManifest().version}</span> ·{" "}
-        {local.apiUrl && (
-          <a href={`${local.apiUrl.replace(/\/$/, "")}/privacy`} target="_blank" rel="noopener">
-            {t("settings.privacy")}
-          </a>
+        <span>7key v{chrome.runtime.getManifest().version}</span>
+        {privacyUrl && (
+          <>
+            {" · "}
+            <a href={privacyUrl} target="_blank" rel="noopener">
+              {t("settings.privacy")}
+            </a>
+          </>
         )}
       </p>
     </section>

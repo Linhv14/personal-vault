@@ -8,6 +8,7 @@ export interface DeployOptions {
   emailProvider: EmailProvider;
   turnstileSiteKey: string | null;
   siteService: string | null;
+  privacyUrl: string | null;
 }
 
 type EmailProvider = (typeof EMAIL_PROVIDERS)[number];
@@ -22,6 +23,7 @@ export const DEFAULT_DEPLOY_OPTIONS: Readonly<DeployOptions> = Object.freeze({
   emailProvider: "resend",
   turnstileSiteKey: null,
   siteService: null,
+  privacyUrl: null,
 });
 
 function isEmailProvider(value: string): value is EmailProvider {
@@ -31,6 +33,15 @@ const HOSTNAME = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TURNSTILE_SITE_KEY = /^[0-9a-zA-Z_-]{10,64}$/;
 const WORKER_NAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
 
 function clearable(value: string): string | null {
   return value === "none" ? null : value;
@@ -93,6 +104,14 @@ export function parseDeployFlags(argv: readonly string[]): Partial<DeployOptions
           throw new Error(`Not a Worker name: ${service}`);
         }
         flags.siteService = service;
+        break;
+      }
+      case "--privacy-url": {
+        const url = clearable(takeValue());
+        if (url && !isHttpsUrl(url)) {
+          throw new Error(`Not an https URL: ${url}`);
+        }
+        flags.privacyUrl = url;
         break;
       }
       default:
@@ -184,6 +203,13 @@ export function renderConfig(
       ...(config.services ?? []).filter((service) => service.binding !== "SITE"),
       { binding: "SITE", service: options.siteService },
     ];
+  }
+
+  if (options.privacyUrl) {
+    if (!isHttpsUrl(options.privacyUrl)) {
+      throw new Error(`Not an https URL: ${options.privacyUrl}`);
+    }
+    vars.PRIVACY_URL = options.privacyUrl;
   }
 
   config.secrets = { required: requiredSecrets(options) };

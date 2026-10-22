@@ -112,6 +112,37 @@ describe("site service option", () => {
   });
 });
 
+describe("privacy url option", () => {
+  it("reads and clears the address, and rejects anything but https", () => {
+    expect(parseDeployFlags(["--privacy-url", "https://example.test/privacy"])).toEqual({
+      privacyUrl: "https://example.test/privacy",
+    });
+    expect(parseDeployFlags(["--privacy-url", "none"])).toEqual({ privacyUrl: null });
+    expect(() => parseDeployFlags(["--privacy-url", "http://example.test"])).toThrow(/https/);
+    expect(() => parseDeployFlags(["--privacy-url", "/privacy"])).toThrow(/https/);
+  });
+
+  it("sets no PRIVACY_URL by default, so self-hosted servers link no policy", () => {
+    expect(DEFAULT_DEPLOY_OPTIONS.privacyUrl).toBeNull();
+    expect(render().vars.PRIVACY_URL).toBeUndefined();
+  });
+
+  it("writes PRIVACY_URL when set", () => {
+    expect(render({ privacyUrl: "https://example.test/privacy" }).vars.PRIVACY_URL).toBe(
+      "https://example.test/privacy",
+    );
+    expect(() => render({ privacyUrl: "ftp://example.test" })).toThrow(/https/);
+  });
+
+  it("picks the address up from deploy/production.json", () => {
+    const production = JSON.parse(
+      readFileSync(new URL("../deploy/production.json", import.meta.url), "utf8"),
+    ) as Record<string, unknown>;
+    expect(resolveDeployOptions(production).privacyUrl).toBe("https://7key.online/privacy");
+    expect(resolveDeployOptions({}).privacyUrl).toBeNull();
+  });
+});
+
 describe("resolveDeployOptions", () => {
   it("lets flags override what the last deploy saved, and ignores unrelated state", () => {
     expect(
