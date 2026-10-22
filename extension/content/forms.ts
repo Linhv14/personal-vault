@@ -5,6 +5,7 @@ import {
   regionNames,
   US_STATES,
 } from "../../src/core/address-data.js";
+import { nationalPhone } from "../../src/core/phone.js";
 import type { AddressData, CardData } from "../lib/autofill-protocol.js";
 import { CARD_BRAND_NAMES, type CardBrand } from "../lib/item-types.js";
 
@@ -489,6 +490,22 @@ function yearValue(element: FormField, year: number): string | null {
   return short ? String(year % 100).padStart(2, "0") : String(year);
 }
 
+function wantsNationalPhone(element: FormField, phone: string): boolean {
+  if (/\btel-(national|local)\b/.test(element.getAttribute("autocomplete") ?? "")) {
+    return true;
+  }
+  if (element.form?.querySelector('[autocomplete~="tel-country-code"]')) {
+    return true;
+  }
+  return (
+    element instanceof HTMLInputElement && element.maxLength > 0 && element.maxLength < phone.length
+  );
+}
+
+function phoneFor(element: FormField, phone: string | undefined): string | undefined {
+  return phone && wantsNationalPhone(element, phone) ? nationalPhone(phone) : phone;
+}
+
 function selectOrText(element: FormField, value: string | undefined, wanted?: string[]) {
   if (!value) {
     return null;
@@ -623,7 +640,7 @@ function addressValue(
     case "email":
       return selectOrText(element, data.email);
     case "tel":
-      return selectOrText(element, data.phone);
+      return selectOrText(element, phoneFor(element, data.phone));
     case "organization":
       return selectOrText(element, data.company);
     case "street-address": {

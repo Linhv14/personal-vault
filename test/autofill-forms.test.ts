@@ -332,6 +332,38 @@ describe("filling an address", () => {
     expect(events).toContain("change:province");
   });
 
+  it("keeps the dial code for a plain phone field and drops it where only a national number fits", () => {
+    const intl = { ...HOME, phone: "+84 90 123 4567" };
+    document.body.innerHTML = `<form>
+      <input id="name" placeholder="Họ và tên">
+      <input id="phone" type="tel" name="phone">
+      <input id="city" name="city">
+    </form>`;
+    fillAddress(detectFields(document.forms[0]!), intl, recorder().set);
+    expect(document.querySelector<HTMLInputElement>("#phone")!.value).toBe("+84 90 123 4567");
+
+    document.body.innerHTML = `<form>
+      <input id="name" placeholder="Họ và tên">
+      <select autocomplete="tel-country-code"><option value="+84">VN</option></select>
+      <input id="phone" type="tel" name="phone">
+      <input id="city" name="city">
+    </form>`;
+    fillAddress(detectFields(document.forms[0]!), intl, recorder().set);
+    expect(document.querySelector<HTMLInputElement>("#phone")!.value).toBe("090 123 4567");
+
+    document.body.innerHTML = `<form>
+      <input id="name" placeholder="Họ và tên">
+      <input id="phone" type="tel" name="phone" autocomplete="tel-national">
+      <input id="city" name="city">
+    </form>`;
+    fillAddress(
+      detectFields(document.forms[0]!),
+      { ...HOME, phone: "+1 (415) 555-0134" },
+      recorder().set,
+    );
+    expect(document.querySelector<HTMLInputElement>("#phone")!.value).toBe("(415) 555-0134");
+  });
+
   it("fills a US form with split names, address lines, a state select and a country code", () => {
     document.body.innerHTML = `<form>
       <input id="given" autocomplete="given-name">

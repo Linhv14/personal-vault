@@ -14,8 +14,8 @@ describe("random addresses", () => {
       expect(address.address).toMatch(/^\d{3,4} [A-Z][A-Za-z ]+( ?\nApt \d{1,2}[ABC]?)?$/);
       expect(address.region).toMatch(/^[A-Z]{2}$/);
       expect(address.postalCode).toMatch(/^\d{5}$/);
-      expect(address.phone).toMatch(/^\([2-9]\d{2}\) [2-9]\d{2}-\d{4}$/);
-      expect(address.phone).not.toMatch(/^\(555\)| 555-/);
+      expect(address.phone).toMatch(/^\+1 \([2-9]\d{2}\) [2-9]\d{2}-\d{4}$/);
+      expect(address.phone).not.toMatch(/^\+1 \(555\)| 555-/);
       expect(address.country).toBe("United States");
       expect(address.ward).toBeUndefined();
       expect(address.email).toBeUndefined();
@@ -31,7 +31,7 @@ describe("random addresses", () => {
       expect(address.city).toMatch(/^(Quận|Thành phố) /);
       expect(address.region.length).toBeGreaterThan(2);
       expect(address.postalCode).toMatch(/^\d{6}$/);
-      expect(address.phone).toMatch(/^0(3[2-9]|7[06-9]|8[1-689]|9[0134678]) \d{3} \d{4}$/);
+      expect(address.phone).toMatch(/^\+84 (3[2-9]|7[06-9]|8[1-689]|9[0134678]) \d{3} \d{4}$/);
       expect(countryOf(address.country)?.code).toBe("VN");
     }
   });
