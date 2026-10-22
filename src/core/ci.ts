@@ -6,8 +6,14 @@ import {
   utf8Encode,
   type Bytes,
 } from "./bytes.js";
-import type { SealedData } from "./crypto.js";
-import { unwrapForRecipient, type Identity, type WrappedForRecipient } from "./identity.js";
+import { isSealedData, type SealedData } from "./crypto.js";
+import {
+  isWrappedForRecipient,
+  unwrapForRecipient,
+  type Identity,
+  type WrappedForRecipient,
+} from "./identity.js";
+import { isPlainObject } from "./json.js";
 import { openWithEnvironmentKey, type SecretContent } from "./projects.js";
 
 const REPO_KEY_PREFIX = "1pw1";
@@ -94,6 +100,21 @@ export interface CiResponse {
   generation: number;
   wrappedKey: WrappedForRecipient;
   secrets: { id: string; sealed: SealedData }[];
+}
+
+export function isCiResponse(value: unknown): value is CiResponse {
+  return (
+    isPlainObject(value) &&
+    typeof value.projectId === "string" &&
+    typeof value.environmentId === "string" &&
+    typeof value.generation === "number" &&
+    isWrappedForRecipient(value.wrappedKey) &&
+    Array.isArray(value.secrets) &&
+    value.secrets.every(
+      (secret) =>
+        isPlainObject(secret) && typeof secret.id === "string" && isSealedData(secret.sealed),
+    )
+  );
 }
 
 export async function openCiResponse(

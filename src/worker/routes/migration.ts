@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { utf8Encode } from "../../core/bytes.js";
 import { apiError } from "../errors.js";
 import { readJson } from "../http.js";
-import { isPlainObject } from "../validate.js";
+import { isPlainObject } from "../../core/json.js";
 import { isStoreDump, type StoreDump } from "../migration.js";
 import { orgStore, userStore } from "../stores.js";
 import type { AppBindings } from "../types.js";

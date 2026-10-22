@@ -1,4 +1,5 @@
 import { fromBase64Url, randomBytes, toBase64, toBase64Url } from "../core/bytes.js";
+import { isPlainObject } from "../core/json.js";
 import type { Env } from "./types.js";
 import { isBase64Url } from "./validate.js";
 import { ES256, RS256, verifyAssertion, type AssertionInput } from "./webauthn.js";
@@ -85,15 +86,22 @@ interface OpenChallenge {
   expires: number;
 }
 
+function isOpenChallenge(value: unknown): value is OpenChallenge {
+  return (
+    isPlainObject(value) && typeof value.value === "string" && typeof value.expires === "number"
+  );
+}
+
 function openChallenges(stored: string | null, now: number): OpenChallenge[] {
   if (!stored) {
     return [];
   }
   try {
-    const parsed = JSON.parse(stored) as unknown;
-    return Array.isArray(parsed)
-      ? (parsed as OpenChallenge[]).filter((entry) => entry.expires >= now)
-      : [];
+    const parsed: unknown = JSON.parse(stored);
+    const entries: unknown[] = Array.isArray(parsed) ? parsed : [];
+    return entries.filter(
+      (entry): entry is OpenChallenge => isOpenChallenge(entry) && entry.expires >= now,
+    );
   } catch {
     return [];
   }
@@ -145,15 +153,9 @@ function claimedChallenge(assertion: AssertionInput): string | null {
     const clientData: unknown = JSON.parse(
       new TextDecoder().decode(fromBase64Url(assertion.clientDataJSON)),
     );
-    if (
-      typeof clientData !== "object" ||
-      clientData === null ||
-      Array.isArray(clientData) ||
-      !("challenge" in clientData)
-    ) {
-      return null;
-    }
-    return typeof clientData.challenge === "string" ? clientData.challenge : null;
+    return isPlainObject(clientData) && typeof clientData.challenge === "string"
+      ? clientData.challenge
+      : null;
   } catch {
     return null;
   }

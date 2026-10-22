@@ -1,3 +1,5 @@
+import { isWrappedForRecipient } from "../../core/identity.js";
+import { parseJsonAs } from "../../core/json.js";
 import type { WrappedKey } from "../../core/org-model.js";
 
 export interface LinkRecord {
@@ -38,7 +40,7 @@ function linkRecord(row: LinkRow): LinkRecord {
     branch: row.branch,
     githubEnvironment: row.github_environment,
     publicKey: row.public_key,
-    wrappedKey: JSON.parse(row.wrapped_key) as WrappedKey,
+    wrappedKey: parseJsonAs(row.wrapped_key, isWrappedForRecipient),
     createdBy: row.created_by,
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,

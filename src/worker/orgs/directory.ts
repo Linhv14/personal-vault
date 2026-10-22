@@ -1,4 +1,5 @@
 import { isDomainAllowed, type InvitableRole, type OrgRole } from "../../core/org-model.js";
+import { isStringArray, parseJsonAs } from "../../core/json.js";
 import { now } from "../http.js";
 
 export const MAX_ORGS_PER_ACCOUNT = 10;
@@ -80,7 +81,7 @@ export class OrgDirectory {
       return null;
     }
     const { allowed_domains, ...org } = row;
-    return { ...org, allowedDomains: JSON.parse(allowed_domains) as string[] };
+    return { ...org, allowedDomains: parseJsonAs(allowed_domains, isStringArray) };
   }
 
   async setAllowedDomains(orgId: string, domains: string[]): Promise<void> {
@@ -265,7 +266,7 @@ export class OrgDirectory {
     return {
       ...invite,
       hasAccount: row.hasAccount === 1,
-      domainAllowed: isDomainAllowed(row.email, JSON.parse(allowedDomains) as string[]),
+      domainAllowed: isDomainAllowed(row.email, parseJsonAs(allowedDomains, isStringArray)),
     };
   }
 
@@ -306,7 +307,7 @@ export class OrgDirectory {
       return null;
     }
     const { allowedDomains, ...invite } = row;
-    if (!isDomainAllowed(email, JSON.parse(allowedDomains) as string[])) {
+    if (!isDomainAllowed(email, parseJsonAs(allowedDomains, isStringArray))) {
       return "domain";
     }
     await this.db.batch([

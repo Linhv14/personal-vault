@@ -106,11 +106,17 @@ describe("malformed request bodies", () => {
     });
   });
 
-  it("rejects a migration snapshot whose dumps are not tables", async () => {
+  it.each([
+    ["a row longer than its columns", { a: { items: { columns: ["id"], rows: [[1, 2]] } } }],
+    ["a cell that is not a value", { a: { items: { columns: ["id"], rows: [[true]] } } }],
+    ["a column that is not a name", { a: { items: { columns: [1], rows: [] } } }],
+    ["a dump that is a list", { a: [] }],
+    ["users that are a list", []],
+  ])("rejects a migration snapshot with %s", async (_label, users) => {
     const worker = await startWorker({ vars: { MIGRATION_TOKEN: "migrate" } });
     const response = await worker.fetch("/api/migration/import", {
       method: "POST",
-      json: { users: { a: { items: { columns: ["id"], rows: [[1, 2]] } } }, orgs: {} },
+      json: { users, orgs: {} },
       headers: { Authorization: "Bearer migrate" },
     });
     expect(response.status).toBe(400);

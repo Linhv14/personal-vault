@@ -1,4 +1,5 @@
 import { fromBase64Url, timingSafeEqual, utf8Encode, type Bytes } from "../core/bytes.js";
+import { isPlainObject } from "../core/json.js";
 
 export const ES256 = -7;
 export const RS256 = -257;
@@ -72,11 +73,10 @@ export async function verifyAssertion(
 ): Promise<boolean> {
   try {
     const clientDataBytes = fromBase64Url(input.clientDataJSON);
-    const clientData = JSON.parse(new TextDecoder().decode(clientDataBytes)) as {
-      type?: unknown;
-      challenge?: unknown;
-      origin?: unknown;
-    };
+    const clientData: unknown = JSON.parse(new TextDecoder().decode(clientDataBytes));
+    if (!isPlainObject(clientData)) {
+      return false;
+    }
     if (clientData.type !== "webauthn.get") {
       return false;
     }

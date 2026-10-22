@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { appendFile } from "node:fs/promises";
-import { openCiResponse, parseLinkReference, type CiResponse } from "../src/core/ci.js";
+import { isCiResponse, openCiResponse, parseLinkReference } from "../src/core/ci.js";
+import { isPlainObject } from "../src/core/json.js";
 import type { SecretContent } from "../src/core/projects.js";
 
 export { DEFAULT_SERVER } from "../src/core/brand.js";
@@ -33,8 +34,9 @@ export async function githubIdToken(
   if (!response.ok) {
     throw new CiError(`GitHub refused an OIDC token (${response.status})`);
   }
-  const { value } = (await response.json()) as { value?: string };
-  if (!value) {
+  const body: unknown = await response.json();
+  const value = isPlainObject(body) ? body.value : undefined;
+  if (typeof value !== "string" || !value) {
     throw new CiError("GitHub returned an empty OIDC token");
   }
   return value;
@@ -57,7 +59,11 @@ export async function fetchSecrets(options: FetchOptions): Promise<SecretContent
     const { error } = (await response.json().catch(() => ({}))) as { error?: string };
     throw new CiError(`7key refused the request (${response.status}): ${error ?? "unknown error"}`);
   }
-  return openCiResponse(options.repoKey, reference.linkId, (await response.json()) as CiResponse);
+  const body: unknown = await response.json();
+  if (!isCiResponse(body)) {
+    throw new CiError("7key sent a response this version cannot read; update the action");
+  }
+  return openCiResponse(options.repoKey, reference.linkId, body);
 }
 
 export function maskCommands(secrets: SecretContent[]): string[] {

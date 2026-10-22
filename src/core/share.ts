@@ -11,11 +11,12 @@
  * compromised channel is no longer enough.
  */
 
-import { fromBase64Url, randomBytes, toBase64Url, utf8Encode } from "./bytes.js";
+import { fromBase64Url, randomBytes, toBase64Url, utf8Decode, utf8Encode } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
 import { open, seal, type SealedData } from "./crypto.js";
 import { VaultError } from "./errors.js";
-import type { TotpConfig } from "./totp.js";
+import { isPlainObject } from "./json.js";
+import { parseTotpConfig, type TotpConfig } from "./totp.js";
 
 export interface SharePayload {
   title?: string;
@@ -25,6 +26,61 @@ export interface SharePayload {
   note?: string;
   totp?: TotpConfig;
   fields?: { label: string; value: string; hidden?: boolean }[];
+}
+
+type ShareField = NonNullable<SharePayload["fields"]>[number];
+
+const TEXT_KEYS = ["title", "url", "username", "password", "note"] as const;
+
+function parseShareField(value: unknown): ShareField | null {
+  if (
+    !isPlainObject(value) ||
+    typeof value.label !== "string" ||
+    typeof value.value !== "string" ||
+    (value.hidden !== undefined && typeof value.hidden !== "boolean")
+  ) {
+    return null;
+  }
+  return {
+    label: value.label,
+    value: value.value,
+    ...(value.hidden === undefined ? {} : { hidden: value.hidden }),
+  };
+}
+
+export function parseSharePayload(value: unknown): SharePayload | null {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+  const payload: SharePayload = {};
+  for (const key of TEXT_KEYS) {
+    const text = value[key];
+    if (text === undefined) {
+      continue;
+    }
+    if (typeof text !== "string") {
+      return null;
+    }
+    payload[key] = text;
+  }
+  if (value.totp !== undefined) {
+    const totp = parseTotpConfig(value.totp);
+    if (!totp) {
+      return null;
+    }
+    payload.totp = totp;
+  }
+  if (value.fields !== undefined) {
+    if (!Array.isArray(value.fields)) {
+      return null;
+    }
+    const fields = value.fields.map(parseShareField);
+    if (fields.some((field) => field === null)) {
+      return null;
+    }
+    payload.fields = fields.filter((field) => field !== null);
+  }
+  return payload;
 }
 
 export interface CreatedShare {
@@ -105,9 +161,9 @@ export async function openShare(
 
   const key = await deriveShareKey(keyMaterial, needsPassphrase ? passphrase : undefined);
 
+  let plaintext: Bytes;
   try {
-    const plaintext = await open(key, sealed);
-    return JSON.parse(new TextDecoder().decode(plaintext)) as SharePayload;
+    plaintext = await open(key, sealed);
   } catch {
     // GCM tag mismatch. For a passphrase-protected link that is almost always a
     // mistyped passphrase rather than a damaged link.
@@ -116,6 +172,19 @@ export async function openShare(
       {},
       "AES-GCM authentication failed",
     );
+  }
+  const payload = parseSharePayload(parseJsonOrNull(utf8Decode(plaintext)));
+  if (!payload) {
+    throw new VaultError("share.undecryptable", {}, "Share payload has an unexpected shape");
+  }
+  return payload;
+}
+
+function parseJsonOrNull(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
   }
 }
 

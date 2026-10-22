@@ -10,6 +10,7 @@ import { base32Decode, base32Encode, isValidBase32 } from "./base32.js";
 import { randomBytes } from "./bytes.js";
 import type { Bytes } from "./bytes.js";
 import { VaultError } from "./errors.js";
+import { isPlainObject } from "./json.js";
 
 export type TotpAlgorithm = "SHA-1" | "SHA-256" | "SHA-512";
 
@@ -27,6 +28,40 @@ export const TOTP_DEFAULTS = {
   digits: 6,
   period: 30,
 };
+
+const ALGORITHMS: readonly unknown[] = ["SHA-1", "SHA-256", "SHA-512"];
+
+function optional<T>(value: unknown, check: (value: unknown) => value is T): boolean {
+  return value === undefined || check(value);
+}
+
+const isString = (value: unknown): value is string => typeof value === "string";
+const isPositiveInteger = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+const isAlgorithm = (value: unknown): value is TotpAlgorithm => ALGORITHMS.includes(value);
+
+export function parseTotpConfig(value: unknown): TotpConfig | null {
+  if (
+    !isPlainObject(value) ||
+    typeof value.secret !== "string" ||
+    !optional(value.algorithm, isAlgorithm) ||
+    !optional(value.digits, isPositiveInteger) ||
+    !optional(value.period, isPositiveInteger) ||
+    !optional(value.issuer, isString) ||
+    !optional(value.account, isString)
+  ) {
+    return null;
+  }
+  const { algorithm, digits, period, issuer, account } = value;
+  return {
+    secret: value.secret,
+    algorithm: isAlgorithm(algorithm) ? algorithm : TOTP_DEFAULTS.algorithm,
+    digits: isPositiveInteger(digits) ? digits : TOTP_DEFAULTS.digits,
+    period: isPositiveInteger(period) ? period : TOTP_DEFAULTS.period,
+    ...(isString(issuer) ? { issuer } : {}),
+    ...(isString(account) ? { account } : {}),
+  };
+}
 
 /**
  * Defaults to SHA-1. That sounds obsolete, but RFC 6238 specifies it and nearly

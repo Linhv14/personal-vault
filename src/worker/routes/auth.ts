@@ -50,7 +50,8 @@ import {
   verifySecondFactor,
 } from "../two-factor.js";
 import type { AppBindings, Env } from "../types.js";
-import { isBase64, isPlainObject, isUuid } from "../validate.js";
+import { isBase64, isUuid } from "../validate.js";
+import { isPlainObject } from "../../core/json.js";
 import { OrgDirectory } from "../orgs/directory.js";
 import { joinFromInvite } from "../orgs/invitations.js";
 import { orgStore, userStore } from "../stores.js";

@@ -1,5 +1,7 @@
 import { Hono } from "hono";
+import { isSealedData } from "../../core/crypto.js";
 import { isPublicKey } from "../../core/identity.js";
+import { parseJsonAs } from "../../core/json.js";
 import { protectAuthKey, protectWrappedKey, recoveryScope, verifyAuthKey } from "../at-rest.js";
 import { twoFactorDisabledEmail, twoFactorEnabledEmail } from "../emails.js";
 import { apiError } from "../errors.js";
@@ -35,7 +37,7 @@ account.get("/identity", async (c) => {
   return c.json({
     identity: {
       publicKey: row.public_key,
-      wrappedPrivateKey: JSON.parse(row.wrapped_private_key) as unknown,
+      wrappedPrivateKey: parseJsonAs(row.wrapped_private_key, isSealedData),
     },
   });
 });

@@ -3,6 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync }
 import { homedir } from "node:os";
 import path from "node:path";
 import { fromBase64, toBase64 } from "../../src/core/bytes.js";
+import { isPlainObject, parseJsonAs } from "../../src/core/json.js";
 import { AgentError, type Session } from "../agent/session.js";
 
 const SERVICE = "7key-cli";
@@ -15,6 +16,18 @@ export interface StoredLogin {
   expiresAt: number;
   publicKey: string;
   privateKey: string;
+}
+
+function isStoredLogin(value: unknown): value is StoredLogin {
+  return (
+    isPlainObject(value) &&
+    typeof value.server === "string" &&
+    typeof value.email === "string" &&
+    typeof value.token === "string" &&
+    typeof value.expiresAt === "number" &&
+    typeof value.publicKey === "string" &&
+    typeof value.privateKey === "string"
+  );
 }
 
 export interface Keyring {
@@ -164,7 +177,7 @@ export function loadLogin(keyring: Keyring, now = Date.now() / 1000): StoredLogi
     return null;
   }
   try {
-    const login = JSON.parse(Buffer.from(raw, "base64").toString("utf8")) as StoredLogin;
+    const login = parseJsonAs(Buffer.from(raw, "base64").toString("utf8"), isStoredLogin);
     return login.token && login.expiresAt > now ? login : null;
   } catch {
     return null;

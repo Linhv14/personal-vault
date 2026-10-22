@@ -1,5 +1,5 @@
 import { toBase64, fromBase64 } from "../core/bytes.js";
-import { isPlainObject } from "./validate.js";
+import { isPlainObject } from "../core/json.js";
 
 type Cell = string | number | null | { b64: string };
 export type TableDump = { columns: string[]; rows: Cell[][] };

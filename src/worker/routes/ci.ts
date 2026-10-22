@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { fromBase64Url, utf8Decode } from "../../core/bytes.js";
 import { parseLinkReference } from "../../core/ci.js";
 import { apiError } from "../errors.js";
-import { githubJwks, verifyGithubToken, type JwksSource } from "../github-oidc.js";
+import { githubJwks, validJwks, verifyGithubToken, type JwksSource } from "../github-oidc.js";
 import { now, readJson, respond } from "../http.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../stores.js";
@@ -18,8 +18,7 @@ function trustSource(c: Context<AppBindings>): { jwks: JwksSource; issuer?: stri
   const testKeys = c.env.CI_TEST_JWKS;
   if (local && testKeys) {
     return {
-      jwks: async () =>
-        JSON.parse(utf8Decode(fromBase64Url(testKeys))) as Awaited<ReturnType<JwksSource>>,
+      jwks: async () => validJwks(JSON.parse(utf8Decode(fromBase64Url(testKeys)))),
       issuer: c.env.CI_TEST_ISSUER,
     };
   }
