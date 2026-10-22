@@ -270,6 +270,14 @@ export class OrgDirectory {
     };
   }
 
+  async inviteOrgId(inviteId: string, email: string): Promise<string | null> {
+    const row = await this.db
+      .prepare("SELECT org_id FROM org_invites WHERE id = ? AND email = ? AND expires_at > ?")
+      .bind(inviteId, email, now())
+      .first<{ org_id: string }>();
+    return row?.org_id ?? null;
+  }
+
   async withdrawInvite(orgId: string, inviteId: string): Promise<void> {
     await this.db
       .prepare("DELETE FROM org_invites WHERE id = ? AND org_id = ?")

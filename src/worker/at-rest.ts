@@ -20,6 +20,7 @@ interface AtRestKeys {
   wrap: CryptoKey;
   twoFactorSecret: CryptoKey;
   backupCodeHmac: CryptoKey;
+  serverSecret: CryptoKey;
 }
 
 let cached: { secret: string; keys: Promise<AtRestKeys> } | null = null;
@@ -46,7 +47,7 @@ async function deriveKeys(secret: string): Promise<AtRestKeys> {
     info: utf8Encode(`personal-vault/at-rest/${info}`),
   });
 
-  const [authHmac, wrap, twoFactorSecret, backupCodeHmac] = await Promise.all([
+  const [authHmac, wrap, twoFactorSecret, backupCodeHmac, serverSecret] = await Promise.all([
     crypto.subtle.deriveKey(
       hkdf("auth-key-hash"),
       root,
@@ -75,8 +76,12 @@ async function deriveKeys(secret: string): Promise<AtRestKeys> {
       false,
       ["sign"],
     ),
+    crypto.subtle.deriveKey(hkdf("server-secret"), root, { name: "AES-GCM", length: 256 }, false, [
+      "encrypt",
+      "decrypt",
+    ]),
   ]);
-  return { authHmac, wrap, twoFactorSecret, backupCodeHmac };
+  return { authHmac, wrap, twoFactorSecret, backupCodeHmac, serverSecret };
 }
 
 export async function protectAuthKey(env: AtRestEnv, authKeyBase64: string): Promise<string> {
@@ -192,4 +197,45 @@ export async function protectBackupCode(
   const { backupCodeHmac } = await keysFor(env);
   const mac = await crypto.subtle.sign("HMAC", backupCodeHmac, utf8Encode(`${accountId}:${code}`));
   return VERSION_PREFIX + toBase64(new Uint8Array(mac));
+}
+
+function serverSecretAad(purpose: string): Uint8Array<ArrayBuffer> {
+  return utf8Encode(`personal-vault/server-secret/${purpose}`);
+}
+
+export async function sealServerSecret(
+  env: AtRestEnv,
+  purpose: string,
+  plaintext: string,
+): Promise<string> {
+  const { serverSecret } = await keysFor(env);
+  const nonce = randomBytes(NONCE_BYTES);
+  const sealed = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: serverSecretAad(purpose) },
+    serverSecret,
+    utf8Encode(plaintext),
+  );
+  return VERSION_PREFIX + toBase64(concat(nonce, new Uint8Array(sealed)));
+}
+
+export async function openServerSecret(
+  env: AtRestEnv,
+  purpose: string,
+  stored: string,
+): Promise<string | null> {
+  if (!stored.startsWith(VERSION_PREFIX)) {
+    return null;
+  }
+  const { serverSecret } = await keysFor(env);
+  const blob = fromBase64(stored.slice(VERSION_PREFIX.length));
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: blob.slice(0, NONCE_BYTES), additionalData: serverSecretAad(purpose) },
+      serverSecret,
+      blob.slice(NONCE_BYTES),
+    );
+    return new TextDecoder().decode(plaintext);
+  } catch {
+    return null;
+  }
 }

@@ -1,6 +1,7 @@
 import { sameSecret } from "#core/primitives.js";
 import { Hono } from "hono";
 import { protectAuthKey, protectWrappedKey } from "#worker/at-rest.js";
+import { authExtensions } from "#worker/auth-extensions.js";
 import { deviceLabel } from "#worker/device-label.js";
 import { normalizeEmail } from "#worker/email-address.js";
 import {
@@ -20,7 +21,7 @@ import { joinFromInvite } from "#worker/orgs/invitations.js";
 import { clientIp, isOpenRegistration } from "#worker/request.js";
 import { createSession, decoySession, noteDevice } from "#worker/session.js";
 import type { AppBindings, Env } from "#worker/types.js";
-import { isBase64, isKdf, isSealed, isUuid } from "#worker/validate.js";
+import { isBase64, isBase64Url, isKdf, isSealed, isUuid } from "#worker/validate.js";
 
 const routes = new Hono<AppBindings>();
 
@@ -30,12 +31,13 @@ routes.post("/register", async (c) => {
   const body = await readJson(c);
   const { email: rawEmail, kdf, authKey, wrappedVaultKey, verificationCode, inviteId } = body;
   const email = normalizeEmail(rawEmail);
+  const externalGrant = isBase64Url(body.ssoGrant, 128) ? body.ssoGrant : null;
   const directory = new OrgDirectory(c.env.DB);
   const invite = isUuid(inviteId) ? await directory.preview(inviteId) : null;
   const invited = invite !== null && invite.email === email && invite.domainAllowed;
 
   const openRegistration = isOpenRegistration(c.env);
-  if (!openRegistration && !invited) {
+  if (!openRegistration && !invited && !externalGrant) {
     const provided = c.req.header("x-registration-token") ?? "";
     const expected = c.env.REGISTRATION_TOKEN;
     if (!expected || !(await sameSecret(provided, expected))) {
@@ -57,11 +59,23 @@ routes.post("/register", async (c) => {
   }
 
   const timestamp = now();
-  const codeError = await verificationCodeError(c.env, email, verificationCode, timestamp);
+  const external = externalGrant
+    ? await authExtensions().externalRegistration({ env: c.env, url: c.req.url }, externalGrant)
+    : null;
+  if (externalGrant && external?.email !== email) {
+    return c.json(apiError("sso.expired"), 403);
+  }
+  const codeError = external
+    ? null
+    : await verificationCodeError(c.env, email, verificationCode, timestamp);
   if (codeError) {
     return c.json(apiError(codeError), 400);
   }
-  if (openRegistration && !(await claimRegistrationSlot(c.env, clientIp(c), timestamp))) {
+  if (
+    openRegistration &&
+    !external &&
+    !(await claimRegistrationSlot(c.env, clientIp(c), timestamp))
+  ) {
     return c.json(apiError("auth.registration_limit"), 429);
   }
   const accountId = crypto.randomUUID();
@@ -89,7 +103,7 @@ routes.post("/register", async (c) => {
     if (!String(error).includes("UNIQUE")) {
       throw error;
     }
-    if (emailVerificationEnabled(c.env)) {
+    if (external || emailVerificationEnabled(c.env)) {
       return c.json(apiError("auth.email_taken"), 409);
     }
     return c.json({ accountId: crypto.randomUUID(), ...decoySession(timestamp) }, 201);
@@ -98,15 +112,18 @@ routes.post("/register", async (c) => {
   const label = deviceLabel(c.req.header("User-Agent"));
   const session = await createSession(c.env, accountId, timestamp, label);
   await noteDevice(c.env, accountId, label, timestamp);
-  const joined = invited
-    ? await joinFromInvite(c.env, directory, {
-        id: inviteId as string,
-        email,
-        accountId,
-        ip: clientIp(c),
-      })
-    : null;
-  const orgId = joined && joined !== "domain" ? joined : null;
+  const joined = external
+    ? await external.join(accountId, clientIp(c))
+    : invited
+      ? await joinFromInvite(c.env, directory, {
+          id: inviteId as string,
+          email,
+          accountId,
+          ip: clientIp(c),
+          url: c.req.url,
+        })
+      : null;
+  const orgId = joined && joined !== "domain" && joined !== "policy" ? joined : null;
   return c.json({ accountId, ...session, ...(orgId ? { orgId } : {}) }, 201);
 });
 

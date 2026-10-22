@@ -13,6 +13,7 @@ import { now } from "#worker/clock.js";
 import { readJson } from "#worker/http.js";
 import { keyedHashBytes } from "#worker/keyed-hash.js";
 import { clientIp, requestLocale } from "#worker/request.js";
+import { authExtensions } from "#worker/auth-extensions.js";
 import { signedIn } from "#worker/sign-in.js";
 import { throttle } from "#worker/throttle.js";
 import {
@@ -105,6 +106,14 @@ routes.post("/login", async (c) => {
       )
       .run();
   }
+  const ssoRequired = await authExtensions().passwordSignInBlock(
+    { env: c.env, url: c.req.url },
+    row.id,
+  );
+  if (ssoRequired) {
+    await guard.clear();
+    return c.json(apiError("auth.sso_required", ssoRequired), 403);
+  }
   const locale = requestLocale(c, body.locale);
   if (row.totp_enabled_at !== null) {
     c.header("Cache-Control", "no-store");
@@ -151,6 +160,13 @@ routes.post("/login/2fa", async (c) => {
     return c.json(apiError("auth.two_factor_expired"), 401);
   }
   await guard.clear();
+  const ssoRequired = await authExtensions().passwordSignInBlock(
+    { env: c.env, url: c.req.url },
+    challenge.accountId,
+  );
+  if (ssoRequired) {
+    return c.json(apiError("auth.sso_required", ssoRequired), 403);
+  }
   const locale = challenge.locale === "vi" ? "vi" : "en";
   return c.json(await signedIn(c, challenge.accountId, account.email, locale, timestamp));
 });

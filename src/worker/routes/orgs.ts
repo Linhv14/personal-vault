@@ -476,9 +476,13 @@ invites.post("/:inviteId/accept", async (c) => {
     email: await myEmail(c),
     accountId: c.get("session").accountId,
     ip: clientIp(c),
+    url: c.req.url,
   });
   if (orgId === "domain") {
     return c.json(apiError("orgs.invite_domain_blocked"), 403);
+  }
+  if (orgId === "policy") {
+    return c.json(apiError("orgs.single_org"), 403);
   }
   if (!orgId) {
     return notFound(c);

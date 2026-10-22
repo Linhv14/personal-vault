@@ -2,6 +2,7 @@ import type { InvitableRole } from "#core/org-model.js";
 import { orgInviteEmail, ownershipEmail } from "../emails.js";
 import { createMailer } from "../mailer.js";
 import { configuredPrivacyUrl } from "../privacy-link.js";
+import { authExtensions } from "../auth-extensions.js";
 import type { Env } from "../types.js";
 import { orgStore } from "../durable-objects.js";
 import type { OrgDirectory } from "./directory.js";
@@ -57,8 +58,13 @@ export async function sendInvitation(
 export async function joinFromInvite(
   env: Env,
   directory: OrgDirectory,
-  invite: { id: string; email: string; accountId: string; ip: string | null },
+  invite: { id: string; email: string; accountId: string; ip: string | null; url: string },
 ): Promise<string | null> {
+  const orgId = await directory.inviteOrgId(invite.id, invite.email);
+  const scope = { env, url: invite.url };
+  if (orgId && (await authExtensions().orgJoinBlocked(scope, invite.accountId, orgId))) {
+    return "policy";
+  }
   const accepted = await directory.accept(invite.id, invite.email, invite.accountId);
   if (!accepted || accepted === "domain") {
     return accepted;

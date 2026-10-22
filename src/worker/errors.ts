@@ -23,6 +23,23 @@ export type ApiErrorCode =
   | "auth.bot_check_failed"
   | "auth.invalid_2fa"
   | "auth.two_factor_expired"
+  | "auth.sso_required"
+  | "license.required"
+  | "sso.not_found"
+  | "sso.invalid_request"
+  | "sso.invalid_return"
+  | "sso.invalid_identifier"
+  | "sso.identifier_taken"
+  | "sso.invalid_domain"
+  | "sso.domain_limit"
+  | "sso.domain_taken"
+  | "sso.domain_not_verified"
+  | "sso.invalid_provider"
+  | "sso.discovery_failed"
+  | "sso.expired"
+  | "sso.failed"
+  | "sso.email_unverified"
+  | "sso.email_not_allowed"
   | "two_factor.already_enabled"
   | "two_factor.not_enabled"
   | "two_factor.setup_expired"
@@ -40,6 +57,7 @@ export type ApiErrorCode =
   | "orgs.domain_not_allowed"
   | "orgs.invalid_domains"
   | "orgs.invite_domain_blocked"
+  | "orgs.single_org"
   | "orgs.transfer_needs_admin"
   | "orgs.transfer_needs_key"
   | "orgs.team_limit"
@@ -105,6 +123,24 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "auth.bot_check_failed": "The human check did not pass; try again",
   "auth.invalid_2fa": "That two-factor code is not correct",
   "auth.two_factor_expired": "The sign-in took too long; enter your master password again",
+  "auth.sso_required": "This organization requires single sign-on; sign in with SSO",
+  "license.required": "Single sign-on needs the enterprise plan or a valid licence key",
+  "sso.not_found": "No single sign-on is set up for that email or organization",
+  "sso.invalid_request": "Enter an email address or an organization identifier",
+  "sso.invalid_return": "That return address is not allowed",
+  "sso.invalid_identifier": "Use 3 to 32 lowercase letters, digits or hyphens",
+  "sso.identifier_taken": "Another organization already uses that identifier",
+  "sso.invalid_domain": "Enter a valid domain name",
+  "sso.domain_limit": "This organization has reached its domain limit",
+  "sso.domain_taken": "Another organization already verified that domain",
+  "sso.domain_not_verified": "The TXT record was not found; DNS changes can take a while",
+  "sso.invalid_provider": "Enter an https issuer, a client ID and a client secret",
+  "sso.discovery_failed": "The provider's OpenID configuration could not be read",
+  "sso.expired": "The single sign-on attempt expired or was already used; start again",
+  "sso.failed": "The identity provider did not confirm the sign-in",
+  "sso.email_unverified": "The identity provider has not verified this email address",
+  "sso.email_not_allowed":
+    "This email is not on a verified domain of the organization and has no pending invitation",
   "two_factor.already_enabled": "Two-factor authentication is already on",
   "two_factor.not_enabled": "Two-factor authentication is off",
   "two_factor.setup_expired": "The setup took too long; start again",
@@ -122,6 +158,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "orgs.domain_not_allowed": "This organization only accepts addresses on its allowed domains",
   "orgs.invalid_domains": "Allowed domains must be up to 10 valid domain names",
   "orgs.invite_domain_blocked": "This organization no longer accepts this email domain",
+  "orgs.single_org": "An organization policy does not allow you to belong to another organization",
   "orgs.transfer_needs_admin": "Ownership can only go to an admin; make them an admin first",
   "orgs.transfer_needs_key": "That member has not finished setting up their account yet",
   "orgs.team_limit": "This plan allows no more teams",

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { mountCommercial } from "#commercial/worker/index.js";
 import ci from "./routes/ci.js";
 import { logError, logInfo } from "./log.js";
 import type { MiddlewareHandler } from "hono";
@@ -186,6 +187,7 @@ app.route("/api/logo", logos);
 app.route("/api/shares", shares);
 app.route("/api/ci", ci);
 app.route("/api/migration", migration);
+mountCommercial(app);
 
 app.get("/api/time", (c) => c.json({ serverTime: Math.floor(Date.now() / 1000) }));
 
