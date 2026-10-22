@@ -2,7 +2,7 @@ import { ITEM_TYPES, itemType, type ItemType } from "../lib/item-types.js";
 import { byLastUsed, searchItems } from "../lib/vault/search.js";
 import { matchingItems } from "../lib/vault/site-match.js";
 import type { VaultItem } from "../lib/vault/types.js";
-import { vaultOf } from "../lib/vaults.js";
+import { vaultOf } from "../lib/vault/defs.js";
 import type { Scope, SortOrder } from "./state.js";
 
 export interface ListView {

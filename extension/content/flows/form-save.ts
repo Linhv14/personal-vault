@@ -1,5 +1,5 @@
 import { hasPaymentFrames, passwordFields } from "../detect.js";
-import { fillState, isSubmitLike, readAddress, readCard } from "../form-capture.js";
+import { fillState, isSubmitLike, readAddress, readCard } from "../forms/read.js";
 import { detectFields, formKindOf, isCardKind } from "../forms/classify.js";
 import { send } from "../send.js";
 import { filled, state } from "../state.js";

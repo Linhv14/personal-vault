@@ -3,7 +3,7 @@ import { generateAddress } from "../../../src/core/address-generator.js";
 import { aliasTag, emailAliases } from "../../../src/core/email-alias.js";
 import { registrableDomain } from "../../../src/core/site.js";
 import type { AddressData, IdentitySuggestion } from "../autofill-protocol.js";
-import { boundToSite } from "../form-capture.js";
+import { boundToSite } from "../captured-forms.js";
 import { itemType } from "../item-types.js";
 import { getLocal } from "../storage.js";
 import { openVault, type OpenVault } from "../vault/decrypt.js";

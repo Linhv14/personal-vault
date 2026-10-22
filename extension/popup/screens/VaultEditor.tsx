@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { describeError } from "../../../src/i18n/index.js";
 import type { IconName } from "../../../src/ui/icons.js";
 import type { VaultDef } from "../../lib/vault/types.js";
-import { DEFAULT_VAULT_ID, VAULT_COLORS, VAULT_ICONS } from "../../lib/vaults.js";
+import { DEFAULT_VAULT_ID, VAULT_COLORS, VAULT_ICONS } from "../../lib/vault/defs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { IconButton } from "../../ui/components/IconButton.js";
 import { useT } from "../../ui/i18n.js";

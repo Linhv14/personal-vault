@@ -6,7 +6,7 @@ import {
   readAddress,
   readCard,
   type FilledFields,
-} from "../extension/content/form-capture.js";
+} from "../extension/content/forms/read.js";
 import { detectFields, type FormField } from "../extension/content/forms/classify.js";
 import {
   addressPreview,
@@ -20,7 +20,7 @@ import {
   matchIdentity,
   mergeCards,
   withAddress,
-} from "../extension/lib/form-capture.js";
+} from "../extension/lib/captured-forms.js";
 import type { VaultItem } from "../extension/lib/vault/types.js";
 
 const page = new Window({ url: "https://shop.example/checkout" });

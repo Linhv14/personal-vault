@@ -2,7 +2,7 @@ import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
 import { isCardFrameFill, type CardFrameCapture } from "../lib/autofill-protocol.js";
 import { detectFields, isCardKind, type FormField } from "./forms/classify.js";
 import { fillCard, setFieldValue } from "./forms/fill.js";
-import { fillState, readCard, type FilledFields } from "./form-capture.js";
+import { fillState, readCard, type FilledFields } from "./forms/read.js";
 
 function inPaymentFrame(): boolean {
   try {

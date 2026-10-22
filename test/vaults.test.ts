@@ -6,7 +6,7 @@ import {
   vaultOf,
   withoutVault,
   withVault,
-} from "../extension/lib/vaults.js";
+} from "../extension/lib/vault/defs.js";
 
 const record = (updatedAt: number, vaults: VaultItem["vaults"]): VaultItem => ({
   id: `r${updatedAt}`,

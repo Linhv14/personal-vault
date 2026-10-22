@@ -1,13 +1,13 @@
-import type { SealedData } from "../../src/core/crypto.js";
-import type { Bytes } from "../../src/core/bytes.js";
-import { unwrapForRecipient, type Identity } from "../../src/core/identity.js";
-import { teamKeyContext } from "../../src/core/org-model.js";
-import { openTeamItem, sealTeamItem } from "../../src/core/team-items.js";
-import { ApiError, request } from "./api.js";
-import { knownIdentity } from "./identity.js";
-import { getLocal, setLocal, type CachedSharedVault } from "./storage.js";
-import type { VaultDef, VaultItem } from "./vault/types.js";
-import { warn } from "./log.js";
+import type { SealedData } from "../../../src/core/crypto.js";
+import type { Bytes } from "../../../src/core/bytes.js";
+import { unwrapForRecipient, type Identity } from "../../../src/core/identity.js";
+import { teamKeyContext } from "../../../src/core/org-model.js";
+import { openTeamItem, sealTeamItem } from "../../../src/core/team-items.js";
+import { ApiError, request } from "../api.js";
+import { knownIdentity } from "../identity.js";
+import { getLocal, setLocal, type CachedSharedVault } from "../storage.js";
+import type { VaultDef, VaultItem } from "./types.js";
+import { warn } from "../log.js";
 
 const PREFIX = "team:";
 

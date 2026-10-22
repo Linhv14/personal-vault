@@ -1,4 +1,4 @@
-import { isSharedVaultId } from "./shared-vaults.js";
+import { isSharedVaultId } from "./vault/shared.js";
 import { decryptEverything } from "./vault/decrypt.js";
 import { removeItem, saveItem } from "./vault/store.js";
 import type { VaultItem } from "./vault/types.js";

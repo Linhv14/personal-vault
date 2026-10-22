@@ -10,7 +10,7 @@ import {
   decryptSharedVaults,
   isSharedVaultId,
   sharedVaultId,
-} from "../extension/lib/shared-vaults.js";
+} from "../extension/lib/vault/shared.js";
 import type { CachedSharedVault } from "../extension/lib/storage.js";
 
 const ORG = "11111111-1111-4111-8111-111111111111";

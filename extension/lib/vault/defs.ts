@@ -1,4 +1,4 @@
-import type { VaultDef, VaultItem } from "./vault/types.js";
+import type { VaultDef, VaultItem } from "./types.js";
 
 export const DEFAULT_VAULT_ID = "personal";
 export const VAULT_COLORS = ["teal", "sky", "violet", "rose", "amber", "lime"] as const;

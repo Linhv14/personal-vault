@@ -6,7 +6,7 @@ import { itemType } from "../lib/item-types.js";
 import { decryptEverything } from "../lib/vault/decrypt.js";
 import { sync } from "../lib/vault/store.js";
 import type { VaultDef, VaultItem } from "../lib/vault/types.js";
-import { vaultList, vaultOf } from "../lib/vaults.js";
+import { vaultList, vaultOf } from "../lib/vault/defs.js";
 import { localeSignal, useT } from "../ui/i18n.js";
 import { LockedCard, StatusHead } from "./ImportPanel.js";
 import { vaultKey } from "./session.js";

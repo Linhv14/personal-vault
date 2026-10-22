@@ -7,7 +7,7 @@ import {
   saveSharedItem,
   sharedVaultOf,
   syncSharedVaults,
-} from "../shared-vaults.js";
+} from "./shared.js";
 import { isLive, itemAssociatedData, openItem } from "./item-crypto.js";
 import type { VaultItem } from "./types.js";
 

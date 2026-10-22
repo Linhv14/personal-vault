@@ -21,7 +21,13 @@ import { migrateUnboundItems } from "../lib/vault/migrate.js";
 import type { VaultDef, VaultItem } from "../lib/vault/types.js";
 import { itemType, type ItemType } from "../lib/item-types.js";
 import { purgeExpiredTrash } from "../lib/trash.js";
-import { DEFAULT_VAULT_ID, vaultList, vaultOf, withoutVault, withVault } from "../lib/vaults.js";
+import {
+  DEFAULT_VAULT_ID,
+  vaultList,
+  vaultOf,
+  withoutVault,
+  withVault,
+} from "../lib/vault/defs.js";
 
 export type Screen =
   "loading" | "setup" | "unlock" | "list" | "edit" | "generator" | "share" | "vault";

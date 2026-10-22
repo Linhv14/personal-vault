@@ -1,6 +1,6 @@
 import { createTranslator, type Translate } from "../../src/i18n/index.js";
 import type { LookalikeMatch } from "../../src/core/lookalike.js";
-import type { FilledFields } from "./form-capture.js";
+import type { FilledFields } from "./forms/read.js";
 
 export const state = {
   translate: createTranslator("en"),

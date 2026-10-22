@@ -10,7 +10,7 @@ import {
 import { memoryArea, usePlatform } from "../extension/lib/platform.js";
 import { getOrg, type Team } from "../extension/lib/orgs.js";
 import { rekeyTeam } from "../extension/lib/projects.js";
-import { sharedVaultId } from "../extension/lib/shared-vaults.js";
+import { sharedVaultId } from "../extension/lib/vault/shared.js";
 import { decryptEverything } from "../extension/lib/vault/decrypt.js";
 import { newItemId, removeItem, saveItem, sync } from "../extension/lib/vault/store.js";
 import type { VaultItem } from "../extension/lib/vault/types.js";

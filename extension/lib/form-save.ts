@@ -21,7 +21,7 @@ import {
   withAddress,
   type CleanCard,
   type Match,
-} from "./form-capture.js";
+} from "./captured-forms.js";
 import { CARD_BRAND_NAMES, cardBrand, lastFour } from "./item-types.js";
 import { getLocal, setLocal } from "./storage.js";
 import { registrableDomain } from "../../src/core/site.js";

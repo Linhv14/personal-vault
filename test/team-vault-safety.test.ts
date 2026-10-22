@@ -7,7 +7,7 @@ import { sealTeamItem } from "../src/core/team-items.js";
 import { memoryArea, usePlatform, type StorageArea } from "../extension/lib/platform.js";
 import { handleAutofill } from "../extension/lib/autofill/service.js";
 import { handlePasskey } from "../extension/lib/passkey/service.js";
-import { sharedVaultId, syncSharedVaults } from "../extension/lib/shared-vaults.js";
+import { sharedVaultId, syncSharedVaults } from "../extension/lib/vault/shared.js";
 import { decryptEverything } from "../extension/lib/vault/decrypt.js";
 import { removeItem } from "../extension/lib/vault/store.js";
 

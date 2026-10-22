@@ -1,5 +1,5 @@
 import { warn } from "../log.js";
-import { decryptSharedVaults, isSharedVaultId } from "../shared-vaults.js";
+import { decryptSharedVaults, isSharedVaultId } from "./shared.js";
 import { getLocal, getUnlocked } from "../storage.js";
 import { importKey, isLive, openItem } from "./item-crypto.js";
 import { unboundItemsAllowed } from "./migrate.js";

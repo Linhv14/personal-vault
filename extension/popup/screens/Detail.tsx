@@ -13,7 +13,7 @@ import {
 } from "../../lib/item-types.js";
 import type { VaultItem } from "../../lib/vault/types.js";
 import { daysUntilPurge } from "../../lib/trash.js";
-import { vaultOf } from "../../lib/vaults.js";
+import { vaultOf } from "../../lib/vault/defs.js";
 import { Icon } from "../../ui/components/Icon.js";
 import { useT } from "../../ui/i18n.js";
 import { MenuList } from "../components/Menu.js";
