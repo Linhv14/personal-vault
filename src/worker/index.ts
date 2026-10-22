@@ -4,6 +4,7 @@ import { logError, logInfo } from "./log.js";
 import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { apiError } from "./errors.js";
+import { InvalidBodyError } from "./http.js";
 import account from "./routes/account.js";
 import auth from "./routes/auth.js";
 import deviceUnlock from "./routes/device-unlock.js";
@@ -260,6 +261,9 @@ app.notFound((c) =>
 );
 
 app.onError((error, c) => {
+  if (error instanceof InvalidBodyError) {
+    return c.json(apiError("auth.invalid_body"), 400);
+  }
   // Never echo the cause: a D1 message can contain the SQL statement.
   logError("unhandled_error", error, { method: c.req.method, path: c.req.path });
   return c.json(apiError("server.error"), 500);

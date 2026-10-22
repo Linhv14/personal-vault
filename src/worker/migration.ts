@@ -1,8 +1,33 @@
 import { toBase64, fromBase64 } from "../core/bytes.js";
+import { isPlainObject } from "./validate.js";
 
 type Cell = string | number | null | { b64: string };
 export type TableDump = { columns: string[]; rows: Cell[][] };
 export type StoreDump = Record<string, TableDump>;
+
+function isCell(value: unknown): value is Cell {
+  if (value === null || typeof value === "string" || typeof value === "number") {
+    return true;
+  }
+  return isPlainObject(value) && typeof value.b64 === "string";
+}
+
+function isTableDump(value: unknown): value is TableDump {
+  if (!isPlainObject(value)) {
+    return false;
+  }
+  const { columns, rows } = value;
+  return (
+    Array.isArray(columns) &&
+    columns.every((column) => typeof column === "string") &&
+    Array.isArray(rows) &&
+    rows.every((row) => Array.isArray(row) && row.length === columns.length && row.every(isCell))
+  );
+}
+
+export function isStoreDump(value: unknown): value is StoreDump {
+  return isPlainObject(value) && Object.values(value).every(isTableDump);
+}
 
 const SYSTEM_TABLE = /^(sqlite_|_cf_|__)/;
 

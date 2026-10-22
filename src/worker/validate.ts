@@ -6,6 +6,10 @@ import { MAX_TEAM_ITEM_BYTES } from "../core/team-items.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" && UUID.test(value);
 }

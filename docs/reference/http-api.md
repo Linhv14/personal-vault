@@ -30,7 +30,10 @@ from the same release is guaranteed to work with it.
   ```
 
 Rate limits per endpoint are listed in [Limits](limits.md). Any endpoint can
-also return `429 server.rate_limited` and `500 server.error`.
+also return `429 server.rate_limited` and `500 server.error`. Any endpoint that
+takes a body returns `400 auth.invalid_body` when the body is not a JSON object
+(malformed JSON, an array, a scalar or nothing at all), before it looks at any
+field.
 
 ## Server
 
