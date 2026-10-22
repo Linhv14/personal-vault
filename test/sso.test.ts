@@ -555,6 +555,9 @@ describe("just-in-time provisioning", () => {
       .prepare("SELECT role FROM org_members WHERE org_id = ? AND account_id = ?")
       .get(ORG, stringField(created.body, "accountId")) as { role: string };
     expect(row.role).toBe("admin");
+
+    const again = await signInThroughSso("guest@partner.org", {}, { identifier: "acme" });
+    expect(again.body).toMatchObject({ status: "signed_in", orgId: ORG });
   });
 });
 

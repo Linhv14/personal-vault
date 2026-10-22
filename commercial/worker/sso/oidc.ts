@@ -20,6 +20,7 @@ export interface ProviderMetadata {
 }
 
 const CACHE_SECONDS = 3600;
+const ENTRA_ISSUER_PREFIX = "https://login.microsoftonline.com/";
 const JWKS_REFRESH_SECONDS = 30;
 const CF_CACHE = { cf: { cacheTtl: CACHE_SECONDS, cacheEverything: true } };
 
@@ -196,7 +197,8 @@ export async function verifyIdToken(
   if (!address) {
     return failed;
   }
-  if (email_verified !== true) {
+  const entraVerified = expected.issuer.startsWith(ENTRA_ISSUER_PREFIX) && claims.xms_edov === true;
+  if (email_verified !== true && !entraVerified) {
     return { ok: false, code: "sso.email_unverified" };
   }
   return { ok: true, email: address, subject: sub };

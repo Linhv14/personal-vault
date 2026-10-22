@@ -192,8 +192,11 @@ routes.get("/callback", async (c) => {
   if (!checked.ok) {
     return fail(checked.code);
   }
-  const onDomain = await store.verifiedDomainOf(pending.orgId, emailDomain(checked.email));
-  if (!onDomain && !(await store.pendingInvite(pending.orgId, checked.email))) {
+  const allowed =
+    (await store.verifiedDomainOf(pending.orgId, emailDomain(checked.email))) ||
+    (await store.hasMemberWithEmail(pending.orgId, checked.email)) ||
+    (await store.pendingInvite(pending.orgId, checked.email)) !== null;
+  if (!allowed) {
     return fail("sso.email_not_allowed");
   }
   const grant = token();
