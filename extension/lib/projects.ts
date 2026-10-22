@@ -324,6 +324,7 @@ type AccessEvent = { environmentId: string; access: SecretAccess };
 const accessQueue = new Map<string, { orgId: string; project: Project; events: AccessEvent[] }>();
 const accessSeen = new Set<string>();
 let accessTimer: ReturnType<typeof setTimeout> | undefined;
+let accessFlushDue = Infinity;
 
 function queueAccess(orgId: string, project: Project, events: AccessEvent[]): void {
   const key = `${orgId}:${project.id}`;
@@ -333,7 +334,12 @@ function queueAccess(orgId: string, project: Project, events: AccessEvent[]): vo
 }
 
 function scheduleAccessFlush(delay: number): void {
+  const due = Date.now() + delay;
+  if (due >= accessFlushDue) {
+    return;
+  }
   clearTimeout(accessTimer);
+  accessFlushDue = due;
   accessTimer = setTimeout(() => void flushAccess(), delay);
 }
 
@@ -361,6 +367,7 @@ export function noteAccess(
 
 export async function flushAccess(keepalive = false): Promise<void> {
   clearTimeout(accessTimer);
+  accessFlushDue = Infinity;
   const pending = [...accessQueue.values()];
   accessQueue.clear();
   await Promise.all(

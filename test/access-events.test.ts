@@ -49,6 +49,22 @@ describe("extension access events", () => {
     expect(bodies[1]).toEqual({ events: [{ environmentId: "dev", access: "revealed" }] });
   });
 
+  it("does not let a retry delay an event noted after the failure", async () => {
+    const { fetch, bodies } = server([503, 204]);
+    vi.stubGlobal("fetch", fetch);
+    noteAccess("o1", project, "dev", "revealed", "s3");
+    await flushAccess();
+    noteAccess("o1", project, "dev", "copied", "s4");
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(bodies[1]).toEqual({
+      events: [
+        { environmentId: "dev", access: "revealed" },
+        { environmentId: "dev", access: "copied" },
+      ],
+    });
+  });
+
   it("drops events the server refuses for good", async () => {
     const { fetch } = server([403]);
     vi.stubGlobal("fetch", fetch);
@@ -77,6 +93,21 @@ describe("agent access events", () => {
     } as unknown as Session;
     await noteAgentAccess(session, selected, "injected", async () => {});
     expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not retry an expired session or a rate limit", async () => {
+    for (const status of [401, 429]) {
+      const { fetch } = server([status]);
+      const session = {
+        server: "https://vault.test",
+        token: "t",
+        request: fetch,
+      } as unknown as Session;
+      const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      await noteAgentAccess(session, selected, "injected", async () => {});
+      expect(fetch).toHaveBeenCalledTimes(1);
+      write.mockRestore();
+    }
   });
 
   it("warns on stderr instead of failing the command when it cannot record", async () => {

@@ -22,6 +22,8 @@ import {
 
 export class AgentError extends Error {}
 
+export class Unreachable extends AgentError {}
+
 export class ServerRefusal extends AgentError {
   constructor(
     message: string,
@@ -77,7 +79,7 @@ async function call<T>(
   try {
     response = await request(`${server}${path}`, { ...init, headers });
   } catch {
-    throw new AgentError(`Cannot reach ${server}`);
+    throw new Unreachable(`Cannot reach ${server}`);
   }
   const body = (await response.json().catch(() => ({}))) as T & {
     error?: string;
@@ -371,10 +373,7 @@ export async function selectEnvironment(
 const ACCESS_RETRY_DELAYS_MS = [500, 2000];
 
 function worthRetrying(error: unknown): boolean {
-  if (!(error instanceof ServerRefusal)) {
-    return true;
-  }
-  return error.status === 429 || error.status >= 500;
+  return error instanceof Unreachable || (error instanceof ServerRefusal && error.status >= 500);
 }
 
 export async function noteAccess(
