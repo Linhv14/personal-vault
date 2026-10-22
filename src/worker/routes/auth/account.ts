@@ -3,7 +3,7 @@ import { verifyAuthKey } from "../../at-rest.js";
 import { apiError } from "../../errors.js";
 import { readJson } from "../../http.js";
 import { OrgDirectory } from "../../orgs/directory.js";
-import { orgStore, userStore } from "../../stores.js";
+import { orgStore, userStore } from "../../durable-objects.js";
 import type { AppBindings } from "../../types.js";
 import { isBase64 } from "../../validate.js";
 

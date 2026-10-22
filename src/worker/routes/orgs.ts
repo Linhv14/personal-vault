@@ -24,7 +24,7 @@ import {
   sendInvitation,
 } from "../orgs/invitations.js";
 import { clientIp } from "../request.js";
-import { orgStore } from "../stores.js";
+import { orgStore } from "../durable-objects.js";
 import type { AppBindings } from "../types.js";
 import {
   displayName,

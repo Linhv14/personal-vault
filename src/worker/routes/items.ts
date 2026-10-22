@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
-import { userStore } from "../stores.js";
+import { userStore } from "../durable-objects.js";
 import type { AppBindings } from "../types.js";
 import { isSealed, isUuid } from "../validate.js";
 

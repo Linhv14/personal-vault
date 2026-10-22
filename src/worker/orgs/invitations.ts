@@ -2,7 +2,7 @@ import type { InvitableRole } from "../../core/org-model.js";
 import { orgInviteEmail, ownershipEmail } from "../emails.js";
 import { createMailer } from "../mailer.js";
 import type { Env } from "../types.js";
-import { orgStore } from "../stores.js";
+import { orgStore } from "../durable-objects.js";
 import type { OrgDirectory } from "./directory.js";
 
 export function invitationLink(siteUrl: string, inviteId: string): string {

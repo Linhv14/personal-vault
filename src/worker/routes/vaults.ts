@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { orgStore } from "../stores.js";
+import { orgStore } from "../durable-objects.js";
 import type { AppBindings } from "../types.js";
 import { directory } from "./org-access.js";
 

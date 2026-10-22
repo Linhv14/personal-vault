@@ -24,7 +24,7 @@ Exact, stored in D1 or the account's Durable Object.
 | Accounts per network per day          | 5 (open registration only)                                                                    | `429 auth.registration_limit`                        | `src/worker/routes/auth/register.ts` |
 | Failed logins per address and network | 5 free, then a wait doubling from 5 seconds to 1 hour                                         | `429 auth.rate_limited` with `seconds`; no hard lock | `src/worker/throttle-policy.ts`      |
 | Failed logins per address             | After 20 in an hour, each attempt slowed by 250 ms, doubling every 5 failures up to 5 seconds | Slower answers                                       | `src/worker/throttle-policy.ts`      |
-| Live items per account                | 5,000                                                                                         | `403 items.quota_exceeded`                           | `src/worker/user-store.ts`           |
+| Live items per account                | 5,000                                                                                         | `403 items.quota_exceeded`                           | `src/worker/user-vault-object.ts`    |
 | Sessions per account                  | 20                                                                                            | Oldest session is revoked                            | `src/worker/session.ts`              |
 
 ## Sizes and ranges

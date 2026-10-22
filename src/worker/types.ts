@@ -1,5 +1,5 @@
-import type { OrgStore } from "./orgs/store.js";
-import type { UserStore } from "./user-store.js";
+import type { OrgStore } from "./orgs/org-object.js";
+import type { UserStore } from "./user-vault-object.js";
 
 export interface Env {
   DB: D1Database;

@@ -3,7 +3,7 @@ import { isEnvironmentId, SECRET_ACCESS, type SecretAccess } from "../../core/pr
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { clientIp } from "../request.js";
-import { orgStore } from "../stores.js";
+import { orgStore } from "../durable-objects.js";
 import type { AppBindings } from "../types.js";
 import { isBranch, isGithubEnvironment, isRepository } from "../../core/ci.js";
 import { isPublicKey } from "../../core/identity.js";

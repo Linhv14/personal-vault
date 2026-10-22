@@ -5,7 +5,7 @@ import { apiError } from "../errors.js";
 import { githubJwks, validJwks, verifyGithubToken, type JwksSource } from "../github-oidc.js";
 import { now, readJson, respond } from "../http.js";
 import { clientIp } from "../request.js";
-import { orgStore } from "../stores.js";
+import { orgStore } from "../durable-objects.js";
 import type { AppBindings } from "../types.js";
 import { isUuid } from "../validate.js";
 

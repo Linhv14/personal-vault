@@ -261,8 +261,8 @@ app.onError((error, c) => {
   return c.json(apiError("server.error"), 500);
 });
 
-export { OrgStore } from "./orgs/store.js";
-export { UserStore } from "./user-store.js";
+export { OrgStore } from "./orgs/org-object.js";
+export { UserStore } from "./user-vault-object.js";
 
 export default {
   fetch: app.fetch,
