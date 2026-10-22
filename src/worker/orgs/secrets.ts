@@ -1,7 +1,8 @@
 import type { SealedData } from "#core/crypto.js";
 import type { Principal } from "#core/org-model.js";
 import { MAX_SECRETS_PER_PROJECT, type SecretAccess } from "#core/projects.js";
-import { fail, now, ok, type Result } from "../http.js";
+import { now } from "../clock.js";
+import { fail, ok, type Result } from "../result.js";
 import { projectAccess, refusedEdit, writable, type OrgContext } from "./context.js";
 import type { SecretRecord, SecretVersionRecord } from "./project-tables.js";
 

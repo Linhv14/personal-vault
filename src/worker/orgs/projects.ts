@@ -1,6 +1,7 @@
 import type { SealedData } from "#core/crypto.js";
 import type { Principal, TeamView } from "#core/org-model.js";
-import { fail, now, ok, type Result } from "../http.js";
+import { now } from "../clock.js";
+import { fail, ok, type Result } from "../result.js";
 import { projectAccess, teamAccess, writable, type OrgContext } from "./context.js";
 import type { ProjectRecord } from "./project-tables.js";
 import { listTeams } from "./teams.js";

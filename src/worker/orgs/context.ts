@@ -1,5 +1,5 @@
 import { isOrgAdmin, type Principal } from "#core/org-model.js";
-import { fail, ok, type Result } from "../http.js";
+import { fail, ok, type Result } from "../result.js";
 import type { AuditLog } from "./audit.js";
 import type { ItemTables } from "./item-tables.js";
 import type { LinkTables } from "./link-tables.js";
