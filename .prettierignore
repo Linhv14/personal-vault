@@ -4,3 +4,4 @@ src/core/wordlist.ts
 package-lock.json
 action/dist
 e2e-browser/.artifacts
+.claude/
