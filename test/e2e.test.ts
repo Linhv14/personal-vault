@@ -55,28 +55,6 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
     vaultKey = created.vaultKey;
   });
 
-  it("exports every store and restores a copy byte for byte, only with the migration token", async () => {
-    const auth = { Authorization: "Bearer local-migration-token" };
-    expect((await fetch(`${BASE}/api/migration/export`)).status).toBe(401);
-    const exported = await (await fetch(`${BASE}/api/migration/export`, { headers: auth })).json();
-    const [accountId, dump] = Object.entries(exported.users as Record<string, unknown>).find(
-      ([, store]) =>
-        Object.values(store as Record<string, { rows: unknown[] }>).some(
-          (table) => table.rows.length > 0,
-        ),
-    )!;
-    const copyId = crypto.randomUUID();
-    const restore = (users: Record<string, unknown>) =>
-      fetch(`${BASE}/api/migration/import`, {
-        method: "POST",
-        headers: { ...auth, "Content-Type": "application/json" },
-        body: JSON.stringify({ users, orgs: {} }),
-      });
-    expect((await restore({ [copyId]: dump })).status).toBe(200);
-    expect((await restore({ [accountId]: dump })).status).toBe(409);
-    expect((await restore({ [copyId]: dump })).status).toBe(409);
-  });
-
   it("marks API responses as uncacheable and not to be sniffed", async () => {
     const response = await fetch(`${BASE}/api/config`);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -440,6 +418,28 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       await expectCodeAsync(openShare(fragment, fetched.body, "tea"), "share.wrong_passphrase");
       expect((await openShare(fragment, fetched.body, "coffee")).password).toBe("two factors");
     });
+  });
+
+  it("exports every store and restores a copy byte for byte, only with the migration token", async () => {
+    const auth = { Authorization: "Bearer local-migration-token" };
+    expect((await fetch(`${BASE}/api/migration/export`)).status).toBe(401);
+    const exported = await (await fetch(`${BASE}/api/migration/export`, { headers: auth })).json();
+    const [accountId, dump] = Object.entries(exported.users as Record<string, unknown>).find(
+      ([, store]) =>
+        Object.values(store as Record<string, { rows: unknown[] }>).some(
+          (table) => table.rows.length > 0,
+        ),
+    )!;
+    const copyId = crypto.randomUUID();
+    const restore = (users: Record<string, unknown>) =>
+      fetch(`${BASE}/api/migration/import`, {
+        method: "POST",
+        headers: { ...auth, "Content-Type": "application/json" },
+        body: JSON.stringify({ users, orgs: {} }),
+      });
+    expect((await restore({ [copyId]: dump })).status).toBe(200);
+    expect((await restore({ [accountId]: dump })).status).toBe(409);
+    expect((await restore({ [copyId]: dump })).status).toBe(409);
   });
 
   it("refuses a password change from a session without the current auth key", async () => {
