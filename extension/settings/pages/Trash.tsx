@@ -8,8 +8,8 @@ import {
   EmptyState,
   SearchInput,
   When,
-} from "../../console/components.js";
-import { attempt } from "../../console/data.js";
+} from "../../ui/components/ConsoleKit.js";
+import { attempt } from "../../ui/store/feedback.js";
 import { itemSubtitle } from "../../lib/item-subtitle.js";
 import { itemType, TYPE_ICON } from "../../lib/item-types.js";
 import { daysUntilPurge, deleteFromTrash, restoreFromTrash } from "../../lib/trash.js";
