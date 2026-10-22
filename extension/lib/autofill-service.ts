@@ -305,6 +305,7 @@ function promptFor(
   return {
     domain: pending.site ?? pending.domain,
     username: pending.username ?? existing?.username,
+    password: pending.password,
     update: Boolean(existing),
     confirmed: Boolean(pending.confirmed),
   };
@@ -407,12 +408,24 @@ export async function handleAutofill(
     }
 
     case "autofill:save": {
-      const pending = await readPending(sender);
+      const stored = await readPending(sender);
+      const pending = stored && {
+        ...stored,
+        username:
+          typeof request.username === "string"
+            ? request.username.trim() || undefined
+            : stored.username,
+        password:
+          typeof request.password === "string" && request.password
+            ? request.password
+            : stored.password,
+      };
       if (!pending) {
         return { ok: true, saved: false };
       }
       const vault = await openVault();
       if (!vault) {
+        await chrome.storage.session.set({ [pendingKey(sender.tabId)]: pending });
         await chrome.action.openPopup?.().catch(() => {});
         return { ok: true, saved: false, locked: true };
       }

@@ -452,13 +452,25 @@ describe("capture and save", () => {
     );
     expect(captured).toEqual({
       ok: true,
-      prompt: { domain: "news.example.com", username: "reader", update: false, confirmed: false },
+      prompt: {
+        domain: "news.example.com",
+        username: "reader",
+        password: "fresh-password",
+        update: false,
+        confirmed: false,
+      },
     });
 
     expect(await handleAutofill({ type: "autofill:pending" }, page)).toEqual(captured);
     expect(await handleAutofill({ type: "autofill:confirm" }, page)).toEqual({
       ok: true,
-      prompt: { domain: "news.example.com", username: "reader", update: false, confirmed: true },
+      prompt: {
+        domain: "news.example.com",
+        username: "reader",
+        password: "fresh-password",
+        update: false,
+        confirmed: true,
+      },
     });
     expect(await handleAutofill({ type: "autofill:save" }, page)).toEqual({
       ok: true,
@@ -590,6 +602,18 @@ describe("capture and save", () => {
     });
   });
 
+  it("saves the username and password as edited in the prompt", async () => {
+    await unlockWith([]);
+    const page = sender("https://news.example.com/login")!;
+    await handleAutofill({ type: "autofill:capture", password: "typed-password" }, page);
+    await handleAutofill(
+      { type: "autofill:save", username: " reader@example.com ", password: "edited-password" },
+      page,
+    );
+    const [saved] = await decryptAll(key);
+    expect(saved).toMatchObject({ username: "reader@example.com", password: "edited-password" });
+  });
+
   it("uses the username typed on an earlier step for a password-only page", async () => {
     await unlockWith([]);
     const first = sender("https://news.example.com/signin")!;
@@ -675,6 +699,7 @@ describe("capture and save", () => {
     expect(await missedSave(tab)).toEqual({
       domain: "news.example.com",
       username: "reader",
+      password: "fresh-password",
       update: false,
       confirmed: true,
     });

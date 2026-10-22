@@ -65,6 +65,23 @@ export const CONTENT_STYLES = `${TOKENS}
 .banner .text { gap: 1px; }
 .banner .text strong { font-size: 15px; font-weight: 650; white-space: normal; overflow-wrap: anywhere; }
 .banner .text small { font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+.fields { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.field-box {
+  display: flex; align-items: center; min-height: 36px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg); color: var(--text);
+}
+.field-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+.field-box input {
+  flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: none; outline: none; background: none;
+  color: inherit; font: inherit; font-size: 14px;
+}
+.reveal {
+  display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: none; background: none;
+  color: var(--muted); cursor: pointer;
+}
+.reveal:hover { color: var(--text); }
+.actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 .actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
 .actions button {
   min-height: 38px; padding: 0 16px; border-radius: var(--radius); border: 1px solid var(--border);

@@ -6,6 +6,7 @@ import type { AutofillRequest, PendingPrompt } from "../extension/lib/autofill-p
 const PROMPT: PendingPrompt = {
   domain: "example.com",
   username: "me",
+  password: "hunter2-but-longer",
   update: false,
   confirmed: false,
 };
