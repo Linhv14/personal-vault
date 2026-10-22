@@ -17,13 +17,19 @@ function isIdentity(item: VaultItem): boolean {
   return itemType(item) === "identity";
 }
 
-function identitySuggestionOf(item: VaultItem, vault: OpenVault): IdentitySuggestion {
+function identitySuggestionOf(
+  item: VaultItem,
+  vault: OpenVault,
+  field: keyof AddressData | undefined,
+): IdentitySuggestion {
   const shared = vault.sharedName(item);
+  const value = field ? addressDataOf(item)[field]?.trim() : undefined;
   const detail = [item.fullName, item.city].filter(Boolean).join(" · ");
   const country = countryOf(item.country)?.code;
   return {
     id: item.id,
     title: item.title,
+    ...(value ? { value } : {}),
     ...(detail ? { detail } : {}),
     ...(country ? { country } : {}),
     ...(shared ? { vault: shared } : {}),
@@ -46,6 +52,25 @@ function addressDataOf(item: Partial<VaultItem>): AddressData {
   return Object.fromEntries(keys.flatMap((key) => (item[key] ? [[key, item[key]]] : [])));
 }
 
+const IDENTITY_FIELDS = new Set<string>([
+  "fullName",
+  "email",
+  "phone",
+  "company",
+  "address",
+  "ward",
+  "city",
+  "region",
+  "postalCode",
+  "country",
+]);
+
+function identityField(field: unknown): keyof AddressData | undefined {
+  return typeof field === "string" && IDENTITY_FIELDS.has(field)
+    ? (field as keyof AddressData)
+    : undefined;
+}
+
 function bySiteBound(domain: string) {
   const rank = (item: VaultItem) => (boundToSite(item, domain) ? 0 : 1);
   return (a: VaultItem, b: VaultItem) => rank(a) - rank(b) || byLastUsed(a, b);
@@ -54,7 +79,7 @@ function bySiteBound(domain: string) {
 export const identityHandlers: AutofillHandlers<
   "autofill:identities" | "autofill:identity" | "autofill:random-address" | "autofill:aliases"
 > = {
-  "autofill:identities": async (_request, sender) => {
+  "autofill:identities": async (request, sender) => {
     if (!(await formsAllowed(sender))) {
       return { ok: true, locked: false, identities: [] };
     }
@@ -65,7 +90,7 @@ export const identityHandlers: AutofillHandlers<
     const identities = vault.items
       .filter(isIdentity)
       .sort(bySiteBound(sender.domain))
-      .map((item) => identitySuggestionOf(item, vault));
+      .map((item) => identitySuggestionOf(item, vault, identityField(request.field)));
     return { ok: true, locked: false, identities };
   },
 

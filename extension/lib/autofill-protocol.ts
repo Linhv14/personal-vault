@@ -26,6 +26,7 @@ export interface CardSuggestion {
 export interface IdentitySuggestion {
   id: string;
   title: string;
+  value?: string;
   detail?: string;
   country?: string;
   vault?: string;
@@ -105,7 +106,7 @@ export type AutofillRequest =
   | { type: "autofill:qr-image"; url: string }
   | { type: "autofill:cards" }
   | { type: "autofill:card"; id: string }
-  | { type: "autofill:identities" }
+  | { type: "autofill:identities"; field?: keyof AddressData }
   | { type: "autofill:identity"; id: string }
   | { type: "autofill:random-address"; country: string }
   | { type: "autofill:aliases" }

@@ -1130,6 +1130,8 @@ export const vi: Catalogue = {
   "autofill.update_title": "Cập nhật mật khẩu cho {domain}?",
   "autofill.save": "Lưu",
   "autofill.update": "Cập nhật",
+  "autofill.fill_whole_form": "Điền cả biểu mẫu",
+  "autofill.no_saved_values": "Chưa có giá trị đã lưu cho ô này",
   "autofill.not_now": "Để sau",
   "autofill.saved": `Đã lưu vào ${APP_NAME}`,
   "autofill.save_failed": "Chưa lưu được. Kiểm tra kết nối rồi thử lại.",

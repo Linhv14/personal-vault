@@ -1142,6 +1142,8 @@ export const en = {
   "autofill.update_title": "Update password for {domain}?",
   "autofill.save": "Save",
   "autofill.update": "Update",
+  "autofill.fill_whole_form": "Fill the whole form",
+  "autofill.no_saved_values": "No saved value for this field yet",
   "autofill.not_now": "Not now",
   "autofill.saved": `Saved to ${APP_NAME}`,
   "autofill.save_failed": "Couldn't save. Check your connection and try again.",

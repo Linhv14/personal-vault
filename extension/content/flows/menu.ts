@@ -1,6 +1,6 @@
 import { formKind, isCodeField } from "../detect.js";
 import { state } from "../state.js";
-import { openAddressMenu } from "./address.js";
+import { isStandalonePhone, openAddressMenu } from "./address.js";
 import { openCardMenu } from "./card.js";
 import { openCodeMenu } from "./code.js";
 import { openLoginMenu } from "./login.js";
@@ -22,6 +22,9 @@ export async function openMenu({ onlyIfUseful }: { onlyIfUseful: boolean }): Pro
   }
   if (kind === "profile") {
     return openAddressMenu(input, onlyIfUseful, true);
+  }
+  if (isStandalonePhone(input)) {
+    return openAddressMenu(input, onlyIfUseful, true, true);
   }
   return openLoginMenu(input, onlyIfUseful);
 }

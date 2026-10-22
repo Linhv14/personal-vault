@@ -363,6 +363,29 @@ describe("cards and addresses", () => {
     });
   });
 
+  it("adds the focused field's value to each identity only when asked for that field", async () => {
+    await unlockWith([HOME]);
+    const page = sender("https://shop.example/address")!;
+    expect(await handleAutofill({ type: "autofill:identities", field: "phone" }, page)).toEqual({
+      ok: true,
+      locked: false,
+      identities: [
+        {
+          id: HOME.id,
+          title: "Home",
+          value: HOME.phone,
+          detail: "Nguyễn Văn An · Quận 1",
+          country: "VN",
+        },
+      ],
+    });
+    const unknown = await handleAutofill(
+      { type: "autofill:identities", field: "secret" as "phone" },
+      page,
+    );
+    expect(JSON.stringify(unknown)).not.toContain(HOME.phone);
+  });
+
   it("reports a locked vault for cards", async () => {
     const response = await handleAutofill(
       { type: "autofill:cards" },

@@ -1,6 +1,6 @@
 import { isPaymentFrameUrl } from "#core/payment-frames.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
-import { detectFields, formKindOf, type FormKind } from "./forms/classify.js";
+import { classifyField, detectFields, formKindOf, type FormKind } from "./forms/classify.js";
 import { isOneTimeCodeField } from "./two-factor.js";
 
 const USERNAME_HINT = /user|email|login|account|phone|mobile|identifier/i;
@@ -94,7 +94,7 @@ function wantsPasskey(input: HTMLInputElement): boolean {
   );
 }
 
-function isLoginUsername(input: HTMLInputElement): boolean {
+export function isLoginUsername(input: HTMLInputElement): boolean {
   const password = findPasswordFor(input);
   return input.type !== "password" && password !== null && findUsernameField(password) === input;
 }
@@ -119,7 +119,7 @@ export function isDecoratable(input: HTMLInputElement): boolean {
   if (input.type === "password" || wantsPasskey(input) || isCodeField(input)) {
     return true;
   }
-  return isLoginUsername(input) || formKind(input) !== null;
+  return isLoginUsername(input) || formKind(input) !== null || classifyField(input) === "tel";
 }
 
 export function isEmailInput(input: HTMLInputElement): boolean {
