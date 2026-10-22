@@ -48,6 +48,31 @@ keep in sync. `src/core` keeps plain relative imports, because it must stay
 loadable by scripts that run under Node without a bundler. ESLint rejects a new
 `../../` import anywhere else.
 
+## No import cycles
+
+Files in `extension/`, `src/`, `web/`, `cli/` and `share/` must not import each
+other in a loop. In a cycle, whichever file the bundler evaluates first sees the
+other's exports as `undefined` until it finishes, so the bug depends on entry
+order and shows up far from the change that caused it. A cycle also means
+neither file can be understood or tested without the other.
+
+`npm run lint` runs `scripts/check-cycles.ts` after the comment check. It reads
+every tracked `.ts` and `.tsx` file in those folders with the TypeScript parser,
+follows each static `import` and `export … from` that is relative or uses a
+`#` alias from `package.json`, maps `.js` specifiers back to their `.ts` or
+`.tsx` source, and prints one loop for each group of files that reach each
+other. `import type` and `export type` are skipped because they are erased
+before the code runs. An import whose names are all marked `type` inline is
+still counted: under `verbatimModuleSyntax` it stays in the output as a
+side-effect import.
+
+A cycle is fixed by moving what both files need into a module below them, not by
+copying it. That is why the vault data model lives in
+`extension/lib/vault/types.ts`, the cached local state shapes in
+`extension/lib/local-state-types.ts`, and the Worker's `Result` helpers, clock
+and Durable Object environment in `src/worker/result.ts`, `clock.ts` and
+`store-env.ts`.
+
 ## One place for cryptography
 
 `crypto.subtle` may only be called from `src/core/` and from a short list of
