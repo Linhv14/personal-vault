@@ -133,8 +133,6 @@ const authUnlessInvitePreview: MiddlewareHandler<AppBindings> = async (c, next) 
 app.use("/api/invites/*", authUnlessInvitePreview);
 app.use("/api/auth/delete-account", requireAuth);
 
-// Creating a share needs a session; reading one must not, since the recipient
-// has no account.
 const authToCreateShare: MiddlewareHandler<AppBindings> = async (c, next) =>
   c.req.method === "POST" ? requireAuth(c, next) : next();
 app.use("/api/shares", authToCreateShare);
@@ -186,11 +184,6 @@ app.route("/api/shares", shares);
 app.route("/api/ci", ci);
 app.route("/api/migration", migration);
 
-/**
- * Lets the extension measure clock drift at unlock. A machine whose clock is off
- * produces 2FA codes that look perfectly normal while every site rejects them —
- * close to undiagnosable without this.
- */
 app.get("/api/time", (c) => c.json({ serverTime: Math.floor(Date.now() / 1000) }));
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
@@ -264,7 +257,6 @@ app.onError((error, c) => {
   if (error instanceof InvalidBodyError) {
     return c.json(apiError("auth.invalid_body"), 400);
   }
-  // Never echo the cause: a D1 message can contain the SQL statement.
   logError("unhandled_error", error, { method: c.req.method, path: c.req.path });
   return c.json(apiError("server.error"), 500);
 });

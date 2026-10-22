@@ -3,11 +3,8 @@ main = "src/worker/index.ts"
 compatibility_date = "2026-10-13"
 compatibility_flags = ["nodejs_compat"]
 upload_source_maps = true
-# Every version would otherwise get its own public URL, keeping old builds
-# reachable after a fix ships.
 preview_urls = false
 
-# The share page is a static asset; the Worker only handles /api/* and /s/*.
 [assets]
 directory = "./dist/public"
 binding = "ASSETS"
@@ -16,15 +13,9 @@ run_worker_first = ["/", "/vi", "/privacy", "/security"]
 [[d1_databases]]
 binding = "DB"
 database_name = "vault"
-# `npm run deploy` replaces this placeholder with the database id in YOUR account and
-# writes the result to .wrangler.local.toml (gitignored). This file stays
-# generic so the public repository carries nobody's identifiers.
 database_id = "SET_BY_DEPLOY"
 migrations_dir = "migrations"
 
-# Per-IP limit on every endpoint reachable without a session (register,
-# prelogin, login, reading a share). The per-email lockout in auth.ts stops
-# password guessing; this stops one client from burning the free-tier quota.
 [[durable_objects.bindings]]
 name = "USER_STORE"
 class_name = "UserStore"
@@ -51,21 +42,14 @@ name = "REGISTRATION_RATE_LIMITER"
 namespace_id = "7302"
 simple = { limit = 10, period = 60 }
 
-# Per-account cap on writes (items, shares), so one account cannot flood D1.
 [[ratelimits]]
 name = "ACCOUNT_RATE_LIMITER"
 namespace_id = "7303"
 simple = { limit = 60, period = 60 }
 
-# "token" (default): creating an account needs REGISTRATION_TOKEN, right for a
-# personal Worker. "open": anyone can sign up, for a shared hosted server; set
-# it with `npm run deploy -- --open-registration`. EMAIL_FROM is added the same
-# way by `--email-from`.
 [vars]
 REGISTRATION_MODE = "token"
 
-# Purge expired share links. Without the cron, expired ciphertext lingers in D1;
-# still unreadable, but keeping data longer than necessary is a needless risk.
 [triggers]
 crons = ["17 * * * *"]
 
@@ -75,16 +59,3 @@ head_sampling_rate = 1
 
 [secrets]
 required = ["REGISTRATION_TOKEN", "EMAIL_PROBE_SECRET", "AT_REST_SECRET"]
-
-# Secrets are generated and uploaded by `npm run deploy`. To set them manually:
-#   npx wrangler secret put REGISTRATION_TOKEN -c .wrangler.local.toml
-#
-#   REGISTRATION_TOKEN — required by /api/auth/register. Without it, anyone who
-#                        finds the URL can create an account.
-#   EMAIL_PROBE_SECRET — HMAC key used to fabricate KDF parameters for addresses
-#                        that do not exist, so registrations cannot be probed.
-#   AT_REST_SECRET     — protects auth_key_hash and wrapped_vault_key in D1, so a
-#                        leaked database cannot be attacked offline. Back it
-#                        up: losing it locks every account out.
-#   RESEND_API_KEY     — only with `--email-from` and the default Resend
-#                        provider. Not generated: create it at resend.com.

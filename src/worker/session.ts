@@ -1,22 +1,12 @@
-/**
- * Session handling. Bearer tokens in a header, never cookies.
- *
- * The extension calls the API from a `chrome-extension://` origin, and having no
- * cookies means there is no CSRF surface to worry about — a malicious page
- * cannot make the browser attach your token to its own request.
- */
-
 import { toBase64, toBase64Url, randomBytes } from "../core/bytes.js";
 import type { Env, SessionContext } from "./types.js";
 
-export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 export const SESSION_IDLE_SECONDS = 14 * 24 * 60 * 60;
 const TOUCH_INTERVAL_SECONDS = 5 * 60;
 const MAX_SESSIONS_PER_ACCOUNT = 20;
 
 export async function hashToken(token: string): Promise<string> {
-  // The token is 32 random bytes, so one SHA-256 round suffices: no dictionary
-  // can reach it. Hashing means a leaked database yields no reusable tokens.
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
   return toBase64(new Uint8Array(digest));
 }
@@ -75,9 +65,6 @@ export async function resolveSession(
       .run();
   }
 
-  // Looked up by primary key on the hash, so no constant-time comparison is
-  // needed: SQLite leaks nothing useful through key lookup timing, and an
-  // attacker must guess all 32 bytes before a single lookup matches.
   return row ? { accountId: row.account_id, tokenHash } : null;
 }
 
@@ -95,7 +82,6 @@ export async function revokeSession(env: Env, tokenHash: string): Promise<void> 
   await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
 }
 
-/** Revoke every session for an account — used when the master password changes. */
 export async function revokeAllSessions(env: Env, accountId: string): Promise<void> {
   await env.DB.prepare("DELETE FROM sessions WHERE account_id = ?").bind(accountId).run();
 }

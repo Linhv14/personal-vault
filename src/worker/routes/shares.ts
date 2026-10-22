@@ -12,10 +12,6 @@ import { isPlainObject } from "../../core/json.js";
 import { consumeShareCode, MAX_RECIPIENTS, recipientHash, sendShareCode } from "../share-access.js";
 import type { AppBindings } from "../types.js";
 
-/**
- * Share links. The decryption key never reaches this code: it travels in the
- * URL fragment, which browsers do not send to the server.
- */
 const shares = new Hono<AppBindings>();
 
 const MAX_SHARE_BYTES = 16 * 1024;
@@ -107,8 +103,6 @@ shares.post("/", async (c) => {
     return c.json(apiError("shares.email_unavailable"), 400);
   }
 
-  // Random id rather than a counter: guessable ids would let anyone enumerate
-  // every share that currently exists.
   const id = toBase64Url(randomBytes(16));
   const revokeToken = toBase64Url(randomBytes(32));
   const timestamp = now();

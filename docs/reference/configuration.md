@@ -19,7 +19,7 @@ generates the first three; the fourth comes from you.
 
 | Secret               | Required                                  | Generated            | Purpose                                                                                                                                                                   |
 | -------------------- | ----------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `REGISTRATION_TOKEN` | Always                                    | Yes, 24 random bytes | Gate on account creation in `token` mode.                                                                                                                                 |
+| `REGISTRATION_TOKEN` | Always                                    | Yes, 24 random bytes | Gate on account creation in `token` mode. Without it, anyone who finds the URL can create an account and use the Worker to store their own data.                          |
 | `EMAIL_PROBE_SECRET` | Always                                    | Yes, 32 random bytes | Key for decoy KDF salts, recipient and code hashes, the per-network registration counter.                                                                                 |
 | `AT_REST_SECRET`     | Always                                    | Yes, 32 random bytes | Root of the server-side layer over auth hashes and wrapped vault keys. **Back it up; never rotate.**                                                                      |
 | `RESEND_API_KEY`     | With `--email-from` and provider `resend` | No                   | Sends email through Resend. `deploy` stops until it is set.                                                                                                               |
@@ -37,25 +37,27 @@ What changing each one breaks: [Rotate secrets](../how-to/rotate-secrets.md).
 
 Declared in [`wrangler.toml`](../../wrangler.toml).
 
-| Binding                     | Type                             | Purpose                                                 |
-| --------------------------- | -------------------------------- | ------------------------------------------------------- |
-| `DB`                        | D1 database `vault`              | All server state; see [Data model](data-model.md).      |
-| `ASSETS`                    | Static assets from `dist/public` | Share page, privacy page, favicon.                      |
-| `ANONYMOUS_RATE_LIMITER`    | Rate limit                       | Per-IP limit on endpoints reachable without a session.  |
-| `REGISTRATION_RATE_LIMITER` | Rate limit                       | Per-IP limit on registration and verification requests. |
-| `ACCOUNT_RATE_LIMITER`      | Rate limit                       | Per-account limit on writes.                            |
-| `EMAIL`                     | Send email                       | Only with `--email-provider cloudflare`.                |
+| Binding                     | Type                             | Purpose                                                                                                                                                                                                  |
+| --------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DB`                        | D1 database `vault`              | All server state; see [Data model](data-model.md).                                                                                                                                                       |
+| `ASSETS`                    | Static assets from `dist/public` | Share page, privacy page, favicon.                                                                                                                                                                       |
+| `ANONYMOUS_RATE_LIMITER`    | Rate limit                       | Per-IP limit on endpoints reachable without a session (sign-up, prelogin, login, reading a share). Per-address backoff stops password guessing; this stops one client from using up the free-tier quota. |
+| `REGISTRATION_RATE_LIMITER` | Rate limit                       | Per-IP limit on registration and verification requests.                                                                                                                                                  |
+| `ACCOUNT_RATE_LIMITER`      | Rate limit                       | Per-account limit on writes (items, shares), so one account cannot flood the database.                                                                                                                   |
+| `EMAIL`                     | Send email                       | Only with `--email-provider cloudflare`.                                                                                                                                                                 |
 
 Values of the rate limits: [Limits](limits.md).
 
 Other settings in `wrangler.toml`:
 
-| Setting                 | Value                              | Why                                                                     |
-| ----------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
-| `triggers.crons`        | `17 * * * *`                       | Hourly purge of expired shares, sessions, codes and counters.           |
-| `preview_urls`          | `false`                            | Old versions do not stay reachable at their own URLs after a fix ships. |
-| `workers_dev`           | `true` when a custom domain is set | The `workers.dev` address keeps serving existing installs.              |
-| `observability.enabled` | `true`                             | Logs for `npm run logs` and the dashboard.                              |
+| Setting                   | Value                               | Why                                                                                                                                                     |
+| ------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `triggers.crons`          | `17 * * * *`                        | Hourly purge of expired shares, sessions, codes and counters. Expired ciphertext is unreadable, but keeping data longer than needed is a needless risk. |
+| `preview_urls`            | `false`                             | Old versions do not stay reachable at their own URLs after a fix ships.                                                                                 |
+| `workers_dev`             | `true` when a custom domain is set  | The `workers.dev` address keeps serving existing installs.                                                                                              |
+| `observability.enabled`   | `true`                              | Logs for `npm run logs` and the dashboard.                                                                                                              |
+| `assets.run_worker_first` | `/`, `/vi`, `/privacy`, `/security` | The Worker answers these so it can serve Markdown on `Accept: text/markdown` and set the page CSP; every other static file is served directly.          |
+| `database_id`             | `SET_BY_DEPLOY`                     | A placeholder. `deploy` writes the real id into `.wrangler.local.toml`, so the public repository carries nobody's identifiers.                          |
 
 ## Client configuration
 

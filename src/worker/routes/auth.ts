@@ -71,8 +71,6 @@ function isSealed(value: unknown, maxBytes = 4096): value is SealedBody {
     return false;
   }
   const { ciphertext, nonce } = value as Record<string, unknown>;
-  // An AES-GCM nonce is always exactly 12 bytes; anything else means a broken
-  // client or someone probing.
   return isBase64(ciphertext, maxBytes) && isBase64(nonce, 12);
 }
 
@@ -90,23 +88,12 @@ function isKdf(value: unknown): value is KdfBody {
   return (
     type === "pbkdf2-sha256" &&
     typeof iterations === "number" &&
-    // Lower bound so a client cannot downgrade itself into brute-force range;
-    // upper bound so nobody locks themselves out with a number that hangs the
-    // browser.
     iterations >= MIN_KDF_ITERATIONS &&
     iterations <= 5_000_000 &&
     isBase64(salt, 64)
   );
 }
 
-/**
- * Registration requires a secret token.
- *
- * Without this step, a Worker that is reachable on the internet is an open
- * signup page for anyone who finds the URL. They could not read your vault, but
- * they would consume your quota and turn your infrastructure into a host for
- * strangers' data.
- */
 async function sameSecret(provided: string, expected: string): Promise<boolean> {
   const digest = (value: string) => crypto.subtle.digest("SHA-256", utf8Encode(value));
   const [a, b] = await Promise.all([digest(provided), digest(expected)]);
@@ -230,15 +217,6 @@ auth.post("/verify-email", async (c) => {
   return c.json({ ok: true, required: true });
 });
 
-/**
- * Hand back the KDF params so the client can derive its auth key *before*
- * signing in.
- *
- * An address that does not exist still receives plausible params, derived
- * deterministically from an HMAC of a server-side secret. Returning 404 here
- * would let anyone enumerate which addresses are registered — and for a personal
- * vault that address is half of the target.
- */
 auth.post("/prelogin", async (c) => {
   const email = normalizeEmail((await readJson(c)).email);
   if (!email) {
@@ -295,8 +273,6 @@ auth.post("/login", async (c) => {
       totp_enabled_at: number | null;
     }>();
 
-  // Compare in constant time, and run the comparison even when no account
-  // exists, so response timing does not reveal which addresses are real.
   const verification = row
     ? await verifyAuthKey(c.env, authKey, row.auth_key_hash, { acceptLegacy: true })
     : await verifyAuthKey(c.env, authKey, "v2:" + toBase64(new Uint8Array(32)));
@@ -445,10 +421,6 @@ auth.post("/logout", async (c) => {
   return c.json({ ok: true });
 });
 
-/**
- * Change the master password. The client derives the new keys and re-wraps the
- * vault key itself, so the server only swaps three columns — no item is touched.
- */
 auth.post("/change-password", async (c) => {
   const { currentAuthKey, kdf, authKey, wrappedVaultKey, keepSession } = await readJson(c);
   if (!isBase64(currentAuthKey, 32)) {
@@ -493,8 +465,6 @@ auth.post("/change-password", async (c) => {
     return c.json(apiError("auth.invalid_credentials"), 403);
   }
 
-  // Revoke every session: other devices still hold the old vault key and must
-  // unlock again.
   if (keepSession === true) {
     await revokeOtherSessions(c.env, accountId, tokenHash);
   } else {

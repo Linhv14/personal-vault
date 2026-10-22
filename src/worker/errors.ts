@@ -1,15 +1,3 @@
-/**
- * API error responses.
- *
- * Every failure carries a stable `code` plus an English `error` sentence. The
- * extension localizes the code; the sentence is there so anyone poking at the
- * API with curl gets something readable without consulting a table.
- *
- * Codes are deliberately coarse. Telling an attacker precisely which field of a
- * login attempt was wrong is a gift, so several distinct causes share one code
- * on purpose — see `auth.invalid_credentials` and `shares.gone`.
- */
-
 export type ApiErrorCode =
   | "auth.bad_registration_token"
   | "auth.invalid_body"
@@ -179,7 +167,6 @@ const MESSAGES: Record<ApiErrorCode, string> = {
 export interface ApiErrorBody {
   code: ApiErrorCode;
   error: string;
-  /** Values the client interpolates into the localized message. */
   params?: Record<string, string | number>;
 }
 
