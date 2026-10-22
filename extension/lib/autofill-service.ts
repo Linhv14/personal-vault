@@ -235,18 +235,29 @@ async function readPending(sender: TrustedSender): Promise<PendingCapture | null
   return pending;
 }
 
+function sameUsername(a?: string, b?: string): boolean {
+  return (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+}
+
 function existingLogin(items: VaultItem[], pageUrl: string, username?: string) {
-  const candidates = items.filter(
+  const onSite = items.filter(
     (item) =>
       isPersonal(item) &&
       matchesSite(item, pageUrl) &&
-      (item.username ?? "") === (username ?? "") &&
       (item.urlMatch === "host" || sameSite(item, pageUrl) !== null),
   );
+  const candidates = onSite.filter((item) => sameUsername(item.username, username));
+  const logins = onSite.filter((item) => item.password);
+  const fallback = !username && candidates.length === 0 && logins.length === 1 ? logins : [];
+  const pool = candidates.length > 0 ? candidates : fallback;
   return (
-    candidates.find((item) => sameSite(item, pageUrl) === "exact") ??
-    candidates.find((item) => item.urlMatch === "host" || sameSite(item, pageUrl) === "related")
+    pool.find((item) => sameSite(item, pageUrl) === "exact") ??
+    pool.find((item) => item.urlMatch === "host" || sameSite(item, pageUrl) === "related")
   );
+}
+
+function alreadySaved(items: VaultItem[], pageUrl: string, password: string): boolean {
+  return items.some((item) => item.password === password && matchesSite(item, pageUrl));
 }
 
 function bySite(pageUrl: string) {
@@ -259,10 +270,10 @@ function promptFor(
   pageUrl: string,
   items: VaultItem[] | null,
 ): PendingPrompt | null {
-  const existing = items && existingLogin(items, pageUrl, pending.username);
-  if (existing?.password === pending.password) {
+  if (items && alreadySaved(items, pageUrl, pending.password)) {
     return null;
   }
+  const existing = items && existingLogin(items, pageUrl, pending.username);
   return {
     domain: pending.site ?? pending.domain,
     username: pending.username,

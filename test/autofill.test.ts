@@ -552,6 +552,43 @@ describe("capture and save", () => {
     expect(response).toEqual({ ok: true, prompt: null });
   });
 
+  it("stays quiet when the username differs only in case or spacing", async () => {
+    await unlockWith([GITHUB]);
+    const response = await handleAutofill(
+      { type: "autofill:capture", username: " Me@Example.com ", password: GITHUB.password },
+      sender("https://github.com/session")!,
+    );
+    expect(response).toEqual({ ok: true, prompt: null });
+  });
+
+  it("stays quiet on a password-only step when the password is saved for the site", async () => {
+    await unlockWith([GITHUB]);
+    const response = await handleAutofill(
+      { type: "autofill:capture", password: GITHUB.password },
+      sender("https://github.com/session")!,
+    );
+    expect(response).toEqual({ ok: true, prompt: null });
+  });
+
+  it("treats a changed password on a password-only step as an update of the site's only login", async () => {
+    await unlockWith([GITHUB]);
+    const page = sender("https://github.com/session")!;
+    const captured = await handleAutofill(
+      { type: "autofill:capture", password: "rotated-password" },
+      page,
+    );
+    expect(captured).toMatchObject({ prompt: { update: true } });
+
+    await handleAutofill({ type: "autofill:save" }, page);
+    expect(puts).toEqual([GITHUB.id]);
+    const [updated] = await decryptAll(key);
+    expect(updated).toMatchObject({
+      id: GITHUB.id,
+      username: GITHUB.username,
+      password: "rotated-password",
+    });
+  });
+
   it("offers an update for a changed password and rewrites the same item", async () => {
     await unlockWith([GITHUB]);
     const page = sender("https://github.com/settings/password")!;
