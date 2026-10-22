@@ -5,7 +5,7 @@ import { createIdentity, randomKey, wrapForRecipient } from "../src/core/identit
 import { teamKeyContext } from "../src/core/org-model.js";
 import { sealTeamItem } from "../src/core/team-items.js";
 import { memoryArea, usePlatform, type StorageArea } from "../extension/lib/platform.js";
-import { handleAutofill } from "../extension/lib/autofill-service.js";
+import { handleAutofill } from "../extension/lib/autofill/service.js";
 import { handlePasskey } from "../extension/lib/passkey/service.js";
 import { sharedVaultId, syncSharedVaults } from "../extension/lib/shared-vaults.js";
 import { decryptEverything } from "../extension/lib/vault/decrypt.js";

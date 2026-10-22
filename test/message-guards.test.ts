@@ -43,7 +43,7 @@ describe("card frame messages", () => {
   });
 });
 
-vi.mock("../extension/lib/autofill-service.js", () => ({
+vi.mock("../extension/lib/autofill/service.js", () => ({
   handleAutofill: vi.fn(async () => {
     throw new Error("internal detail that must not leak");
   }),

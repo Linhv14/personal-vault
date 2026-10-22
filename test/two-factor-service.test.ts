@@ -4,7 +4,7 @@ import { importVaultKey, openJson, sealJson } from "../src/core/crypto.js";
 import { randomKey } from "../src/core/identity.js";
 import { generateTotp } from "../src/core/totp.js";
 import { memoryArea, usePlatform } from "../extension/lib/platform.js";
-import { handleAutofill } from "../extension/lib/autofill-service.js";
+import { handleAutofill } from "../extension/lib/autofill/service.js";
 
 const SENDER = { tabId: 7, url: "https://www.npmjs.com/settings/tfa", domain: "npmjs.com" };
 const LOGIN = "55555555-5555-4555-8555-555555555555";

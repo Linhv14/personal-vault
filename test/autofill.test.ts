@@ -66,8 +66,9 @@ async function settled(done: () => boolean = () => false): Promise<void> {
   }
 }
 
-const { forgetMissedSave, forgetTab, handleAutofill, missedSave } =
-  await import("../extension/lib/autofill-service.js");
+const { handleAutofill } = await import("../extension/lib/autofill/service.js");
+const { forgetMissedSave, missedSave } = await import("../extension/lib/autofill/save-prompt.js");
+const { forgetTab } = await import("../extension/lib/autofill/tab-state.js");
 const { tabSender, trustedSender } = await import("../extension/lib/autofill/senders.js");
 const { saveItem } = await import("../extension/lib/vault/store.js");
 const { decryptAll } = await import("../extension/lib/vault/decrypt.js");
