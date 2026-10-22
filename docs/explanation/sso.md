@@ -23,8 +23,8 @@ by `LICENSE_COMMERCIAL.md`; the AGPL core only knows how to mount it.
   OIDC the issuer, client ID and client secret; for SAML the IdP entity ID,
   single sign-on URL and signing certificate. Secrets are sealed with
   `AT_REST_SECRET` like other server-held secrets.
-- **Policies.** _Require SSO_: members other than owners and admins must sign in
-  through SSO. _Single organization_: members may not join another
+- **Policies.** _Require SSO_: members on a verified domain, other than owners
+  and admins, must sign in through SSO. _Single organization_: members may not join another
   organization. _Account recovery administration_: members enrol a copy of
   their vault key that admins can use to reset a forgotten password. Trusted
   devices need all three.
@@ -47,8 +47,8 @@ by `LICENSE_COMMERCIAL.md`; the AGPL core only knows how to mount it.
 3. The provider redirects to the callback. The Worker exchanges the code with the
    PKCE verifier, verifies the ID token's signature against the provider's JWKS,
    `iss`, `aud`, `exp`, `nonce`, and that `email_verified` is true and the email
-   is on a verified domain of the organization, belongs to one of its members,
-   or has a pending invitation to it.
+   is on a verified domain of the organization. Membership or a pending
+   invitation is not enough (see _Trust in the identity provider_ below).
 4. The Worker issues a short-lived, single-use SSO grant and redirects to the
    client, which trades it for a session at `POST /api/sso/session`.
 5. What happens next depends on the decryption option: ask for the master
@@ -95,9 +95,21 @@ option):
   15-minute registration grant. The client creates the account keys and the
   master password exactly as normal registration does and calls
   `POST /api/auth/register` with `ssoGrant`, which replaces the registration
-  token and the email code (the IdP verified the address). The account then
-  joins through its pending invitation, with the invited role and teams, or as a
-  member through the verified domain, within the seat limit.
+  token and the email code (the IdP verified the address, and the organization
+  proved it owns the domain). The account then joins through its pending
+  invitation, with the invited role and teams, or as a member through the
+  verified domain, within the seat limit.
+- **Trust in the identity provider.** The IdP is trusted only for addresses on
+  domains the organization proved it controls through DNS. The admins who
+  configure the IdP can make it assert any address, so trusting it for invited
+  addresses or members on other domains would let an admin invite anyone on the
+  server and sign in to their account, without their password or 2FA, and sign
+  in as an owner on another domain. People on other domains join through the
+  invitation and keep signing in with their master password; Require SSO does
+  not apply to them. The domain is checked again when the grant is redeemed, so
+  removing a domain takes effect within the grant's two minutes. Linking an
+  account on another domain to its IdP identity, with the master password as
+  proof, is planned for a later phase.
 - **Seats.** Joining through a verified domain counts against the larger of the
   plan's seats and the licence's seats.
 - **Policies.** Owners and admins are exempt from both. Require SSO needs an

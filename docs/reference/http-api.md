@@ -752,4 +752,4 @@ Errors: `400 shares.invalid_code`, `400 shares.code_expired`, `404 shares.gone`.
 | `sso.expired`                 | 400, 403      | State or grant unknown, used, expired, or verifier wrong         |
 | `sso.failed`                  | redirect      | The code exchange or the ID token check failed                   |
 | `sso.email_unverified`        | redirect      | The ID token does not say the email is verified                  |
-| `sso.email_not_allowed`       | redirect, 403 | Email not on a verified domain, not a member, not invited        |
+| `sso.email_not_allowed`       | redirect, 403 | Email not on a verified domain of the organization               |

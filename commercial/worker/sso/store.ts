@@ -220,17 +220,6 @@ export class SsoStore {
     return row !== null;
   }
 
-  async hasMemberWithEmail(orgId: string, email: string): Promise<boolean> {
-    const row = await this.db
-      .prepare(
-        `SELECT 1 AS found FROM org_members m JOIN accounts a ON a.id = m.account_id
-          WHERE m.org_id = ? AND a.email = ?`,
-      )
-      .bind(orgId, email)
-      .first<{ found: number }>();
-    return row !== null;
-  }
-
   async pendingInvite(orgId: string, email: string): Promise<string | null> {
     const row = await this.db
       .prepare("SELECT id FROM org_invites WHERE org_id = ? AND email = ? AND expires_at > ?")
@@ -326,7 +315,11 @@ export class SsoStore {
     const { results } = await this.db
       .prepare(
         `SELECT c.org_id AS orgId, c.identifier
-           FROM org_members m JOIN sso_configs c ON c.org_id = m.org_id
+           FROM org_members m
+           JOIN sso_configs c ON c.org_id = m.org_id
+           JOIN accounts a ON a.id = m.account_id
+           JOIN sso_domains d ON d.org_id = c.org_id AND d.verified_at IS NOT NULL
+            AND d.domain = lower(substr(a.email, instr(a.email, '@') + 1))
           WHERE m.account_id = ? AND m.role = 'member' AND c.require_sso = 1 AND c.enabled = 1`,
       )
       .bind(accountId)

@@ -192,11 +192,7 @@ routes.get("/callback", async (c) => {
   if (!checked.ok) {
     return fail(checked.code);
   }
-  const allowed =
-    (await store.verifiedDomainOf(pending.orgId, emailDomain(checked.email))) ||
-    (await store.hasMemberWithEmail(pending.orgId, checked.email)) ||
-    (await store.pendingInvite(pending.orgId, checked.email)) !== null;
-  if (!allowed) {
+  if (!(await store.verifiedDomainOf(pending.orgId, emailDomain(checked.email)))) {
     return fail("sso.email_not_allowed");
   }
   const grant = token();
@@ -226,6 +222,9 @@ routes.post("/session", async (c) => {
   }
   if (!(await ssoAvailable(c.env, c.req.url, org.plan))) {
     return c.json(apiError("license.required"), 403);
+  }
+  if (!(await store.verifiedDomainOf(claim.orgId, emailDomain(claim.email)))) {
+    return c.json(apiError("sso.email_not_allowed"), 403);
   }
   const account = await c.env.DB.prepare(
     "SELECT id, kdf_type, kdf_iterations, kdf_salt FROM accounts WHERE email = ?",

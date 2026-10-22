@@ -540,24 +540,68 @@ describe("just-in-time provisioning", () => {
     expect((await register("new@acme.com", grant)).body.code).toBe("sso.expired");
     expect((await register("new@acme.com", "forged-grant")).body.code).toBe("sso.expired");
   });
+});
 
-  it("admits an invited address that is not on a verified domain", async () => {
+describe("trust in the identity provider", () => {
+  beforeEach(async () => {
+    await start();
+    await configure();
+  });
+
+  const invite = (email: string, role = "member") =>
     worker.d1.db
       .prepare(
         `INSERT INTO org_invites (id, org_id, email, role, invited_by, created_at, expires_at)
-         VALUES (?, ?, ?, 'admin', ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(crypto.randomUUID(), ORG, "guest@partner.org", owner.id, T0, T0 + 3600);
-    const grant = await registrationGrant("guest@partner.org", { identifier: "acme" });
-    const created = await register("guest@partner.org", grant);
-    expect(created.body.orgId).toBe(ORG);
-    const row = worker.d1.db
-      .prepare("SELECT role FROM org_members WHERE org_id = ? AND account_id = ?")
-      .get(ORG, stringField(created.body, "accountId")) as { role: string };
-    expect(row.role).toBe("admin");
+      .run(crypto.randomUUID(), ORG, email, role, owner.id, T0, T0 + 3600);
 
-    const again = await signInThroughSso("guest@partner.org", {}, { identifier: "acme" });
-    expect(again.body).toMatchObject({ status: "signed_in", orgId: ORG });
+  const addMember = (accountId: string, role: string) =>
+    worker.d1.db
+      .prepare("INSERT INTO org_members (org_id, account_id, role, joined_at) VALUES (?, ?, ?, ?)")
+      .run(ORG, accountId, role, T0);
+
+  async function callbackError(email: string) {
+    const started = await prepared({ identifier: "acme" });
+    return outcome(await callback(started, { email })).error;
+  }
+
+  const roleIn = (accountId: string) =>
+    worker.d1.db
+      .prepare("SELECT role FROM org_members WHERE org_id = ? AND account_id = ?")
+      .get(ORG, accountId) as { role: string } | undefined;
+
+  it("refuses an invited account outside the verified domains instead of signing it in", async () => {
+    const victim = await signedInAccount(worker, "victim@gmail.com");
+    invite("victim@gmail.com");
+    expect(await callbackError("victim@gmail.com")).toBe("sso.email_not_allowed");
+    expect(roleIn(victim.id)).toBeUndefined();
+    const pending = worker.d1.db
+      .prepare("SELECT COUNT(*) AS n FROM org_invites WHERE org_id = ? AND email = ?")
+      .get(ORG, "victim@gmail.com") as { n: number };
+    expect(pending.n).toBe(1);
+  });
+
+  it("refuses an invited newcomer outside the verified domains", async () => {
+    invite("guest@partner.org", "admin");
+    expect(await callbackError("guest@partner.org")).toBe("sso.email_not_allowed");
+  });
+
+  it("refuses members outside the verified domains, owners included", async () => {
+    const boss = await signedInAccount(worker, "boss@partner.org");
+    addMember(boss.id, "owner");
+    expect(await callbackError("boss@partner.org")).toBe("sso.email_not_allowed");
+  });
+
+  it("refuses a grant whose domain stopped being verified before it was redeemed", async () => {
+    await signedInAccount(worker, "member@acme.com");
+    const started = await prepared();
+    const { grant } = outcome(await callback(started));
+    expect((await admin("/domains/acme.com", "DELETE")).status).toBe(200);
+    expect(await session(grant!, started.verifier)).toMatchObject({
+      status: 403,
+      body: { code: "sso.email_not_allowed" },
+    });
   });
 });
 
@@ -598,6 +642,16 @@ describe("policies", () => {
     expect((await passwordLogin(admin2, "admin@acme.com")).status).toBe(200);
     expect((await passwordLogin(owner, "owner@acme.com")).status).toBe(200);
     expect((await signInThroughSso("member@acme.com")).status).toBe(200);
+  });
+
+  it("keeps password sign-in for members outside the verified domains", async () => {
+    const guest = await signedInAccount(worker, "guest@partner.org");
+    worker.d1.db
+      .prepare("INSERT INTO org_members (org_id, account_id, role, joined_at) VALUES (?, ?, ?, ?)")
+      .run(ORG, guest.id, "member", T0);
+    await admin("/policies", "PUT", { requireSso: true, singleOrg: false });
+    expect((await passwordLogin(guest, "guest@partner.org")).status).toBe(200);
+    expect((await passwordLogin(member, "member@acme.com")).body.code).toBe("auth.sso_required");
   });
 
   it("stops enforcing Require SSO when the provider is switched off", async () => {

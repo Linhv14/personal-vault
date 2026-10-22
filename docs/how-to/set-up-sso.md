@@ -83,12 +83,13 @@ master password after signing in. Trusted devices come in a later release.
 On the extension's first screen or on the web dashboard, choose **Sign in with
 SSO** and enter your work email or the identifier. Someone without a 7key
 account yet is asked to create a master password and joins the organization as
-a member; an invited address on another domain can sign in through the
-identifier.
+a member. Addresses on other domains cannot use SSO, even when invited: they
+accept the invitation and sign in with their master password.
 
 When it works, choose the policies:
 
-- **Require single sign-on.** Members other than owners and admins can no longer
+- **Require single sign-on.** Members on a verified domain, other than owners
+  and admins, can no longer
   sign in with their master password alone; the sign-in screen sends them to
   SSO. Owners and admins keep password sign-in so a broken provider cannot lock
   everyone out.
@@ -106,5 +107,5 @@ Every change on this page is recorded in the organization's activity log.
 | The provider's OpenID configuration could not be read       | Wrong issuer URL, or the provider does not publish discovery at `<issuer>/.well-known/openid-configuration`             |
 | The identity provider did not confirm the sign-in           | Wrong client secret or redirect URI, the person cancelled, or the ID token failed a check (signature, audience, expiry) |
 | Your identity provider has not verified this email address  | The ID token has no `email_verified: true` (for Entra, no `xms_edov: true`)                                             |
-| This email is not on a verified domain of the organization  | Verify the domain, or invite the address first                                                                          |
+| This email is not on a verified domain of the organization  | Verify the domain. Addresses on other domains sign in with their master password                                        |
 | Single sign-on needs the enterprise plan or a valid licence | No enterprise plan and no valid `LICENSE_KEY`, or the licence expired                                                   |

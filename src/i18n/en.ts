@@ -1222,7 +1222,7 @@ export const en = {
   "error.sso.failed": "The identity provider did not confirm the sign-in. Try again.",
   "error.sso.email_unverified": "Your identity provider has not verified this email address.",
   "error.sso.email_not_allowed":
-    "This email is not on a verified domain of the organization and has no pending invitation.",
+    "This email is not on a verified domain of the organization. Sign in with your master password instead.",
   "sso.sign_in": "Sign in with SSO",
   "sso.sign_in_hint": "Use your company's identity provider",
   "sso.title": "Single sign-on",
@@ -1281,7 +1281,7 @@ export const en = {
   "sso_admin.policies": "Policies",
   "sso_admin.require_sso": "Require single sign-on",
   "sso_admin.require_sso_hint":
-    "Members other than owners and admins must sign in through SSO instead of with their master password alone.",
+    "Members on a verified domain, other than owners and admins, must sign in through SSO instead of with their master password alone.",
   "sso_admin.single_org": "Single organization",
   "sso_admin.single_org_hint":
     "Members other than owners and admins cannot join other organizations, and people in other organizations cannot join this one.",

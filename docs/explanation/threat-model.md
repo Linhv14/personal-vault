@@ -309,16 +309,18 @@ server trusts, for sign-in only:
   because the organization's IdP is where it enforces MFA. Password sign-in
   still asks for the code.
 - **Which IdP a member trusts is set by the organization's owners and admins.**
-  An admin can point the organization at an IdP they control and sign in as any
-  member whose email is on a verified domain. They would still need that
+  An admin can point the organization at an IdP they control and sign in as
+  anyone whose email is on one of the organization's verified domains, whether
+  or not they are a member. They would still need that
   member's master password to read the member's vault, and anything they
   already have access to as an admin is shared with them anyway.
 - **Domains are claimed with DNS.** Only an organization that published
   `7key-verify=<token>` in the domain's TXT records, checked over Cloudflare's
   DNS over HTTPS, can serve SSO for addresses on it, and only one organization
   can hold a domain. Someone who controls the domain's DNS can claim it. An
-  address on another domain can sign in only if it was invited or is already a
-  member.
+  address on another domain never signs in through SSO, even if it is invited or
+  already a member: an invitation is something the admin issues alone, so it
+  cannot stand for the person's consent to trust the admin's IdP.
 - **The flow resists the usual OIDC attacks.** The Worker uses PKCE (`S256`)
   with the IdP, a one-time `state` that expires after ten minutes and a `nonce`
   checked in the ID token; it verifies the ID token's signature (RS256 or
@@ -334,7 +336,7 @@ server trusts, for sign-in only:
   fetched with a five-second timeout and a 64 KB cap, over https only and
   without following redirects.
 - **Policies are enforced by the server.** Require SSO refuses password
-  sign-in to members other than owners and admins, who keep it so a broken IdP
+  sign-in to members on a verified domain other than owners and admins, who keep it so a broken IdP
   cannot lock the organization out. Single organization refuses invitations.
   Neither revokes sessions that already exist.
 

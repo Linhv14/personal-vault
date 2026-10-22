@@ -94,7 +94,9 @@ async function signInWithSso(email: string, identifier: string, overrides = {}) 
 
 describe.skipIf(!enabled)("single sign-on with a local test identity provider", () => {
   const identifier = `e2e-${Math.random().toString(36).slice(2, 8)}`;
-  const memberEmail = unique("sso-member");
+  const domain = `${identifier}.invalid`;
+  const memberEmail = unique("sso-member").replace("@example.com", `@${domain}`);
+  const outsiderEmail = unique("sso-outsider");
   let ownerToken: string;
   let orgId: string;
 
@@ -118,6 +120,17 @@ describe.skipIf(!enabled)("single sign-on with a local test identity provider", 
       body: json({ identifier }),
     });
     expect(named.body.identifier).toBe(identifier);
+    const claimed = await api(`/api/orgs/${orgId}/sso/domains`, {
+      method: "POST",
+      token: ownerToken,
+      body: json({ domain }),
+    });
+    expect(claimed.status).toBe(201);
+    const verified = await api(`/api/orgs/${orgId}/sso/domains/${domain}/verify`, {
+      method: "POST",
+      token: ownerToken,
+    });
+    expect(verified.body.domains).toMatchObject([{ domain, verified: true }]);
     const provider = await api(`/api/orgs/${orgId}/sso/provider`, {
       method: "PUT",
       token: ownerToken,
@@ -136,6 +149,17 @@ describe.skipIf(!enabled)("single sign-on with a local test identity provider", 
       body: json({ email: memberEmail, role: "member" }),
     });
     expect(invited.status).toBe(201);
+  });
+
+  it("refuses an invited address outside the verified domains", async () => {
+    const invited = await api(`/api/orgs/${orgId}/invites`, {
+      method: "POST",
+      token: ownerToken,
+      body: json({ email: outsiderEmail, role: "member" }),
+    });
+    expect(invited.status).toBe(201);
+    const { params } = await signInWithSso(outsiderEmail, identifier);
+    expect(params.get("sso_error")).toBe("sso.email_not_allowed");
   });
 
   it("refuses return addresses outside the allow-list", async () => {

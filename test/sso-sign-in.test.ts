@@ -126,7 +126,7 @@ describe("SSO sign-in", () => {
     );
     expect(
       await screen.findByText(
-        "This email is not on a verified domain of the organization and has no pending invitation.",
+        "This email is not on a verified domain of the organization. Sign in with your master password instead.",
       ),
     ).toBeTruthy();
     expect(requests).toEqual([]);

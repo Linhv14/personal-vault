@@ -1211,7 +1211,7 @@ export const vi: Catalogue = {
   "error.sso.failed": "Nhà cung cấp danh tính chưa xác nhận đăng nhập. Vui lòng thử lại.",
   "error.sso.email_unverified": "Nhà cung cấp danh tính chưa xác minh địa chỉ email này.",
   "error.sso.email_not_allowed":
-    "Email này không thuộc domain đã xác minh của tổ chức và không có lời mời đang chờ.",
+    "Email này không thuộc domain đã xác minh của tổ chức. Hãy đăng nhập bằng mật khẩu chính.",
   "sso.sign_in": "Đăng nhập bằng SSO",
   "sso.sign_in_hint": "Dùng nhà cung cấp danh tính của công ty",
   "sso.title": "Đăng nhập một lần",
@@ -1269,7 +1269,7 @@ export const vi: Catalogue = {
   "sso_admin.policies": "Chính sách",
   "sso_admin.require_sso": "Bắt buộc đăng nhập một lần",
   "sso_admin.require_sso_hint":
-    "Thành viên không phải chủ sở hữu hoặc quản trị viên phải đăng nhập qua SSO thay vì chỉ dùng mật khẩu chính.",
+    "Thành viên thuộc domain đã xác minh, trừ chủ sở hữu và quản trị viên, phải đăng nhập qua SSO thay vì chỉ dùng mật khẩu chính.",
   "sso_admin.single_org": "Một tổ chức duy nhất",
   "sso_admin.single_org_hint":
     "Thành viên không phải chủ sở hữu hoặc quản trị viên không thể tham gia tổ chức khác, và người thuộc tổ chức khác không thể tham gia tổ chức này.",
