@@ -13,11 +13,11 @@ import { accountRecoveredEmail, twoFactorDisabledEmail } from "../../emails.js";
 import { apiError } from "../../errors.js";
 import { inBackground, now, readJson } from "../../http.js";
 import { createMailer } from "../../mailer.js";
-import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../../one-time-code.js";
+import { CODE_RESEND_COOLDOWN_SECONDS } from "../../one-time-code.js";
 import {
-  checkRecoveryEmailCode,
   clearRecoveryEmailCode,
   issueRecoveryEmailCode,
+  recoveryEmailCodeError,
   sendRecoveryEmailCode,
 } from "../../recovery-email.js";
 import { clientIp } from "../../request.js";
@@ -25,8 +25,7 @@ import { revokeAllSessions } from "../../session.js";
 import { throttle } from "../../throttle.js";
 import { disableStatements } from "../../two-factor.js";
 import type { AppBindings, Env } from "../../types.js";
-import { isBase64 } from "../../validate.js";
-import { isKdf, isSealed } from "./bodies.js";
+import { isBase64, isKdf, isSealed } from "../../validate.js";
 
 const routes = new Hono<AppBindings>();
 
@@ -64,28 +63,6 @@ async function checkRecovery(
   }
   await guard.clear();
   return row;
-}
-
-async function emailCodeError(
-  env: Env,
-  accountId: string,
-  code: unknown,
-  timestamp: number,
-): Promise<"auth.invalid_code" | "auth.code_expired" | null> {
-  if (!createMailer(env)) {
-    return null;
-  }
-  if (!isCode(code)) {
-    return "auth.invalid_code";
-  }
-  const result = await checkRecoveryEmailCode(env, accountId, code, timestamp);
-  if (result === "invalid") {
-    return "auth.invalid_code";
-  }
-  if (result === "expired") {
-    return "auth.code_expired";
-  }
-  return null;
 }
 
 routes.post("/recover/email", async (c) => {
@@ -135,7 +112,7 @@ routes.post("/recover/start", async (c) => {
   if (!row) {
     return c.json(apiError("auth.invalid_recovery_code"), 401);
   }
-  const codeError = await emailCodeError(c.env, row.id, body.emailCode, timestamp);
+  const codeError = await recoveryEmailCodeError(c.env, row.id, body.emailCode, timestamp);
   if (codeError) {
     return c.json(apiError(codeError), 400);
   }
@@ -170,7 +147,7 @@ routes.post("/recover/finish", async (c) => {
   if (!row) {
     return c.json(apiError("auth.invalid_recovery_code"), 401);
   }
-  const codeError = await emailCodeError(c.env, row.id, body.emailCode, timestamp);
+  const codeError = await recoveryEmailCodeError(c.env, row.id, body.emailCode, timestamp);
   if (codeError) {
     return c.json(apiError(codeError), 400);
   }

@@ -1,8 +1,13 @@
 import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
 import { recoveryCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
-import type { Mailer } from "./mailer.js";
-import { CODE_MAX_ATTEMPTS, CODE_RESEND_COOLDOWN_SECONDS, generateCode } from "./one-time-code.js";
+import { createMailer, type Mailer } from "./mailer.js";
+import {
+  CODE_MAX_ATTEMPTS,
+  CODE_RESEND_COOLDOWN_SECONDS,
+  generateCode,
+  isCode,
+} from "./one-time-code.js";
 import type { Env } from "./types.js";
 
 const CODE_TTL_SECONDS = 15 * 60;
@@ -84,4 +89,26 @@ export async function clearRecoveryEmailCode(env: Env, accountId: string): Promi
   await env.DB.prepare("DELETE FROM recovery_email_codes WHERE account_id = ?")
     .bind(accountId)
     .run();
+}
+
+export async function recoveryEmailCodeError(
+  env: Env,
+  accountId: string,
+  code: unknown,
+  timestamp: number,
+): Promise<"auth.invalid_code" | "auth.code_expired" | null> {
+  if (!createMailer(env)) {
+    return null;
+  }
+  if (!isCode(code)) {
+    return "auth.invalid_code";
+  }
+  const result = await checkRecoveryEmailCode(env, accountId, code, timestamp);
+  if (result === "invalid") {
+    return "auth.invalid_code";
+  }
+  if (result === "expired") {
+    return "auth.code_expired";
+  }
+  return null;
 }

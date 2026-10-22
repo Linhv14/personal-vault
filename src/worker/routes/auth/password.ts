@@ -4,8 +4,7 @@ import { apiError } from "../../errors.js";
 import { readJson } from "../../http.js";
 import { revokeAllSessions, revokeOtherSessions } from "../../session.js";
 import type { AppBindings } from "../../types.js";
-import { isBase64 } from "../../validate.js";
-import { isKdf, isSealed } from "./bodies.js";
+import { isBase64, isKdf, isSealed } from "../../validate.js";
 
 const routes = new Hono<AppBindings>();
 

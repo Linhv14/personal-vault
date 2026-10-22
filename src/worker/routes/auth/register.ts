@@ -4,23 +4,22 @@ import { protectAuthKey, protectWrappedKey } from "../../at-rest.js";
 import { deviceLabel } from "../../device-label.js";
 import { normalizeEmail } from "../../email-address.js";
 import {
-  consumeCode,
   emailVerificationEnabled,
   issueCode,
   sendCode,
+  verificationCodeError,
 } from "../../email-verification.js";
 import { apiError } from "../../errors.js";
 import { inBackground, now, readJson } from "../../http.js";
 import { keyedHash } from "../../keyed-hash.js";
 import { createMailer } from "../../mailer.js";
-import { CODE_RESEND_COOLDOWN_SECONDS, isCode } from "../../one-time-code.js";
+import { CODE_RESEND_COOLDOWN_SECONDS } from "../../one-time-code.js";
 import { OrgDirectory } from "../../orgs/directory.js";
 import { joinFromInvite } from "../../orgs/invitations.js";
 import { clientIp, isOpenRegistration } from "../../request.js";
 import { createSession, decoySession, noteDevice } from "../../session.js";
 import type { AppBindings, Env } from "../../types.js";
-import { isBase64, isUuid } from "../../validate.js";
-import { isKdf, isSealed } from "./bodies.js";
+import { isBase64, isKdf, isSealed, isUuid } from "../../validate.js";
 
 const routes = new Hono<AppBindings>();
 
@@ -63,17 +62,9 @@ routes.post("/register", async (c) => {
   }
 
   const timestamp = now();
-  if (emailVerificationEnabled(c.env)) {
-    if (!isCode(verificationCode)) {
-      return c.json(apiError("auth.invalid_code"), 400);
-    }
-    const verified = await consumeCode(c.env, email, verificationCode, timestamp);
-    if (verified === "invalid") {
-      return c.json(apiError("auth.invalid_code"), 400);
-    }
-    if (verified === "expired") {
-      return c.json(apiError("auth.code_expired"), 400);
-    }
+  const codeError = await verificationCodeError(c.env, email, verificationCode, timestamp);
+  if (codeError) {
+    return c.json(apiError(codeError), 400);
   }
   if (openRegistration && !(await claimRegistrationSlot(c.env, clientIp(c), timestamp))) {
     return c.json(apiError("auth.registration_limit"), 429);
