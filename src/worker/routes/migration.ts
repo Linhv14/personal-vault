@@ -1,5 +1,5 @@
+import { sameSecret } from "../../core/primitives.js";
 import { Hono } from "hono";
-import { utf8Encode } from "../../core/bytes.js";
 import { apiError } from "../errors.js";
 import { readJson } from "../http.js";
 import { isPlainObject } from "../../core/json.js";
@@ -24,10 +24,7 @@ migration.use("*", async (c, next) => {
   if (!expected) {
     return c.json(apiError("server.not_found"), 404);
   }
-  const [a, b] = await Promise.all(
-    [provided, expected].map((value) => crypto.subtle.digest("SHA-256", utf8Encode(value))),
-  );
-  if (!crypto.subtle.timingSafeEqual(a!, b!)) {
+  if (!(await sameSecret(provided, expected))) {
     return c.json(apiError("auth.unauthorized"), 401);
   }
   await next();

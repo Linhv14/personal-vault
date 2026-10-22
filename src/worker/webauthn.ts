@@ -1,3 +1,4 @@
+import { sha256 } from "../core/primitives.js";
 import { fromBase64Url, timingSafeEqual, utf8Encode, type Bytes } from "../core/bytes.js";
 import { isPlainObject } from "../core/json.js";
 
@@ -19,10 +20,6 @@ export interface AssertionInput {
   clientDataJSON: string;
   authenticatorData: string;
   signature: string;
-}
-
-async function sha256(data: Bytes): Promise<Bytes> {
-  return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
 }
 
 function rawEcdsaSignature(der: Bytes): Bytes | null {

@@ -247,6 +247,33 @@ export default defineConfig(
     },
   },
   {
+    files: ["**/*.{ts,tsx}"],
+    ignores: [
+      "src/core/**",
+      "src/worker/at-rest.ts",
+      "src/worker/webauthn.ts",
+      "src/worker/github-oidc.ts",
+      "extension/lib/passkey/authenticator.ts",
+      "extension/lib/import/bitwarden.ts",
+      "extension/lib/import/openpgp.ts",
+      "extension/lib/import/proton-passkey.ts",
+      "test/**",
+      "e2e-browser/**",
+      "scripts/**",
+      "tools/**",
+    ],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "crypto",
+          property: "subtle",
+          message: "Use src/core/primitives.ts or src/core/crypto.ts instead of crypto.subtle.",
+        },
+      ],
+    },
+  },
+  {
     files: ["extension/background.ts", "src/worker/**/*.ts"],
     rules: {
       "no-restricted-globals": [

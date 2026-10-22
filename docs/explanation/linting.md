@@ -25,3 +25,35 @@ Tool directives are allowed: a shebang, `/// <reference />`,
 `// @vitest-environment`, `@ts-expect-error` and `eslint-disable`. Workflow
 files are not checked, because Renovate reads the `# vX.Y.Z` note next to each
 pinned action digest to know which release it is.
+
+## Import boundaries
+
+`import/no-restricted-paths` keeps the folders layered. `src/core` imports
+nothing outside itself. `web/` reaches the extension only through
+`extension/web-host.ts`, so the dashboard's dependency on the client app is one
+reviewed file rather than a scattering of deep imports. `extension/settings` and
+`extension/console` do not import each other; the pieces both need live in
+`extension/ui/`. The one exception is `extension/console/main.tsx`, the entry
+that mounts the settings pages inside the console. `extension/lib` does not
+import UI modules, so background and content code never pull in Preact or the
+DOM helpers by accident.
+
+## One place for cryptography
+
+`crypto.subtle` may only be called from `src/core/` and from a short list of
+protocol adapters. Key derivation, hashing, HMAC and secret comparison go through
+`src/core/primitives.ts` and `src/core/crypto.ts`, which are covered by RFC test
+vectors, so a reviewer checking how keys are made reads one folder instead of
+every caller.
+
+The adapters keep their own calls because they implement someone else's wire
+format rather than 7key's key hierarchy:
+
+- `src/worker/at-rest.ts` seals data at rest with the server secret.
+- `src/worker/webauthn.ts` and `src/worker/github-oidc.ts` verify signatures in
+  formats defined by WebAuthn and GitHub's OIDC tokens.
+- `extension/lib/passkey/authenticator.ts` signs WebAuthn assertions.
+- `extension/lib/import/bitwarden.ts`, `openpgp.ts` and `proton-passkey.ts`
+  decrypt or re-encode other password managers' exports.
+
+ESLint's `no-restricted-properties` rejects `crypto.subtle` anywhere else.

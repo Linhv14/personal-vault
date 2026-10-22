@@ -1,4 +1,4 @@
-import type { Bytes } from "./bytes.js";
+import { timingSafeEqual, utf8Encode, type Bytes } from "./bytes.js";
 
 export async function pbkdf2Bits(
   secret: Bytes,
@@ -48,4 +48,20 @@ export async function sha1(data: Bytes): Promise<Bytes> {
 
 export async function sha256(data: Bytes): Promise<Bytes> {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+}
+
+export async function hmacSha256(key: Bytes, message: Bytes): Promise<Bytes> {
+  const hmacKey = await crypto.subtle.importKey(
+    "raw",
+    key,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return new Uint8Array(await crypto.subtle.sign("HMAC", hmacKey, message));
+}
+
+export async function sameSecret(provided: string, expected: string): Promise<boolean> {
+  const [a, b] = await Promise.all([sha256(utf8Encode(provided)), sha256(utf8Encode(expected))]);
+  return timingSafeEqual(a, b);
 }

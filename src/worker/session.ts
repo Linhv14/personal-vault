@@ -1,4 +1,5 @@
-import { toBase64, toBase64Url, randomBytes } from "../core/bytes.js";
+import { sha256 } from "../core/primitives.js";
+import { toBase64, toBase64Url, randomBytes, utf8Encode } from "../core/bytes.js";
 import type { Env, SessionContext } from "./types.js";
 
 export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -7,8 +8,7 @@ const TOUCH_INTERVAL_SECONDS = 5 * 60;
 const MAX_SESSIONS_PER_ACCOUNT = 20;
 
 export async function hashToken(token: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  return toBase64(new Uint8Array(digest));
+  return toBase64(await sha256(utf8Encode(token)));
 }
 
 export function decoySession(now: number): { token: string; expiresAt: number } {
@@ -100,11 +100,8 @@ export async function revokeOtherSessions(
 }
 
 export async function sessionId(tokenHash: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(`session-id:${tokenHash}`),
-  );
-  return toBase64Url(new Uint8Array(digest).slice(0, 16));
+  const digest = await sha256(utf8Encode(`session-id:${tokenHash}`));
+  return toBase64Url(digest.slice(0, 16));
 }
 
 export interface SessionSummary {

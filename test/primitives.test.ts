@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { randomBytes, utf8Encode, type Bytes } from "../src/core/bytes.js";
-import { hkdfAesKey, pbkdf2AesKey, pbkdf2Bits, sha1, sha256 } from "../src/core/primitives.js";
+import {
+  hkdfAesKey,
+  hmacSha256,
+  pbkdf2AesKey,
+  pbkdf2Bits,
+  sameSecret,
+  sha1,
+  sha256,
+} from "../src/core/primitives.js";
 
 const hex = (bytes: Uint8Array) =>
   [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -53,5 +61,16 @@ describe("crypto primitives", () => {
     await expect(
       roundTrip(pin, await hkdfAesKey(material, utf8Encode("personal-vault/biometric"))),
     ).rejects.toThrow();
+  });
+
+  it("matches the RFC 4231 HMAC-SHA256 vector", async () => {
+    const mac = await hmacSha256(utf8Encode("Jefe"), utf8Encode("what do ya want for nothing?"));
+    expect(hex(mac)).toBe("5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843");
+  });
+
+  it("compares secrets of any length without leaking through an early exit", async () => {
+    expect(await sameSecret("token-dev-local", "token-dev-local")).toBe(true);
+    expect(await sameSecret("token-dev-local", "token-dev-locaX")).toBe(false);
+    expect(await sameSecret("", "token-dev-local")).toBe(false);
   });
 });

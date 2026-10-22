@@ -1,3 +1,4 @@
+import { sha256 } from "../../core/primitives.js";
 import { toBase64, utf8Encode } from "../../core/bytes.js";
 import type { AuditEvent } from "../../core/org-model.js";
 
@@ -11,8 +12,7 @@ export function chainInput(previous: string, entry: AuditEntry): string {
 }
 
 export async function chainHash(previous: string, entry: AuditEntry): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", utf8Encode(chainInput(previous, entry)));
-  return toBase64(new Uint8Array(digest));
+  return toBase64(await sha256(utf8Encode(chainInput(previous, entry))));
 }
 
 export async function verifyChain(previous: string, events: AuditEvent[]): Promise<boolean> {

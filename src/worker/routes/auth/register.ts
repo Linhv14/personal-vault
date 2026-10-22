@@ -1,5 +1,5 @@
+import { sameSecret } from "../../../core/primitives.js";
 import { Hono } from "hono";
-import { utf8Encode } from "../../../core/bytes.js";
 import { protectAuthKey, protectWrappedKey } from "../../at-rest.js";
 import { deviceLabel } from "../../device-label.js";
 import { normalizeEmail } from "../../email-address.js";
@@ -24,12 +24,6 @@ import { isBase64, isKdf, isSealed, isUuid } from "../../validate.js";
 const routes = new Hono<AppBindings>();
 
 const MAX_ACCOUNTS_PER_IP_PER_DAY = 5;
-
-async function sameSecret(provided: string, expected: string): Promise<boolean> {
-  const digest = (value: string) => crypto.subtle.digest("SHA-256", utf8Encode(value));
-  const [a, b] = await Promise.all([digest(provided), digest(expected)]);
-  return crypto.subtle.timingSafeEqual(a, b);
-}
 
 routes.post("/register", async (c) => {
   const body = await readJson(c);
