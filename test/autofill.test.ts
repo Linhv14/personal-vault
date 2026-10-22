@@ -590,6 +590,55 @@ describe("capture and save", () => {
     });
   });
 
+  it("uses the username typed on an earlier step for a password-only page", async () => {
+    await unlockWith([]);
+    const first = sender("https://news.example.com/signin")!;
+    await handleAutofill({ type: "autofill:identifier", username: " reader@example.com " }, first);
+    const page = sender("https://news.example.com/signin/password")!;
+    const captured = await handleAutofill(
+      { type: "autofill:capture", password: "fresh-password" },
+      page,
+    );
+    expect(captured).toMatchObject({
+      prompt: { username: "reader@example.com", update: false },
+    });
+    await handleAutofill({ type: "autofill:save" }, page);
+    const [saved] = await decryptAll(key);
+    expect(saved).toMatchObject({ username: "reader@example.com", password: "fresh-password" });
+  });
+
+  it("ignores a remembered username from another site", async () => {
+    await unlockWith([]);
+    const tab = { tab: { id: 7 } as chrome.tabs.Tab };
+    await handleAutofill(
+      { type: "autofill:identifier", username: "reader@example.com" },
+      sender("https://elsewhere.com/signin", tab)!,
+    );
+    const captured = await handleAutofill(
+      { type: "autofill:capture", password: "fresh-password" },
+      sender("https://news.example.com/signup", tab)!,
+    );
+    expect(captured).toMatchObject({ prompt: { update: false } });
+    expect((captured as { prompt: { username?: string } }).prompt.username).toBeUndefined();
+  });
+
+  it("updates the most recently used login when a password-only page names no account", async () => {
+    const OTHER = {
+      ...GITHUB,
+      id: "00000000-0000-4000-8000-000000000009",
+      username: "work@example.com",
+    };
+    await unlockWith([GITHUB, { ...OTHER, lastUsedAt: 1_700_000_000 }]);
+    const page = sender("https://github.com/settings/password")!;
+    const captured = await handleAutofill(
+      { type: "autofill:capture", password: "rotated-password" },
+      page,
+    );
+    expect(captured).toMatchObject({ prompt: { update: true, username: "work@example.com" } });
+    await handleAutofill({ type: "autofill:save" }, page);
+    expect(puts).toEqual([OTHER.id]);
+  });
+
   it("offers an update for a changed password and rewrites the same item", async () => {
     await unlockWith([GITHUB]);
     const page = sender("https://github.com/settings/password")!;

@@ -93,6 +93,25 @@ function pendingKey(tabId: number): string {
   return `autofill:pending:${tabId}`;
 }
 
+function identifierKey(tabId: number): string {
+  return `autofill:identifier:${tabId}`;
+}
+
+interface PendingIdentifier {
+  domain: string;
+  username: string;
+  at: number;
+}
+
+async function rememberedIdentifier(sender: TrustedSender): Promise<string | undefined> {
+  const key = identifierKey(sender.tabId);
+  const stored = (await chrome.storage.session.get(key))[key] as PendingIdentifier | undefined;
+  if (!stored || stored.domain !== sender.domain || Date.now() - stored.at > PENDING_TTL_MS) {
+    return undefined;
+  }
+  return stored.username;
+}
+
 function totpKey(tabId: number): string {
   return `autofill:totp:${tabId}`;
 }
@@ -257,7 +276,7 @@ function existingLogin(items: VaultItem[], pageUrl: string, username?: string) {
   );
   const candidates = onSite.filter((item) => sameUsername(item.username, username));
   const logins = onSite.filter((item) => item.password);
-  const fallback = !username && candidates.length === 0 && logins.length === 1 ? logins : [];
+  const fallback = !username && candidates.length === 0 ? logins.sort(byLastUsed).slice(0, 1) : [];
   const pool = candidates.length > 0 ? candidates : fallback;
   return (
     pool.find((item) => sameSite(item, pageUrl) === "exact") ??
@@ -285,7 +304,7 @@ function promptFor(
   const existing = items && existingLogin(items, pageUrl, pending.username);
   return {
     domain: pending.site ?? pending.domain,
-    username: pending.username,
+    username: pending.username ?? existing?.username,
     update: Boolean(existing),
     confirmed: Boolean(pending.confirmed),
   };
@@ -339,6 +358,15 @@ export async function handleAutofill(
     case "autofill:generate":
       return { ok: true, password: generatePassword({ length: 20 }).value };
 
+    case "autofill:identifier": {
+      const username = request.username.trim();
+      if (username && !(await isVaultServer(sender.url))) {
+        const stored: PendingIdentifier = { domain: sender.domain, username, at: Date.now() };
+        await chrome.storage.session.set({ [identifierKey(sender.tabId)]: stored });
+      }
+      return { ok: true, prompt: null };
+    }
+
     case "autofill:capture": {
       if (!request.password || (await isVaultServer(sender.url))) {
         return { ok: true, prompt: null };
@@ -346,7 +374,7 @@ export async function handleAutofill(
       const pending: PendingCapture = {
         domain: sender.domain,
         site: sender.site,
-        username: request.username || undefined,
+        username: request.username || (await rememberedIdentifier(sender)),
         password: request.password,
         at: Date.now(),
       };

@@ -90,6 +90,7 @@ export type AutofillRequest =
   | { type: "autofill:fill"; id: string }
   | { type: "autofill:generate" }
   | { type: "autofill:capture"; username?: string; password: string }
+  | { type: "autofill:identifier"; username: string }
   | { type: "autofill:pending" }
   | { type: "autofill:confirm" }
   | { type: "autofill:save" }

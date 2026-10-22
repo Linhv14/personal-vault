@@ -818,9 +818,28 @@ function capturedPassword(scope: ParentNode): string {
   return repeated ?? values.at(-1) ?? "";
 }
 
+function rememberIdentifier(scope: ParentNode): void {
+  const field = [
+    ...scope.querySelectorAll<HTMLInputElement>(
+      'input[type="email"], input[type="text"], input[type="tel"], input:not([type])',
+    ),
+  ].find(
+    (input) =>
+      isVisible(input) &&
+      input.value.trim() &&
+      (/username|email/.test(input.autocomplete) || USERNAME_HINT.test(describe(input))),
+  );
+  if (field) {
+    void send({ type: "autofill:identifier", username: field.value.trim() });
+  }
+}
+
 async function capture(scope: ParentNode): Promise<void> {
   const fields = passwordFields(scope);
   if (fields.length === 0) {
+    if (scope !== document) {
+      rememberIdentifier(scope);
+    }
     return;
   }
   const password = capturedPassword(scope);
@@ -988,8 +1007,12 @@ document.addEventListener("keydown", (event) => {
     menuRows()[0]?.focus();
   }
   const target = event.target;
-  if (event.key === "Enter" && target instanceof HTMLInputElement && target.type === "password") {
-    void capture(scopeOf(target));
+  if (event.key === "Enter" && target instanceof HTMLInputElement) {
+    if (target.type === "password") {
+      void capture(scopeOf(target));
+    } else if (target.form) {
+      rememberIdentifier(target.form);
+    }
   }
 });
 document.addEventListener(
@@ -1013,6 +1036,8 @@ document.addEventListener(
     const scope = (button as HTMLButtonElement).form ?? button.closest("form") ?? document;
     if (passwordFields(scope).some((field) => field.value)) {
       void capture(scope);
+    } else if (scope !== document) {
+      rememberIdentifier(scope);
     }
   },
   true,
