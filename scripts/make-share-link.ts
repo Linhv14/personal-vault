@@ -1,11 +1,3 @@
-/**
- * Creates a real share link against a locally running Worker, so the `/s/:id`
- * page can be checked in a real browser.
- *
- *   npx esbuild scripts/make-share-link.ts --bundle --platform=node --format=esm --outfile=dist/mk.mjs
- *   node dist/mk.mjs
- */
-
 import { createAccount } from "../src/core/crypto.js";
 import { buildShareUrl, createShare } from "../src/core/share.js";
 

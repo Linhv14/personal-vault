@@ -1,8 +1,3 @@
-/**
- * Worker client. Everything passing through here is already encrypted — no
- * function in this file sees plaintext or takes a key.
- */
-
 import {
   isKdfParams,
   isSealedData,
@@ -13,13 +8,8 @@ import {
 import { isPlainObject } from "../../src/core/json.js";
 import { getLocal, getUnlocked, lock, setToken, type CachedItem } from "./storage.js";
 
-/**
- * `status: 0` means the request never reached the server. The UI distinguishes
- * it from a real failure because the vault still works offline from its cache.
- */
 export class ApiError extends Error {
   constructor(
-    /** i18n key, e.g. `error.api.offline` or `error.auth.invalid_credentials`. */
     readonly messageKey: string,
     readonly status: number,
     readonly params: Record<string, string | number> = {},
@@ -97,8 +87,6 @@ export async function request<T>(
   }
 
   if (response.status === 401 && init.auth !== false) {
-    // The server dropped the session: lock so the user re-derives the key,
-    // rather than silently retrying with a dead token.
     await lock();
     throw new ApiError("error.api.session_expired", 401);
   }
@@ -316,8 +304,6 @@ export async function loginSecondFactor(challenge: string, code: string): Promis
 }
 
 export async function logout(): Promise<void> {
-  // A failed server-side logout is not worth surfacing: clearing local keys is
-  // what matters, and the session expires on its own.
   await request("/api/auth/logout", { method: "POST" }).catch(() => {});
 }
 

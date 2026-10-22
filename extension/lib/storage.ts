@@ -1,22 +1,9 @@
-/**
- * Two storage areas, and the boundary between them is the extension's most
- * important security decision:
- *
- * - `chrome.storage.local` is ON DISK in the clear. Ciphertext and settings only.
- * - `chrome.storage.session` is in memory and cleared when the browser closes.
- *   The vault key and session token live here; see resume.ts for the disk copy.
- *
- * Mixing the two is a failure with no visible symptom: everything keeps working,
- * your keys are just sitting on disk.
- */
-
 import type { KdfParams, SealedData } from "../../src/core/crypto.js";
 import type { LocalePreference } from "../../src/i18n/index.js";
 import { isPlainObject } from "../../src/core/json.js";
 import { normalizeLocalState } from "./local-state.js";
 import { platform } from "./platform.js";
 
-/** An item exactly as the server stores it — always ciphertext. */
 export interface CachedItem {
   id: string;
   ciphertext: string | null;
@@ -29,7 +16,6 @@ export interface LocalState {
   apiUrl?: string;
   email?: string;
   kdf?: KdfParams;
-  /** Cached so the vault can be unlocked without a network connection. */
   wrappedVaultKey?: SealedData;
   items?: CachedItem[];
   lastSync?: number;
@@ -40,7 +26,6 @@ export interface LocalState {
   sharedLinks?: SealedData;
   autoLockMinutes?: number;
   hasPasskeys?: boolean;
-  /** Offset of this machine's clock against the server, in seconds. */
   clockSkew?: number;
   locale?: LocalePreference;
   showLogos?: boolean;
@@ -66,9 +51,9 @@ export interface CachedSharedVault {
 }
 
 interface SessionState {
-  vaultKeyRaw?: string; // base64
+  vaultKeyRaw?: string;
   token?: string;
-  lockAt?: number; // epoch ms
+  lockAt?: number;
   focusItem?: string;
 }
 
@@ -166,8 +151,6 @@ export async function getUnlocked(): Promise<{ vaultKeyRaw: string; token?: stri
     return null;
   }
 
-  // Check the deadline here rather than trusting the alarm alone: MV3 can kill
-  // the service worker and delay alarms, but the popup must always be right.
   if (session.lockAt && Date.now() > session.lockAt) {
     await lock();
     return null;
@@ -181,7 +164,6 @@ export async function unlock(vaultKeyRaw: string, token: string | undefined): Pr
   await scheduleLockAlarm();
 }
 
-/** Extend the deadline on activity so the vault never locks mid-use. */
 export async function requestItemFocus(id: string): Promise<void> {
   await platform().session.set({ focusItem: id });
 }
@@ -212,8 +194,6 @@ export async function notePasskeys(present: boolean): Promise<void> {
 }
 
 export async function lock(): Promise<void> {
-  // clear() rather than deleting named keys, so adding a field later cannot
-  // leave a secret behind.
   await platform().session.clear();
   await platform().local.remove("resume");
 }

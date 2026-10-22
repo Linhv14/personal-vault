@@ -1,12 +1,3 @@
-/**
- * Client-side vault model: decrypt the cache, sync deltas, save, delete, and
- * find items matching the open tab.
- *
- * Domain matching happens here rather than on the server on purpose. For the
- * server to query by URL it would have to store URLs in the clear, and the list
- * of every site you hold an account on is nearly as sensitive as the passwords.
- */
-
 import { importVaultKey, openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
 import { fromBase64, toBase64, utf8Encode } from "../../src/core/bytes.js";
 import type { TotpConfig } from "../../src/core/totp.js";
@@ -214,7 +205,6 @@ export async function decryptEverything(
         output.push(resolved);
       }
     } catch {
-      // One corrupt item must not take down the whole list.
       warn("Skipping item that failed to decrypt:", row.id);
     }
   }
@@ -242,7 +232,6 @@ export async function decryptAll(
   return (await decryptEverything(key, locale, includeTrashed)).items;
 }
 
-/** Returns the number of changed items, or `null` when offline. */
 export async function sync(): Promise<number | null> {
   const { lastSync = 0, items = [] } = await getLocal();
 
@@ -261,8 +250,6 @@ export async function sync(): Promise<number | null> {
     const merged = new Map(items.map((item) => [item.id, item]));
     for (const incoming of response.items) {
       const existing = merged.get(incoming.id);
-      // Last write wins on the server clock. Two devices editing the same item
-      // within the same second is not worth more machinery for a personal vault.
       if (!existing || incoming.updatedAt >= existing.updatedAt) {
         if (
           !existing ||
@@ -279,7 +266,6 @@ export async function sync(): Promise<number | null> {
     }
   }
 
-  // The cursor is the server's clock, never the local one.
   await setLocal({ lastSync: response.serverTime });
   const sharedChanged = await syncSharedVaults().catch(() => 0);
   return changed + (sharedChanged ?? 0);
@@ -525,8 +511,6 @@ async function upsertCache(row: CachedItem): Promise<void> {
 }
 
 export function newItemId(): string {
-  // The client mints ids so create and update share one PUT path, which makes a
-  // retry after a dropped connection idempotent instead of duplicating.
   return crypto.randomUUID();
 }
 

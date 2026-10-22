@@ -53,6 +53,14 @@ npm run dev
 VAULT_E2E=1 npx vitest run test/e2e.test.ts
 ```
 
+To check the `/s/:id` page in a real browser, `scripts/make-share-link.ts`
+creates a share against the local Worker and prints its link:
+
+```bash
+npx esbuild scripts/make-share-link.ts --bundle --platform=node --format=esm --outfile=dist/mk.mjs
+node dist/mk.mjs
+```
+
 ## Calling Wrangler directly
 
 `wrangler.toml` is a template with no account or database id. Wrangler commands

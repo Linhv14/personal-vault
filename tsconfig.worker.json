@@ -1,7 +1,4 @@
 {
-  // Cloudflare Worker project. No DOM lib on purpose: if a Worker file reaches
-  // for `document` or `localStorage`, that should fail at typecheck rather than
-  // at runtime.
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

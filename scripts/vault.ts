@@ -1,22 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Project task runner: deploys Personal Vault to the Cloudflare account of
- * whoever runs it. Reached through npm scripts:
- *
- *   npm run deploy    create D1 and secrets if absent, migrate, build, deploy
- *   npm run dev       run the Worker locally against a local D1
- *   npm run status    show which account and resources are in use
- *   npm run logs      tail the Worker
- *
- * Written by hand rather than relying on CLI provisioning: neither Wrangler
- * 4.149 nor the current `cf` beta creates a D1 database automatically when the
- * binding has no id.
- *
- * Deliberately not exposed as a `cf` command: Cloudflare ships an official CLI
- * by that name (open beta, September 2026), and shadowing it would be hostile.
- */
-
 import { spawn, spawnSync } from "node:child_process";
 import {
   appendFileSync,
@@ -43,14 +26,6 @@ const GENERATED = path.join(root, ".wrangler.local.toml");
 const STATE = path.join(root, ".cf-state.json");
 const SECRETS_NOTE = path.join(root, ".secrets.local.txt");
 
-/**
- * Invoke the Wrangler entrypoint directly with the current Node binary, without
- * npx and without a shell.
- *
- * On Windows, `spawn("npx", args, { shell: true })` breaks when the Node path
- * contains a space — the default is "C:\Program Files\nodejs" — because the
- * shell splits on it and reports "Cannot find module C:\Program Files\nodejs".
- */
 const WRANGLER = path.join(root, "node_modules", "wrangler", "bin", "wrangler.js");
 
 const DB_NAME = "vault";
@@ -82,14 +57,6 @@ const style = {
   fail: (text: string) => console.error(`\n\x1b[31m✗ ${text}\x1b[0m`),
 };
 
-/**
- * Set once the account is known and passed to every later wrangler call.
- *
- * `wrangler d1 list` and `d1 create` run before the generated config exists, and
- * with credentials that reach more than one account they abort rather than
- * guess. Without this the database lookup fails silently and the script tries to
- * create a database that is already there.
- */
 let accountEnv: Record<string, string> = {};
 
 function wranglerEnv() {
@@ -105,10 +72,6 @@ function wranglerCapture(args: string[]) {
   return { ok: result.status === 0, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
-/**
- * Like wranglerInherit, but also returns what was printed. Used for `deploy`,
- * whose output is the only place the Worker URL appears.
- */
 function wranglerTee(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [WRANGLER, ...args], {
@@ -142,21 +105,23 @@ function wranglerInherit(args: string[]): Promise<void> {
   });
 }
 
-/**
- * Wrangler prints logs and JSON to the same stream, so try parsing from each
- * opening brace in turn. Taking only the last one would land inside a nested
- * object; taking only the first fails when a log line contains a brace.
- */
+function tryParseJson<T>(text: string): T | null {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 function parseJsonFromOutput<T>(output: string): T | null {
   for (let i = 0; i < output.length; i++) {
     const char = output[i];
     if (char !== "{" && char !== "[") {
       continue;
     }
-    try {
-      return JSON.parse(output.slice(i)) as T;
-    } catch {
-      // Not the start of the JSON block; keep looking.
+    const parsed = tryParseJson<T>(output.slice(i));
+    if (parsed !== null) {
+      return parsed;
     }
   }
   return null;
@@ -222,7 +187,6 @@ async function ensureLogin() {
     (accounts.length === 1 ? accounts[0] : null);
 
   if (!account) {
-    // Deploying into the wrong account is not something a script should guess at.
     style.warn(`Your credentials reach ${accounts.length} accounts:`);
     account = await ask(
       "Deploy to which account?",
@@ -253,7 +217,6 @@ async function ensureDatabase() {
   style.info(`Creating database "${DB_NAME}"…`);
   await wranglerInherit(["d1", "create", DB_NAME]);
 
-  // `d1 create` has no --json, so read the list back to learn the uuid.
   const after =
     parseJsonFromOutput<Database[]>(wranglerCapture(["d1", "list", "--json"]).stdout) ?? [];
   const created = after.find((db) => db.name === DB_NAME);
@@ -266,11 +229,6 @@ async function ensureDatabase() {
   return created.uuid;
 }
 
-/**
- * `wrangler.toml` in the repository deliberately carries no account or database
- * id — this is a public template and those values belong to each operator. The
- * generated file is gitignored.
- */
 function writeGeneratedConfig(
   accountId: string,
   databaseId: string,
@@ -302,8 +260,6 @@ async function ensureSecrets(configPath: string, options: DeployOptions): Promis
       );
     }
 
-    // The registration token is shorter because it gets typed into the
-    // extension by hand; the probe secret is server-only.
     const value = randomBytes(name === "REGISTRATION_TOKEN" ? 24 : 32).toString("base64url");
     const result = spawnSync(
       process.execPath,
@@ -342,8 +298,6 @@ async function ensureSecrets(configPath: string, options: DeployOptions): Promis
     );
   }
   if (lines.length > 0) {
-    // Written to a file rather than printed: terminals get scrolled back,
-    // screenshotted, and pasted into bug reports.
     if (!existsSync(SECRETS_NOTE)) {
       writeFileSync(
         SECRETS_NOTE,
@@ -382,8 +336,6 @@ async function deploy() {
   style.step("Deploying the Worker");
   const output = await wranglerTee(["deploy", "-c", configPath]);
 
-  // Remember the URL so the next build can bake it into the extension; without
-  // it every install starts by asking the user to retype their own server.
   const url = options.customDomain
     ? `https://${options.customDomain}`
     : output.match(/https:\/\/\S+\.workers\.dev/)?.[0];
@@ -411,7 +363,6 @@ async function dev() {
   await wranglerInherit(["d1", "migrations", "apply", DB_NAME, "--local"]);
 
   if (!existsSync(path.join(root, ".dev.vars"))) {
-    // Local runs get their own secrets; never the production ones.
     writeFileSync(
       path.join(root, ".dev.vars"),
       [

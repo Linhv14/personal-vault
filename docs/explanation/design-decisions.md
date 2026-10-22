@@ -43,6 +43,26 @@ or creates the database, renders `.wrangler.local.toml` from the template,
 applies migrations, generates secrets, deploys, and rebuilds the extension with
 the Worker URL. It is idempotent, so the same command installs and upgrades.
 
+**The deploy script writes generated secrets to a file, not the terminal.**
+Terminal output gets scrolled back, screenshotted and pasted into bug reports;
+`.secrets.local.txt` is written once and meant to be moved offline. The
+registration token is shorter than the other secrets (24 bytes rather than 32)
+because someone types it into the extension by hand; the others never leave
+the server. `npm run dev` generates its own local secrets and never uses the
+production ones.
+
+**The Worker URL is baked into the extension at build time.** `npm run deploy`
+remembers the URL it deployed to, and the next build uses it as the default
+server, so a fresh install does not ask its owner to retype the address of
+their own server. Without a deployment the build falls back to the hosted
+service in `deploy/production.json`, and only with neither is the default
+empty.
+
+**esbuild, not a full bundler.** The share page and the extension compile to
+plain JavaScript; Vite or webpack would only add something else to maintain.
+Release builds carry no source maps, so a published extension does not ship a
+map pointing back at the source; development builds inline them.
+
 **Wrangler, not the `cf` CLI.** Cloudflare's `cf` CLI entered open beta in
 September 2026. It uses a different configuration format and also does not
 provision a database for an unbound binding. Moving brings churn for no gain
@@ -80,6 +100,20 @@ which half of a guess was right.
 
 **Errors never echo their cause.** A D1 error can contain the SQL statement;
 unhandled errors return `server.error` and go to the log only.
+
+Each error response still carries an English `error` sentence next to its
+`code`. The extension localizes the code; the sentence is there so someone
+calling the API with curl gets something readable without a table.
+
+**Share ids are random, not a counter.** Sequential ids would let anyone
+enumerate every share that currently exists.
+
+**The client mints item ids.** Creating and updating an item are the same `PUT`,
+so retrying after a dropped connection is idempotent instead of creating a
+duplicate.
+
+**Last write wins, on the server clock.** Two devices editing the same item in
+the same second is not worth more machinery for a personal vault.
 
 ## Extension
 
@@ -132,6 +166,27 @@ delete it too, so anyone who wants the old behaviour picks one of those.
 
 **`chrome.storage.local` holds only ciphertext and preferences.** The browser
 writes it to disk unencrypted.
+Mixing up the two storage areas has no visible symptom: everything keeps
+working while the keys sit on disk. `test/popup.test.ts` therefore checks that
+no key or plaintext ever lands in `storage.local`. Locking calls `clear()` on
+the session area rather than removing named keys, so a field added later cannot
+be left behind.
+
+**Auto-lock is checked on every read, not only by the alarm.** MV3 can stop the
+service worker and delay alarms, so the stored deadline is compared whenever
+the vault key is read, and the popup is never shown an unlocked vault past its
+deadline. Activity extends the deadline, so the vault does not lock mid-use.
+
+**A dead session locks the vault.** When the server answers that the session is
+gone, the extension locks and asks for the master password rather than
+retrying with a token that will never work. A request that never reached the
+server is reported separately from a failure, as `error.api.offline`, because
+the vault keeps working from its cache. Signing out still succeeds when the
+server cannot be reached: clearing local keys is what matters, and the session
+expires on its own.
+
+**One damaged item does not hide the list.** An item that fails to decrypt is
+skipped and the rest of the vault still opens.
 
 **The service worker clears the clipboard.** A timer in the popup dies when the
 popup closes, which is usually right after copying. The service worker sets an
@@ -169,6 +224,22 @@ handles a GitHub codes file and a Bitwarden vault.
 
 **`src/core` throws codes, not sentences.** The UI turns `VaultError` codes
 into text in the user's language; core code never needs to know which.
+The `message` on a `VaultError` is for developers, in logs, stack traces and
+tests; it stays in English and is never shown.
+
+**Translation is hand-rolled.** An i18n library would be a lot of third-party
+code in an extension that holds every password its user owns, for what amounts
+to a lookup and a string replacement. Translation happens only at the UI edge;
+the crypto, the Worker and the vault model never know which language is
+active. English is the source catalogue and every other locale is typed
+against its keys, so a missing translation is a compile error rather than a
+string that silently appears in English. The locale follows the browser's
+language list, matching on the primary subtag (`vi-VN` uses `vi`), and falls
+back to English, the one catalogue guaranteed complete. An unknown `{name}`
+placeholder is left as written, so a typo shows in the UI instead of rendering
+an empty string. Anything thrown that is not a `VaultError`, such as a bug or a
+DOM exception, is shown with its own English message: better than hiding a
+real failure behind a friendly phrase.
 
 ## Interface
 
@@ -207,6 +278,31 @@ scrolls off screen; the side menu holds only app actions.
   with the current Node binary instead.
 - **A deploy with `routes` turns `workers.dev` off** unless `workers_dev` is
   set explicitly. The generated config always sets it.
+- **Wrangler with access to several accounts** aborts `d1 list` and
+  `d1 create` rather than guess, and those run before the generated config
+  exists. Once the account is known, the deploy script passes it to every
+  later call; without that the database lookup failed silently and the script
+  tried to create a database that already existed. `d1 create` has no
+  `--json`, so the script reads the list back to learn the new id.
+- **Wrangler prints logs and JSON to the same stream.** The deploy script tries
+  to parse JSON from each opening brace in turn: taking only the last brace
+  lands inside a nested object, and taking only the first fails when a log
+  line contains a brace. The Worker URL appears only in `deploy`'s output, so
+  that output is captured as well as shown.
+- **`wrangler dev` holds `dist/public` open**, and removing the directory fails
+  with `EBUSY` on Windows; the build then clears its contents instead. The
+  build only ever cleans its own outputs, never all of `dist/`, which also
+  holds the packaged extension zips.
+- **An MV3 service worker runs in its own module scope**, so it is bundled
+  without code splitting: shared chunks would be files the manifest cannot
+  declare.
+- **TypeScript 5.7 made `Uint8Array` generic over its buffer**, while WebCrypto
+  accepts only views over a plain `ArrayBuffer`. `src/core/bytes.ts` exports a
+  `Bytes` alias for `Uint8Array<ArrayBuffer>` and copies into a fresh buffer
+  where needed, instead of casting at every `crypto.subtle` call.
+- **The Worker's `tsconfig` has no DOM library**, on purpose: a Worker file that
+  reaches for `document` or `localStorage` fails at typecheck rather than at
+  runtime.
 
 ### PIN unlock is a server-limited second key
 

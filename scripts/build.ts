@@ -1,11 +1,3 @@
-/**
- * Builds the share page and the extension with esbuild.
- *
- * esbuild rather than a full bundler because both outputs are plain
- * framework-free JavaScript; Vite or webpack here would only add something else
- * to maintain.
- */
-
 import { build, transform, type BuildOptions } from "esbuild";
 import { hasTokensMarker, injectTokens } from "./tokens.ts";
 import { renderMarkdown } from "./markdown.ts";
@@ -25,12 +17,6 @@ const outExtension = path.join(root, "dist", "extension");
 const watch = process.argv.includes("--watch");
 const dev = watch || process.argv.includes("--dev");
 
-/**
- * The Worker URL of the last deployment, baked into the extension so a fresh
- * install does not ask the user to retype the address of their own server.
- * Falls back to the hosted service in deploy/production.json, and is empty
- * only when neither exists.
- */
 function deployedServerUrl() {
   for (const file of [".cf-state.json", "deploy/production.json"]) {
     const config = path.join(root, file);
@@ -54,8 +40,6 @@ const common: BuildOptions = {
   bundle: true,
   format: "esm",
   target: "es2022",
-  // Source maps only in dev builds; a release should not ship a map pointing
-  // back at the source.
   sourcemap: dev ? "inline" : false,
   minify: !dev,
   logLevel: "info",
@@ -322,8 +306,6 @@ async function buildExtension() {
     entryPoints: entries(EXTENSION_PAGES),
     outdir: outExtension,
     outbase: source,
-    // An MV3 service worker runs in its own module scope; code splitting would
-    // emit shared chunks the manifest cannot declare.
     splitting: false,
   });
   await build({
@@ -372,13 +354,6 @@ async function packageForDownload() {
   }
 }
 
-/**
- * Clean only this script's own outputs, never all of dist/, which also holds
- * the packaged extension zips.
- *
- * `wrangler dev` keeps a handle on dist/public while running, which makes rmdir
- * fail with EBUSY on Windows; in that case clear the contents instead.
- */
 async function clean(dir: string): Promise<void> {
   if (!existsSync(dir)) {
     return;
