@@ -1,3 +1,5 @@
+import { utf8Encode } from "../../src/core/bytes.js";
+import { sha1 } from "../../src/core/primitives.js";
 import { HAS_PASSWORD_HISTORY, itemType } from "./item-types.js";
 import type { VaultItem } from "./vault/types.js";
 
@@ -72,8 +74,8 @@ export function reusedGroups(items: VaultItem[]): VaultItem[][] {
 }
 
 async function sha1Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)]
+  const digest = await sha1(utf8Encode(text));
+  return [...digest]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("")
     .toUpperCase();

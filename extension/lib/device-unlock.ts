@@ -1,3 +1,4 @@
+import { hkdfAesKey } from "../../src/core/primitives.js";
 import { concat, fromBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
 import { openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
 import { ApiError } from "./api.js";
@@ -9,20 +10,7 @@ export type Rejection = "gone" | "denied";
 
 async function wrappingKey(method: DeviceMethod, serverKey: string, local: Bytes) {
   const purpose = utf8Encode(`personal-vault/${method}`);
-  const material = await crypto.subtle.importKey(
-    "raw",
-    concat(fromBase64(serverKey), local),
-    "HKDF",
-    false,
-    ["deriveKey"],
-  );
-  const key = await crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(32), info: purpose },
-    material,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
+  const key = await hkdfAesKey(concat(fromBase64(serverKey), local), purpose);
   return { key, purpose };
 }
 

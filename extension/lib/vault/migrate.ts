@@ -1,3 +1,4 @@
+import { sha256 } from "../../../src/core/primitives.js";
 import { toBase64, utf8Encode } from "../../../src/core/bytes.js";
 import { getLocal, setLocal } from "../storage.js";
 import { isLive, openItem } from "./item-crypto.js";
@@ -5,11 +6,10 @@ import { saveItem } from "./store.js";
 import type { VaultItem } from "./types.js";
 
 async function accountTag(apiUrl: string, email: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
+  const digest = await sha256(
     utf8Encode(`personal-vault/aad-bound/${apiUrl.replace(/\/+$/, "")}/${email.toLowerCase()}`),
   );
-  return toBase64(new Uint8Array(digest));
+  return toBase64(digest);
 }
 
 export async function unboundItemsAllowed(): Promise<boolean> {

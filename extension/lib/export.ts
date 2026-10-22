@@ -1,3 +1,4 @@
+import { pbkdf2AesKey } from "../../src/core/primitives.js";
 import { openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
 import { fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
 import { buildOtpauthUri } from "../../src/core/totp.js";
@@ -25,16 +26,7 @@ export class ExportPassphraseError extends Error {
 }
 
 async function exportKey(passphrase: string, salt: Bytes, iterations: number) {
-  const base = await crypto.subtle.importKey("raw", utf8Encode(passphrase), "PBKDF2", false, [
-    "deriveKey",
-  ]);
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
-    base,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
+  return pbkdf2AesKey(utf8Encode(passphrase), salt, iterations);
 }
 
 export function exportDrafts(items: VaultItem[]): ItemDraft[] {

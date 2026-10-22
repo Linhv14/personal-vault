@@ -1,3 +1,4 @@
+import { pbkdf2Bits } from "../../src/core/primitives.js";
 import { fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
 import { asSession, request } from "./api.js";
 import { forget, openVaultKey, rejection, sealVaultKey, signedInSession } from "./device-unlock.js";
@@ -23,16 +24,7 @@ export function isValidPin(pin: string): boolean {
 }
 
 async function derive(pin: string, salt: Bytes, iterations: number) {
-  const base = await crypto.subtle.importKey("raw", utf8Encode(pin), "PBKDF2", false, [
-    "deriveBits",
-  ]);
-  const bits = new Uint8Array(
-    await crypto.subtle.deriveBits(
-      { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
-      base,
-      512,
-    ),
-  );
+  const bits = await pbkdf2Bits(utf8Encode(pin), salt, iterations, 512);
   return { verifier: toBase64(bits.slice(0, 32)), local: bits.slice(32) };
 }
 
