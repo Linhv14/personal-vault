@@ -58,3 +58,23 @@ export function isAllowedReturn(value: unknown, targets: readonly string[]): val
 export function callbackUrl(origin: string): string {
   return `${origin}/api/sso/callback`;
 }
+export interface SsoOutcome {
+  grant?: string;
+  error?: string;
+}
+
+export function readOutcome(url: string): SsoOutcome | null {
+  let hash: string;
+  try {
+    hash = new URL(url).hash.replace(/^#/, "");
+  } catch {
+    return null;
+  }
+  const params = new URLSearchParams(hash);
+  const grant = params.get("sso_grant");
+  const error = params.get("sso_error");
+  if (grant) {
+    return { grant };
+  }
+  return error ? { error } : null;
+}

@@ -67,6 +67,9 @@ export function ActivityPage() {
     if (action === "org.domains_changed") {
       return target ? target.replaceAll(",", ", ") : t("console.domains_any");
     }
+    if (action.startsWith("org.sso_")) {
+      return target ?? "";
+    }
     if (!target || target === actor) {
       return "";
     }

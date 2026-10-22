@@ -10,13 +10,21 @@ import {
   ROLE_LABEL,
   Spinner,
   TwoFactorStep,
+  takeWebSsoReturn,
   useT,
+  WebSsoSignIn,
   Wordmark,
   type InvitePreview,
 } from "#ext/web-host.js";
 import { describeError } from "#i18n/index.js";
 import { logoSvg } from "#ui/logo.js";
-import { registerFromInvite, signIn, signInWithCode, type PendingSignIn } from "./session.js";
+import {
+  openVaultWithPassword,
+  registerFromInvite,
+  signIn,
+  signInWithCode,
+  type PendingSignIn,
+} from "./session.js";
 
 type Mode = "sign-in" | "register";
 
@@ -37,6 +45,12 @@ export function SignIn() {
   const [working, setWorking] = useState(false);
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
   const [secondFactor, setSecondFactor] = useState<PendingSignIn | null>(null);
+  const [sso, setSso] = useState<{ resume: { url: string; verifier: string } | null } | null>(
+    () => {
+      const resume = takeWebSsoReturn();
+      return resume ? { resume } : null;
+    },
+  );
 
   useEffect(() => {
     if (!inviteId) {
@@ -103,12 +117,28 @@ export function SignIn() {
       }
       setSecondFactor(await signIn(email, password));
     } catch (failure) {
+      if (failure instanceof api.ApiError && failure.messageKey === "error.auth.sso_required") {
+        setSso({ resume: null });
+        return;
+      }
       setError(describeError(failure, t));
       field?.focus();
     } finally {
       setWorking(false);
     }
   };
+
+  if (sso) {
+    return (
+      <main className="sign-in">
+        <WebSsoSignIn
+          resume={sso.resume}
+          openVault={openVaultWithPassword}
+          onCancel={() => setSso(null)}
+        />
+      </main>
+    );
+  }
 
   if (invite === undefined) {
     return (
@@ -276,6 +306,10 @@ export function SignIn() {
           ) : (
             <>
               {t("web.no_account")} <a href="/">{t("web.get_extension")}</a>
+              <br />
+              <button type="button" className="link" onClick={() => setSso({ resume: null })}>
+                {t("sso.sign_in")}
+              </button>
             </>
           )}
         </p>

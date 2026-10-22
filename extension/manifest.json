@@ -18,7 +18,8 @@
     "activeTab",
     "offscreen",
     "clipboardWrite",
-    "scripting"
+    "scripting",
+    "identity"
   ],
   "optional_permissions": ["privacy"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],

@@ -191,13 +191,14 @@ export async function register(
   registrationToken: string,
   verificationCode?: string,
   inviteId?: string,
+  ssoGrant?: string,
 ): Promise<{ accountId: string; token: string; orgId?: string }> {
   const result = await requestChecked("/api/auth/register", isRegistered, {
     method: "POST",
     auth: false,
     humanCheck: true,
     extraHeaders: { "X-Registration-Token": registrationToken },
-    body: JSON.stringify({ email, ...record, verificationCode, inviteId }),
+    body: JSON.stringify({ email, ...record, verificationCode, inviteId, ssoGrant }),
   });
   await setToken(result.token);
   return result;

@@ -6,6 +6,7 @@ import {
   open,
   unlockVault,
   type KdfParams,
+  type SealedData,
 } from "#core/crypto.js";
 import { toBase64 } from "#core/bytes.js";
 import { signal } from "@preact/signals";
@@ -104,6 +105,20 @@ async function openSession(
   }
   await setLocal({ email, kdf, wrappedVaultKey });
   await unlock(toBase64(vaultKeyRaw), login.token);
+  accountEmail.value = email;
+  await refreshSession();
+}
+
+export async function openVaultWithPassword(
+  email: string,
+  password: string,
+  kdf: KdfParams,
+  wrappedVaultKey: SealedData,
+  token: string,
+): Promise<void> {
+  const { vaultKeyRaw } = await unlockVault(email, password, { kdf, wrappedVaultKey });
+  await setLocal({ email, kdf, wrappedVaultKey });
+  await unlock(toBase64(vaultKeyRaw), token);
   accountEmail.value = email;
   await refreshSession();
 }

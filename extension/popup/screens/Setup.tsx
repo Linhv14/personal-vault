@@ -4,6 +4,7 @@ import { createAccount } from "#core/crypto.js";
 import type { MasterPasswordIssue } from "#core/master-password.js";
 import { describeError } from "#i18n/index.js";
 import * as api from "#ext/lib/api.js";
+import { PopupSsoSignIn, ssoTabRequest } from "#ext/commercial.js";
 import { checkNewMasterPassword } from "#ext/lib/master-password.js";
 import {
   clearPendingSignup,
@@ -67,6 +68,10 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const [email, setEmail] = useState(signup?.email ?? "");
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
   const [secondFactor, setSecondFactor] = useState<PendingSignIn | null>(null);
+  const [sso, setSso] = useState<{ lookup: string; server: string } | null>(() => {
+    const request = ssoTabRequest();
+    return request ? { lookup: request.lookup, server: request.server } : null;
+  });
 
   const registering = mode === "register";
   const codeStep = registering && verificationRequired && codeSentTo !== null;
@@ -116,6 +121,14 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
     setError(null);
     setChoosing(false);
     setFocusTarget(next === "register" && required && codeSentTo ? "verificationCode" : "email");
+  };
+
+  const currentServer = () =>
+    (field("apiUrl")?.value.trim() || (customServer ? apiUrl : defaultServer)).replace(/\/$/, "");
+
+  const openSso = (lookup = "") => {
+    setError(null);
+    setSso({ lookup, server: currentServer() });
   };
 
   const leaveCodeStep = async () => {
@@ -190,6 +203,10 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
         setSecondFactor(failure.pending);
         return;
       }
+      if (failure instanceof api.ApiError && failure.messageKey === "error.auth.sso_required") {
+        setSso({ lookup: String(failure.params.identifier || email), server });
+        return;
+      }
       if (!(await getLocal()).wrappedVaultKey) {
         await chrome.storage.local.remove("email");
       }
@@ -235,6 +252,22 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
     );
   }
 
+  if (sso) {
+    return (
+      <AuthLayout id="screen-sso">
+        <PopupSsoSignIn
+          apiUrl={sso.server}
+          initial={sso.lookup}
+          openVault={async (account, password, kdf, wrapped, token) => {
+            await setLocal({ apiUrl: sso.server, email: account, kdf, wrappedVaultKey: wrapped });
+            await finishUnlock(account, password, kdf, wrapped, token);
+          }}
+          onCancel={() => setSso(null)}
+        />
+      </AuthLayout>
+    );
+  }
+
   if (recovering) {
     return (
       <Recover
@@ -265,6 +298,15 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             <span className="choice-text">
               <strong>{t("setup.mode_signin")}</strong>
               <small>{t("setup.mode_signin_hint")}</small>
+            </span>
+          </button>
+          <button className="choice" id="choose-sso" onClick={() => openSso()}>
+            <span className="choice-icon">
+              <Icon name="briefcase" />
+            </span>
+            <span className="choice-text">
+              <strong>{t("sso.sign_in")}</strong>
+              <small>{t("sso.sign_in_hint")}</small>
             </span>
           </button>
         </div>
@@ -399,6 +441,14 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             }
           >
             {t("recovery.forgot")}
+          </button>
+          <button
+            type="button"
+            className="link quiet"
+            hidden={registering}
+            onClick={() => openSso(field("email")?.value.trim() ?? "")}
+          >
+            {t("sso.sign_in")}
           </button>
           <button
             type="button"

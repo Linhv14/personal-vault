@@ -1199,6 +1199,100 @@ export const en = {
   "view.shared_with_you": "Shared with you",
   "view.copied": "Copied",
   "view.totp_label": "2FA code",
+  "error.auth.sso_required": "Your organization requires single sign-on. Continue with SSO.",
+  "error.license.required":
+    "Single sign-on needs the enterprise plan or a valid licence key on this server.",
+  "error.orgs.single_org":
+    "An organization policy does not allow you to belong to another organization.",
+  "error.sso.not_found": "No single sign-on is set up for that email or organization identifier.",
+  "error.sso.invalid_request": "Enter your work email or your organization's identifier.",
+  "error.sso.invalid_return": "This app is not allowed to receive single sign-on results.",
+  "error.sso.invalid_identifier": "Use 3 to 32 lowercase letters, digits or hyphens.",
+  "error.sso.identifier_taken": "Another organization already uses that identifier.",
+  "error.sso.invalid_domain": "Enter a valid domain name, such as acme.com.",
+  "error.sso.domain_limit": "This organization has reached its domain limit.",
+  "error.sso.domain_taken": "Another organization has already verified that domain.",
+  "error.sso.domain_not_verified":
+    "The TXT record was not found yet. DNS changes can take a while; try again later.",
+  "error.sso.invalid_provider":
+    "Enter an https issuer, a client ID and a client secret, and turn the provider on first.",
+  "error.sso.discovery_failed":
+    "The provider's OpenID configuration could not be read. Check the issuer URL.",
+  "error.sso.expired": "The single sign-on attempt expired or was already used. Start again.",
+  "error.sso.failed": "The identity provider did not confirm the sign-in. Try again.",
+  "error.sso.email_unverified": "Your identity provider has not verified this email address.",
+  "error.sso.email_not_allowed":
+    "This email is not on a verified domain of the organization and has no pending invitation.",
+  "sso.sign_in": "Sign in with SSO",
+  "sso.sign_in_hint": "Use your company's identity provider",
+  "sso.title": "Single sign-on",
+  "sso.lead": "Enter your work email or your organization's SSO identifier.",
+  "sso.lookup": "Work email or organization identifier",
+  "sso.continue": "Continue",
+  "sso.waiting": "Finish signing in with your identity provider…",
+  "sso.use_password": "Use the master password instead",
+  "sso.unlock_title": "Unlock your vault",
+  "sso.unlock_lead":
+    "Signed in as {email}. Your master password still decrypts the vault; it never leaves this device.",
+  "sso.create_title": "Create your master password",
+  "sso.create_lead":
+    "{org} signed you in as {email}. Choose a master password to encrypt your new vault.",
+  "sso.create": "Create vault and join",
+  "sso.wrong_account": "Single sign-on returned {email}, which is not the account on this device.",
+  "sso_admin.title": "Single sign-on",
+  "sso_admin.text":
+    "Members sign in through your identity provider. Their master password still decrypts their vault, so 7key never holds the keys.",
+  "sso_admin.plan_enterprise": "Included in the enterprise plan",
+  "sso_admin.license_valid": "Licensed to {licensee} for {seats} seats until {date}",
+  "sso_admin.license_expired": "The licence for {licensee} expired on {date}",
+  "sso_admin.license_missing":
+    "Single sign-on needs the enterprise plan, or a licence key in LICENSE_KEY on this server.",
+  "sso_admin.license_invalid": "The LICENSE_KEY on this server is not a valid licence.",
+  "sso_admin.identifier": "Organization identifier",
+  "sso_admin.identifier_hint":
+    "3 to 32 lowercase letters, digits or hyphens. Members whose email is not on a verified domain type it to find your provider.",
+  "sso_admin.identifier_saved": "Identifier saved",
+  "sso_admin.domains": "Verified domains",
+  "sso_admin.domains_hint":
+    "Publish the TXT record at the domain, then verify it. Members on a verified domain can sign in with their email alone, and no other organization can claim the domain.",
+  "sso_admin.domain": "Domain",
+  "sso_admin.txt_record": "TXT record",
+  "sso_admin.verified": "Verified",
+  "sso_admin.pending": "Not verified",
+  "sso_admin.last_checked": "Last checked",
+  "sso_admin.verify": "Verify",
+  "sso_admin.domain_added": "Domain added; publish its TXT record",
+  "sso_admin.domain_verified": "Domain verified",
+  "sso_admin.domain_removed": "Domain removed",
+  "sso_admin.provider": "OpenID Connect provider",
+  "sso_admin.provider_hint":
+    "Register 7key as a web application at your provider with this redirect URI and the scopes openid, email and profile.",
+  "sso_admin.redirect_uri": "Redirect URI",
+  "sso_admin.issuer": "Issuer URL",
+  "sso_admin.client_id": "Client ID",
+  "sso_admin.client_secret": "Client secret",
+  "sso_admin.client_secret_kept": "Leave blank to keep the saved secret.",
+  "sso_admin.decryption": "Member decryption",
+  "sso_admin.decryption_master_password": "Master password",
+  "sso_admin.decryption_hint":
+    "Members unlock their vault with their own master password after signing in.",
+  "sso_admin.enabled": "Allow members to sign in with SSO",
+  "sso_admin.provider_saved": "Provider saved",
+  "sso_admin.policies": "Policies",
+  "sso_admin.require_sso": "Require single sign-on",
+  "sso_admin.require_sso_hint":
+    "Members other than owners and admins must sign in through SSO instead of with their master password alone.",
+  "sso_admin.single_org": "Single organization",
+  "sso_admin.single_org_hint":
+    "Members other than owners and admins cannot join other organizations, and people in other organizations cannot join this one.",
+  "sso_admin.policies_saved": "Policies saved",
+  "orgs.audit_member_joined_sso": "joined through single sign-on",
+  "orgs.audit_sso_identifier_set": "set the SSO identifier to",
+  "orgs.audit_sso_domain_added": "added the SSO domain",
+  "orgs.audit_sso_domain_verified": "verified the domain",
+  "orgs.audit_sso_domain_removed": "removed the SSO domain",
+  "orgs.audit_sso_provider_saved": "saved the SSO provider",
+  "orgs.audit_sso_policies_changed": "changed the SSO policies:",
 } as const;
 
 export type MessageKey = keyof typeof en;

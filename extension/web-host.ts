@@ -14,3 +14,4 @@ export { TwoFactorStep } from "./ui/components/TwoFactorStep.js";
 export { upgradeKdf } from "./lib/kdf-upgrade.js";
 export { memoryArea, usePlatform } from "./lib/platform.js";
 export { getUnlocked, lock, setLocal, touch, unlock } from "./lib/storage.js";
+export { takeWebSsoReturn, WebSsoSignIn } from "./commercial.js";

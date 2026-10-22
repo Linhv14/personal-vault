@@ -9,9 +9,17 @@ import {
   hasBiometric,
   unlockWithBiometric,
 } from "#ext/lib/biometric.js";
-import { clearAccountData, getLocal, getUnlocked, lock } from "#ext/lib/storage.js";
+import { ApiError } from "#ext/lib/api.js";
+import { clearAccountData, getLocal, getUnlocked, lock, setLocal } from "#ext/lib/storage.js";
+import { PopupSsoSignIn, ssoTabRequest } from "#ext/commercial.js";
 import { useT } from "#ext/ui/i18n.js";
-import { SecondFactorRequired, signIn, signInWithCode, type PendingSignIn } from "../auth.js";
+import {
+  finishUnlock,
+  SecondFactorRequired,
+  signIn,
+  signInWithCode,
+  type PendingSignIn,
+} from "../auth.js";
 import { TwoFactorStep } from "#ext/ui/components/TwoFactorStep.js";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { Icon } from "#ext/ui/components/Icon.js";
@@ -28,6 +36,7 @@ export function Unlock({ email }: { email: string }) {
   const [biometric, setBiometric] = useState(false);
   const [recovering, setRecovering] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingSignIn | null>(null);
+  const [sso, setSso] = useState<{ lookup: string; server: string } | null>(ssoTabRequest);
   const method = t(biometricLabel());
 
   useEffect(() => {
@@ -104,12 +113,19 @@ export function Unlock({ email }: { email: string }) {
     } catch (failure) {
       if (failure instanceof SecondFactorRequired) {
         setPending(failure.pending);
+      } else if (failure instanceof ApiError && failure.messageKey === "error.auth.sso_required") {
+        await openSso(String(failure.params.identifier || email));
       } else {
         setError(describeError(failure, t));
       }
     } finally {
       setWorking(false);
     }
+  };
+
+  const openSso = async (lookup: string) => {
+    setError(null);
+    setSso({ lookup, server: (await getLocal()).apiUrl ?? "" });
   };
 
   const reset = async () => {
@@ -131,6 +147,23 @@ export function Unlock({ email }: { email: string }) {
             setPending(null);
             setError(message ?? null);
           }}
+        />
+      </AuthLayout>
+    );
+  }
+
+  if (sso) {
+    return (
+      <AuthLayout id="screen-sso">
+        <PopupSsoSignIn
+          apiUrl={sso.server}
+          initial={sso.lookup}
+          expectedEmail={email}
+          openVault={async (account, password, kdf, wrapped, token) => {
+            await setLocal({ kdf, wrappedVaultKey: wrapped });
+            await finishUnlock(account, password, kdf, wrapped, token);
+          }}
+          onCancel={() => setSso(null)}
         />
       </AuthLayout>
     );
@@ -229,6 +262,9 @@ export function Unlock({ email }: { email: string }) {
           onClick={() => void getLocal().then((local) => setRecovering(local.apiUrl ?? ""))}
         >
           {t("recovery.forgot")}
+        </button>
+        <button type="button" className="link quiet" onClick={() => void openSso(email)}>
+          {t("sso.sign_in")}
         </button>
       </form>
       <button type="button" className="link quiet" onClick={() => void reset()}>
