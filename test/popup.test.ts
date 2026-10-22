@@ -1,14 +1,5 @@
 // @vitest-environment happy-dom
 
-/**
- * Smoke test for the extension popup: the real popup.html, driven against
- * stubbed `chrome.*` APIs and a fake server.
- *
- * The point is not to exercise every button but to catch what typechecking
- * cannot: missing ids in the HTML, screens wired in the wrong order, and above
- * all a key or plaintext landing in `storage.local`, which is on disk.
- */
-
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -70,7 +61,6 @@ const chromeMock = {
 const server = {
   account: null as Record<string, unknown> | null,
   items: new Map<string, { ciphertext: string; nonce: string; updatedAt: number }>(),
-  /** Every request body seen, used to prove the server never gets plaintext. */
   received: [] as string[],
   emailVerification: false,
   shareRequests: [] as Record<string, any>[],
@@ -278,12 +268,10 @@ describe("extension popup", () => {
   });
 
   it("signs up without asking for any browser permission", () => {
-    // A permission prompt closes the popup, which used to abort the first sign-in.
     expect(chromeMock.permissions.request).not.toHaveBeenCalled();
   });
 
   it("keeps the vault key in session storage, never in local storage", async () => {
-    // The central invariant: storage.local is on disk in the clear.
     expect(sessionArea.get("vaultKeyRaw")).toBeTypeOf("string");
     expect(localArea.has("vaultKeyRaw")).toBe(false);
     expect(sessionArea.get("token")).toBe("session-token");

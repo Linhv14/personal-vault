@@ -32,7 +32,6 @@ describe("createShare / openShare", () => {
   });
 
   it("emits base64url, free of characters a URL would re-encode", async () => {
-    // `+` and `/` from standard base64 get mangled in transit and corrupt the key.
     for (let i = 0; i < 50; i++) {
       const { fragment } = await createShare(PAYLOAD);
       expect(fragment).toMatch(/^[A-Za-z0-9_-]+$/);
@@ -59,8 +58,6 @@ describe("createShare / openShare", () => {
   });
 
   it("accepts a fragment with its leading #, as location.hash provides it", async () => {
-    // `location.hash` always includes the hash; forgetting to strip it would
-    // make every link fail to decrypt.
     const { sealed, fragment } = await createShare(PAYLOAD);
     expect(await openShare(`#${fragment}`, sealed)).toEqual(PAYLOAD);
   });

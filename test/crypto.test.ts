@@ -19,14 +19,13 @@ import {
 import { fromBase64, toBase64, utf8Decode, utf8Encode } from "../src/core/bytes.js";
 import { expectCodeAsync } from "./helpers.js";
 
-// Low iteration count keeps the suite fast; production uses DEFAULT_KDF_ITERATIONS.
-const FAST = 1_000;
+const TEST_KDF_ITERATIONS = 1_000;
 const EMAIL = "you@example.com";
 const PASSWORD = "a long and hard to guess master password";
 
 const KDF: KdfParams = {
   type: "pbkdf2-sha256",
-  iterations: FAST,
+  iterations: TEST_KDF_ITERATIONS,
   salt: toBase64(new Uint8Array(16)),
 };
 
@@ -39,8 +38,6 @@ describe("deriveMasterKey", () => {
   });
 
   it("normalizes the email so case and whitespace do not change the key", async () => {
-    // Without this, typing "You@Example.com " locks you out of your own vault —
-    // a failure that is very hard to diagnose from the symptom.
     const a = await deriveMasterKey(EMAIL, PASSWORD, KDF);
     const b = await deriveMasterKey("  YOU@Example.COM  ", PASSWORD, KDF);
     expect(a).toEqual(b);
@@ -53,9 +50,9 @@ describe("deriveMasterKey", () => {
     expect(
       await deriveMasterKey(EMAIL, PASSWORD, { ...KDF, salt: toBase64(new Uint8Array([1])) }),
     ).not.toEqual(base);
-    expect(await deriveMasterKey(EMAIL, PASSWORD, { ...KDF, iterations: FAST + 1 })).not.toEqual(
-      base,
-    );
+    expect(
+      await deriveMasterKey(EMAIL, PASSWORD, { ...KDF, iterations: TEST_KDF_ITERATIONS + 1 }),
+    ).not.toEqual(base);
   });
 
   it("rejects an empty password and an unknown KDF", async () => {
@@ -73,8 +70,6 @@ describe("deriveMasterKey", () => {
 
 describe("auth key and encryption key separation", () => {
   it("auth key differs from the master key", async () => {
-    // If the auth key were the master key, sending it to the server would send
-    // the means to decrypt the vault.
     const masterKey = await deriveMasterKey(EMAIL, PASSWORD, KDF);
     expect(await deriveAuthKey(masterKey)).not.toEqual(masterKey);
   });
@@ -107,8 +102,6 @@ describe("seal / open", () => {
   });
 
   it("uses a fresh nonce, so identical plaintext yields different ciphertext", async () => {
-    // Nonce reuse under AES-GCM is catastrophic, making this one of the most
-    // important invariants in the codebase.
     const key = await importVaultKey(createVaultKey());
     const a = await seal(key, utf8Encode("x"));
     const b = await seal(key, utf8Encode("x"));
@@ -122,8 +115,6 @@ describe("seal / open", () => {
   });
 
   it("detects a single flipped bit in the ciphertext", async () => {
-    // This is where AES-GCM beats AES-CBC: tampering fails loudly instead of
-    // producing garbage the application treats as real.
     const key = await importVaultKey(createVaultKey());
     const sealed = await seal(key, utf8Encode("balance: 100"));
     const bytes = fromBase64(sealed.ciphertext);
@@ -158,7 +149,7 @@ describe("seal / open", () => {
 
 describe("createAccount / unlockVault", () => {
   it("reopens the vault with the correct master password", async () => {
-    const { record, vaultKey } = await createAccount(EMAIL, PASSWORD, FAST);
+    const { record, vaultKey } = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     const sealed = await sealJson(vaultKey, { secret: "hello" });
 
     const unlocked = await unlockVault(EMAIL, PASSWORD, record);
@@ -166,20 +157,19 @@ describe("createAccount / unlockVault", () => {
   });
 
   it("reports a wrong master password distinctly", async () => {
-    const { record } = await createAccount(EMAIL, PASSWORD, FAST);
+    const { record } = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     await expectCodeAsync(unlockVault(EMAIL, "wrong", record), "crypto.wrong_password");
   });
 
   it("returns the same auth key that registration produced", async () => {
-    // This is how a client signs in on a new machine while storing nothing.
-    const { record } = await createAccount(EMAIL, PASSWORD, FAST);
+    const { record } = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     const unlocked = await unlockVault(EMAIL, PASSWORD, record);
     expect(unlocked.authKey).toBe(record.authKey);
   });
 
   it("gives each account its own salt, so one password yields different auth keys", async () => {
-    const a = await createAccount(EMAIL, PASSWORD, FAST);
-    const b = await createAccount(EMAIL, PASSWORD, FAST);
+    const a = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
+    const b = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     expect(a.record.kdf.salt).not.toBe(b.record.kdf.salt);
     expect(a.record.authKey).not.toBe(b.record.authKey);
   });
@@ -187,9 +177,7 @@ describe("createAccount / unlockVault", () => {
 
 describe("rewrapVaultKey", () => {
   it("keeps items readable after a master password change", async () => {
-    // The central invariant of the vault key layer: changing the master password
-    // re-encrypts no items.
-    const { record, vaultKey } = await createAccount(EMAIL, PASSWORD, FAST);
+    const { record, vaultKey } = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     const sealed = await sealJson(vaultKey, { note: "written before the change" });
 
     const unlocked = await unlockVault(EMAIL, PASSWORD, record);
@@ -197,7 +185,7 @@ describe("rewrapVaultKey", () => {
       EMAIL,
       "a different master password",
       unlocked.vaultKeyRaw,
-      FAST,
+      TEST_KDF_ITERATIONS,
     );
 
     const reopened = await unlockVault(EMAIL, "a different master password", newRecord);
@@ -208,16 +196,21 @@ describe("rewrapVaultKey", () => {
   });
 
   it("stops the old password from opening the new record", async () => {
-    const { record } = await createAccount(EMAIL, PASSWORD, FAST);
+    const { record } = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     const unlocked = await unlockVault(EMAIL, PASSWORD, record);
-    const newRecord = await rewrapVaultKey(EMAIL, "new password", unlocked.vaultKeyRaw, FAST);
+    const newRecord = await rewrapVaultKey(
+      EMAIL,
+      "new password",
+      unlocked.vaultKeyRaw,
+      TEST_KDF_ITERATIONS,
+    );
     await expectCodeAsync(unlockVault(EMAIL, PASSWORD, newRecord), "crypto.wrong_password");
   });
 });
 
 describe("hashAuthKey", () => {
   it("is deterministic, 32 bytes, and not the auth key itself", async () => {
-    const { record } = await createAccount(EMAIL, PASSWORD, FAST);
+    const { record } = await createAccount(EMAIL, PASSWORD, TEST_KDF_ITERATIONS);
     const hash = await hashAuthKey(record.authKey);
     expect(await hashAuthKey(record.authKey)).toBe(hash);
     expect(fromBase64(hash)).toHaveLength(32);

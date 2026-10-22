@@ -3,7 +3,6 @@ import { base32Decode, base32Encode, isValidBase32 } from "../src/core/base32.js
 import { utf8Decode, utf8Encode } from "../src/core/bytes.js";
 import { expectCode } from "./helpers.js";
 
-/** RFC 4648 §10 test vectors. If any of these is wrong, TOTP is wrong too. */
 const RFC4648_VECTORS: Array<[string, string]> = [
   ["", ""],
   ["f", "MY======"],
@@ -31,8 +30,6 @@ describe("base32", () => {
   });
 
   it("rejects characters outside the alphabet", () => {
-    // 0, 1, 8 and 9 are absent from RFC 4648 base32 because they look like O, I,
-    // B and g.
     expectCode(() => base32Decode("MZXW0YTB"), "base32.invalid_character");
     expectCode(() => base32Decode("MZXW1YTB"), "base32.invalid_character");
   });

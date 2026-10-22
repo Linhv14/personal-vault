@@ -11,25 +11,21 @@ import { base32Encode, isValidBase32 } from "../src/core/base32.js";
 import { utf8Encode } from "../src/core/bytes.js";
 import { expectCode, expectCodeAsync } from "./helpers.js";
 
-/**
- * RFC 6238 Appendix B. The seed is the ASCII string "12345678901234567890"
- * repeated to each algorithm's key length, and all vectors use 8 digits.
- */
 const SEED_SHA1 = base32Encode(utf8Encode("12345678901234567890"));
 const SEED_SHA256 = base32Encode(utf8Encode("12345678901234567890123456789012"));
 const SEED_SHA512 = base32Encode(
   utf8Encode("1234567890123456789012345678901234567890123456789012345678901234"),
 );
 
-const RFC6238_VECTORS: Array<[number, string, string, string]> = [
-  // [unix seconds, SHA-1, SHA-256, SHA-512]
-  [59, "94287082", "46119246", "90693936"],
-  [1111111109, "07081804", "68084774", "25091201"],
-  [1111111111, "14050471", "67062674", "99943326"],
-  [1234567890, "89005924", "91819424", "93441116"],
-  [2000000000, "69279037", "90698825", "38618901"],
-  [20000000000, "65353130", "77737706", "47863826"],
-];
+const RFC6238_VECTORS: Array<[unixSeconds: number, sha1: string, sha256: string, sha512: string]> =
+  [
+    [59, "94287082", "46119246", "90693936"],
+    [1111111109, "07081804", "68084774", "25091201"],
+    [1111111111, "14050471", "67062674", "99943326"],
+    [1234567890, "89005924", "91819424", "93441116"],
+    [2000000000, "69279037", "90698825", "38618901"],
+    [20000000000, "65353130", "77737706", "47863826"],
+  ];
 
 describe("generateTotp against the RFC 6238 vectors", () => {
   it.each(RFC6238_VECTORS)("t=%i matches on all three algorithms", async (t, s1, s256, s512) => {
@@ -45,9 +41,7 @@ describe("generateTotp against the RFC 6238 vectors", () => {
     ).resolves.toBe(s512);
   });
 
-  it("handles the large-counter vector", async () => {
-    // Kept as its own case so replacing BigInt with plain bit shifts fails here
-    // immediately rather than silently in the year 6053.
+  it("handles a counter beyond 32 bits, reached in the year 6053", async () => {
     await expect(
       generateTotp({ secret: SEED_SHA1, algorithm: "SHA-1", digits: 8 }, 20000000000 * 1000),
     ).resolves.toBe("65353130");
@@ -56,7 +50,7 @@ describe("generateTotp against the RFC 6238 vectors", () => {
   it("defaults to 6 digits, SHA-1 and a 30 second period", async () => {
     const code = await generateTotp({ secret: SEED_SHA1 }, 59 * 1000);
     expect(code).toHaveLength(6);
-    expect(code).toBe("287082"); // last 6 digits of the 8-digit vector
+    expect(code).toBe("287082");
   });
 
   it("returns the same code throughout one window", async () => {
@@ -167,8 +161,6 @@ describe("parseTotpInput", () => {
   });
 
   it("reports unrecognized input clearly", () => {
-    // Note "my password" would NOT work here: strip the space and "mypassword"
-    // is entirely base32 letters, so it is a legitimate secret.
     expectCode(() => parseTotpInput("p@ssw0rd!"), "totp.unrecognized_input");
   });
 });

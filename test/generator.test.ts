@@ -32,9 +32,6 @@ describe("randomInt", () => {
   });
 
   it("shows no measurable bias for a max that does not divide 2^32", () => {
-    // max = 3 is the classic modulo-bias case. With 30,000 samples each value
-    // should be near 33.3%; the 2-point threshold is far wider than statistical
-    // noise, so this does not flake but would still catch real bias.
     const counts = [0, 0, 0];
     const samples = 30_000;
     for (let i = 0; i < samples; i++) {
@@ -78,8 +75,6 @@ describe("generatePassword", () => {
   });
 
   it("always includes at least one character from every selected set", () => {
-    // Repeated because this is a probabilistic property; one lucky run proves
-    // nothing.
     for (let i = 0; i < 200; i++) {
       const { value } = generatePassword({ length: 12 });
       expect(value).toMatch(/[a-z]/);
@@ -97,8 +92,6 @@ describe("generatePassword", () => {
   });
 
   it("does not leave the mandatory characters bunched at the front", () => {
-    // Forgetting the shuffle would put one character per set in the first four
-    // positions in a fixed order — a silent loss of real entropy.
     let digitInFirstFour = 0;
     const runs = 400;
     for (let i = 0; i < runs; i++) {
@@ -128,8 +121,6 @@ describe("generatePassword", () => {
 
 describe("generatePassphrase", () => {
   it("defaults to 8 dash-separated words from the list", () => {
-    // 8, not 5: the short list carries 10.34 bits per word, so 5 words is only
-    // 51.7 bits — inside offline brute-force range.
     const { value } = generatePassphrase();
     const words = value.split("-");
     expect(words).toHaveLength(8);
@@ -144,7 +135,6 @@ describe("generatePassphrase", () => {
   });
 
   it("ships exactly 1296 unique words", () => {
-    // Duplicates would make the reported entropy higher than the truth.
     expect(EFF_SHORT_WORDLIST).toHaveLength(1296);
     expect(new Set(EFF_SHORT_WORDLIST).size).toBe(1296);
   });

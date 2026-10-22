@@ -1,14 +1,3 @@
-/**
- * End-to-end test against a real Worker and a local D1 database.
- *
- * Skipped by default. To run it:
- *   npm run dev                 (in another terminal)
- *   VAULT_E2E=1 npx vitest run test/e2e.test.ts
- *
- * The goal is not endpoint coverage but the system's central invariant: walk a
- * full lifecycle and confirm the server never sees plaintext.
- */
-
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   createAccount,
@@ -183,8 +172,6 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
 
   it("requires a session to read items", async () => {
     expect((await api("/api/items")).status).toBe(401);
-    // A bogus token must be ASCII: HTTP headers are ByteStrings, so accented
-    // characters are rejected by fetch before the request is ever sent.
     expect((await api("/api/items", { token: "not-a-real-token" })).status).toBe(401);
   });
 
@@ -225,9 +212,6 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
   });
 
   it("recovers the whole vault on a new machine from email and password alone", async () => {
-    // The path that matters after losing a laptop. A fresh client holds nothing:
-    // no cached KDF parameters, no wrapped key, and no registration token — that
-    // token only ever gates account creation.
     const prelogin = await api("/api/auth/prelogin", {
       method: "POST",
       body: JSON.stringify({ email }),
@@ -267,7 +251,6 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
 
     const list = await api("/api/items?since=0", { token });
     const row = list.body.items.find((i: any) => i.id === itemId);
-    // An offline device needs this marker, or it would resurrect the item.
     expect(row.deletedAt).toBeGreaterThan(0);
     expect(row.ciphertext).toBeNull();
   });
@@ -364,7 +347,6 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
       });
       expect(created.status).toBe(201);
 
-      // No token here — that is the entire point of the feature.
       const fetched = await api(`/api/shares/${created.body.id}`);
       expect(fetched.status).toBe(200);
       expect(fetched.body.viewsLeft).toBe(1);
@@ -456,7 +438,6 @@ describe.skipIf(!enabled)("full lifecycle against Worker + D1", () => {
 
       const fetched = await api(`/api/shares/${created.body.id}`);
       await expectCodeAsync(openShare(fragment, fetched.body, "tea"), "share.wrong_passphrase");
-      // Same ciphertext, right passphrase — and no extra view is consumed.
       expect((await openShare(fragment, fetched.body, "coffee")).password).toBe("two factors");
     });
   });

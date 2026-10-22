@@ -52,13 +52,6 @@ export function objectArrayField(
   return value.map(jsonObject);
 }
 
-/**
- * Assert on the error *code*, never the message.
- *
- * Messages are localized and get reworded; codes are the contract. A test that
- * matches prose breaks on a typo fix and passes when the wrong error is thrown
- * with similar wording.
- */
 export function expectCode(fn: () => unknown, code: ErrorCode): void {
   let thrown: unknown;
   try {

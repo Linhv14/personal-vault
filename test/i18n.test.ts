@@ -23,8 +23,6 @@ describe("message catalogues", () => {
   });
 
   it("every locale uses the same placeholders as English", () => {
-    // A translation that drops `{seconds}` silently renders an incomplete
-    // sentence; one that invents a placeholder renders a literal brace.
     const placeholders = (text: string) =>
       [...new Set([...text.matchAll(/\{(\w+)(?:\}|,\s*plural,)/g)].map((m) => m[1]))].sort();
 
@@ -38,8 +36,6 @@ describe("message catalogues", () => {
   });
 
   it("covers every VaultError code", () => {
-    // Guards against adding a code in core and forgetting the message, which
-    // would surface to the user as a raw identifier.
     const codes: string[] = [
       "base32.invalid_character",
       "totp.empty_secret",
@@ -114,7 +110,6 @@ describe("describeError", () => {
   });
 
   it("falls back to the raw message for unexpected errors", () => {
-    // Hiding a genuine bug behind a friendly phrase makes it undebuggable.
     expect(describeError(new Error("boom"), createTranslator("en"))).toBe("boom");
   });
 
