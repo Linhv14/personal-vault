@@ -687,6 +687,7 @@ label.range output {
 .list-scroll {
   flex: 1;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 0 6px 10px;
 }
 .list-heading {
@@ -884,6 +885,7 @@ label.range output {
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 .drawer-link {
   display: flex;
@@ -929,6 +931,7 @@ label.range output {
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 14px 16px 16px;
 }
 .title-bar {
@@ -1424,6 +1427,7 @@ details.history .field-row {
   justify-content: safe center;
   min-width: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 14px 28px;
 }
 .auth-main > div:not([hidden]) {
