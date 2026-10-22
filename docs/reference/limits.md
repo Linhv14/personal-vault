@@ -19,13 +19,13 @@ are approximate by design. Exceeding one returns `429` with
 
 Exact, stored in D1 or the account's Durable Object.
 
-| Limit                                 | Value                                                                                         | Result when exceeded                                 | Defined in                      |
-| ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------- |
-| Accounts per network per day          | 5 (open registration only)                                                                    | `429 auth.registration_limit`                        | `src/worker/routes/auth.ts`     |
-| Failed logins per address and network | 5 free, then a wait doubling from 5 seconds to 1 hour                                         | `429 auth.rate_limited` with `seconds`; no hard lock | `src/worker/throttle-policy.ts` |
-| Failed logins per address             | After 20 in an hour, each attempt slowed by 250 ms, doubling every 5 failures up to 5 seconds | Slower answers                                       | `src/worker/throttle-policy.ts` |
-| Live items per account                | 5,000                                                                                         | `403 items.quota_exceeded`                           | `src/worker/user-store.ts`      |
-| Sessions per account                  | 20                                                                                            | Oldest session is revoked                            | `src/worker/session.ts`         |
+| Limit                                 | Value                                                                                         | Result when exceeded                                 | Defined in                           |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------ |
+| Accounts per network per day          | 5 (open registration only)                                                                    | `429 auth.registration_limit`                        | `src/worker/routes/auth/register.ts` |
+| Failed logins per address and network | 5 free, then a wait doubling from 5 seconds to 1 hour                                         | `429 auth.rate_limited` with `seconds`; no hard lock | `src/worker/throttle-policy.ts`      |
+| Failed logins per address             | After 20 in an hour, each attempt slowed by 250 ms, doubling every 5 failures up to 5 seconds | Slower answers                                       | `src/worker/throttle-policy.ts`      |
+| Live items per account                | 5,000                                                                                         | `403 items.quota_exceeded`                           | `src/worker/user-store.ts`           |
+| Sessions per account                  | 20                                                                                            | Oldest session is revoked                            | `src/worker/session.ts`              |
 
 ## Sizes and ranges
 
@@ -35,7 +35,7 @@ Exact, stored in D1 or the account's Durable Object.
 | Items per import batch          | 100                             | `src/worker/routes/items.ts`  |
 | Share ciphertext                | 16 KiB decoded                  | `src/worker/routes/shares.ts` |
 | AES-GCM nonce                   | 12 bytes                        | `src/core/crypto.ts`          |
-| KDF iterations accepted         | 600,000 – 5,000,000             | `src/worker/routes/auth.ts`   |
+| KDF iterations accepted         | 600,000 – 5,000,000             | `src/worker/validate.ts`      |
 | KDF iterations for new accounts | 600,000                         | `src/core/crypto.ts`          |
 | Share lifetime (API)            | 60 seconds – 30 days            | `src/worker/routes/shares.ts` |
 | Share lifetime (extension)      | 1 hour, **1 day**, 7 or 30 days | `extension/popup/popup.html`  |
