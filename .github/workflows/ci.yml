@@ -4,14 +4,26 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -20,14 +32,120 @@ jobs:
 
       - run: npm audit --audit-level=high
 
-      # Two projects: browser code and Worker code have conflicting globals, so
-      # they cannot share one tsconfig.
+      - run: npm run lint
+
+      - run: npm run knip
+
       - run: npm run typecheck
 
       - run: npm run format:check
 
       - run: npm test
 
-      # Catches a broken build before anyone deploys, since the share page and
-      # the extension are built from the same sources the tests exercise.
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Start a local Worker
+        run: |
+          state="$RUNNER_TEMP/worker-state"
+          printf 'REGISTRATION_TOKEN=token-dev-local\nEMAIL_PROBE_SECRET=ci-probe\nAT_REST_SECRET=ci-at-rest\n' > .dev.vars
+          npx wrangler d1 migrations apply vault --local --persist-to "$state"
+          jwks=$(node -e 'const k=require("./test/fixtures/ci-test-key.json");process.stdout.write(Buffer.from(JSON.stringify([{kid:k.kid,kty:k.kty,n:k.n,e:k.e}])).toString("base64url"))')
+          nohup npx wrangler dev --local --port 8787 --persist-to "$state" \
+            --var "CI_TEST_JWKS:$jwks" --var "CI_TEST_ISSUER:https://ci-test.invalid" \
+            --var "MIGRATION_TOKEN:local-migration-token" > "$RUNNER_TEMP/worker.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8787/api/health > /dev/null && exit 0
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/worker.log"
+          exit 1
+
+      - name: Run the end-to-end suites one at a time
+        env:
+          VAULT_E2E: "1"
+          VAULT_E2E_URL: http://127.0.0.1:8787
+        run: |
+          status=0
+          for file in test/e2e*.test.ts; do
+            npx vitest run "$file" || status=1
+            sleep 62
+          done
+          exit $status
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan the history with gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$file" "$base/$file"
+          curl -sSfL -o "$RUNNER_TEMP/checksums.txt" "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          (cd "$RUNNER_TEMP" && grep " $file\$" checksums.txt | sha256sum -c -)
+          tar -xzf "$RUNNER_TEMP/$file" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git . --redact --no-banner --config .gitleaks.toml
+
+  codeql:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: javascript-typescript
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+
+  dependency-review:
+    if: github.event_name == 'pull_request' && !github.event.repository.private
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
+  gate:
+    if: always()
+    needs: [check, e2e, secrets, codeql, dependency-review]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to pass or be skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "A required job ended with: $result"
+              exit 1
+            fi
+          done

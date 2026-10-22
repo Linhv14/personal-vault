@@ -1,0 +1,12 @@
+title = "7key gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public keys, test fixtures and removed demo data that look like secrets"
+paths = [
+  '''^extension/manifest\.json$''',
+  '''^test/''',
+  '''^preview/''',
+]
