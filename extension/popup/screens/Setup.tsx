@@ -51,6 +51,7 @@ function serverConfigFor(url: string): Promise<api.ServerConfig> {
 export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const t = useT();
   const form = useRef<HTMLFormElement>(null);
+  const errorLine = useRef<HTMLParagraphElement>(null);
   const [choosing, setChoosing] = useState(signup === null);
   const [mode, setMode] = useState<Mode>("register");
   const [customServer, setCustomServer] = useState(
@@ -83,6 +84,15 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
     setVerificationRequired(config.emailVerification);
     return config.emailVerification;
   };
+
+  useEffect(() => {
+    errorLine.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [error]);
+
+  const explainFailure = (failure: unknown): string =>
+    failure instanceof api.ApiError && failure.messageKey === "error.api.offline"
+      ? t("setup.server_unreachable")
+      : describeError(failure, t);
 
   useEffect(() => {
     void applyServerConfig().then(() => {
@@ -183,7 +193,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
       if (!(await getLocal()).wrappedVaultKey) {
         await chrome.storage.local.remove("email");
       }
-      setError(describeError(failure, t));
+      setError(explainFailure(failure));
     } finally {
       setWorking(false);
     }
@@ -201,7 +211,7 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
       await savePendingSignup({ ...pending, sentAt: Date.now() });
       toast(t("setup.code_resent"));
     } catch (failure) {
-      setError(describeError(failure, t));
+      setError(explainFailure(failure));
     }
   };
 
@@ -368,6 +378,11 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             {t("setup.hint_create")}
           </p>
           <div className="turnstile-slot" data-turnstile />
+          {error && (
+            <p className="error form-error" role="alert" ref={errorLine}>
+              {error}
+            </p>
+          )}
           <button className="primary" type="submit" disabled={working}>
             {buttonLabel}
           </button>
@@ -402,7 +417,6 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
             {t("setup.custom_server")}
           </button>
         </form>
-        {error && <p className="error">{error}</p>}
       </div>
     </AuthLayout>
   );

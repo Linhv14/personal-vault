@@ -1,4 +1,3 @@
-import type { ComponentChildren } from "preact";
 import { useMemo, useState } from "preact/hooks";
 import {
   ADDRESS_COUNTRIES,
@@ -48,7 +47,7 @@ export function Flag({ code }: { code: string }) {
   );
 }
 
-export function AddressGenerator({ modes }: { modes: ComponentChildren }) {
+export function AddressGenerator() {
   const t = useT();
   const [country, setCountry] = useState<AddressCountry>("US");
   const [withEmail, setWithEmail] = useState(true);
@@ -100,7 +99,6 @@ export function AddressGenerator({ modes }: { modes: ComponentChildren }) {
           <IconButton icon="plus" label={t("gen.save_identity")} onClick={save} />
         </div>
       </div>
-      {modes}
       <div className="options">
         <div className="segmented gen-countries" role="radiogroup">
           {ADDRESS_COUNTRIES.map((code) => (

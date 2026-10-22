@@ -94,6 +94,7 @@ export const vi: Catalogue = {
   "setup.mode_create_hint": "Lần đầu dùng 7key? Tạo kho để cất mật khẩu",
   "setup.mode_signin": "Đăng nhập kho có sẵn",
   "setup.mode_signin_hint": "Đã có kho, giờ dùng thêm trên máy này",
+  "setup.server_unreachable": "Không kết nối được server. Kiểm tra mạng hoặc địa chỉ server.",
   "setup.hint_create": "7key không giữ mật khẩu chính. Vào kho rồi nhớ tạo mã khôi phục.",
   "setup.server": "Server",
   "setup.custom_server": "Dùng server riêng",

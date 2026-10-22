@@ -180,6 +180,11 @@ export function Unlock({ email }: { email: string }) {
             required
             autoFocus={!biometric}
           />
+          {error && (
+            <p className="error form-error" role="alert">
+              {error}
+            </p>
+          )}
           <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
             {t(working ? "unlock.working" : "unlock.submit")}
           </button>
@@ -209,6 +214,11 @@ export function Unlock({ email }: { email: string }) {
           required
           autoFocus={mode === "password" && !biometric}
         />
+        {error && (
+          <p className="error form-error" role="alert">
+            {error}
+          </p>
+        )}
         <button className={biometric ? "secondary" : "primary"} type="submit" disabled={working}>
           {t(working ? "unlock.working" : "unlock.submit")}
         </button>
@@ -221,7 +231,6 @@ export function Unlock({ email }: { email: string }) {
           {t("recovery.forgot")}
         </button>
       </form>
-      {error && <p className="error">{error}</p>}
       <button type="button" className="link quiet" onClick={() => void reset()}>
         {t("unlock.reset")}
       </button>

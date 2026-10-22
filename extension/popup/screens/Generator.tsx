@@ -137,7 +137,8 @@ export function Generator() {
           <IconButton icon="back" label={t("common.back")} onClick={showList} />
           <h1>{t("gen.title")}</h1>
         </header>
-        <AddressGenerator modes={modes} />
+        {modes}
+        <AddressGenerator />
       </section>
     );
   }
@@ -148,6 +149,7 @@ export function Generator() {
         <IconButton icon="back" label={t("common.back")} onClick={showList} />
         <h1>{t("gen.title")}</h1>
       </header>
+      {modes}
       <div className="gen-output">
         <code id="gen-value">{failed ? "—" : result.value}</code>
         <div className="gen-footer">
@@ -178,7 +180,6 @@ export function Generator() {
           />
         </div>
       </div>
-      {modes}
       {mode === "password" && (
         <div className="options">
           {range("length", "gen.length", 8, 64)}
