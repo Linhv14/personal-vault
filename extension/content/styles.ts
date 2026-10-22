@@ -10,7 +10,8 @@ export const CONTENT_STYLES = `${TOKENS}
 .wordmark-accent { color: var(--accent); }
 .icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
-.trigger, .menu, .banner { position: fixed; color: var(--text); font-size: 13px; line-height: 1.4; }
+.trigger, .menu, .banner { position: absolute; color: var(--text); font-size: 13px; line-height: 1.4; }
+.banner { position: fixed; }
 
 .trigger {
   display: grid; place-items: center; padding: 0; margin: 0; cursor: pointer;
@@ -112,7 +113,7 @@ button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px
 .banner .link:hover { color: var(--text); text-decoration: underline; }
 
 .chip {
-  position: fixed; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+  position: absolute; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
   background: var(--danger-solid); color: var(--danger-on); font-size: 12px; font-weight: 600; line-height: 1.3;
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.2);
 }

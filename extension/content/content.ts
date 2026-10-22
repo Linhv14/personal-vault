@@ -66,7 +66,7 @@ const OUTCOME_POLL_MS = 250;
 
 const host = document.createElement("div");
 host.style.cssText =
-  "all: initial !important; position: fixed !important; inset: 0 auto auto 0 !important; width: 0 !important; height: 0 !important; z-index: 2147483647 !important;";
+  "all: initial !important; position: absolute !important; inset: 0 auto auto 0 !important; width: 0 !important; height: 0 !important; z-index: 2147483647 !important;";
 const shadow = host.attachShadow({ mode: "closed" });
 const style = document.createElement("style");
 style.textContent = CONTENT_STYLES;
@@ -218,20 +218,30 @@ function isDecoratable(input: HTMLInputElement): boolean {
   return isLoginUsername(input) || formKind(input) !== null;
 }
 
+function pageRect(element: Element): DOMRect {
+  const rect = element.getBoundingClientRect();
+  return new DOMRect(
+    rect.left + window.scrollX,
+    rect.top + window.scrollY,
+    rect.width,
+    rect.height,
+  );
+}
+
 function placeTrigger(): void {
   const anchor = activeInput ?? cardFrame;
   if (!anchor || !anchor.isConnected || !isVisible(anchor)) {
     trigger.hidden = true;
     return;
   }
-  const rect = anchor.getBoundingClientRect();
+  const rect = pageRect(anchor);
   const size = Math.min(24, Math.max(18, rect.height - 10));
   trigger.style.width = trigger.style.height = `${size}px`;
   trigger.style.left = `${rect.right - size - 6}px`;
   trigger.style.top = `${rect.top + (rect.height - size) / 2}px`;
   trigger.hidden = false;
   if (!menu.hidden) {
-    menu.style.left = `${Math.max(8, rect.right - 280)}px`;
+    menu.style.left = `${Math.max(window.scrollX + 8, rect.right - 280)}px`;
     menu.style.top = `${rect.bottom + 6}px`;
   }
 }
@@ -1137,9 +1147,9 @@ async function checkSite(): Promise<LookalikeMatch | null> {
 }
 
 function showChip(field: HTMLInputElement, warning: LookalikeMatch): void {
-  const rect = field.getBoundingClientRect();
+  const rect = pageRect(field);
   chip.replaceChildren(icon("alert"), t("autofill.lookalike_title", { domain: warning.target }));
-  chip.style.left = `${Math.max(8, rect.left)}px`;
+  chip.style.left = `${Math.max(window.scrollX + 8, rect.left)}px`;
   chip.style.top = `${rect.bottom + 6}px`;
   chip.hidden = false;
   const hide = () => (chip.hidden = true);
