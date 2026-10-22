@@ -1,4 +1,4 @@
-import { APP_NAME } from "../core/brand.js";
+import { APP_NAME } from "#core/brand.js";
 import type { Catalogue } from "./en.js";
 
 export const vi: Catalogue = {

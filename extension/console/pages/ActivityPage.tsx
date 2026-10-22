@@ -1,9 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
-import { describeError } from "../../../src/i18n/index.js";
-import { auditLog, type AuditEvent } from "../../lib/orgs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { formatDateTime } from "../../ui/format.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+import { describeError } from "#i18n/index.js";
+import { auditLog, type AuditEvent } from "#ext/lib/orgs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { formatDateTime } from "#ext/ui/format.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { ActionButton, Avatar, Badge, PageHeader, SkeletonTable, When } from "../components.js";
 import { useConsole } from "../data.js";
 import { ACTION_LABEL } from "../labels.js";

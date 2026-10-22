@@ -1,6 +1,6 @@
-import { formText } from "../../../../src/ui/form-data.js";
-import { newEnvironment, type Environment } from "../../../../src/core/projects.js";
-import type { Team } from "../../../lib/orgs.js";
+import { formText } from "#ui/form-data.js";
+import { newEnvironment, type Environment } from "#core/projects.js";
+import type { Team } from "#ext/lib/orgs.js";
 import {
   deleteLink,
   deleteProject,
@@ -9,11 +9,11 @@ import {
   updateProject,
   type Project,
   type Secret,
-} from "../../../lib/projects.js";
-import { useT } from "../../../ui/i18n.js";
-import { Dialog, Field } from "../../components.js";
-import { useConsole } from "../../data.js";
-import { navigate } from "../../router.js";
+} from "#ext/lib/projects.js";
+import { useT } from "#ext/ui/i18n.js";
+import { Dialog, Field } from "#ext/console/components.js";
+import { useConsole } from "#ext/console/data.js";
+import { navigate } from "#ext/console/router.js";
 import { TypeToConfirmDialog } from "../project-dialogs.js";
 
 interface ProjectDialogProps {

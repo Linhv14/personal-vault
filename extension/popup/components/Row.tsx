@@ -1,8 +1,8 @@
-import { itemSubtitle } from "../../lib/item-subtitle.js";
-import type { VaultItem } from "../../lib/vault/types.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
-import { daysUntilPurge } from "../../lib/trash.js";
+import { itemSubtitle } from "#ext/lib/item-subtitle.js";
+import type { VaultItem } from "#ext/lib/vault/types.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
+import { daysUntilPurge } from "#ext/lib/trash.js";
 import { nowMs, selectItem, selectedId } from "../state.js";
 import { ItemIcon } from "./ItemIcons.js";
 

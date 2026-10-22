@@ -1,8 +1,8 @@
-import type { SealedData } from "../../core/crypto.js";
-import { isWrappedForRecipient } from "../../core/identity.js";
-import { parseJsonAs } from "../../core/json.js";
-import { isOrgAdmin, type Principal, type WrappedKey } from "../../core/org-model.js";
-import { MAX_TEAM_ITEMS, MAX_TEAM_VAULT_BYTES } from "../../core/team-items.js";
+import type { SealedData } from "#core/crypto.js";
+import { isWrappedForRecipient } from "#core/identity.js";
+import { parseJsonAs } from "#core/json.js";
+import { isOrgAdmin, type Principal, type WrappedKey } from "#core/org-model.js";
+import { MAX_TEAM_ITEMS, MAX_TEAM_VAULT_BYTES } from "#core/team-items.js";
 import { fail, now, ok, type Result } from "../http.js";
 import { confirmed, refusedEdit, teamAccess, writable, type OrgContext } from "./context.js";
 import type { TeamItemRecord } from "./item-tables.js";

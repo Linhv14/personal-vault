@@ -1,5 +1,5 @@
-import { countryOf } from "../../../src/core/address-data.js";
-import type { AddressData, CapturedCard } from "../../lib/autofill-protocol.js";
+import { countryOf } from "#core/address-data.js";
+import type { AddressData, CapturedCard } from "#ext/lib/autofill-protocol.js";
 import { isCardKind, type DetectedField, type FormField } from "./classify.js";
 
 export interface FilledValue {

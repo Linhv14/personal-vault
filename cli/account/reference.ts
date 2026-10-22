@@ -1,4 +1,4 @@
-import type { SecretContent } from "../../src/core/projects.js";
+import type { SecretContent } from "#core/projects.js";
 import { AgentError } from "../agent/session.js";
 
 export interface SecretReference {

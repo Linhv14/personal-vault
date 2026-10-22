@@ -1,6 +1,6 @@
-import { suggestHosts } from "../../../../src/core/agent-hosts.js";
-import { handleOf, isVariable, type Environment } from "../../../../src/core/projects.js";
-import type { Project, Secret } from "../../../lib/projects.js";
+import { suggestHosts } from "#core/agent-hosts.js";
+import { handleOf, isVariable, type Environment } from "#core/projects.js";
+import type { Project, Secret } from "#ext/lib/projects.js";
 
 export const CI_TAB = "ci";
 

@@ -1,4 +1,4 @@
-import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
+import { isPaymentFrameUrl } from "#core/payment-frames.js";
 import { conditionalPasskeys } from "../lib/passkey/conditional.js";
 import { detectFields, formKindOf, type FormKind } from "./forms/classify.js";
 import { isOneTimeCodeField } from "./two-factor.js";

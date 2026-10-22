@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { verifyAuthKey } from "../../at-rest.js";
-import { apiError } from "../../errors.js";
-import { readJson } from "../../http.js";
-import { OrgDirectory } from "../../orgs/directory.js";
-import { orgStore, userStore } from "../../durable-objects.js";
-import type { AppBindings } from "../../types.js";
-import { isBase64 } from "../../validate.js";
+import { verifyAuthKey } from "#worker/at-rest.js";
+import { apiError } from "#worker/errors.js";
+import { readJson } from "#worker/http.js";
+import { OrgDirectory } from "#worker/orgs/directory.js";
+import { orgStore, userStore } from "#worker/durable-objects.js";
+import type { AppBindings } from "#worker/types.js";
+import { isBase64 } from "#worker/validate.js";
 
 const routes = new Hono<AppBindings>();
 

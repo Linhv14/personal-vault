@@ -1,7 +1,7 @@
-import { countryOf } from "../../../src/core/address-data.js";
-import { generateAddress } from "../../../src/core/address-generator.js";
-import { aliasTag, emailAliases } from "../../../src/core/email-alias.js";
-import { registrableDomain } from "../../../src/core/site.js";
+import { countryOf } from "#core/address-data.js";
+import { generateAddress } from "#core/address-generator.js";
+import { aliasTag, emailAliases } from "#core/email-alias.js";
+import { registrableDomain } from "#core/site.js";
 import type { AddressData, IdentitySuggestion } from "../autofill-protocol.js";
 import { boundToSite } from "../captured-forms.js";
 import { itemType } from "../item-types.js";

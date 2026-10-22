@@ -1,4 +1,4 @@
-import { iconMarkup, type IconName } from "../../../src/ui/icons.js";
+import { iconMarkup, type IconName } from "#ui/icons.js";
 
 export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
   return (

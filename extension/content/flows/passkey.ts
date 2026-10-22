@@ -1,5 +1,5 @@
-import { conditionalPasskeys } from "../../lib/passkey/conditional.js";
-import type { PasskeyOption } from "../../lib/passkey/protocol.js";
+import { conditionalPasskeys } from "#ext/lib/passkey/conditional.js";
+import type { PasskeyOption } from "#ext/lib/passkey/protocol.js";
 import { closeMenu } from "../ui/menu.js";
 
 export async function offeredPasskeys(input: HTMLInputElement): Promise<PasskeyOption[]> {

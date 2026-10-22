@@ -1,11 +1,5 @@
-import {
-  fromBase64,
-  fromBase64Url,
-  randomBytes,
-  toBase64,
-  toBase64Url,
-} from "../../src/core/bytes.js";
-import type { MessageKey } from "../../src/i18n/index.js";
+import { fromBase64, fromBase64Url, randomBytes, toBase64, toBase64Url } from "#core/bytes.js";
+import type { MessageKey } from "#i18n/index.js";
 import { asSession, request } from "./api.js";
 import { forget, openVaultKey, rejection, sealVaultKey, signedInSession } from "./device-unlock.js";
 import { getLocal, setLocal, unlock } from "./storage.js";

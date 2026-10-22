@@ -1,4 +1,4 @@
-import { APP_NAME, WORDMARK } from "../../core/brand.js";
+import { APP_NAME, WORDMARK } from "#core/brand.js";
 import { EMAIL_LOGO_PNG_BASE64 } from "../email-logo.js";
 import type { InlineImage } from "../mailer.js";
 import { COLORS, FONT, MONO } from "./theme.js";

@@ -1,13 +1,13 @@
-import type { SealedData } from "../../core/crypto.js";
-import { isWrappedForRecipient } from "../../core/identity.js";
-import { parseJsonAs } from "../../core/json.js";
+import type { SealedData } from "#core/crypto.js";
+import { isWrappedForRecipient } from "#core/identity.js";
+import { parseJsonAs } from "#core/json.js";
 import {
   isOrgAdmin,
   type Principal,
   type TeamAccess,
   type TeamView,
   type WrappedKey,
-} from "../../core/org-model.js";
+} from "#core/org-model.js";
 import { fail, now, ok, type Result } from "../http.js";
 import { confirmed, confirmedAdmin, type OrgContext } from "./context.js";
 

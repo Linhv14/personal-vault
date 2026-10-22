@@ -1,6 +1,6 @@
 import { en, type Catalogue, type MessageKey } from "./en.js";
 import { vi } from "./vi.js";
-import { isVaultError } from "../core/errors.js";
+import { isVaultError } from "#core/errors.js";
 
 export type Locale = "en" | "vi";
 export type LocalePreference = Locale | "auto";

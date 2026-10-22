@@ -1,5 +1,5 @@
-import { fromBase64Url, randomBytes, toBase64, toBase64Url } from "../core/bytes.js";
-import { isPlainObject } from "../core/json.js";
+import { fromBase64Url, randomBytes, toBase64, toBase64Url } from "#core/bytes.js";
+import { isPlainObject } from "#core/json.js";
 import type { Env } from "./types.js";
 import { isBase64Url } from "./validate.js";
 import { ES256, RS256, verifyAssertion, type AssertionInput } from "./webauthn.js";

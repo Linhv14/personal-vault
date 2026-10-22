@@ -3,8 +3,8 @@ import {
   deriveMasterKey,
   deriveWrappingKey,
   open as openSealed,
-} from "../../src/core/crypto.js";
-import { toBase64 } from "../../src/core/bytes.js";
+} from "#core/crypto.js";
+import { toBase64 } from "#core/bytes.js";
 import { getLocal } from "./storage.js";
 
 export async function currentAuthKey(password: string): Promise<string | null> {

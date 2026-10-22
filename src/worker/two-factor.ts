@@ -2,10 +2,10 @@ import {
   BACKUP_CODE_COUNT,
   generateBackupCode,
   parseSecondFactor,
-} from "../core/account-two-factor.js";
-import { APP_NAME } from "../core/brand.js";
-import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "../core/bytes.js";
-import { buildOtpauthUri, generateTotp, generateTotpSecret, TOTP_DEFAULTS } from "../core/totp.js";
+} from "#core/account-two-factor.js";
+import { APP_NAME } from "#core/brand.js";
+import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "#core/bytes.js";
+import { buildOtpauthUri, generateTotp, generateTotpSecret, TOTP_DEFAULTS } from "#core/totp.js";
 import { protectBackupCode, protectTwoFactorSecret, revealTwoFactorSecret } from "./at-rest.js";
 import { hashToken } from "./session.js";
 import type { Env } from "./types.js";

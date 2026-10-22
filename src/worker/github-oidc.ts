@@ -1,6 +1,6 @@
-import { fromBase64Url, utf8Decode, utf8Encode, type Bytes } from "../core/bytes.js";
-import type { GithubClaims } from "../core/ci.js";
-import { isPlainObject } from "../core/json.js";
+import { fromBase64Url, utf8Decode, utf8Encode, type Bytes } from "#core/bytes.js";
+import type { GithubClaims } from "#core/ci.js";
+import { isPlainObject } from "#core/json.js";
 
 export const GITHUB_ISSUER = "https://token.actions.githubusercontent.com";
 const JWKS_URL = `${GITHUB_ISSUER}/.well-known/jwks`;

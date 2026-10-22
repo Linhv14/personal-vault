@@ -1,9 +1,4 @@
-import {
-  randomKey,
-  unwrapForRecipient,
-  wrapForRecipient,
-  type Identity,
-} from "../../src/core/identity.js";
+import { randomKey, unwrapForRecipient, wrapForRecipient, type Identity } from "#core/identity.js";
 import {
   teamKeyContext,
   type AuditEvent,
@@ -11,14 +6,14 @@ import {
   type OrgRole,
   type TeamAccess,
   type TeamView,
-} from "../../src/core/org-model.js";
-import type { Bytes } from "../../src/core/bytes.js";
-import type { SealedData } from "../../src/core/crypto.js";
+} from "#core/org-model.js";
+import type { Bytes } from "#core/bytes.js";
+import type { SealedData } from "#core/crypto.js";
 import { request } from "./api.js";
 import { getLocal } from "./storage.js";
 
-export { isOrgAdmin, planLimits } from "../../src/core/org-model.js";
-export type { AuditEvent, OrgRole, TeamAccess } from "../../src/core/org-model.js";
+export { isOrgAdmin, planLimits } from "#core/org-model.js";
+export type { AuditEvent, OrgRole, TeamAccess } from "#core/org-model.js";
 export type Team = TeamView;
 
 export interface OrgSummary {

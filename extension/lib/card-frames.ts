@@ -1,4 +1,4 @@
-import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
+import { isPaymentFrameUrl } from "#core/payment-frames.js";
 import type { CardData } from "./autofill-protocol.js";
 
 interface CardFrame {

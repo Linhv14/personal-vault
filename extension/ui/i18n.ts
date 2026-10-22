@@ -1,10 +1,5 @@
 import { signal } from "@preact/signals";
-import {
-  createTranslator,
-  resolveLocale,
-  type Locale,
-  type Translate,
-} from "../../src/i18n/index.js";
+import { createTranslator, resolveLocale, type Locale, type Translate } from "#i18n/index.js";
 
 export const localeSignal = signal<Locale>("en");
 

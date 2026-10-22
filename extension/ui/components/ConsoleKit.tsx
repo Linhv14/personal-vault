@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { IconName } from "../../../src/ui/icons.js";
+import type { IconName } from "#ui/icons.js";
 import { formatRelative } from "../format.js";
 import { localeSignal, useT } from "../i18n.js";
 import { failure$, pending$ } from "../store/feedback.js";

@@ -1,18 +1,18 @@
 import { useEffect, useState } from "preact/hooks";
-import { describeError, type Translate } from "../../../src/i18n/index.js";
-import * as api from "../../lib/api.js";
-import { scheduleClipboardClear } from "../../lib/clipboard.js";
+import { describeError, type Translate } from "#i18n/index.js";
+import * as api from "#ext/lib/api.js";
+import { scheduleClipboardClear } from "#ext/lib/clipboard.js";
 import {
   forgetSharedLink,
   loadSharedLinks,
   saveSharedLinks,
   type SharedLink,
-} from "../../lib/shared-links.js";
-import { Card } from "../../ui/components/Card.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { formatDateTime } from "../../ui/format.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
-import { vaultKeySignal } from "../../ui/store/session.js";
+} from "#ext/lib/shared-links.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { formatDateTime } from "#ext/ui/format.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
+import { vaultKeySignal } from "#ext/ui/store/session.js";
 import { showToast } from "../state.js";
 
 type LinkEntry = { link: SharedLink; status: api.ShareStatus };

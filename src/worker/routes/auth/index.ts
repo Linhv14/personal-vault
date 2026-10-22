@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { AppBindings } from "../../types.js";
+import type { AppBindings } from "#worker/types.js";
 import account from "./account.js";
 import login from "./login.js";
 import password from "./password.js";

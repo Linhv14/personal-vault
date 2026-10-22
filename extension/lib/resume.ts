@@ -1,5 +1,5 @@
-import { importVaultKey, openJson, sealJson } from "../../src/core/crypto.js";
-import { fromBase64, utf8Encode } from "../../src/core/bytes.js";
+import { importVaultKey, openJson, sealJson } from "#core/crypto.js";
+import { fromBase64, utf8Encode } from "#core/bytes.js";
 import * as api from "./api.js";
 import { platform } from "./platform.js";
 import { autoLockMinutes, getLocal, getUnlocked, LOCK_NEVER, setLocal, unlock } from "./storage.js";

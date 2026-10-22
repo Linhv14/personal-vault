@@ -1,8 +1,8 @@
 import { Fragment } from "preact";
-import { formText } from "../../../src/ui/form-data.js";
+import { formText } from "#ui/form-data.js";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { generatePassword } from "../../../src/core/generator.js";
-import { describeError } from "../../../src/i18n/index.js";
+import { generatePassword } from "#core/generator.js";
+import { describeError } from "#i18n/index.js";
 import {
   HAS_PASSWORD_HISTORY,
   keepUsedCodes,
@@ -11,13 +11,13 @@ import {
   withPasswordHistory,
   type FieldSpec,
   type ItemType,
-} from "../../lib/item-types.js";
-import { parseRecoveryCodes } from "../../lib/recovery-codes.js";
-import { newItemId, saveItem } from "../../lib/vault/store.js";
-import type { VaultItem } from "../../lib/vault/types.js";
-import { DEFAULT_VAULT_ID, vaultOf } from "../../lib/vault/defs.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/item-types.js";
+import { parseRecoveryCodes } from "#ext/lib/recovery-codes.js";
+import { newItemId, saveItem } from "#ext/lib/vault/store.js";
+import type { VaultItem } from "#ext/lib/vault/types.js";
+import { DEFAULT_VAULT_ID, vaultOf } from "#ext/lib/vault/defs.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import {
   CustomFieldsEditor,
   rowKey,

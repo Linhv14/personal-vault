@@ -1,4 +1,4 @@
-import type { Suggestion } from "../../lib/autofill-protocol.js";
+import type { Suggestion } from "#ext/lib/autofill-protocol.js";
 import { send } from "../send.js";
 import { state, t } from "../state.js";
 import { setValue } from "../track.js";

@@ -1,6 +1,6 @@
 import { Hono, type Context } from "hono";
-import { fromBase64Url, utf8Decode } from "../../core/bytes.js";
-import { parseLinkReference } from "../../core/ci.js";
+import { fromBase64Url, utf8Decode } from "#core/bytes.js";
+import { parseLinkReference } from "#core/ci.js";
 import { apiError } from "../errors.js";
 import { githubJwks, validJwks, verifyGithubToken, type JwksSource } from "../github-oidc.js";
 import { now, readJson, respond } from "../http.js";

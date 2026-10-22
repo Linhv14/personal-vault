@@ -1,7 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { IconName } from "../../../src/ui/icons.js";
-import { Icon } from "../../ui/components/Icon.js";
+import type { IconName } from "#ui/icons.js";
+import { Icon } from "#ext/ui/components/Icon.js";
 
 export function useDismiss(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);

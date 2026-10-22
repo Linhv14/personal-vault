@@ -1,6 +1,6 @@
-import { icon } from "../../../src/ui/icons.js";
-import { logo } from "../../../src/ui/logo.js";
-import type { PendingPrompt } from "../../lib/autofill-protocol.js";
+import { icon } from "#ui/icons.js";
+import { logo } from "#ui/logo.js";
+import type { PendingPrompt } from "#ext/lib/autofill-protocol.js";
 import { send } from "../send.js";
 import { t } from "../state.js";
 import { banner } from "./root.js";

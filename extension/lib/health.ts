@@ -1,5 +1,5 @@
-import { utf8Encode } from "../../src/core/bytes.js";
-import { sha1 } from "../../src/core/primitives.js";
+import { utf8Encode } from "#core/bytes.js";
+import { sha1 } from "#core/primitives.js";
 import { HAS_PASSWORD_HISTORY, itemType } from "./item-types.js";
 import type { VaultItem } from "./vault/types.js";
 

@@ -1,15 +1,15 @@
 import { Hono } from "hono";
-import { deviceKind } from "../../device-label.js";
-import { apiError } from "../../errors.js";
-import { now } from "../../http.js";
+import { deviceKind } from "#worker/device-label.js";
+import { apiError } from "#worker/errors.js";
+import { now } from "#worker/http.js";
 import {
   listSessions,
   revokeOtherSessions,
   revokeSession,
   revokeSessionById,
   sessionResumeKey,
-} from "../../session.js";
-import type { AppBindings } from "../../types.js";
+} from "#worker/session.js";
+import type { AppBindings } from "#worker/types.js";
 
 const routes = new Hono<AppBindings>();
 

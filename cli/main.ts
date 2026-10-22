@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { formatDotenv } from "../src/core/projects.js";
+import { formatDotenv } from "#core/projects.js";
 import {
   defaultContext,
   dotenvLocal,

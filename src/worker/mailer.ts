@@ -1,5 +1,5 @@
-import { APP_NAME } from "../core/brand.js";
-import { fromBase64 } from "../core/bytes.js";
+import { APP_NAME } from "#core/brand.js";
+import { fromBase64 } from "#core/bytes.js";
 
 export interface InlineImage {
   contentId: string;

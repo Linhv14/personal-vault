@@ -6,9 +6,9 @@ import {
   previewInvite,
   type InvitePreview,
   type MyInvite,
-} from "../../lib/orgs.js";
-import { formatDateTime } from "../../ui/format.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+} from "#ext/lib/orgs.js";
+import { formatDateTime } from "#ext/ui/format.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { ActionButton, EmptyState, PageHeader, PageSkeleton, RoleBadge } from "../components.js";
 import type { Run } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";

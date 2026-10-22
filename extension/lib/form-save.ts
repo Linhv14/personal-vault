@@ -1,4 +1,4 @@
-import { countryOf } from "../../src/core/address-data.js";
+import { countryOf } from "#core/address-data.js";
 import type {
   AddressData,
   AutofillRequest,
@@ -24,7 +24,7 @@ import {
 } from "./captured-forms.js";
 import { CARD_BRAND_NAMES, cardBrand, lastFour } from "./item-types.js";
 import { getLocal, setLocal } from "./storage.js";
-import { registrableDomain } from "../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 import { isPersonal, openVault } from "./vault/decrypt.js";
 import { newItemId, saveItem } from "./vault/store.js";
 import type { VaultItem } from "./vault/types.js";

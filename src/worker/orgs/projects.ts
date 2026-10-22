@@ -1,5 +1,5 @@
-import type { SealedData } from "../../core/crypto.js";
-import type { Principal, TeamView } from "../../core/org-model.js";
+import type { SealedData } from "#core/crypto.js";
+import type { Principal, TeamView } from "#core/org-model.js";
 import { fail, now, ok, type Result } from "../http.js";
 import { projectAccess, teamAccess, writable, type OrgContext } from "./context.js";
 import type { ProjectRecord } from "./project-tables.js";

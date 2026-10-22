@@ -1,12 +1,8 @@
 import { useState } from "preact/hooks";
-import {
-  isDomainAllowed,
-  normalizeDomain,
-  MAX_ALLOWED_DOMAINS,
-} from "../../../src/core/org-model.js";
-import { setAllowedDomains } from "../../lib/orgs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+import { isDomainAllowed, normalizeDomain, MAX_ALLOWED_DOMAINS } from "#core/org-model.js";
+import { setAllowedDomains } from "#ext/lib/orgs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { ActionButton, PanelHead } from "../components.js";
 import { useConsole } from "../data.js";
 

@@ -1,4 +1,4 @@
-import type { AuditEvent } from "../../core/org-model.js";
+import type { AuditEvent } from "#core/org-model.js";
 import { now } from "../http.js";
 import { chainHash, GENESIS, verifyChain } from "./audit-chain.js";
 

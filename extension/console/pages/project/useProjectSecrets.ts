@@ -1,9 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
-import { describeError, type MessageKey } from "../../../../src/i18n/index.js";
-import { listSecrets, upgradeLegacySecrets, type Project } from "../../../lib/projects.js";
-import type { Team } from "../../../lib/orgs.js";
-import { useT } from "../../../ui/i18n.js";
-import { attempt, toast } from "../../data.js";
+import { describeError, type MessageKey } from "#i18n/index.js";
+import { listSecrets, upgradeLegacySecrets, type Project } from "#ext/lib/projects.js";
+import type { Team } from "#ext/lib/orgs.js";
+import { useT } from "#ext/ui/i18n.js";
+import { attempt, toast } from "#ext/console/data.js";
 import type { SecretsByEnvironment } from "./helpers.js";
 
 export type Mutate = (

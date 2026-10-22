@@ -1,4 +1,4 @@
-import { foldText } from "../../../src/core/address-data.js";
+import { foldText } from "#core/address-data.js";
 
 export type CardFieldKind =
   | "cc-name"

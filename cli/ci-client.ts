@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { appendFile } from "node:fs/promises";
-import { isCiResponse, openCiResponse, parseLinkReference } from "../src/core/ci.js";
-import { isPlainObject } from "../src/core/json.js";
-import type { SecretContent } from "../src/core/projects.js";
+import { isCiResponse, openCiResponse, parseLinkReference } from "#core/ci.js";
+import { isPlainObject } from "#core/json.js";
+import type { SecretContent } from "#core/projects.js";
 
-export { DEFAULT_SERVER } from "../src/core/brand.js";
+export { DEFAULT_SERVER } from "#core/brand.js";
 
 export interface FetchOptions {
   server: string;

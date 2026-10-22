@@ -1,5 +1,5 @@
-import { isSealedData, type SealedData } from "../../core/crypto.js";
-import { parseJsonAs } from "../../core/json.js";
+import { isSealedData, type SealedData } from "#core/crypto.js";
+import { parseJsonAs } from "#core/json.js";
 
 export interface TeamItemRecord {
   id: string;

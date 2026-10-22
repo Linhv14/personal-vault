@@ -1,11 +1,6 @@
-import {
-  buildOtpauthUri,
-  parseTotpInput,
-  TOTP_DEFAULTS,
-  type TotpConfig,
-} from "../../src/core/totp.js";
-import type { MessageKey } from "../../src/i18n/index.js";
-import { formText } from "../../src/ui/form-data.js";
+import { buildOtpauthUri, parseTotpInput, TOTP_DEFAULTS, type TotpConfig } from "#core/totp.js";
+import type { MessageKey } from "#i18n/index.js";
+import { formText } from "#ui/form-data.js";
 import {
   cardDigits,
   cleanCustomFields,
@@ -18,7 +13,7 @@ import {
   type TextFieldKey,
 } from "../lib/item-types.js";
 import { parseRecoveryCodes } from "../lib/recovery-codes.js";
-import { registrableDomain } from "../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 import type { VaultItem } from "../lib/vault/types.js";
 
 export type EditedFields = Partial<

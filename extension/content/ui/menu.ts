@@ -1,6 +1,6 @@
-import type { LookalikeMatch } from "../../../src/core/lookalike.js";
-import { icon, type IconName } from "../../../src/ui/icons.js";
-import { logo, wordmark } from "../../../src/ui/logo.js";
+import type { LookalikeMatch } from "#core/lookalike.js";
+import { icon, type IconName } from "#ui/icons.js";
+import { logo, wordmark } from "#ui/logo.js";
 import { send } from "../send.js";
 import { state, t } from "../state.js";
 import { menu } from "./root.js";

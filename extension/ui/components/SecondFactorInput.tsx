@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { parseSecondFactor } from "../../../src/core/account-two-factor.js";
+import { parseSecondFactor } from "#core/account-two-factor.js";
 import { useT } from "../i18n.js";
 import { CodeBoxes } from "./CodeBoxes.js";
 

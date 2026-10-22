@@ -1,4 +1,4 @@
-import type { MessageKey } from "../../src/i18n/index.js";
+import type { MessageKey } from "#i18n/index.js";
 import type { OrgRole } from "../lib/orgs.js";
 
 export const ROLE_LABEL: Record<OrgRole, MessageKey> = {

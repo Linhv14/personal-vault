@@ -1,4 +1,4 @@
-import { deleteSecrets, type Project } from "../../../lib/projects.js";
+import { deleteSecrets, type Project } from "#ext/lib/projects.js";
 import { findDuplicates, type SecretsByEnvironment } from "./helpers.js";
 import type { Mutate } from "./useProjectSecrets.js";
 

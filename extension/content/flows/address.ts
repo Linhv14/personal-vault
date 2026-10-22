@@ -1,5 +1,5 @@
-import { flagMark } from "../../../src/ui/marks.js";
-import type { AddressData, AutofillRequest } from "../../lib/autofill-protocol.js";
+import { flagMark } from "#ui/marks.js";
+import type { AddressData, AutofillRequest } from "#ext/lib/autofill-protocol.js";
 import { scopeOf } from "../detect.js";
 import { detectFields } from "../forms/classify.js";
 import { fillAddress } from "../forms/fill.js";

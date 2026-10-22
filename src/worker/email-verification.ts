@@ -1,4 +1,4 @@
-import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
+import { timingSafeEqual, utf8Encode } from "#core/bytes.js";
 import { existingAccountEmail, verificationCodeEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import { createMailer, type Mailer } from "./mailer.js";

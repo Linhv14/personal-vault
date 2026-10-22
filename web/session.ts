@@ -6,8 +6,8 @@ import {
   open,
   unlockVault,
   type KdfParams,
-} from "../src/core/crypto.js";
-import { toBase64 } from "../src/core/bytes.js";
+} from "#core/crypto.js";
+import { toBase64 } from "#core/bytes.js";
 import { signal } from "@preact/signals";
 import {
   api,
@@ -23,7 +23,7 @@ import {
   upgradeKdf,
   usePlatform,
   vaultKeySignal,
-} from "../extension/web-host.js";
+} from "#ext/web-host.js";
 
 export const IDLE_MINUTES = 15;
 export const accountEmail = signal<string | null>(null);

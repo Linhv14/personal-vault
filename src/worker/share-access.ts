@@ -1,4 +1,4 @@
-import { timingSafeEqual, utf8Encode } from "../core/bytes.js";
+import { timingSafeEqual, utf8Encode } from "#core/bytes.js";
 import { shareAccessEmail, type EmailLocale } from "./emails.js";
 import { keyedHash } from "./keyed-hash.js";
 import type { Mailer } from "./mailer.js";

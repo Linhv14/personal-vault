@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
-import { generateTotp, secondsRemaining, type TotpConfig } from "../../../src/core/totp.js";
-import { useT } from "../../ui/i18n.js";
+import { generateTotp, secondsRemaining, type TotpConfig } from "#core/totp.js";
+import { useT } from "#ext/ui/i18n.js";
 import { copy, CopySource, nowMs } from "../state.js";
 import { CopyRow } from "./FieldRow.js";
 

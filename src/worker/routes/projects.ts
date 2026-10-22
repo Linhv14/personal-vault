@@ -1,12 +1,12 @@
 import { Hono } from "hono";
-import { isEnvironmentId, SECRET_ACCESS, type SecretAccess } from "../../core/projects.js";
+import { isEnvironmentId, SECRET_ACCESS, type SecretAccess } from "#core/projects.js";
 import { apiError } from "../errors.js";
 import { readJson, respond } from "../http.js";
 import { clientIp } from "../request.js";
 import { orgStore } from "../durable-objects.js";
 import type { AppBindings } from "../types.js";
-import { isBranch, isGithubEnvironment, isRepository } from "../../core/ci.js";
-import { isPublicKey } from "../../core/identity.js";
+import { isBranch, isGithubEnvironment, isRepository } from "#core/ci.js";
+import { isPublicKey } from "#core/identity.js";
 import {
   isSealedProject,
   isSealedSecret,
@@ -14,8 +14,8 @@ import {
   isUuid,
   isWrappedKey,
 } from "../validate.js";
-import type { SealedData } from "../../core/crypto.js";
-import type { Principal } from "../../core/org-model.js";
+import type { SealedData } from "#core/crypto.js";
+import type { Principal } from "#core/org-model.js";
 import { asMember, isGeneration, limitsOf, param, type Ctx } from "./org-access.js";
 
 const projects = new Hono<AppBindings>();

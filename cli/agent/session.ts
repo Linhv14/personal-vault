@@ -1,4 +1,4 @@
-import { toBase64, utf8Encode } from "../../src/core/bytes.js";
+import { toBase64, utf8Encode } from "#core/bytes.js";
 import {
   deriveAuthKey,
   deriveMasterKey,
@@ -7,9 +7,9 @@ import {
   open,
   type KdfParams,
   type SealedData,
-} from "../../src/core/crypto.js";
-import { unwrapForRecipient, type Identity } from "../../src/core/identity.js";
-import { teamKeyContext, type TeamView } from "../../src/core/org-model.js";
+} from "#core/crypto.js";
+import { unwrapForRecipient, type Identity } from "#core/identity.js";
+import { teamKeyContext, type TeamView } from "#core/org-model.js";
 import {
   openProject,
   refersTo,
@@ -18,7 +18,7 @@ import {
   type ProjectContent,
   type SecretAccess,
   type SecretContent,
-} from "../../src/core/projects.js";
+} from "#core/projects.js";
 
 export class AgentError extends Error {}
 

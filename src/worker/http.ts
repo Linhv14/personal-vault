@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { apiError, type ApiErrorCode } from "./errors.js";
 import { logError } from "./log.js";
 import type { AppBindings } from "./types.js";
-import { isPlainObject } from "../core/json.js";
+import { isPlainObject } from "#core/json.js";
 
 type Params = Record<string, string | number>;
 

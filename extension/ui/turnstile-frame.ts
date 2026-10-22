@@ -1,4 +1,4 @@
-import { turnstileSlot } from "../../src/ui/turnstile.js";
+import { turnstileSlot } from "#ui/turnstile.js";
 
 const SILENT_TIMEOUT_MS = 30_000;
 

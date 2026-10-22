@@ -1,6 +1,6 @@
-import { open, seal, type SealedData } from "../../src/core/crypto.js";
-import { utf8Encode } from "../../src/core/bytes.js";
-import { createIdentity, type Identity } from "../../src/core/identity.js";
+import { open, seal, type SealedData } from "#core/crypto.js";
+import { utf8Encode } from "#core/bytes.js";
+import { createIdentity, type Identity } from "#core/identity.js";
 import { ApiError, request } from "./api.js";
 import { getLocal, setLocal } from "./storage.js";
 

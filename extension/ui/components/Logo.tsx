@@ -1,5 +1,5 @@
-import { APP_NAME, WORDMARK } from "../../../src/core/brand.js";
-import { logoSvg } from "../../../src/ui/logo.js";
+import { APP_NAME, WORDMARK } from "#core/brand.js";
+import { logoSvg } from "#ui/logo.js";
 
 export function Logo({
   size,

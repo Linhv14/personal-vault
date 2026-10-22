@@ -1,4 +1,4 @@
-import { saveSecrets, type Project, type Secret } from "../../../lib/projects.js";
+import { saveSecrets, type Project, type Secret } from "#ext/lib/projects.js";
 import { hostSuggestions, uniqueByName, withHosts } from "./helpers.js";
 import type { Mutate } from "./useProjectSecrets.js";
 

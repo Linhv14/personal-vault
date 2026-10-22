@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { describeError } from "../../../src/i18n/index.js";
-import type { IconName } from "../../../src/ui/icons.js";
-import type { VaultDef } from "../../lib/vault/types.js";
-import { DEFAULT_VAULT_ID, VAULT_COLORS, VAULT_ICONS } from "../../lib/vault/defs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+import { describeError } from "#i18n/index.js";
+import type { IconName } from "#ui/icons.js";
+import type { VaultDef } from "#ext/lib/vault/types.js";
+import { DEFAULT_VAULT_ID, VAULT_COLORS, VAULT_ICONS } from "#ext/lib/vault/defs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import { deleteVault, saveVault, showList } from "../state.js";
 
 export function VaultEditor({ vault }: { vault: VaultDef | null }) {

@@ -1,4 +1,4 @@
-import type { AddressData, CardData } from "../../lib/autofill-protocol.js";
+import type { AddressData, CardData } from "#ext/lib/autofill-protocol.js";
 import { isCardKind, type DetectedField, type FormField } from "./classify.js";
 import { addressValue, cardValue } from "./values.js";
 

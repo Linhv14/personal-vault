@@ -5,7 +5,7 @@ import net, { type AddressInfo } from "node:net";
 import tls from "node:tls";
 import zlib from "node:zlib";
 import type { Readable } from "node:stream";
-import { hostAllowed } from "../../src/core/projects.js";
+import { hostAllowed } from "#core/projects.js";
 import type { Authority } from "./certs.js";
 import { Scrubber, substituteHeader, type Injectable } from "./substitute.js";
 

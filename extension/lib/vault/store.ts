@@ -1,4 +1,4 @@
-import { sealJson } from "../../../src/core/crypto.js";
+import { sealJson } from "#core/crypto.js";
 import * as api from "../api.js";
 import { getLocal, setLocal, type CachedItem } from "../storage.js";
 import {

@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { describeError, type MessageKey, type Translate } from "../../src/i18n/index.js";
+import { describeError, type MessageKey, type Translate } from "#i18n/index.js";
 import { planImport, type ImportPlan } from "../lib/import/plan.js";
 import { readExport } from "../lib/import/read-export.js";
 import { ImportError, type ImportFormat, type SkipReason } from "../lib/import/source.js";
@@ -10,7 +10,7 @@ import { importItems } from "../lib/vault/import-items.js";
 import { saveItemPatiently, sync } from "../lib/vault/store.js";
 import { ITEM_TYPES, itemType, TYPE_LABEL } from "../lib/item-types.js";
 import { TYPE_ICON } from "../ui/item-icons.js";
-import type { IconName } from "../../src/ui/icons.js";
+import type { IconName } from "#ui/icons.js";
 import { Icon } from "../ui/components/Icon.js";
 import { localeSignal, useT } from "../ui/i18n.js";
 import { vaultKey } from "./session.js";

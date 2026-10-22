@@ -1,5 +1,5 @@
-import { rewrapVaultKey, type KdfParams, type SealedData } from "../../src/core/crypto.js";
-import type { Bytes } from "../../src/core/bytes.js";
+import { rewrapVaultKey, type KdfParams, type SealedData } from "#core/crypto.js";
+import type { Bytes } from "#core/bytes.js";
 import * as api from "./api.js";
 
 export async function upgradeKdf(

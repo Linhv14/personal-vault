@@ -8,7 +8,7 @@ import {
   type PageRequest,
   type RegistrationJSON,
 } from "../lib/passkey/protocol.js";
-import { fromBase64Url, toBase64Url } from "../../src/core/bytes.js";
+import { fromBase64Url, toBase64Url } from "#core/bytes.js";
 
 const credentials = navigator.credentials;
 const nativeCreate = credentials.create.bind(credentials);

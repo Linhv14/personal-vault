@@ -1,8 +1,8 @@
 import { spawn } from "node:child_process";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { formatDotenv, handleOf, refersTo } from "../../src/core/projects.js";
-import { DEFAULT_SERVER } from "../../src/core/brand.js";
+import { formatDotenv, handleOf, refersTo } from "#core/projects.js";
+import { DEFAULT_SERVER } from "#core/brand.js";
 import { remember, remembered } from "../agent/config.js";
 import {
   AgentError,

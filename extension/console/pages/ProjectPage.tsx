@@ -1,11 +1,6 @@
 import { useState } from "preact/hooks";
-import {
-  formatDotenv,
-  isVariable,
-  parseDotenv,
-  type SecretKind,
-} from "../../../src/core/projects.js";
-import { isOrgAdmin } from "../../lib/orgs.js";
+import { formatDotenv, isVariable, parseDotenv, type SecretKind } from "#core/projects.js";
+import { isOrgAdmin } from "#ext/lib/orgs.js";
 import {
   deleteSecret,
   importSecrets,
@@ -14,9 +9,9 @@ import {
   saveSecret,
   saveSecrets,
   type Project,
-} from "../../lib/projects.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/projects.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { EmptyState, PageHeader, PageSkeleton, SearchInput, SkeletonTable } from "../components.js";
 import { pending$, toast, useConsole } from "../data.js";
 import { href } from "../router.js";

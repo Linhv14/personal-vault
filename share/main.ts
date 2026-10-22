@@ -1,15 +1,15 @@
-import { fragmentNeedsPassphrase, openShare, type SharePayload } from "../src/core/share.js";
-import { generateTotp, secondsRemaining, TOTP_DEFAULTS } from "../src/core/totp.js";
+import { fragmentNeedsPassphrase, openShare, type SharePayload } from "#core/share.js";
+import { generateTotp, secondsRemaining, TOTP_DEFAULTS } from "#core/totp.js";
 import {
   createTranslator,
   describeError,
   detectLocale,
   type MessageKey,
   type Translate,
-} from "../src/i18n/index.js";
-import { hydrateIcons, icon, type IconName } from "../src/ui/icons.js";
-import { hydrateBrand } from "../src/ui/logo.js";
-import { turnstileToken } from "../src/ui/turnstile.js";
+} from "#i18n/index.js";
+import { hydrateIcons, icon, type IconName } from "#ui/icons.js";
+import { hydrateBrand } from "#ui/logo.js";
+import { turnstileToken } from "#ui/turnstile.js";
 import { guardReveal } from "./reveal.js";
 
 interface ShareResponse {

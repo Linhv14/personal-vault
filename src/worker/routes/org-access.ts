@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { HARD_LIMITS, isOrgAdmin, planLimits, type Principal } from "../../core/org-model.js";
+import { HARD_LIMITS, isOrgAdmin, planLimits, type Principal } from "#core/org-model.js";
 import { apiError } from "../errors.js";
 import { OrgDirectory } from "../orgs/directory.js";
 import type { AppBindings } from "../types.js";

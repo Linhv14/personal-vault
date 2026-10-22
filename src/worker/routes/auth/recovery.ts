@@ -1,31 +1,31 @@
 import { Hono } from "hono";
-import { toBase64 } from "../../../core/bytes.js";
-import { isPlainObject } from "../../../core/json.js";
+import { toBase64 } from "#core/bytes.js";
+import { isPlainObject } from "#core/json.js";
 import {
   protectAuthKey,
   protectWrappedKey,
   recoveryScope,
   revealWrappedKey,
   verifyAuthKey,
-} from "../../at-rest.js";
-import { normalizeEmail } from "../../email-address.js";
-import { accountRecoveredEmail, twoFactorDisabledEmail } from "../../emails.js";
-import { apiError } from "../../errors.js";
-import { inBackground, now, readJson } from "../../http.js";
-import { createMailer } from "../../mailer.js";
-import { CODE_RESEND_COOLDOWN_SECONDS } from "../../one-time-code.js";
+} from "#worker/at-rest.js";
+import { normalizeEmail } from "#worker/email-address.js";
+import { accountRecoveredEmail, twoFactorDisabledEmail } from "#worker/emails.js";
+import { apiError } from "#worker/errors.js";
+import { inBackground, now, readJson } from "#worker/http.js";
+import { createMailer } from "#worker/mailer.js";
+import { CODE_RESEND_COOLDOWN_SECONDS } from "#worker/one-time-code.js";
 import {
   clearRecoveryEmailCode,
   issueRecoveryEmailCode,
   recoveryEmailCodeError,
   sendRecoveryEmailCode,
-} from "../../recovery-email.js";
-import { clientIp } from "../../request.js";
-import { revokeAllSessions } from "../../session.js";
-import { throttle } from "../../throttle.js";
-import { disableStatements } from "../../two-factor.js";
-import type { AppBindings, Env } from "../../types.js";
-import { isBase64, isKdf, isSealed } from "../../validate.js";
+} from "#worker/recovery-email.js";
+import { clientIp } from "#worker/request.js";
+import { revokeAllSessions } from "#worker/session.js";
+import { throttle } from "#worker/throttle.js";
+import { disableStatements } from "#worker/two-factor.js";
+import type { AppBindings, Env } from "#worker/types.js";
+import { isBase64, isKdf, isSealed } from "#worker/validate.js";
 
 const routes = new Hono<AppBindings>();
 

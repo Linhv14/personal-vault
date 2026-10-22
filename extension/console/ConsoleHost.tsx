@@ -1,7 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import type { Identity } from "../../src/core/identity.js";
-import { describeError } from "../../src/i18n/index.js";
+import type { Identity } from "#core/identity.js";
+import { describeError } from "#i18n/index.js";
 import { ensureIdentity } from "../lib/identity.js";
 import { useT } from "../ui/i18n.js";
 import { ConsoleApp, type PersonalPage } from "./ConsoleApp.js";

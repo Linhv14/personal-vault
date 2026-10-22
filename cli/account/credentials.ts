@@ -2,8 +2,8 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { fromBase64, toBase64 } from "../../src/core/bytes.js";
-import { isPlainObject, parseJsonAs } from "../../src/core/json.js";
+import { fromBase64, toBase64 } from "#core/bytes.js";
+import { isPlainObject, parseJsonAs } from "#core/json.js";
 import { AgentError, type Session } from "../agent/session.js";
 
 const SERVICE = "7key-cli";

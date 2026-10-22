@@ -1,6 +1,6 @@
 import type { StoredPasskey } from "../passkey/authenticator.js";
 import { cardDigits, normalizeExpiry } from "../item-types.js";
-import { registrableDomain } from "../../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 import type { ItemDraft } from "../vault/types.js";
 import { decryptWithPassphrase, OpenPgpError, type OpenPgpErrorCode } from "./openpgp.js";
 import { readProtonPasskey, type ProtonPasskeyFields } from "./proton-passkey.js";

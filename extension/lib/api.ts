@@ -4,8 +4,8 @@ import {
   type AccountCryptoRecord,
   type KdfParams,
   type SealedData,
-} from "../../src/core/crypto.js";
-import { isFiniteNumber, isPlainObject, isString } from "../../src/core/json.js";
+} from "#core/crypto.js";
+import { isFiniteNumber, isPlainObject, isString } from "#core/json.js";
 import { getLocal, getUnlocked, lock, setToken, type CachedItem } from "./storage.js";
 
 export class ApiError extends Error {

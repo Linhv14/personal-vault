@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "../../core/bytes.js";
+import { randomBytes, timingSafeEqual, toBase64Url, utf8Encode } from "#core/bytes.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";
 import { inBackground, now, readJson } from "../http.js";
@@ -8,7 +8,7 @@ import { createMailer } from "../mailer.js";
 import { isCode } from "../one-time-code.js";
 import { hashToken } from "../session.js";
 import { isBase64 } from "../validate.js";
-import { isPlainObject } from "../../core/json.js";
+import { isPlainObject } from "#core/json.js";
 import { consumeShareCode, MAX_RECIPIENTS, recipientHash, sendShareCode } from "../share-access.js";
 import type { AppBindings } from "../types.js";
 

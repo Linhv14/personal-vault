@@ -1,4 +1,4 @@
-import type { OrgRole, Principal, TeamAccess } from "../../core/org-model.js";
+import type { OrgRole, Principal, TeamAccess } from "#core/org-model.js";
 import { fail, ok, type Result } from "../http.js";
 import { confirmedAdmin, type OrgContext } from "./context.js";
 

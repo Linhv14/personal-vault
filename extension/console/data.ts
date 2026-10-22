@@ -1,8 +1,8 @@
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useEffect, useState } from "preact/hooks";
-import type { Identity } from "../../src/core/identity.js";
-import { describeError, type MessageKey } from "../../src/i18n/index.js";
+import type { Identity } from "#core/identity.js";
+import { describeError, type MessageKey } from "#i18n/index.js";
 import {
   getOrg,
   listOrgs,

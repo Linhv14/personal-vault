@@ -1,5 +1,5 @@
-import { APP_NAME } from "../core/brand.js";
-import type { InvitableRole } from "../core/org-model.js";
+import { APP_NAME } from "#core/brand.js";
+import type { InvitableRole } from "#core/org-model.js";
 import {
   formatDate,
   renderEmail,

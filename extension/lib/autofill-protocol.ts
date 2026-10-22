@@ -1,5 +1,5 @@
-import type { LookalikeMatch } from "../../src/core/lookalike.js";
-import { isPlainObject } from "../../src/core/json.js";
+import type { LookalikeMatch } from "#core/lookalike.js";
+import { isPlainObject } from "#core/json.js";
 import { CARD_BRAND_NAMES, type CardBrand } from "./item-types.js";
 
 export const AUTOFILL_SCRIPT_ID = "personal-vault-autofill";

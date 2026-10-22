@@ -1,25 +1,25 @@
-import { sameSecret } from "../../../core/primitives.js";
+import { sameSecret } from "#core/primitives.js";
 import { Hono } from "hono";
-import { protectAuthKey, protectWrappedKey } from "../../at-rest.js";
-import { deviceLabel } from "../../device-label.js";
-import { normalizeEmail } from "../../email-address.js";
+import { protectAuthKey, protectWrappedKey } from "#worker/at-rest.js";
+import { deviceLabel } from "#worker/device-label.js";
+import { normalizeEmail } from "#worker/email-address.js";
 import {
   emailVerificationEnabled,
   issueCode,
   sendCode,
   verificationCodeError,
-} from "../../email-verification.js";
-import { apiError } from "../../errors.js";
-import { inBackground, now, readJson } from "../../http.js";
-import { keyedHash } from "../../keyed-hash.js";
-import { createMailer } from "../../mailer.js";
-import { CODE_RESEND_COOLDOWN_SECONDS } from "../../one-time-code.js";
-import { OrgDirectory } from "../../orgs/directory.js";
-import { joinFromInvite } from "../../orgs/invitations.js";
-import { clientIp, isOpenRegistration } from "../../request.js";
-import { createSession, decoySession, noteDevice } from "../../session.js";
-import type { AppBindings, Env } from "../../types.js";
-import { isBase64, isKdf, isSealed, isUuid } from "../../validate.js";
+} from "#worker/email-verification.js";
+import { apiError } from "#worker/errors.js";
+import { inBackground, now, readJson } from "#worker/http.js";
+import { keyedHash } from "#worker/keyed-hash.js";
+import { createMailer } from "#worker/mailer.js";
+import { CODE_RESEND_COOLDOWN_SECONDS } from "#worker/one-time-code.js";
+import { OrgDirectory } from "#worker/orgs/directory.js";
+import { joinFromInvite } from "#worker/orgs/invitations.js";
+import { clientIp, isOpenRegistration } from "#worker/request.js";
+import { createSession, decoySession, noteDevice } from "#worker/session.js";
+import type { AppBindings, Env } from "#worker/types.js";
+import { isBase64, isKdf, isSealed, isUuid } from "#worker/validate.js";
 
 const routes = new Hono<AppBindings>();
 

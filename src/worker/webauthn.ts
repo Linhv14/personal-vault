@@ -1,6 +1,6 @@
-import { sha256 } from "../core/primitives.js";
-import { fromBase64Url, timingSafeEqual, utf8Encode, type Bytes } from "../core/bytes.js";
-import { isPlainObject } from "../core/json.js";
+import { sha256 } from "#core/primitives.js";
+import { fromBase64Url, timingSafeEqual, utf8Encode, type Bytes } from "#core/bytes.js";
+import { isPlainObject } from "#core/json.js";
 
 export const ES256 = -7;
 export const RS256 = -257;

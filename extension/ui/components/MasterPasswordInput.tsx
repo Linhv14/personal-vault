@@ -1,14 +1,14 @@
 import { useRef, useState } from "preact/hooks";
-import { rateStrength, type Strength } from "../../../src/core/generator.js";
+import { rateStrength, type Strength } from "#core/generator.js";
 import {
   MASTER_PASSWORD_MIN_LENGTH,
   masterPasswordIssue,
   masterPasswordLength,
   type MasterPasswordIssue,
-} from "../../../src/core/master-password.js";
-import type { MessageKey } from "../../../src/i18n/index.js";
-import { passwordEntropy } from "../../lib/health.js";
-import { checkNewMasterPassword, masterPasswordMessage } from "../../lib/master-password.js";
+} from "#core/master-password.js";
+import type { MessageKey } from "#i18n/index.js";
+import { passwordEntropy } from "#ext/lib/health.js";
+import { checkNewMasterPassword, masterPasswordMessage } from "#ext/lib/master-password.js";
 import { useT } from "../i18n.js";
 
 const STRENGTH_LEVELS: readonly Strength[] = ["very_weak", "weak", "fair", "strong", "very_strong"];

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { groupSecret } from "../../../src/core/account-two-factor.js";
-import { describeError } from "../../../src/i18n/index.js";
-import { getLocal } from "../../lib/storage.js";
+import { formText } from "#ui/form-data.js";
+import { groupSecret } from "#core/account-two-factor.js";
+import { describeError } from "#i18n/index.js";
+import { getLocal } from "#ext/lib/storage.js";
 import {
   disableTwoFactor,
   enableTwoFactor,
@@ -10,14 +10,14 @@ import {
   startTwoFactor,
   twoFactorStatus,
   type TwoFactorStatus,
-} from "../../lib/two-factor.js";
-import { BackupCodesView } from "../../ui/components/BackupCodesView.js";
-import { Button } from "../../ui/components/Button.js";
-import { Card } from "../../ui/components/Card.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { QrCode } from "../../ui/components/QrCode.js";
-import { SecondFactorInput } from "../../ui/components/SecondFactorInput.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+} from "#ext/lib/two-factor.js";
+import { BackupCodesView } from "#ext/ui/components/BackupCodesView.js";
+import { Button } from "#ext/ui/components/Button.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { QrCode } from "#ext/ui/components/QrCode.js";
+import { SecondFactorInput } from "#ext/ui/components/SecondFactorInput.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { currentAuthKey, showToast } from "../state.js";
 
 type Purpose = "enable" | "disable" | "codes";

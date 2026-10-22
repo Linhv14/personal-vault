@@ -1,10 +1,10 @@
-import { Icon } from "../../ui/components/Icon.js";
+import { Icon } from "#ext/ui/components/Icon.js";
 import { useEffect } from "preact/hooks";
-import { ITEM_TYPES, NEW_LABEL, TYPE_LABEL } from "../../lib/item-types.js";
-import { TYPE_ICON } from "../../ui/item-icons.js";
-import { siteWarning } from "../../lib/site-warning.js";
-import { registrableDomain } from "../../../src/core/site.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+import { ITEM_TYPES, NEW_LABEL, TYPE_LABEL } from "#ext/lib/item-types.js";
+import { TYPE_ICON } from "#ext/ui/item-icons.js";
+import { siteWarning } from "#ext/lib/site-warning.js";
+import { registrableDomain } from "#core/site.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { inScope, inVault, listView, live, scopeExists, typeCounts } from "../filters.js";
 import { Dropdown } from "./Menu.js";
 import { Row } from "./Row.js";

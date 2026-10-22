@@ -1,5 +1,5 @@
-import { pbkdf2Bits } from "../../src/core/primitives.js";
-import { fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
+import { pbkdf2Bits } from "#core/primitives.js";
+import { fromBase64, randomBytes, toBase64, utf8Encode, type Bytes } from "#core/bytes.js";
 import { asSession, request } from "./api.js";
 import { forget, openVaultKey, rejection, sealVaultKey, signedInSession } from "./device-unlock.js";
 import { getLocal, setLocal, unlock } from "./storage.js";

@@ -1,5 +1,5 @@
-import { sealJson } from "../../../src/core/crypto.js";
-import { registrableDomain } from "../../../src/core/site.js";
+import { sealJson } from "#core/crypto.js";
+import { registrableDomain } from "#core/site.js";
 import * as api from "../api.js";
 import { cardDigits, itemType } from "../item-types.js";
 import { getLocal, setLocal } from "../storage.js";

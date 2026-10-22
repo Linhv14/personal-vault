@@ -247,6 +247,30 @@ export default defineConfig(
     },
   },
   {
+    files: [
+      "extension/**/*.{ts,tsx}",
+      "web/**/*.{ts,tsx}",
+      "src/**/*.{ts,tsx}",
+      "cli/**/*.{ts,tsx}",
+      "share/**/*.ts",
+    ],
+    ignores: ["src/core/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../../*"],
+              message:
+                "Use a # import from package.json (#core, #ui, #i18n, #worker, #ext) instead of climbing two folders.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     ignores: [
       "src/core/**",

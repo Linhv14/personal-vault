@@ -1,4 +1,4 @@
-import { randomInt } from "../core/generator.js";
+import { randomInt } from "#core/generator.js";
 
 export const CODE_RESEND_COOLDOWN_SECONDS = 60;
 export const CODE_MAX_ATTEMPTS = 5;

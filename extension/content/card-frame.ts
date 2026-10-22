@@ -1,4 +1,4 @@
-import { isPaymentFrameUrl } from "../../src/core/payment-frames.js";
+import { isPaymentFrameUrl } from "#core/payment-frames.js";
 import { isCardFrameFill, type CardFrameCapture } from "../lib/autofill-protocol.js";
 import { detectFields, isCardKind, type FormField } from "./forms/classify.js";
 import { fillCard, setFieldValue } from "./forms/fill.js";

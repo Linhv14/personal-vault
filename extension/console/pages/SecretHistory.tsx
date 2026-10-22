@@ -1,13 +1,13 @@
 import { useEffect, useState } from "preact/hooks";
-import { describeError } from "../../../src/i18n/index.js";
+import { describeError } from "#i18n/index.js";
 import {
   listSecretVersions,
   type Project,
   type Secret,
   type SecretVersion,
-} from "../../lib/projects.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/projects.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Dialog, When } from "../components.js";
 import { toast, useConsole } from "../data.js";
 

@@ -20,7 +20,7 @@ import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
 import { resumeUnlock } from "./lib/resume.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
 import { warn } from "./lib/log.js";
-import { isPlainObject } from "../src/core/json.js";
+import { isPlainObject } from "#core/json.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   void scheduleLockAlarm();

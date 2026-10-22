@@ -1,14 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { rewrapVaultKey } from "../../../src/core/crypto.js";
-import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
-import { describeError } from "../../../src/i18n/index.js";
-import * as api from "../../lib/api.js";
+import { formText } from "#ui/form-data.js";
+import { rewrapVaultKey } from "#core/crypto.js";
+import type { MasterPasswordIssue } from "#core/master-password.js";
+import { describeError } from "#i18n/index.js";
+import * as api from "#ext/lib/api.js";
 import {
   createRecoveryCode,
   recoveryCreatedAt,
   removeRecoveryCode,
-} from "../../lib/account-recovery.js";
+} from "#ext/lib/account-recovery.js";
 import {
   biometricLabel,
   biometricSetupHint,
@@ -16,7 +16,7 @@ import {
   disableBiometric,
   enableBiometric,
   hasBiometric,
-} from "../../lib/biometric.js";
+} from "#ext/lib/biometric.js";
 import {
   disablePin,
   enablePin,
@@ -24,16 +24,16 @@ import {
   isValidPin,
   PIN_MAX_LENGTH,
   PIN_MIN_LENGTH,
-} from "../../lib/pin.js";
-import { checkNewMasterPassword } from "../../lib/master-password.js";
-import { getLocal, lock, setLocal } from "../../lib/storage.js";
-import { Button } from "../../ui/components/Button.js";
-import { Card } from "../../ui/components/Card.js";
-import { MasterPasswordInput } from "../../ui/components/MasterPasswordInput.js";
-import { RecoveryCodeView } from "../../ui/components/RecoveryCodeView.js";
-import { formatDateTime } from "../../ui/format.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
-import { vaultKeyRawSignal, vaultKeySignal } from "../../ui/store/session.js";
+} from "#ext/lib/pin.js";
+import { checkNewMasterPassword } from "#ext/lib/master-password.js";
+import { getLocal, lock, setLocal } from "#ext/lib/storage.js";
+import { Button } from "#ext/ui/components/Button.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { MasterPasswordInput } from "#ext/ui/components/MasterPasswordInput.js";
+import { RecoveryCodeView } from "#ext/ui/components/RecoveryCodeView.js";
+import { formatDateTime } from "#ext/ui/format.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
+import { vaultKeyRawSignal, vaultKeySignal } from "#ext/ui/store/session.js";
 import { currentAuthKey, reloadLocal, showToast } from "../state.js";
 import { TwoFactorCard } from "./TwoFactorCard.js";
 

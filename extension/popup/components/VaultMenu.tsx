@@ -1,13 +1,13 @@
 import type { ComponentChildren } from "preact";
 import { Fragment } from "preact";
 import { useState } from "preact/hooks";
-import type { IconName } from "../../../src/ui/icons.js";
-import type { VaultDef } from "../../lib/vault/types.js";
-import { consolePathOf } from "../../lib/vault/shared.js";
-import { DEFAULT_VAULT_ID, vaultOf } from "../../lib/vault/defs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+import type { IconName } from "#ui/icons.js";
+import type { VaultDef } from "#ext/lib/vault/types.js";
+import { consolePathOf } from "#ext/lib/vault/shared.js";
+import { DEFAULT_VAULT_ID, vaultOf } from "#ext/lib/vault/defs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import {
   currentVault,
   deleteVault,

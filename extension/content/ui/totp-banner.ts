@@ -1,5 +1,5 @@
-import { logo } from "../../../src/ui/logo.js";
-import type { TotpPrompt } from "../../lib/autofill-protocol.js";
+import { logo } from "#ui/logo.js";
+import type { TotpPrompt } from "#ext/lib/autofill-protocol.js";
 import { send } from "../send.js";
 import { t } from "../state.js";
 import { setValue } from "../track.js";

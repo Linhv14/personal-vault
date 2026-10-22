@@ -1,13 +1,8 @@
-import type { SealedData } from "../../src/core/crypto.js";
-import { openTeamItem, sealTeamItem } from "../../src/core/team-items.js";
-import {
-  createIdentity,
-  wrapForRecipient,
-  randomKey,
-  type Identity,
-} from "../../src/core/identity.js";
-import { encodeRepoKey, linkKeyContext, linkReference } from "../../src/core/ci.js";
-import { teamKeyContext, type WrappedKey } from "../../src/core/org-model.js";
+import type { SealedData } from "#core/crypto.js";
+import { openTeamItem, sealTeamItem } from "#core/team-items.js";
+import { createIdentity, wrapForRecipient, randomKey, type Identity } from "#core/identity.js";
+import { encodeRepoKey, linkKeyContext, linkReference } from "#core/ci.js";
+import { teamKeyContext, type WrappedKey } from "#core/org-model.js";
 import {
   environmentKey,
   newProject,
@@ -19,8 +14,8 @@ import {
   type ProjectContent,
   type SecretAccess,
   type SecretContent,
-} from "../../src/core/projects.js";
-import { toBase64 } from "../../src/core/bytes.js";
+} from "#core/projects.js";
+import { toBase64 } from "#core/bytes.js";
 import { ApiError, request } from "./api.js";
 import { warn } from "./log.js";
 import { teamKey, type OrgMember, type Team } from "./orgs.js";

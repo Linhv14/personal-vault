@@ -1,5 +1,5 @@
-import { isKdfParams, isSealedData } from "../../src/core/crypto.js";
-import { isWrappedForRecipient } from "../../src/core/identity.js";
+import { isKdfParams, isSealedData } from "#core/crypto.js";
+import { isWrappedForRecipient } from "#core/identity.js";
 import {
   isBoolean,
   isFiniteNumber,
@@ -7,8 +7,8 @@ import {
   isPositiveInteger,
   isString,
   isStringArray,
-} from "../../src/core/json.js";
-import type { LocalePreference } from "../../src/i18n/index.js";
+} from "#core/json.js";
+import type { LocalePreference } from "#i18n/index.js";
 import type { CachedItem, CachedSharedVault, LocalState } from "./storage.js";
 
 type Guard<T> = (value: unknown) => value is T;

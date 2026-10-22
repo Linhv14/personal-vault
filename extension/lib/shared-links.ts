@@ -1,5 +1,5 @@
-import { utf8Encode } from "../../src/core/bytes.js";
-import { openJson, sealJson } from "../../src/core/crypto.js";
+import { utf8Encode } from "#core/bytes.js";
+import { openJson, sealJson } from "#core/crypto.js";
 import { getLocal, setLocal } from "./storage.js";
 
 export interface SharedLink {

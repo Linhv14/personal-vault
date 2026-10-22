@@ -1,4 +1,4 @@
-import TOKENS from "../../src/ui/tokens.css";
+import TOKENS from "#ui/tokens.css";
 
 export const CONTENT_STYLES = `${TOKENS}
 :host { all: initial; }

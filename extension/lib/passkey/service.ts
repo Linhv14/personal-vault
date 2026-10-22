@@ -1,7 +1,7 @@
 import type { TrustedSender } from "../autofill/senders.js";
 import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
-import { registrableDomain } from "../../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 import { byLastUsed } from "../vault/search.js";
 import { isPersonal, openVault } from "../vault/decrypt.js";
 import { markUsed, newItemId, saveItem } from "../vault/store.js";

@@ -1,6 +1,6 @@
-import { isWrappedForRecipient } from "../../core/identity.js";
-import { parseJsonAs } from "../../core/json.js";
-import type { WrappedKey } from "../../core/org-model.js";
+import { isWrappedForRecipient } from "#core/identity.js";
+import { parseJsonAs } from "#core/json.js";
+import type { WrappedKey } from "#core/org-model.js";
 
 export interface LinkRecord {
   id: string;

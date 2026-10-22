@@ -1,6 +1,6 @@
-import type { Translate } from "../../src/i18n/index.js";
+import type { Translate } from "#i18n/index.js";
 import { itemType, lastFour, unusedCodes } from "./item-types.js";
-import { parseSiteUrl, registrableDomain } from "../../src/core/site.js";
+import { parseSiteUrl, registrableDomain } from "#core/site.js";
 import type { VaultItem } from "./vault/types.js";
 
 function keyComment(publicKey: string | undefined): string {

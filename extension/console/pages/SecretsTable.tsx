@@ -1,9 +1,9 @@
 import { useState } from "preact/hooks";
-import { isVariable, type SecretAccess, type SecretKind } from "../../../src/core/projects.js";
-import type { Secret } from "../../lib/projects.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+import { isVariable, type SecretAccess, type SecretKind } from "#core/projects.js";
+import type { Secret } from "#ext/lib/projects.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Badge, When } from "../components.js";
 import { toast, useConsole } from "../data.js";
 import { HostChips } from "./HostChips.js";

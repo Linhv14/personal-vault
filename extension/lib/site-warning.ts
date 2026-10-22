@@ -1,6 +1,6 @@
-import { findLookalike, type LookalikeMatch } from "../../src/core/lookalike.js";
+import { findLookalike, type LookalikeMatch } from "#core/lookalike.js";
 import { itemType } from "./item-types.js";
-import { registrableDomain } from "../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 import { itemSites } from "./vault/site-match.js";
 import type { VaultItem } from "./vault/types.js";
 

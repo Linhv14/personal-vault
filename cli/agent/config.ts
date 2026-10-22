@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { isPlainObject } from "../../src/core/json.js";
+import { isPlainObject } from "#core/json.js";
 
 export interface Remembered {
   email?: string;

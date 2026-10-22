@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import type { AuditEvent, Principal } from "../../core/org-model.js";
+import type { AuditEvent, Principal } from "#core/org-model.js";
 import { fail, ok, type Result } from "../http.js";
 import { dumpStore, restoreStore, type StoreDump } from "../migration.js";
 import type { Env } from "../types.js";

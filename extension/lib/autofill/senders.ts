@@ -1,4 +1,4 @@
-import { registrableDomain, siteOf } from "../../../src/core/site.js";
+import { registrableDomain, siteOf } from "#core/site.js";
 import { getLocal } from "../storage.js";
 
 export interface TrustedSender {

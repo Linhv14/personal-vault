@@ -1,4 +1,4 @@
-import TOKENS from "../../src/ui/tokens.css";
+import TOKENS from "#ui/tokens.css";
 
 export const PASSKEY_STYLES = `${TOKENS}
 :host { all: initial; }

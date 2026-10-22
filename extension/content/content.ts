@@ -1,5 +1,5 @@
-import { createTranslator, resolveLocale } from "../../src/i18n/index.js";
-import type { LocalePreference } from "../../src/i18n/index.js";
+import { createTranslator, resolveLocale } from "#i18n/index.js";
+import type { LocalePreference } from "#i18n/index.js";
 import { onWindowBlur } from "./flows/card.js";
 import {
   onFieldClick,

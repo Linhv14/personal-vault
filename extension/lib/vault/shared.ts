@@ -1,8 +1,8 @@
-import type { SealedData } from "../../../src/core/crypto.js";
-import type { Bytes } from "../../../src/core/bytes.js";
-import { unwrapForRecipient, type Identity } from "../../../src/core/identity.js";
-import { teamKeyContext } from "../../../src/core/org-model.js";
-import { openTeamItem, sealTeamItem } from "../../../src/core/team-items.js";
+import type { SealedData } from "#core/crypto.js";
+import type { Bytes } from "#core/bytes.js";
+import { unwrapForRecipient, type Identity } from "#core/identity.js";
+import { teamKeyContext } from "#core/org-model.js";
+import { openTeamItem, sealTeamItem } from "#core/team-items.js";
 import { ApiError, request } from "../api.js";
 import { knownIdentity } from "../identity.js";
 import { getLocal, setLocal, type CachedSharedVault } from "../storage.js";

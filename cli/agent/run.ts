@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import tls from "node:tls";
-import { isVariable, type SecretContent } from "../../src/core/projects.js";
+import { isVariable, type SecretContent } from "#core/projects.js";
 import { createAuthority } from "./certs.js";
 import { startProxy } from "./proxy.js";
 import {

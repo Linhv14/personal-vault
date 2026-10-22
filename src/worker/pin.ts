@@ -1,4 +1,4 @@
-import { fromBase64, randomBytes, timingSafeEqual, toBase64 } from "../core/bytes.js";
+import { fromBase64, randomBytes, timingSafeEqual, toBase64 } from "#core/bytes.js";
 import { keyedHash } from "./keyed-hash.js";
 import type { Env } from "./types.js";
 import { isBase64 } from "./validate.js";

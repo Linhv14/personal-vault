@@ -1,4 +1,4 @@
-import { logo } from "../../../src/ui/logo.js";
+import { logo } from "#ui/logo.js";
 import { CONTENT_STYLES } from "../styles.js";
 
 export const host = document.createElement("div");

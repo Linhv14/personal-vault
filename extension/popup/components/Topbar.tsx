@@ -1,9 +1,9 @@
 import { useState } from "preact/hooks";
-import { ITEM_TYPES, KIND_LABEL } from "../../lib/item-types.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+import { ITEM_TYPES, KIND_LABEL } from "#ext/lib/item-types.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { MenuList } from "./Menu.js";
-import { IconButton } from "../../ui/components/IconButton.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
 import { TypeBadge } from "./ItemIcons.js";
 import { VaultMenu } from "./VaultMenu.js";
 import { orgSnapshot } from "../promos.js";

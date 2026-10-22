@@ -1,4 +1,4 @@
-import type { IconName } from "../../src/ui/icons.js";
+import type { IconName } from "#ui/icons.js";
 import type { ItemType } from "../lib/item-types.js";
 
 export const TYPE_ICON: Record<ItemType, IconName> = {

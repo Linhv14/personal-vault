@@ -5,10 +5,10 @@ import {
   generatePin,
   rateStrength,
   type GeneratedSecret,
-} from "../../../src/core/generator.js";
-import { describeError, type MessageKey } from "../../../src/i18n/index.js";
-import { useT } from "../../ui/i18n.js";
-import { IconButton } from "../../ui/components/IconButton.js";
+} from "#core/generator.js";
+import { describeError, type MessageKey } from "#i18n/index.js";
+import { useT } from "#ext/ui/i18n.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
 import { copy, showList } from "../state.js";
 import { formatEntropy } from "../strength.js";
 

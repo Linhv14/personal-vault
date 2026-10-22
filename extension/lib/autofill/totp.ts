@@ -1,4 +1,4 @@
-import { generateTotp, parseTotpInput, type TotpConfig } from "../../../src/core/totp.js";
+import { generateTotp, parseTotpInput, type TotpConfig } from "#core/totp.js";
 import type { TotpPrompt } from "../autofill-protocol.js";
 import { getLocal } from "../storage.js";
 import { isPersonal, openVault } from "../vault/decrypt.js";

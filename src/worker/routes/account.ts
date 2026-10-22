@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { isSealedData } from "../../core/crypto.js";
-import { isPublicKey } from "../../core/identity.js";
-import { parseJsonAs } from "../../core/json.js";
+import { isSealedData } from "#core/crypto.js";
+import { isPublicKey } from "#core/identity.js";
+import { parseJsonAs } from "#core/json.js";
 import { protectAuthKey, protectWrappedKey, recoveryScope, verifyAuthKey } from "../at-rest.js";
 import { twoFactorDisabledEmail, twoFactorEnabledEmail } from "../emails.js";
 import { apiError } from "../errors.js";

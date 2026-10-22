@@ -1,4 +1,4 @@
-import { fromBase64 } from "../../../src/core/bytes.js";
+import { fromBase64 } from "#core/bytes.js";
 import { send } from "../send.js";
 import { state } from "../state.js";
 import { findSetupQr, findSetupText, mentionsSetup } from "../two-factor.js";

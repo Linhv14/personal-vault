@@ -1,8 +1,8 @@
-import { fromBase64 } from "../core/bytes.js";
-import type { SealedData } from "../core/crypto.js";
-import type { WrappedKey } from "../core/org-model.js";
-import { MAX_PROJECT_BYTES, MAX_SECRET_BYTES } from "../core/projects.js";
-import { MAX_TEAM_ITEM_BYTES } from "../core/team-items.js";
+import { fromBase64 } from "#core/bytes.js";
+import type { SealedData } from "#core/crypto.js";
+import type { WrappedKey } from "#core/org-model.js";
+import { MAX_PROJECT_BYTES, MAX_SECRET_BYTES } from "#core/projects.js";
+import { MAX_TEAM_ITEM_BYTES } from "#core/team-items.js";
 
 export const MIN_KDF_ITERATIONS = 600_000;
 

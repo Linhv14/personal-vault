@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals";
-import { describeError } from "../../src/i18n/index.js";
+import { describeError } from "#i18n/index.js";
 import {
   autofillSupported,
   enableAutofill,

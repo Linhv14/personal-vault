@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { VaultItem } from "../../lib/vault/types.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+import type { VaultItem } from "#ext/lib/vault/types.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 
 let rowCount = 0;
 export const rowKey = () => ++rowCount;

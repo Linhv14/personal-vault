@@ -1,9 +1,9 @@
 import { useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { isOrgAdmin } from "../../lib/orgs.js";
-import { createProject } from "../../lib/projects.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+import { formText } from "#ui/form-data.js";
+import { isOrgAdmin } from "#ext/lib/orgs.js";
+import { createProject } from "#ext/lib/projects.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Badge, Dialog, EmptyState, Field, PageHeader, SearchInput, When } from "../components.js";
 import { useConsole } from "../data.js";
 import { href, navigate } from "../router.js";

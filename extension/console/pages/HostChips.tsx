@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
-import { suggestHosts } from "../../../src/core/agent-hosts.js";
-import { parseHosts } from "../../../src/core/projects.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+import { suggestHosts } from "#core/agent-hosts.js";
+import { parseHosts } from "#core/projects.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 
 export function HostChips({
   hosts,

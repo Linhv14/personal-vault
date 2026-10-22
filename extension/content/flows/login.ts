@@ -1,4 +1,4 @@
-import type { Suggestion } from "../../lib/autofill-protocol.js";
+import type { Suggestion } from "#ext/lib/autofill-protocol.js";
 import {
   findPasswordFor,
   findUsernameField,

@@ -1,6 +1,6 @@
-import { sha256 } from "../../core/primitives.js";
-import { toBase64, utf8Encode } from "../../core/bytes.js";
-import type { AuditEvent } from "../../core/org-model.js";
+import { sha256 } from "#core/primitives.js";
+import { toBase64, utf8Encode } from "#core/bytes.js";
+import type { AuditEvent } from "#core/org-model.js";
 
 export const GENESIS = "genesis";
 

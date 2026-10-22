@@ -1,7 +1,7 @@
 import { ensureIdentity } from "../lib/identity.js";
 import { signal } from "@preact/signals";
 import { createContext } from "preact";
-import { createTranslator, describeError, type Translate } from "../../src/i18n/index.js";
+import { createTranslator, describeError, type Translate } from "#i18n/index.js";
 import { formatDateTime } from "../ui/format.js";
 import { localeSignal } from "../ui/i18n.js";
 import * as api from "../lib/api.js";

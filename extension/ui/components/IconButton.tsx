@@ -1,5 +1,5 @@
 import type { JSX } from "preact";
-import type { IconName } from "../../../src/ui/icons.js";
+import type { IconName } from "#ui/icons.js";
 import { Icon } from "./Icon.js";
 
 export function IconButton({

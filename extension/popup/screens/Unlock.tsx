@@ -1,20 +1,20 @@
 import { useEffect, useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { describeError } from "../../../src/i18n/index.js";
-import { rememberUnlock } from "../../lib/resume.js";
-import { hasPin, PIN_MAX_LENGTH, PIN_MIN_LENGTH, PinError, unlockWithPin } from "../../lib/pin.js";
+import { formText } from "#ui/form-data.js";
+import { describeError } from "#i18n/index.js";
+import { rememberUnlock } from "#ext/lib/resume.js";
+import { hasPin, PIN_MAX_LENGTH, PIN_MIN_LENGTH, PinError, unlockWithPin } from "#ext/lib/pin.js";
 import {
   BiometricError,
   biometricLabel,
   hasBiometric,
   unlockWithBiometric,
-} from "../../lib/biometric.js";
-import { clearAccountData, getLocal, getUnlocked, lock } from "../../lib/storage.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/biometric.js";
+import { clearAccountData, getLocal, getUnlocked, lock } from "#ext/lib/storage.js";
+import { useT } from "#ext/ui/i18n.js";
 import { SecondFactorRequired, signIn, signInWithCode, type PendingSignIn } from "../auth.js";
-import { TwoFactorStep } from "../../ui/components/TwoFactorStep.js";
+import { TwoFactorStep } from "#ext/ui/components/TwoFactorStep.js";
 import { AuthLayout } from "../components/AuthLayout.js";
-import { Icon } from "../../ui/components/Icon.js";
+import { Icon } from "#ext/ui/components/Icon.js";
 import { enterVault } from "../state.js";
 import { Recover } from "./Recover.js";
 

@@ -1,7 +1,7 @@
-import type { IconName } from "../../../src/ui/icons.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { Wordmark, Logo } from "../../ui/components/Logo.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+import type { IconName } from "#ui/icons.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { Wordmark, Logo } from "#ext/ui/components/Logo.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { inVault, live, tagsOf } from "../filters.js";
 import {
   openConsole,

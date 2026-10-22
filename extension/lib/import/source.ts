@@ -1,4 +1,4 @@
-import { parseTotpInput, type TotpConfig } from "../../../src/core/totp.js";
+import { parseTotpInput, type TotpConfig } from "#core/totp.js";
 import { cleanCustomFields, type CustomField } from "../item-types.js";
 import type { ItemDraft } from "../vault/types.js";
 

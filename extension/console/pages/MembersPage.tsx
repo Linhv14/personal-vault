@@ -1,11 +1,6 @@
 import { useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import {
-  canChangeRoles,
-  canInvite,
-  canRemove,
-  isDomainAllowed,
-} from "../../../src/core/org-model.js";
+import { formText } from "#ui/form-data.js";
+import { canChangeRoles, canInvite, canRemove, isDomainAllowed } from "#core/org-model.js";
 import {
   inviteLink,
   inviteMember,
@@ -16,12 +11,12 @@ import {
   transferOwnership,
   withdrawInvite,
   type OrgMember,
-} from "../../lib/orgs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { ApiError } from "../../lib/api.js";
-import { currentAuthKey } from "../../lib/reauth.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+} from "#ext/lib/orgs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { ApiError } from "#ext/lib/api.js";
+import { currentAuthKey } from "#ext/lib/reauth.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import {
   ActionButton,
   Avatar,

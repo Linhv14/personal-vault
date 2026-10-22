@@ -1,9 +1,9 @@
-import type { Environment } from "../../../../src/core/projects.js";
-import { protectEnvironment, type Project } from "../../../lib/projects.js";
-import { Icon } from "../../../ui/components/Icon.js";
-import { useT } from "../../../ui/i18n.js";
-import { Menu, MenuItem } from "../../components.js";
-import { toast, useConsole } from "../../data.js";
+import type { Environment } from "#core/projects.js";
+import { protectEnvironment, type Project } from "#ext/lib/projects.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
+import { Menu, MenuItem } from "#ext/console/components.js";
+import { toast, useConsole } from "#ext/console/data.js";
 import { cliCommand, type Modal } from "./helpers.js";
 
 export function ProjectActions({

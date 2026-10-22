@@ -1,9 +1,9 @@
 import type { ComponentChildren } from "preact";
 import { useContext, useState } from "preact/hooks";
-import type { IconName } from "../../../src/ui/icons.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+import type { IconName } from "#ui/icons.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import { copy, CopySource } from "../state.js";
 
 export function Field({ label, children }: { label: string; children: ComponentChildren }) {

@@ -1,5 +1,5 @@
-import { sha256 } from "../../../src/core/primitives.js";
-import { toBase64, utf8Encode } from "../../../src/core/bytes.js";
+import { sha256 } from "#core/primitives.js";
+import { toBase64, utf8Encode } from "#core/bytes.js";
 import { getLocal, setLocal } from "../storage.js";
 import { isLive, openItem } from "./item-crypto.js";
 import { saveItem } from "./store.js";

@@ -1,14 +1,14 @@
 import { useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { describeError } from "../../../src/i18n/index.js";
-import * as api from "../../lib/api.js";
-import { isDefaultServer } from "../../lib/server.js";
-import { clearAccountData, getLocal, lock } from "../../lib/storage.js";
-import { Button } from "../../ui/components/Button.js";
-import { Card } from "../../ui/components/Card.js";
-import { formatDateTime } from "../../ui/format.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
-import { vaultKeySignal } from "../../ui/store/session.js";
+import { formText } from "#ui/form-data.js";
+import { describeError } from "#i18n/index.js";
+import * as api from "#ext/lib/api.js";
+import { isDefaultServer } from "#ext/lib/server.js";
+import { clearAccountData, getLocal, lock } from "#ext/lib/storage.js";
+import { Button } from "#ext/ui/components/Button.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { formatDateTime } from "#ext/ui/format.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
+import { vaultKeySignal } from "#ext/ui/store/session.js";
 import { SessionsCard } from "./Sessions.js";
 import { currentAuthKey, isSignedIn, localState, reloadLocal, showToast } from "../state.js";
 

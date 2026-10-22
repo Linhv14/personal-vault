@@ -1,5 +1,5 @@
-import { sha256 } from "../core/primitives.js";
-import { toBase64, toBase64Url, randomBytes, utf8Encode } from "../core/bytes.js";
+import { sha256 } from "#core/primitives.js";
+import { toBase64, toBase64Url, randomBytes, utf8Encode } from "#core/bytes.js";
 import type { Env, SessionContext } from "./types.js";
 
 export const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;

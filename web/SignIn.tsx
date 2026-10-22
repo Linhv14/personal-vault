@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { formText } from "../src/ui/form-data.js";
-import type { MasterPasswordIssue } from "../src/core/master-password.js";
+import { formText } from "#ui/form-data.js";
+import type { MasterPasswordIssue } from "#core/master-password.js";
 import {
   api,
   checkNewMasterPassword,
@@ -13,9 +13,9 @@ import {
   useT,
   Wordmark,
   type InvitePreview,
-} from "../extension/web-host.js";
-import { describeError } from "../src/i18n/index.js";
-import { logoSvg } from "../src/ui/logo.js";
+} from "#ext/web-host.js";
+import { describeError } from "#i18n/index.js";
+import { logoSvg } from "#ui/logo.js";
 import { registerFromInvite, signIn, signInWithCode, type PendingSignIn } from "./session.js";
 
 type Mode = "sign-in" | "register";

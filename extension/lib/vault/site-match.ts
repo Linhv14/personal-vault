@@ -1,4 +1,4 @@
-import { registrableDomain, siteHostname, siteOf } from "../../../src/core/site.js";
+import { registrableDomain, siteHostname, siteOf } from "#core/site.js";
 import { itemType } from "../item-types.js";
 import type { VaultItem } from "./types.js";
 

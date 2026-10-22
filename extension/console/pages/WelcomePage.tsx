@@ -1,7 +1,7 @@
-import { formText } from "../../../src/ui/form-data.js";
-import { createOrg } from "../../lib/orgs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+import { formText } from "#ui/form-data.js";
+import { createOrg } from "#ext/lib/orgs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Field, Spinner } from "../components.js";
 import { pending$, type Run } from "../data.js";
 import { navigate } from "../router.js";

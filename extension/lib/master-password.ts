@@ -2,8 +2,8 @@ import {
   checkMasterPassword,
   masterPasswordIssue,
   type MasterPasswordIssue,
-} from "../../src/core/master-password.js";
-import type { MessageKey } from "../../src/i18n/index.js";
+} from "#core/master-password.js";
+import type { MessageKey } from "#i18n/index.js";
 import { breachCounts, fetchBreachRange, type FetchRange } from "./health.js";
 
 export function masterPasswordMessage(issue: MasterPasswordIssue): {

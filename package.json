@@ -57,5 +57,12 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "imports": {
+    "#core/*": "./src/core/*",
+    "#ui/*": "./src/ui/*",
+    "#i18n/*": "./src/i18n/*",
+    "#worker/*": "./src/worker/*",
+    "#ext/*": "./extension/*"
   }
 }

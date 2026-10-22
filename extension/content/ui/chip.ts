@@ -1,5 +1,5 @@
-import { icon } from "../../../src/ui/icons.js";
-import type { LookalikeMatch } from "../../../src/core/lookalike.js";
+import { icon } from "#ui/icons.js";
+import type { LookalikeMatch } from "#core/lookalike.js";
 import { t } from "../state.js";
 import { chip } from "./root.js";
 import { pageRect } from "./trigger.js";

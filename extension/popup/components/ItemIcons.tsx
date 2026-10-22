@@ -1,10 +1,10 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { itemType, type ItemType } from "../../lib/item-types.js";
-import { TYPE_ICON } from "../../ui/item-icons.js";
-import type { IconName } from "../../../src/ui/icons.js";
-import type { VaultDef, VaultItem } from "../../lib/vault/types.js";
-import { Icon } from "../../ui/components/Icon.js";
+import { itemType, type ItemType } from "#ext/lib/item-types.js";
+import { TYPE_ICON } from "#ext/ui/item-icons.js";
+import type { IconName } from "#ui/icons.js";
+import type { VaultDef, VaultItem } from "#ext/lib/vault/types.js";
+import { Icon } from "#ext/ui/components/Icon.js";
 import { knownLogo, logoDomainOf, logoFor, showLogos } from "../logos.js";
 
 export function Avatar({ title }: { title: string }) {

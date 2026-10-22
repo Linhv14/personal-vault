@@ -1,10 +1,10 @@
 import type { ComponentChildren, ComponentType } from "preact";
 import { Wordmark } from "../ui/components/Logo.js";
-import type { MessageKey } from "../../src/i18n/index.js";
+import type { MessageKey } from "#i18n/index.js";
 import { useEffect } from "preact/hooks";
-import type { Identity } from "../../src/core/identity.js";
-import type { IconName } from "../../src/ui/icons.js";
-import { logoSvg } from "../../src/ui/logo.js";
+import type { Identity } from "#core/identity.js";
+import type { IconName } from "#ui/icons.js";
+import { logoSvg } from "#ui/logo.js";
 import { acceptInvite, declineInvite, type OrgSummary } from "../lib/orgs.js";
 import { flushAccess } from "../lib/projects.js";
 import { Icon } from "../ui/components/Icon.js";

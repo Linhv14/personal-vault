@@ -1,7 +1,7 @@
-import { countryOf, foldText } from "../../src/core/address-data.js";
+import { countryOf, foldText } from "#core/address-data.js";
 import type { AddressData, CapturedCard } from "./autofill-protocol.js";
 import { cardDigits, itemType, normalizeExpiry } from "./item-types.js";
-import { registrableDomain } from "../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 import { itemSites } from "./vault/site-match.js";
 import type { VaultItem } from "./vault/types.js";
 

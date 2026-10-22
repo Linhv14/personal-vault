@@ -1,4 +1,4 @@
-import { generatePassword } from "../../../src/core/generator.js";
+import { generatePassword } from "#core/generator.js";
 import type { Suggestion } from "../autofill-protocol.js";
 import { openVault, type OpenVault } from "../vault/decrypt.js";
 import { byLastUsed } from "../vault/search.js";

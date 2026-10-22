@@ -1,4 +1,4 @@
-import type { LookalikeMatch } from "../../../src/core/lookalike.js";
+import type { LookalikeMatch } from "#core/lookalike.js";
 import { send } from "../send.js";
 import { state } from "../state.js";
 import { showChip } from "../ui/chip.js";

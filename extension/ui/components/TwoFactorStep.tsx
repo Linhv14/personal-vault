@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { describeError } from "../../../src/i18n/index.js";
-import { ApiError } from "../../lib/api.js";
+import { describeError } from "#i18n/index.js";
+import { ApiError } from "#ext/lib/api.js";
 import { useT } from "../i18n.js";
 import { Icon } from "./Icon.js";
 import { SecondFactorInput } from "./SecondFactorInput.js";

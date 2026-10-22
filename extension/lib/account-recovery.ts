@@ -1,12 +1,12 @@
-import type { Bytes } from "../../src/core/bytes.js";
-import { isSealedData, rewrapVaultKey } from "../../src/core/crypto.js";
+import type { Bytes } from "#core/bytes.js";
+import { isSealedData, rewrapVaultKey } from "#core/crypto.js";
 import {
   generateRecoveryCode,
   openWithRecovery,
   recoveryAuthKey,
   sealForRecovery,
-} from "../../src/core/recovery.js";
-import { isBoolean, isFiniteNumber } from "../../src/core/json.js";
+} from "#core/recovery.js";
+import { isBoolean, isFiniteNumber } from "#core/json.js";
 import { ApiError, hasField, request, requestChecked } from "./api.js";
 import { assertMasterPasswordPolicy } from "./master-password.js";
 

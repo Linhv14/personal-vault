@@ -1,4 +1,4 @@
-import type { OrgRole, TeamAccess, WrappedKey } from "../../core/org-model.js";
+import type { OrgRole, TeamAccess, WrappedKey } from "#core/org-model.js";
 
 export type TeamRow = { id: string; name: string; key_generation: number; rekey_needed: number };
 export type MembershipRow = {

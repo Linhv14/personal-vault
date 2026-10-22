@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { hostAllowed } from "../../src/core/projects.js";
+import { hostAllowed } from "#core/projects.js";
 
 export interface Injectable {
   name: string;

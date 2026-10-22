@@ -1,4 +1,4 @@
-import { APP_NAME } from "../core/brand.js";
+import { APP_NAME } from "#core/brand.js";
 export const en = {
   "error.base32.invalid_character": 'Invalid character in base32 secret: "{char}"',
   "error.totp.empty_secret": "The 2FA secret is empty",

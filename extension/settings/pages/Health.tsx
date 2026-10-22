@@ -1,13 +1,13 @@
 import { useEffect, useState } from "preact/hooks";
-import { describeError, type Translate } from "../../../src/i18n/index.js";
-import { breachCounts, reusedGroups, weakItems } from "../../lib/health.js";
-import { requestItemFocus } from "../../lib/storage.js";
-import { decryptAll } from "../../lib/vault/decrypt.js";
-import type { VaultItem } from "../../lib/vault/types.js";
-import { Button } from "../../ui/components/Button.js";
-import { Card } from "../../ui/components/Card.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
-import { vaultKeySignal } from "../../ui/store/session.js";
+import { describeError, type Translate } from "#i18n/index.js";
+import { breachCounts, reusedGroups, weakItems } from "#ext/lib/health.js";
+import { requestItemFocus } from "#ext/lib/storage.js";
+import { decryptAll } from "#ext/lib/vault/decrypt.js";
+import type { VaultItem } from "#ext/lib/vault/types.js";
+import { Button } from "#ext/ui/components/Button.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
+import { vaultKeySignal } from "#ext/ui/store/session.js";
 
 export function Health() {
   const t = useT();

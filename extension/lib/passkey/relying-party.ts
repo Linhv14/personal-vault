@@ -1,4 +1,4 @@
-import { registrableDomain } from "../../../src/core/site.js";
+import { registrableDomain } from "#core/site.js";
 
 const IP_ADDRESS = /^[\d.]+$|:/;
 

@@ -10,7 +10,7 @@ import {
   parseDomains,
   planLimits,
   type TeamAccess,
-} from "../../core/org-model.js";
+} from "#core/org-model.js";
 import { verifyAuthKey } from "../at-rest.js";
 import { normalizeEmail } from "../email-address.js";
 import { apiError } from "../errors.js";

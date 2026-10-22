@@ -1,6 +1,6 @@
-import { hkdfAesKey } from "../../src/core/primitives.js";
-import { concat, fromBase64, utf8Encode, type Bytes } from "../../src/core/bytes.js";
-import { openJson, sealJson, type SealedData } from "../../src/core/crypto.js";
+import { hkdfAesKey } from "#core/primitives.js";
+import { concat, fromBase64, utf8Encode, type Bytes } from "#core/bytes.js";
+import { openJson, sealJson, type SealedData } from "#core/crypto.js";
 import { ApiError } from "./api.js";
 import { getUnlocked } from "./storage.js";
 

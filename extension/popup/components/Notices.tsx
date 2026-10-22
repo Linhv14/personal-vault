@@ -1,14 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
-import type { PendingPrompt } from "../../lib/autofill-protocol.js";
-import { forgetMissedSave, missedSave } from "../../lib/autofill/save-prompt.js";
-import { handleAutofill } from "../../lib/autofill/service.js";
-import { tabSender, type TrustedSender } from "../../lib/autofill/senders.js";
-import type { IconName } from "../../../src/ui/icons.js";
-import { biometricLabel } from "../../lib/biometric.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { Logo } from "../../ui/components/Logo.js";
-import { useT } from "../../ui/i18n.js";
+import type { PendingPrompt } from "#ext/lib/autofill-protocol.js";
+import { forgetMissedSave, missedSave } from "#ext/lib/autofill/save-prompt.js";
+import { handleAutofill } from "#ext/lib/autofill/service.js";
+import { tabSender, type TrustedSender } from "#ext/lib/autofill/senders.js";
+import type { IconName } from "#ui/icons.js";
+import { biometricLabel } from "#ext/lib/biometric.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { Logo } from "#ext/ui/components/Logo.js";
+import { useT } from "#ext/ui/i18n.js";
 import { acceptPromo, activePromo, dismissPromo, orgSnapshot, refreshPromos } from "../promos.js";
 import {
   openConsole,

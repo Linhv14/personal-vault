@@ -1,28 +1,28 @@
 import { Hono } from "hono";
-import { DEFAULT_KDF_ITERATIONS } from "../../../core/crypto.js";
-import { toBase64 } from "../../../core/bytes.js";
+import { DEFAULT_KDF_ITERATIONS } from "#core/crypto.js";
+import { toBase64 } from "#core/bytes.js";
 import {
   protectAuthKey,
   protectWrappedKey,
   revealWrappedKey,
   verifyAuthKey,
-} from "../../at-rest.js";
-import { normalizeEmail } from "../../email-address.js";
-import { apiError } from "../../errors.js";
-import { now, readJson } from "../../http.js";
-import { keyedHashBytes } from "../../keyed-hash.js";
-import { clientIp, requestLocale } from "../../request.js";
-import { signedIn } from "../../sign-in.js";
-import { throttle } from "../../throttle.js";
+} from "#worker/at-rest.js";
+import { normalizeEmail } from "#worker/email-address.js";
+import { apiError } from "#worker/errors.js";
+import { now, readJson } from "#worker/http.js";
+import { keyedHashBytes } from "#worker/keyed-hash.js";
+import { clientIp, requestLocale } from "#worker/request.js";
+import { signedIn } from "#worker/sign-in.js";
+import { throttle } from "#worker/throttle.js";
 import {
   consumeChallenge,
   findChallenge,
   issueChallenge,
   noteChallengeFailure,
   verifySecondFactor,
-} from "../../two-factor.js";
-import type { AppBindings, Env } from "../../types.js";
-import { isBase64, type KdfBody } from "../../validate.js";
+} from "#worker/two-factor.js";
+import type { AppBindings, Env } from "#worker/types.js";
+import { isBase64, type KdfBody } from "#worker/validate.js";
 
 const routes = new Hono<AppBindings>();
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { describeError } from "../../../src/i18n/index.js";
-import type { IconName } from "../../../src/ui/icons.js";
+import { describeError } from "#i18n/index.js";
+import type { IconName } from "#ui/icons.js";
 import {
   ActionButton,
   Badge,
@@ -8,18 +8,18 @@ import {
   EmptyState,
   SearchInput,
   When,
-} from "../../ui/components/ConsoleKit.js";
-import { attempt } from "../../ui/store/feedback.js";
-import { itemSubtitle } from "../../lib/item-subtitle.js";
-import { itemType } from "../../lib/item-types.js";
-import { daysUntilPurge, deleteFromTrash, restoreFromTrash } from "../../lib/trash.js";
-import { decryptEverything } from "../../lib/vault/decrypt.js";
-import type { VaultDef, VaultItem } from "../../lib/vault/types.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { TYPE_ICON } from "../../ui/item-icons.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
-import { vaultKeySignal } from "../../ui/store/session.js";
+} from "#ext/ui/components/ConsoleKit.js";
+import { attempt } from "#ext/ui/store/feedback.js";
+import { itemSubtitle } from "#ext/lib/item-subtitle.js";
+import { itemType } from "#ext/lib/item-types.js";
+import { daysUntilPurge, deleteFromTrash, restoreFromTrash } from "#ext/lib/trash.js";
+import { decryptEverything } from "#ext/lib/vault/decrypt.js";
+import type { VaultDef, VaultItem } from "#ext/lib/vault/types.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { TYPE_ICON } from "#ext/ui/item-icons.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
+import { vaultKeySignal } from "#ext/ui/store/session.js";
 import { showToast } from "../state.js";
 
 const PURGE_SOON_DAYS = 3;

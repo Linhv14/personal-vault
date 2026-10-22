@@ -1,4 +1,4 @@
-import { APP_NAME, WORDMARK } from "../core/brand.js";
+import { APP_NAME, WORDMARK } from "#core/brand.js";
 
 export const BRAND_INK = "#171513";
 export const BRAND_ORANGE = "#FF6A3D";

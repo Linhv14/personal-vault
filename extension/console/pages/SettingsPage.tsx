@@ -1,8 +1,8 @@
 import { useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { createOrg, isOrgAdmin, planLimits, removeMember } from "../../lib/orgs.js";
-import { Fingerprint } from "../../ui/components/Fingerprint.js";
-import { useT } from "../../ui/i18n.js";
+import { formText } from "#ui/form-data.js";
+import { createOrg, isOrgAdmin, planLimits, removeMember } from "#ext/lib/orgs.js";
+import { Fingerprint } from "#ext/ui/components/Fingerprint.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Badge, Dialog, Field, PageHeader, PanelHead, RoleBadge, Usage } from "../components.js";
 import { useConsole } from "../data.js";
 import { ROLE_LABEL } from "../labels.js";

@@ -1,4 +1,4 @@
-import type { TotpConfig } from "../../../src/core/totp.js";
+import type { TotpConfig } from "#core/totp.js";
 import type { StoredPasskey } from "../passkey/authenticator.js";
 import type { CustomField, ItemType, PasswordChange } from "../item-types.js";
 

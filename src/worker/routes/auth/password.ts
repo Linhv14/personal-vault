@@ -1,10 +1,10 @@
 import { Hono } from "hono";
-import { protectAuthKey, protectWrappedKey, verifyAuthKey } from "../../at-rest.js";
-import { apiError } from "../../errors.js";
-import { readJson } from "../../http.js";
-import { revokeAllSessions, revokeOtherSessions } from "../../session.js";
-import type { AppBindings } from "../../types.js";
-import { isBase64, isKdf, isSealed } from "../../validate.js";
+import { protectAuthKey, protectWrappedKey, verifyAuthKey } from "#worker/at-rest.js";
+import { apiError } from "#worker/errors.js";
+import { readJson } from "#worker/http.js";
+import { revokeAllSessions, revokeOtherSessions } from "#worker/session.js";
+import type { AppBindings } from "#worker/types.js";
+import { isBase64, isKdf, isSealed } from "#worker/validate.js";
 
 const routes = new Hono<AppBindings>();
 

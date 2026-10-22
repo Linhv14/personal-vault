@@ -1,6 +1,6 @@
-import type { KdfParams, SealedData } from "../../src/core/crypto.js";
-import type { LocalePreference } from "../../src/i18n/index.js";
-import { isPlainObject } from "../../src/core/json.js";
+import type { KdfParams, SealedData } from "#core/crypto.js";
+import type { LocalePreference } from "#i18n/index.js";
+import { isPlainObject } from "#core/json.js";
 import { needsCacheRepair, normalizeLocalState } from "./local-state.js";
 import { platform } from "./platform.js";
 

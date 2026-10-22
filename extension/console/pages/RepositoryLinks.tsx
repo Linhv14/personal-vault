@@ -1,19 +1,19 @@
 import { useEffect, useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { ACTION_MAJOR, ACTION_REPOSITORY, DEFAULT_SERVER } from "../../../src/core/brand.js";
-import { isBranch, isGithubEnvironment, isRepository } from "../../../src/core/ci.js";
-import { describeError } from "../../../src/i18n/index.js";
+import { formText } from "#ui/form-data.js";
+import { ACTION_MAJOR, ACTION_REPOSITORY, DEFAULT_SERVER } from "#core/brand.js";
+import { isBranch, isGithubEnvironment, isRepository } from "#core/ci.js";
+import { describeError } from "#i18n/index.js";
 import {
   createLink,
   deleteLink,
   listLinks,
   type Project,
   type RepoLink,
-} from "../../lib/projects.js";
-import { getLocal } from "../../lib/storage.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/projects.js";
+import { getLocal } from "#ext/lib/storage.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Dialog, EmptyState, Field, When } from "../components.js";
 import { toast, useConsole } from "../data.js";
 

@@ -1,5 +1,5 @@
 import type { StoredPasskey } from "../passkey/authenticator.js";
-import { fromBase64, toBase64Url } from "../../../src/core/bytes.js";
+import { fromBase64, toBase64Url } from "#core/bytes.js";
 import { decodeMsgpack, type MsgpackValue } from "./msgpack.js";
 
 const P256 = 1;

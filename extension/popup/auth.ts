@@ -5,8 +5,8 @@ import {
   open as openSealed,
   type KdfParams,
   type SealedData,
-} from "../../src/core/crypto.js";
-import { toBase64 } from "../../src/core/bytes.js";
+} from "#core/crypto.js";
+import { toBase64 } from "#core/bytes.js";
 import * as api from "../lib/api.js";
 import { upgradeKdf } from "../lib/kdf-upgrade.js";
 import { rememberUnlock } from "../lib/resume.js";

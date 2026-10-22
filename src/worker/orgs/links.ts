@@ -1,6 +1,6 @@
-import { ruleAllows, type GithubClaims } from "../../core/ci.js";
-import type { SealedData } from "../../core/crypto.js";
-import type { Principal, WrappedKey } from "../../core/org-model.js";
+import { ruleAllows, type GithubClaims } from "#core/ci.js";
+import type { SealedData } from "#core/crypto.js";
+import type { Principal, WrappedKey } from "#core/org-model.js";
 import { fail, now, ok, type Result } from "../http.js";
 import { projectAccess, writable, type OrgContext } from "./context.js";
 import type { LinkRecord } from "./link-tables.js";

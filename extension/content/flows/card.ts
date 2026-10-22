@@ -1,5 +1,5 @@
-import { isPaymentFrameUrl } from "../../../src/core/payment-frames.js";
-import { brandMark } from "../../../src/ui/marks.js";
+import { isPaymentFrameUrl } from "#core/payment-frames.js";
+import { brandMark } from "#ui/marks.js";
 import { scopeOf } from "../detect.js";
 import { detectFields } from "../forms/classify.js";
 import { fillCard } from "../forms/fill.js";

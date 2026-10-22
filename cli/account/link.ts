@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { isPlainObject, parseJsonAs } from "../../src/core/json.js";
+import { isPlainObject, parseJsonAs } from "#core/json.js";
 import type { EnvironmentRef } from "../agent/session.js";
 
 export const LINK_FILE = ".7key.json";

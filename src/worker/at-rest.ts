@@ -1,4 +1,4 @@
-import { hashAuthKey } from "../core/crypto.js";
+import { hashAuthKey } from "#core/crypto.js";
 import {
   concat,
   fromBase64,
@@ -6,7 +6,7 @@ import {
   timingSafeEqual,
   toBase64,
   utf8Encode,
-} from "../core/bytes.js";
+} from "#core/bytes.js";
 
 export interface AtRestEnv {
   AT_REST_SECRET: string;

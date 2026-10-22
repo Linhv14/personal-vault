@@ -3,9 +3,9 @@ import {
   resolveLocale,
   type LocalePreference,
   type Translate,
-} from "../../src/i18n/index.js";
-import { icon } from "../../src/ui/icons.js";
-import { logo } from "../../src/ui/logo.js";
+} from "#i18n/index.js";
+import { icon } from "#ui/icons.js";
+import { logo } from "#ui/logo.js";
 import {
   PAGE_ABORT,
   PAGE_REPLY,

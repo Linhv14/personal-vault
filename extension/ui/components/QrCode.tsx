@@ -1,5 +1,5 @@
 import { useMemo } from "preact/hooks";
-import { encodeQr, qrPath } from "../../../src/core/qr.js";
+import { encodeQr, qrPath } from "#core/qr.js";
 
 const MARGIN = 4;
 

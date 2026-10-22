@@ -1,5 +1,5 @@
-import { downloadRecoveryKit } from "../../lib/account-recovery.js";
-import { backupCodesText } from "../../lib/two-factor.js";
+import { downloadRecoveryKit } from "#ext/lib/account-recovery.js";
+import { backupCodesText } from "#ext/lib/two-factor.js";
 import { useT } from "../i18n.js";
 
 export interface BackupCodesViewProps {

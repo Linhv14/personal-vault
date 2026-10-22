@@ -1,6 +1,6 @@
-import { MAX_ENVIRONMENTS, type Environment } from "../../../../src/core/projects.js";
-import { Icon } from "../../../ui/components/Icon.js";
-import { useT } from "../../../ui/i18n.js";
+import { MAX_ENVIRONMENTS, type Environment } from "#core/projects.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { CI_TAB, type SecretsByEnvironment } from "./helpers.js";
 
 export function EnvironmentTabs({

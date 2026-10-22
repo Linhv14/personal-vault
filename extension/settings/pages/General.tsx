@@ -1,16 +1,11 @@
 import { useEffect, useState } from "preact/hooks";
-import {
-  LOCALE_NAMES,
-  LOCALES,
-  type LocalePreference,
-  type Translate,
-} from "../../../src/i18n/index.js";
+import { LOCALE_NAMES, LOCALES, type LocalePreference, type Translate } from "#i18n/index.js";
 import {
   autofillSupported,
   disableAutofill,
   enableAutofill,
   isAutofillEnabled,
-} from "../../lib/autofill-permission.js";
+} from "#ext/lib/autofill-permission.js";
 import {
   browserPasswordsState,
   browserPasswordsSupported,
@@ -19,7 +14,7 @@ import {
   passwordSettingsPage,
   takeOverBrowserPasswords,
   type BrowserPasswordsState,
-} from "../../lib/browser-passwords.js";
+} from "#ext/lib/browser-passwords.js";
 import {
   AUTO_LOCK_CHOICES,
   DEFAULT_AUTO_LOCK_MINUTES,
@@ -28,10 +23,10 @@ import {
   LOCK_ON_BROWSER_CLOSE,
   setLocal,
   touch,
-} from "../../lib/storage.js";
-import { rememberUnlock } from "../../lib/resume.js";
-import { Card } from "../../ui/components/Card.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/storage.js";
+import { rememberUnlock } from "#ext/lib/resume.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { useT } from "#ext/ui/i18n.js";
 import { localState, reloadLocal, showToast } from "../state.js";
 
 function lockLabel(minutes: number, t: Translate): string {

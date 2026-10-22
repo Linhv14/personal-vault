@@ -1,13 +1,13 @@
 import { useEffect, useState } from "preact/hooks";
-import type { IconName } from "../../../src/ui/icons.js";
-import { describeError } from "../../../src/i18n/index.js";
-import * as api from "../../lib/api.js";
-import { Button } from "../../ui/components/Button.js";
-import { Card } from "../../ui/components/Card.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { formatDateTime, formatRelative } from "../../ui/format.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+import type { IconName } from "#ui/icons.js";
+import { describeError } from "#i18n/index.js";
+import * as api from "#ext/lib/api.js";
+import { Button } from "#ext/ui/components/Button.js";
+import { Card } from "#ext/ui/components/Card.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { formatDateTime, formatRelative } from "#ext/ui/format.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { showToast } from "../state.js";
 
 const KIND_ICONS: Record<api.SessionInfo["kind"], IconName> = {

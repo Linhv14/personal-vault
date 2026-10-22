@@ -1,4 +1,4 @@
-import { fromBase64 } from "../../../src/core/bytes.js";
+import { fromBase64 } from "#core/bytes.js";
 
 export type OpenPgpErrorCode = "wrong_passphrase" | "unsupported" | "damaged";
 

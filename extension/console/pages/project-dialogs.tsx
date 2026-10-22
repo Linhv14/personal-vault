@@ -1,13 +1,8 @@
 import { useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import {
-  isSecretName,
-  parseDotenv,
-  type Environment,
-  type SecretKind,
-} from "../../../src/core/projects.js";
-import type { Secret } from "../../lib/projects.js";
-import { useT } from "../../ui/i18n.js";
+import { formText } from "#ui/form-data.js";
+import { isSecretName, parseDotenv, type Environment, type SecretKind } from "#core/projects.js";
+import type { Secret } from "#ext/lib/projects.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Dialog, Field } from "../components.js";
 import { HostChips } from "./HostChips.js";
 

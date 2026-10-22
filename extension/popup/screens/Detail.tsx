@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
-import { describeError } from "../../../src/i18n/index.js";
-import type { IconName } from "../../../src/ui/icons.js";
+import { describeError } from "#i18n/index.js";
+import type { IconName } from "#ui/icons.js";
 import {
   formatCardNumber,
   itemType,
@@ -10,14 +10,14 @@ import {
   TYPE_FIELDS,
   unusedCodes,
   type FieldSpec,
-} from "../../lib/item-types.js";
-import type { VaultItem } from "../../lib/vault/types.js";
-import { daysUntilPurge } from "../../lib/trash.js";
-import { vaultOf } from "../../lib/vault/defs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/item-types.js";
+import type { VaultItem } from "#ext/lib/vault/types.js";
+import { daysUntilPurge } from "#ext/lib/trash.js";
+import { vaultOf } from "#ext/lib/vault/defs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { MenuList } from "../components/Menu.js";
-import { IconButton } from "../../ui/components/IconButton.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
 import { Field, ValueRow } from "../components/FieldRow.js";
 import { ItemIcon } from "../components/ItemIcons.js";
 import { TotpRow } from "../components/Totp.js";

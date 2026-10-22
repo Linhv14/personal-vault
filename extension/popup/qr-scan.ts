@@ -1,6 +1,6 @@
-import { fromBase64 } from "../../src/core/bytes.js";
-import { generateTotp, parseTotpInput, type TotpConfig } from "../../src/core/totp.js";
-import type { Translate } from "../../src/i18n/index.js";
+import { fromBase64 } from "#core/bytes.js";
+import { generateTotp, parseTotpInput, type TotpConfig } from "#core/totp.js";
+import type { Translate } from "#i18n/index.js";
 import { nowMs } from "./state.js";
 import { warn } from "../lib/log.js";
 

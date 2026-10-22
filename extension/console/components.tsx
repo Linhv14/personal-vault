@@ -1,7 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
-import type { IconName } from "../../src/ui/icons.js";
-import type { OrgRole } from "../../src/core/org-model.js";
+import type { IconName } from "#ui/icons.js";
+import type { OrgRole } from "#core/org-model.js";
 import { Badge } from "../ui/components/ConsoleKit.js";
 import { Fingerprint } from "../ui/components/Fingerprint.js";
 import { Icon } from "../ui/components/Icon.js";

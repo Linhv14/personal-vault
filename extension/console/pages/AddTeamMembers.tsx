@@ -1,9 +1,9 @@
 import { useState } from "preact/hooks";
-import type { OrgMember, TeamAccess } from "../../lib/orgs.js";
-import { Fingerprint } from "../../ui/components/Fingerprint.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+import type { OrgMember, TeamAccess } from "#ext/lib/orgs.js";
+import { Fingerprint } from "#ext/ui/components/Fingerprint.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Avatar, Dialog } from "../components.js";
 
 const SHOWN = 8;

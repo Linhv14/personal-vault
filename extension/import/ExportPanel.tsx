@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { formText } from "../../src/ui/form-data.js";
-import { describeError } from "../../src/i18n/index.js";
+import { formText } from "#ui/form-data.js";
+import { describeError } from "#i18n/index.js";
 import { csvExport, encryptExport, EXPORT_PASSPHRASE_MIN } from "../lib/export.js";
 import { itemType } from "../lib/item-types.js";
 import { decryptEverything } from "../lib/vault/decrypt.js";

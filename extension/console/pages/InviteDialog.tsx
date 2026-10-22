@@ -1,9 +1,9 @@
 import { useState } from "preact/hooks";
-import { isDomainAllowed } from "../../../src/core/org-model.js";
-import { formText } from "../../../src/ui/form-data.js";
-import type { Team, TeamAccess } from "../../lib/orgs.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { useT } from "../../ui/i18n.js";
+import { isDomainAllowed } from "#core/org-model.js";
+import { formText } from "#ui/form-data.js";
+import type { Team, TeamAccess } from "#ext/lib/orgs.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { useT } from "#ext/ui/i18n.js";
 import { Dialog, Field } from "../components.js";
 import { failure$ } from "../data.js";
 import { AccessToggle } from "./AddTeamMembers.js";

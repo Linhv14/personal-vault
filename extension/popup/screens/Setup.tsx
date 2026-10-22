@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { formText } from "../../../src/ui/form-data.js";
-import { createAccount } from "../../../src/core/crypto.js";
-import type { MasterPasswordIssue } from "../../../src/core/master-password.js";
-import { describeError } from "../../../src/i18n/index.js";
-import * as api from "../../lib/api.js";
-import { checkNewMasterPassword } from "../../lib/master-password.js";
+import { formText } from "#ui/form-data.js";
+import { createAccount } from "#core/crypto.js";
+import type { MasterPasswordIssue } from "#core/master-password.js";
+import { describeError } from "#i18n/index.js";
+import * as api from "#ext/lib/api.js";
+import { checkNewMasterPassword } from "#ext/lib/master-password.js";
 import {
   clearPendingSignup,
   getLocal,
@@ -12,11 +12,11 @@ import {
   savePendingSignup,
   setLocal,
   type PendingSignup,
-} from "../../lib/storage.js";
-import { isDefaultServer } from "../../lib/server.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { MasterPasswordInput } from "../../ui/components/MasterPasswordInput.js";
-import { localeSignal, useT } from "../../ui/i18n.js";
+} from "#ext/lib/storage.js";
+import { isDefaultServer } from "#ext/lib/server.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { MasterPasswordInput } from "#ext/ui/components/MasterPasswordInput.js";
+import { localeSignal, useT } from "#ext/ui/i18n.js";
 import {
   finishUnlock,
   SecondFactorRequired,
@@ -24,7 +24,7 @@ import {
   signInWithCode,
   type PendingSignIn,
 } from "../auth.js";
-import { TwoFactorStep } from "../../ui/components/TwoFactorStep.js";
+import { TwoFactorStep } from "#ext/ui/components/TwoFactorStep.js";
 import { AuthLayout } from "../components/AuthLayout.js";
 import { toast } from "../state.js";
 import { Recover } from "./Recover.js";

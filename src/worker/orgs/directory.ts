@@ -1,5 +1,5 @@
-import { isDomainAllowed, type InvitableRole, type OrgRole } from "../../core/org-model.js";
-import { isStringArray, parseJsonAs } from "../../core/json.js";
+import { isDomainAllowed, type InvitableRole, type OrgRole } from "#core/org-model.js";
+import { isStringArray, parseJsonAs } from "#core/json.js";
 import { now } from "../http.js";
 
 export const MAX_ORGS_PER_ACCOUNT = 10;

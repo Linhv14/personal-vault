@@ -8,8 +8,8 @@ import {
   setUiLocale,
   useT,
   vaultKeySignal,
-} from "../extension/web-host.js";
-import { turnstileToken } from "../src/ui/turnstile.js";
+} from "#ext/web-host.js";
+import { turnstileToken } from "#ui/turnstile.js";
 import { SignIn } from "./SignIn.js";
 import { accountEmail, signOut, startWebSession } from "./session.js";
 

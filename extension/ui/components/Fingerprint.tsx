@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { fingerprint } from "../../../src/core/identity.js";
+import { fingerprint } from "#core/identity.js";
 
 export function Fingerprint({
   publicKey,

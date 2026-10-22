@@ -1,13 +1,7 @@
-import {
-  bareRegion,
-  countryOf,
-  foldText,
-  regionNames,
-  US_STATES,
-} from "../../../src/core/address-data.js";
-import { nationalPhone } from "../../../src/core/phone.js";
-import type { AddressData, CardData } from "../../lib/autofill-protocol.js";
-import { CARD_BRAND_NAMES, type CardBrand } from "../../lib/item-types.js";
+import { bareRegion, countryOf, foldText, regionNames, US_STATES } from "#core/address-data.js";
+import { nationalPhone } from "#core/phone.js";
+import type { AddressData, CardData } from "#ext/lib/autofill-protocol.js";
+import { CARD_BRAND_NAMES, type CardBrand } from "#ext/lib/item-types.js";
 import {
   rawDescription,
   type AddressFieldKind,

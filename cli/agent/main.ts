@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER } from "../../src/core/brand.js";
+import { DEFAULT_SERVER } from "#core/brand.js";
 import {
   currentSession,
   defaultContext,

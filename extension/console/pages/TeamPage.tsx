@@ -6,12 +6,12 @@ import {
   removeTeamMember,
   setTeamAccess,
   type OrgMember,
-} from "../../lib/orgs.js";
-import { rekeyTeam } from "../../lib/projects.js";
-import { Fingerprint } from "../../ui/components/Fingerprint.js";
-import { Icon } from "../../ui/components/Icon.js";
-import { IconButton } from "../../ui/components/IconButton.js";
-import { useT } from "../../ui/i18n.js";
+} from "#ext/lib/orgs.js";
+import { rekeyTeam } from "#ext/lib/projects.js";
+import { Fingerprint } from "#ext/ui/components/Fingerprint.js";
+import { Icon } from "#ext/ui/components/Icon.js";
+import { IconButton } from "#ext/ui/components/IconButton.js";
+import { useT } from "#ext/ui/i18n.js";
 import {
   ActionButton,
   Avatar,

@@ -1,7 +1,7 @@
-import { logo } from "../../../src/ui/logo.js";
-import { brandMark, flagMark } from "../../../src/ui/marks.js";
-import type { FormPrompt } from "../../lib/autofill-protocol.js";
-import { CARD_BRAND_NAMES } from "../../lib/item-types.js";
+import { logo } from "#ui/logo.js";
+import { brandMark, flagMark } from "#ui/marks.js";
+import type { FormPrompt } from "#ext/lib/autofill-protocol.js";
+import { CARD_BRAND_NAMES } from "#ext/lib/item-types.js";
 import { send } from "../send.js";
 import { t } from "../state.js";
 import { badge } from "./menu.js";

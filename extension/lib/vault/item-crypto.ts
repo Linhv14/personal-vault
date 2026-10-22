@@ -1,5 +1,5 @@
-import { importVaultKey, openJson } from "../../../src/core/crypto.js";
-import { fromBase64, utf8Encode } from "../../../src/core/bytes.js";
+import { importVaultKey, openJson } from "#core/crypto.js";
+import { fromBase64, utf8Encode } from "#core/bytes.js";
 import type { CachedItem } from "../storage.js";
 import type { VaultItem } from "./types.js";
 

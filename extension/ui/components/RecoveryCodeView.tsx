@@ -1,4 +1,4 @@
-import { downloadRecoveryKit, recoveryKitText } from "../../lib/account-recovery.js";
+import { downloadRecoveryKit, recoveryKitText } from "#ext/lib/account-recovery.js";
 import { useT } from "../i18n.js";
 
 export interface RecoveryCodeViewProps {
