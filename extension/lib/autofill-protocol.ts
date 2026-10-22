@@ -1,5 +1,6 @@
 import type { LookalikeMatch } from "../../src/core/lookalike.js";
-import type { CardBrand } from "./item-types.js";
+import { isPlainObject } from "../../src/core/json.js";
+import { CARD_BRAND_NAMES, type CardBrand } from "./item-types.js";
 
 export const AUTOFILL_SCRIPT_ID = "personal-vault-autofill";
 export const CARD_FRAME_SCRIPT_ID = "personal-vault-card-frame";
@@ -143,6 +144,45 @@ export type AutofillResponse =
   | { ok: true; form: FormPrompt | null }
   | { ok: true; lookalike: LookalikeMatch | null }
   | { ok: false; error: string };
+
+export interface CardFrameFill {
+  type: "7key:card-frame-fill";
+  card: CardData;
+}
+
+const isOptionalString = (value: unknown): boolean =>
+  value === undefined || typeof value === "string";
+
+function isCardBrand(value: unknown): value is CardBrand {
+  return typeof value === "string" && Object.hasOwn(CARD_BRAND_NAMES, value);
+}
+
+export function isCardData(value: unknown): value is CardData {
+  return (
+    isPlainObject(value) &&
+    typeof value.number === "string" &&
+    isCardBrand(value.brand) &&
+    isOptionalString(value.cardholder) &&
+    isOptionalString(value.expiry) &&
+    isOptionalString(value.cvv)
+  );
+}
+
+export function isCardFrameFill(message: unknown): message is CardFrameFill {
+  return (
+    isPlainObject(message) && message.type === "7key:card-frame-fill" && isCardData(message.card)
+  );
+}
+
+export function isCardFrameCapture(message: unknown): message is CardFrameCapture {
+  return (
+    isPlainObject(message) &&
+    message.type === "autofill:card-frame-capture" &&
+    isPlainObject(message.card) &&
+    typeof message.untouched === "boolean" &&
+    typeof message.submit === "boolean"
+  );
+}
 
 export function isAutofillRequest(message: unknown): message is AutofillRequest {
   const type = (message as { type?: unknown } | null)?.type;

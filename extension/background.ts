@@ -16,7 +16,7 @@ import {
 import {
   AUTOFILL_ORIGINS,
   isAutofillRequest,
-  type CardFrameCapture,
+  isCardFrameCapture,
 } from "./lib/autofill-protocol.js";
 import { handleAutofill, trustedSender, type TrustedSender } from "./lib/autofill-service.js";
 import { isPasskeyRequest } from "./lib/passkey/protocol.js";
@@ -27,6 +27,7 @@ import { CLIPBOARD_ALARM, clearClipboardNow } from "./lib/clipboard.js";
 import { resumeUnlock } from "./lib/resume.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
 import { warn } from "./lib/log.js";
+import { isPlainObject } from "../src/core/json.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   void scheduleLockAlarm();
@@ -59,12 +60,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if ((message as { type?: unknown } | null)?.type === "autofill:card-frame") {
+  const type = isPlainObject(message) ? message.type : undefined;
+  if (type === "autofill:card-frame") {
     void rememberCardFrame(sender, chrome.runtime.id);
     return false;
   }
-  if ((message as { type?: unknown } | null)?.type === "autofill:card-frame-capture") {
-    void rememberFrameCard(sender, chrome.runtime.id, message as CardFrameCapture);
+  if (type === "autofill:card-frame-capture") {
+    if (isCardFrameCapture(message)) {
+      void rememberFrameCard(sender, chrome.runtime.id, message);
+    }
     return false;
   }
   const handle: ((trusted: TrustedSender) => Promise<unknown>) | null = isAutofillRequest(message)
