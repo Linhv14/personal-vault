@@ -374,11 +374,24 @@ export async function setUsedCodes(item: VaultItem, usedCodes: string[] | undefi
   }
 }
 
+const trashing = new Map<string, Promise<void>>();
+
 export async function setTrashed(item: VaultItem, trashed: boolean): Promise<void> {
   const { trashedAt: _trashedAt, ...draft } = withoutTimestamps(item);
-  await replaceItem(trashed ? { ...draft, trashedAt: Math.floor(nowMs() / 1000) } : draft);
+  const next = trashed ? { ...draft, trashedAt: Math.floor(nowMs() / 1000) } : draft;
+  const put = (value: VaultItem) => {
+    items.value = items.value.map((candidate) => (candidate.id === item.id ? value : candidate));
+  };
+  put({ ...next, createdAt: item.createdAt, updatedAt: item.updatedAt });
   showList();
   toast(translator()(trashed ? "edit.trashed" : "edit.restored"));
+  const saving = replaceItem(next).catch((error: unknown) => {
+    put(item);
+    toast(describeError(error, translator()));
+  });
+  trashing.set(item.id, saving);
+  await saving;
+  trashing.delete(item.id);
 }
 
 export async function deleteForever(item: VaultItem): Promise<void> {
@@ -387,6 +400,7 @@ export async function deleteForever(item: VaultItem): Promise<void> {
     return;
   }
   try {
+    await trashing.get(item.id);
     await removeItem(item.id, item);
     items.value = items.value.filter((candidate) => candidate.id !== item.id);
     toast(t("edit.deleted"));

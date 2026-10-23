@@ -54,7 +54,7 @@ export function Trash() {
     setTrashed((current) => current?.filter((item) => !ids.has(item.id)) ?? null);
     showToast(message);
     if (vaultKey) {
-      await load(vaultKey).catch(() => undefined);
+      void load(vaultKey).catch(() => undefined);
     }
   };
 
