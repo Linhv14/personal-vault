@@ -213,6 +213,9 @@ async function buildCli() {
     target: "node20",
     minify: false,
     logLevel: "info",
+    define: {
+      __SEVENKEY_CLI_VERSION__: JSON.stringify(process.env.SEVENKEY_CLI_VERSION || "dev"),
+    },
   };
   await build({
     ...node,

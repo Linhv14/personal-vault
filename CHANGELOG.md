@@ -8,6 +8,19 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Added
+
+- `7key login --sso` signs in through the organization's identity provider:
+  the CLI opens the browser, receives the result on a one-time
+  `127.0.0.1` port (RFC 8252), then asks for the master password. Password
+  sign-in under **Require SSO** now points there.
+- `7key --version`.
+
+### Changed
+
+- The console's suggestion of AI agent hosts takes one line, with the list
+  behind **Show**, so it no longer pushes the secrets table down.
+
 ## [0.5.0] - 2026-10-23
 
 Upgrade with `npm run upgrade`. Migrations `0013` to `0017` only add tables

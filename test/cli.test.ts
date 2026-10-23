@@ -56,3 +56,24 @@ describe("7key CLI", () => {
     await expect(githubIdToken("https://7key.online", {})).rejects.toThrow("id-token: write");
   });
 });
+
+describe("7key --version", () => {
+  it("prints the version without touching the network", async () => {
+    const { main } = await import("../cli/main.js");
+    const lines: string[] = [];
+    for (const flag of ["--version", "-v", "version"]) {
+      expect(await main([flag], {}, (line) => lines.push(line))).toBe(0);
+    }
+    expect(lines).toEqual(["7key dev", "7key dev", "7key dev"]);
+  });
+});
+
+describe("7key login flags", () => {
+  it("takes --sso", async () => {
+    const { parseFlags } = await import("../cli/account/commands.js");
+    expect(parseFlags(["--sso", "--email", "ana@acme.com"])).toMatchObject({
+      sso: true,
+      email: "ana@acme.com",
+    });
+  });
+});

@@ -1,5 +1,3 @@
-import { toBase64Url, utf8Encode } from "#core/bytes.js";
-import { sha256 } from "#core/primitives.js";
 import { normalizeEmail } from "#worker/email-address.js";
 import {
   audienceMatches,
@@ -120,10 +118,6 @@ export function jwksSource(fetcher: Fetcher, jwksUri: string): JwksSource {
     }
     return seconds() - cached.fetchedAt >= JWKS_REFRESH_SECONDS ? load() : cached.value;
   };
-}
-
-export async function pkceChallenge(verifier: string): Promise<string> {
-  return toBase64Url(await sha256(utf8Encode(verifier)));
 }
 
 export async function exchangeCode(

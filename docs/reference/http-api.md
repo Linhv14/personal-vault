@@ -465,12 +465,12 @@ overview, which reports the licence instead.
 
 No session; rate-limited per network.
 
-| Field             | Type   | Notes                                                                                                    |
-| ----------------- | ------ | -------------------------------------------------------------------------------------------------------- |
-| `email`           | string | A work email; its domain must be verified by one organization. Ignored when `identifier` is given        |
-| `identifier`      | string | The organization identifier                                                                              |
-| `returnTo`        | string | Exactly `<server>/app/` or `https://<extension id>.chromiumapp.org/` for an allowed extension            |
-| `clientChallenge` | string | base64url SHA-256 of a random verifier the client keeps; the grant is only redeemable with that verifier |
+| Field             | Type   | Notes                                                                                                                                                          |
+| ----------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `email`           | string | A work email; its domain must be verified by one organization. Ignored when `identifier` is given                                                              |
+| `identifier`      | string | The organization identifier                                                                                                                                    |
+| `returnTo`        | string | Exactly `<server>/app/`, `https://<extension id>.chromiumapp.org/` for an allowed extension, or `http://127.0.0.1:<port>/sso` (port 1024 to 65535) for the CLI |
+| `clientChallenge` | string | base64url SHA-256 of a random verifier the client keeps; the grant is only redeemable with that verifier                                                       |
 
 | Status | Body / code                                                                   |
 | ------ | ----------------------------------------------------------------------------- |

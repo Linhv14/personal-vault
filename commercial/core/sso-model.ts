@@ -55,6 +55,13 @@ export function isAllowedReturn(value: unknown, targets: readonly string[]): val
   return typeof value === "string" && targets.includes(value);
 }
 
+const LOOPBACK_RETURN = /^http:\/\/127\.0\.0\.1:([1-9]\d{3,4})\/sso$/;
+
+export function isLoopbackReturn(value: unknown): value is string {
+  const port = typeof value === "string" ? LOOPBACK_RETURN.exec(value)?.[1] : undefined;
+  return port !== undefined && Number(port) >= 1024 && Number(port) <= 65535;
+}
+
 export function callbackUrl(origin: string): string {
   return `${origin}/api/sso/callback`;
 }

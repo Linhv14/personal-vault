@@ -9,7 +9,8 @@ import { checkNewMasterPassword } from "#ext/lib/master-password.js";
 import { MasterPasswordInput } from "#ext/ui/components/MasterPasswordInput.js";
 import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { readOutcome } from "#commercial/core/sso-model.js";
-import { newVerifier, prepareSso, startSsoSession, type SsoSession } from "./api.js";
+import { pkceVerifier } from "#core/pkce.js";
+import { prepareSso, startSsoSession, type SsoSession } from "./api.js";
 import type { SsoPending } from "./flow.js";
 
 export interface SsoHost {
@@ -111,7 +112,7 @@ export function SsoSignIn({
     setError(null);
     setStep({ kind: "waiting" });
     try {
-      const verifier = newVerifier();
+      const verifier = pkceVerifier();
       const prepared = await prepareSso(host.apiUrl, lookup, host.returnTo, verifier);
       const url = await host.launch(prepared.authorizeUrl, verifier);
       if (url !== null) {

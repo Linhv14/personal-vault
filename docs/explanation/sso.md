@@ -91,7 +91,12 @@ option):
   popup hands the provider step to the extension's service worker: it runs
   `launchWebAuthFlow`, redeems the grant, keeps the result for ten minutes in
   `chrome.storage.session` (memory only, closed to content scripts) and opens
-  the popup again, which asks for the master password.
+  the popup again, which asks for the master password. The CLI follows
+  [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252): `prepare` also accepts
+  `http://127.0.0.1:<port>/sso`, a port the CLI listens on for that one
+  attempt. Its page hands the fragment to the CLI with a same-origin `POST`, and
+  the CLI ignores any other origin. Another program on the machine that answers
+  on that port gets at most a grant it cannot redeem without the CLI's verifier.
 - **Two-factor authentication.** As in Bitwarden, the IdP's sign-in stands in
   for 7key's account 2FA: an SSO sign-in is not asked for a 2FA code. Password
   sign-in, which owners and admins keep under Require SSO, still is.

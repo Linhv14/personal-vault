@@ -1,4 +1,4 @@
-import { toBase64, utf8Encode } from "#core/bytes.js";
+import { toBase64, utf8Encode, type Bytes } from "#core/bytes.js";
 import {
   deriveAuthKey,
   deriveMasterKey,
@@ -62,7 +62,7 @@ export interface Selected {
   secrets: SecretContent[];
 }
 
-async function call<T>(
+export async function call<T>(
   request: typeof fetch,
   server: string,
   path: string,
@@ -133,19 +133,48 @@ export async function signIn(
       "The server asked for a sign-in step this 7key does not know. Update 7key",
     );
   }
+  return openSession(request, origin, masterKey, {
+    token: login.token,
+    expiresAt: login.expiresAt,
+    wrappedVaultKey: login.wrappedVaultKey,
+  });
+}
+
+export async function unlockAccount(
+  request: typeof fetch,
+  origin: string,
+  account: { email: string; kdf: KdfParams },
+  password: string,
+  answer: { token: string; expiresAt?: number; wrappedVaultKey: SealedData },
+): Promise<Session> {
+  const masterKey = await deriveMasterKey(account.email, password, account.kdf);
+  return openSession(request, origin, masterKey, answer).catch((error: unknown) => {
+    if (error instanceof DOMException && error.name === "OperationError") {
+      throw new AgentError("Wrong master password");
+    }
+    throw error;
+  });
+}
+
+async function openSession(
+  request: typeof fetch,
+  origin: string,
+  masterKey: Bytes,
+  answer: { token: string; expiresAt?: number; wrappedVaultKey: SealedData },
+): Promise<Session> {
   const vaultKey = await importVaultKey(
-    await open(await deriveWrappingKey(masterKey), login.wrappedVaultKey),
+    await open(await deriveWrappingKey(masterKey), answer.wrappedVaultKey),
   );
   const { identity } = await call<{
     identity: { publicKey: string; wrappedPrivateKey: SealedData } | null;
-  }>(request, origin, "/api/account/identity", { token: login.token });
+  }>(request, origin, "/api/account/identity", { token: answer.token });
   if (!identity) {
     throw new AgentError("This account has no key pair yet. Open the 7key console once first.");
   }
   return {
     server: origin,
-    token: login.token,
-    expiresAt: login.expiresAt,
+    token: answer.token,
+    expiresAt: answer.expiresAt,
     request,
     identity: {
       publicKey: identity.publicKey,
@@ -163,6 +192,9 @@ function signInError(error: AgentError, fallback: string): AgentError {
     return new AgentError(
       `Too many attempts. Try again in ${String(error.params.seconds)} seconds`,
     );
+  }
+  if (error instanceof ServerRefusal && error.code === "auth.sso_required") {
+    return new AgentError("Your organization requires single sign-on. Run: 7key login --sso");
   }
   if (error instanceof ServerRefusal && error.code === "auth.two_factor_expired") {
     return new AgentError("The sign-in timed out. Run 7key login again");

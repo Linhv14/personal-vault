@@ -87,12 +87,16 @@ a member. Addresses on other domains cannot use SSO on their own, even when
 invited: they accept the invitation, sign in with their master password, then
 choose **Link with SSO** under the organization's **Settings** in the console.
 
+In a terminal, members run `7key login --sso` (with `--server` for a
+self-hosted server): the CLI opens the provider in the browser and asks for the
+master password once the provider confirms them.
+
 When it works, choose the policies:
 
 - **Require single sign-on.** Members on a verified domain, other than owners
   and admins, can no longer
   sign in with their master password alone; the sign-in screen sends them to
-  SSO. Owners and admins keep password sign-in so a broken provider cannot lock
+  SSO, and `7key login` tells them to use `7key login --sso`. Owners and admins keep password sign-in so a broken provider cannot lock
   everyone out.
 - **Single organization.** Members other than owners and admins cannot join
   another organization, and people who already belong to another organization

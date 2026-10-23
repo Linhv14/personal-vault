@@ -117,6 +117,7 @@ if (tapOnly) {
   process.exit(0);
 }
 
+process.env.SEVENKEY_CLI_VERSION = version;
 run(process.execPath, [path.join(root, "scripts", "build.ts")]);
 
 const stage = mkdtempSync(path.join(tmpdir(), "7key-cli-"));

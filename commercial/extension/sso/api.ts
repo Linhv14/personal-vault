@@ -1,7 +1,6 @@
-import { randomBytes, toBase64Url, utf8Encode } from "#core/bytes.js";
 import { isKdfParams, isSealedData, type KdfParams, type SealedData } from "#core/crypto.js";
 import { isBoolean, isFiniteNumber, isPlainObject, isString } from "#core/json.js";
-import { sha256 } from "#core/primitives.js";
+import { pkceChallenge } from "#core/pkce.js";
 import { ApiError, hasField, requestChecked } from "#ext/lib/api.js";
 import type { DecryptionOption } from "#commercial/core/sso-model.js";
 
@@ -46,14 +45,6 @@ async function post(apiUrl: string, path: string, body: unknown): Promise<unknow
   return value;
 }
 
-export function newVerifier(): string {
-  return toBase64Url(randomBytes(32));
-}
-
-export async function challengeOf(verifier: string): Promise<string> {
-  return toBase64Url(await sha256(utf8Encode(verifier)));
-}
-
 export async function prepareSso(
   apiUrl: string,
   lookup: string,
@@ -64,7 +55,7 @@ export async function prepareSso(
   const body = await post(apiUrl, "/api/sso/prepare", {
     ...(value.includes("@") ? { email: value } : { identifier: value }),
     returnTo,
-    clientChallenge: await challengeOf(verifier),
+    clientChallenge: await pkceChallenge(verifier),
   });
   if (!isPlainObject(body) || !isString(body.orgName) || !isString(body.authorizeUrl)) {
     throw new ApiError("error.api.bad_response", 200);

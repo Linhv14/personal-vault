@@ -52,17 +52,19 @@ stays the same when the project is renamed.
 7key run --project trust1-portal --env production -- npm run migrate
 ```
 
-| Command                       | What it does                                      |
-| ----------------------------- | ------------------------------------------------- |
-| `7key run -- <command>`       | Run a command with the linked secrets             |
-| `7key dotenv > .env`          | Write them to a `.env` file                       |
-| `7key secrets`                | List the names, without values                    |
-| `7key read <reference>`       | Print one value                                   |
-| `7key inject -i <template>`   | Fill a template with values                       |
-| `--env production`            | Use another environment of the linked project     |
-| `--project <ref> --env <ref>` | Use a project without linking the folder          |
-| `7key login --server <url>`   | Sign in to your own server instead of 7key.online |
-| `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke    |
+| Command                       | What it does                                          |
+| ----------------------------- | ----------------------------------------------------- |
+| `7key run -- <command>`       | Run a command with the linked secrets                 |
+| `7key dotenv > .env`          | Write them to a `.env` file                           |
+| `7key secrets`                | List the names, without values                        |
+| `7key read <reference>`       | Print one value                                       |
+| `7key inject -i <template>`   | Fill a template with values                           |
+| `--env production`            | Use another environment of the linked project         |
+| `--project <ref> --env <ref>` | Use a project without linking the folder              |
+| `7key login --sso`            | Sign in through your organization's identity provider |
+| `7key login --server <url>`   | Sign in to your own server instead of 7key.online     |
+| `7key --version`              | Print the version, for bug reports                    |
+| `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke        |
 
 ### Read one value or fill a template
 

@@ -25,6 +25,7 @@ function run(command: string, args: string[], cwd = root): string {
   return result.stdout.trim();
 }
 
+process.env.SEVENKEY_CLI_VERSION = version;
 run(process.execPath, [path.join(root, "scripts", "build.ts")]);
 
 const work = mkdtempSync(path.join(tmpdir(), "7key-action-"));

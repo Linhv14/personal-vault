@@ -13,6 +13,7 @@ import { isBase64Url } from "#worker/validate.js";
 import {
   callbackUrl,
   isAllowedReturn,
+  isLoopbackReturn,
   normalizeIdentifier,
   returnTargets,
 } from "#commercial/core/sso-model.js";
@@ -30,7 +31,8 @@ import { ssoEnv } from "./env.js";
 import { ssoFetcher } from "./fetcher.js";
 import { completeLink } from "./links.js";
 import { joinOrg } from "./membership.js";
-import { discover, exchangeCode, jwksSource, pkceChallenge, verifyIdToken } from "./oidc.js";
+import { pkceChallenge } from "#core/pkce.js";
+import { discover, exchangeCode, jwksSource, verifyIdToken } from "./oidc.js";
 import { SsoStore } from "./store.js";
 
 const SESSION_GRANT_TTL_SECONDS = 120;
@@ -64,7 +66,7 @@ async function findConfig(store: SsoStore, body: Record<string, unknown>) {
 routes.post("/prepare", async (c) => {
   const body = await readJson(c);
   const targets = returnTargets(origin(c), ssoEnv(c.env).SSO_EXTENSION_IDS);
-  if (!isAllowedReturn(body.returnTo, targets)) {
+  if (!isAllowedReturn(body.returnTo, targets) && !isLoopbackReturn(body.returnTo)) {
     return c.json(apiError("sso.invalid_return"), 400);
   }
   if (!isBase64Url(body.clientChallenge, 64) || body.clientChallenge.length !== 43) {

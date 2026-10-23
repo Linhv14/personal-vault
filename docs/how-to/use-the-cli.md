@@ -19,6 +19,10 @@ cd ~/code/payments
 7key link
 ```
 
+If your organization signs in through single sign-on, run `7key login --sso`
+instead: it opens your identity provider in the browser, then asks for your
+master password, which still decrypts the vault on your machine.
+
 The CLI remembers the server from the login, and `.7key.json` records it for
 the folder, so you name your server once. `npm run deploy` prints the login
 line with your Worker's address; `SEVENKEY_SERVER` overrides it for one

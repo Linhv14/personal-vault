@@ -5,7 +5,8 @@ import { hashToken } from "#worker/session.js";
 import type { AppBindings } from "#worker/types.js";
 import { callbackUrl, SSO_SCOPES } from "#commercial/core/sso-model.js";
 import { ssoFetcher } from "./fetcher.js";
-import { discover, pkceChallenge } from "./oidc.js";
+import { pkceChallenge } from "#core/pkce.js";
+import { discover } from "./oidc.js";
 import type { SsoConfig, SsoStore } from "./store.js";
 
 type Ctx = Context<AppBindings>;

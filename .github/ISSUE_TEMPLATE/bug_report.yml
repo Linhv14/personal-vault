@@ -33,7 +33,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: The extension version in chrome://extensions, `npm ls -g @7key/cli` for the CLI, or the release you deployed.
+      description: The extension version in chrome://extensions, `7key --version` for the CLI, or the release you deployed.
       placeholder: 0.5.0
     validations:
       required: true

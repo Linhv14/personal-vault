@@ -30,7 +30,7 @@ vi.mock("../extension/console/data.js", () => ({
 
 const { SsoSignIn } = await import("../commercial/extension/sso/SsoSignIn.js");
 const { SsoLinkPanel } = await import("../commercial/extension/sso/SsoLinkPanel.js");
-const { challengeOf } = await import("../commercial/extension/sso/api.js");
+const { pkceChallenge } = await import("../src/core/pkce.js");
 
 const API = "https://vault.example";
 const RETURN = "https://vault.example/app/";
@@ -109,7 +109,7 @@ describe("SSO sign-in", () => {
     expect(prepare.body).toMatchObject({ email: "ana@acme.com", returnTo: RETURN });
     expect(session.body.grant).toBe("grant-1");
     expect(prepare.body.clientChallenge).toBe(
-      await challengeOf(String(session.body.clientVerifier)),
+      await pkceChallenge(String(session.body.clientVerifier)),
     );
     expect(fake.launch).toHaveBeenCalledWith(
       "https://idp.example/authorize?state=s",

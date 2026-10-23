@@ -29,6 +29,7 @@ import {
 } from "./credentials.js";
 import { findLink, LINK_FILE, writeLink } from "./link.js";
 import { injectTemplate, parseReference, type Scope } from "./reference.js";
+import { ssoSignIn } from "./sso.js";
 
 export interface Flags {
   email?: string;
@@ -40,6 +41,7 @@ export interface Flags {
   output?: string;
   force?: boolean;
   insecureFileStore?: boolean;
+  sso?: boolean;
   positional?: string[];
   command: string[];
 }
@@ -56,6 +58,19 @@ export interface Context {
   choose: (title: string, options: string[]) => Promise<number>;
   isTTY?: boolean;
   readInput?: () => Promise<string>;
+  openUrl?: (url: string) => void;
+}
+
+function openInBrowser(url: string): void {
+  const [command, args] =
+    process.platform === "darwin"
+      ? ["open", [url]]
+      : process.platform === "win32"
+        ? ["rundll32", ["url.dll,FileProtocolHandler", url]]
+        : ["xdg-open", [url]];
+  const child = spawn(command, args, { stdio: "ignore", detached: true });
+  child.on("error", () => {});
+  child.unref();
 }
 
 async function readStdin(): Promise<string> {
@@ -82,6 +97,7 @@ export function defaultContext(
     choose,
     isTTY: process.stdout.isTTY === true,
     readInput: readStdin,
+    openUrl: openInBrowser,
   };
 }
 
@@ -114,6 +130,8 @@ export function parseFlags(argv: string[], options: { positional?: boolean } = {
       flags.input = value();
     } else if (arg === "-o" || arg === "--out") {
       flags.output = value();
+    } else if (arg === "--sso") {
+      flags.sso = true;
     } else if (arg === "--force") {
       flags.force = true;
     } else if (arg === INSECURE_FILE_STORE_FLAG) {
@@ -160,6 +178,28 @@ export async function login(flags: Flags, context: Context): Promise<number> {
   }
   const saved = remembered(context.env);
   const server = flags.server ?? context.env.SEVENKEY_SERVER ?? saved.server ?? DEFAULT_SERVER;
+  if (flags.sso) {
+    const lookup =
+      (
+        flags.email ??
+        context.env.SEVENKEY_EMAIL ??
+        (await context.ask(
+          saved.email
+            ? `Work email or organization identifier [${saved.email}]: `
+            : "Work email or organization identifier: ",
+        ))
+      ).trim() || saved.email;
+    if (!lookup) {
+      throw new AgentError("A work email or an organization identifier is needed");
+    }
+    const { email, session } = await ssoSignIn(server, lookup, {
+      request: context.request,
+      openUrl: context.openUrl ?? openInBrowser,
+      log: context.log,
+      askPassword: context.askPassword,
+    });
+    return keepLogin(context, email, session);
+  }
   const email =
     (
       flags.email ??
@@ -172,6 +212,10 @@ export async function login(flags: Flags, context: Context): Promise<number> {
   }
   const password = await context.askPassword(`Master password for ${email}: `);
   const session = await signIn(server, email, password, context.request, context.ask);
+  return keepLogin(context, email, session);
+}
+
+async function keepLogin(context: Context, email: string, session: Session): Promise<number> {
   const previous = currentSession(context);
   if (previous) {
     await signOut(previous);

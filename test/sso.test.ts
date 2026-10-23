@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { randomBytes, toBase64Url } from "../src/core/bytes.js";
+import { randomBytes, toBase64Url, utf8Encode } from "../src/core/bytes.js";
+import { createAccount, seal } from "../src/core/crypto.js";
+import { createIdentity } from "../src/core/identity.js";
+import { ssoSignIn } from "../cli/account/sso.js";
 import { OFFICIAL_EXTENSION_ID } from "../commercial/core/sso-model.js";
 import { readJsonObject, stringField } from "./helpers.js";
 import {
@@ -17,6 +20,7 @@ import {
 import {
   accountRecord,
   freezeClockAtT0,
+  REGISTRATION_TOKEN,
   startWorker,
   T0,
   type TestWorker,
@@ -485,6 +489,12 @@ describe("OIDC sign-in", () => {
       "https://abcdefghijklmnopabcdefghijklmnop.chromiumapp.org/",
       `chrome-extension://${OFFICIAL_EXTENSION_ID}/`,
       "javascript:alert(1)",
+      "http://localhost:4567/sso",
+      "http://127.0.0.1:80/sso",
+      "https://127.0.0.1:4567/sso",
+      "http://127.0.0.1:4567/sso/../app",
+      "http://127.0.0.1:4567/sso?next=x",
+      "http://127.0.0.1:99999/sso",
     ];
     for (const returnTo of attempts) {
       const { response } = await begin({ email: "member@acme.com", returnTo });
@@ -858,5 +868,140 @@ describe("policies", () => {
     addOrg(worker, OTHER_ORG, "free", [[outsider.id, "owner"]]);
     const result = await signInThroughSso("dev@acme.com");
     expect(result).toMatchObject({ status: 403, body: { code: "orgs.single_org" } });
+  });
+});
+
+describe("7key login --sso", () => {
+  const PASSWORD = "a long cli sso test password";
+  let publicKey: string;
+
+  beforeEach(async () => {
+    await start();
+    await configure();
+    const { record, vaultKey } = await createAccount("member@acme.com", PASSWORD, 600_000);
+    const registered = await worker.fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "x-registration-token": REGISTRATION_TOKEN },
+      json: { email: "member@acme.com", ...record },
+    });
+    const { token } = (await registered.json()) as { token: string };
+    const identity = await createIdentity();
+    publicKey = identity.publicKey;
+    await worker.fetch("/api/account/identity", {
+      method: "PUT",
+      token,
+      json: {
+        publicKey,
+        wrappedPrivateKey: await seal(
+          vaultKey,
+          identity.privateKey,
+          utf8Encode("personal-vault/account-private-key"),
+        ),
+      },
+    });
+  }, 30_000);
+
+  const request = ((input: RequestInfo | URL, init?: RequestInit) =>
+    worker.fetch(String(input), init)) as typeof fetch;
+
+  function browser(overrides: Record<string, unknown> = {}) {
+    const visited: string[] = [];
+    const openUrl = (url: string) => {
+      visited.push(url);
+      void (async () => {
+        const authorize = new URL(url);
+        const started: Started = {
+          verifier: "",
+          authorize,
+          state: authorize.searchParams.get("state")!,
+          nonce: authorize.searchParams.get("nonce")!,
+          challenge: authorize.searchParams.get("code_challenge")!,
+        };
+        const location = new URL((await callback(started, overrides)).headers.get("Location")!);
+        await fetch(`${location.origin}/sso/result`, {
+          method: "POST",
+          headers: { Origin: location.origin },
+          body: location.hash.slice(1),
+        });
+      })();
+    };
+    return { visited, openUrl };
+  }
+
+  it("signs in through the identity provider over a loopback redirect", async () => {
+    const { visited, openUrl } = browser();
+    const { email, session } = await ssoSignIn("https://vault.test", "member@acme.com", {
+      request,
+      openUrl,
+      log: () => {},
+      askPassword: async () => PASSWORD,
+    });
+    expect(email).toBe("member@acme.com");
+    expect(session.identity.publicKey).toBe(publicKey);
+    expect(visited).toHaveLength(1);
+    const returnTo = new URL(visited[0]!).searchParams.get("redirect_uri");
+    expect(returnTo).toBe("https://vault.test/api/sso/callback");
+    expect((await worker.fetch("/api/orgs", { token: session.token })).status).toBe(200);
+  }, 30_000);
+
+  it("revokes the session when the master password is wrong", async () => {
+    const before = worker.d1.db.prepare("SELECT COUNT(*) AS n FROM sessions").get() as {
+      n: number;
+    };
+    await expect(
+      ssoSignIn("https://vault.test", "member@acme.com", {
+        request,
+        openUrl: browser().openUrl,
+        log: () => {},
+        askPassword: async () => "not the password",
+      }),
+    ).rejects.toThrow("Wrong master password");
+    const after = worker.d1.db.prepare("SELECT COUNT(*) AS n FROM sessions").get() as {
+      n: number;
+    };
+    expect(after.n).toBe(before.n);
+  }, 30_000);
+
+  it("reports the provider's refusal", async () => {
+    await expect(
+      ssoSignIn("https://vault.test", "member@acme.com", {
+        request,
+        openUrl: browser({ email: "member@acme.com", email_verified: false }).openUrl,
+        log: () => {},
+        askPassword: async () => PASSWORD,
+      }),
+    ).rejects.toThrow();
+  }, 30_000);
+
+  it("ignores a result posted from another page", async () => {
+    let returnTo = "";
+    let refused = 0;
+    const watching = ((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/api/sso/prepare")) {
+        returnTo = String((JSON.parse(String(init?.body)) as { returnTo: string }).returnTo);
+      }
+      return request(input, init);
+    }) as typeof fetch;
+    const attempt = ssoSignIn(
+      "https://vault.test",
+      "member@acme.com",
+      {
+        request: watching,
+        openUrl: () => {
+          void fetch(`${new URL(returnTo).origin}/sso/result`, {
+            method: "POST",
+            headers: { Origin: "https://evil.example" },
+            body: "sso_grant=forged",
+          }).then((response) => {
+            refused = response.status;
+          });
+        },
+        log: () => {},
+        askPassword: async () => PASSWORD,
+      },
+      500,
+    );
+    await expect(attempt).rejects.toThrow("took too long");
+    expect(refused).toBe(404);
   });
 });

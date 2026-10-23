@@ -16,12 +16,14 @@ import {
   type Flags,
 } from "./account/commands.js";
 import { agentMain } from "./agent/main.js";
+import { CLI_VERSION } from "./version.js";
 import { CiError, DEFAULT_SERVER, exportToGithubEnv, fetchSecrets } from "./ci-client.js";
 
 const USAGE = `Usage: 7key <command> [options]
 
 On your computer
   login               Sign in once; the session stays in the system keychain
+  login --sso         Sign in through your organization's identity provider
   link                Pick the organization, project and environment for this folder
   run -- <command…>   Run a command with the linked secrets in its environment
   dotenv              Print the linked secrets as a .env file
@@ -31,7 +33,7 @@ On your computer
                       Fill {{ 7key:NAME }} and {{ 7key://<project>/<env>/<NAME> }}
                       in a template (stdin by default); -o writes a 0600 file
   agent -- <command…> Let an AI agent use secrets it cannot see (7key agent --help)
-  whoami | logout
+  whoami | logout | --version
   login --insecure-file-store
                       Without a system keyring, keep the session in a plain
                       0600 file (or set SEVENKEY_INSECURE_FILE_STORE=1)
@@ -104,6 +106,10 @@ export async function main(
   env: NodeJS.ProcessEnv,
   write: (line: string) => void = (line) => console.log(line),
 ): Promise<number> {
+  if (argv[0] === "--version" || argv[0] === "-v" || argv[0] === "version") {
+    write(`7key ${CLI_VERSION}`);
+    return 0;
+  }
   if (argv[0] === "agent") {
     return agentMain(argv.slice(1), env);
   }

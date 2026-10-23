@@ -76,8 +76,8 @@ and Durable Object environment in `src/worker/result.ts`, `clock.ts` and
 ## One place for cryptography
 
 `crypto.subtle` may only be called from `src/core/` and from a short list of
-protocol adapters. Key derivation, hashing, HMAC and secret comparison go through
-`src/core/primitives.ts` and `src/core/crypto.ts`, which are covered by RFC test
+protocol adapters. Key derivation, hashing, HMAC, secret comparison and PKCE go through
+`src/core/primitives.ts`, `src/core/crypto.ts` and `src/core/pkce.ts`, which are covered by RFC test
 vectors, so a reviewer checking how keys are made reads one folder instead of
 every caller.
 
