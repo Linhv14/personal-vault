@@ -40,6 +40,12 @@ Each account's items live in its own SQLite-backed Durable Object, named
 | `updated_at` | Unix seconds                                             | When it last changed |
 | `deleted_at` | Unix seconds, or null                                    | When it was deleted  |
 
+A `files` table lists the account's attachments: `id` (UUID chosen by the
+client), `item_id` (the item it was uploaded for), `size` (bytes of the sealed
+object, which reveals the file's size to within 16 bytes per MiB) and
+`created_at`. The sealed bytes live in R2 under `a/<account id>/<file id>`; the
+name, type and key are only inside the item's ciphertext.
+
 A `meta` table records the owning account, checked on every call, and how many
 rows were copied from D1. Deleted rows stay as tombstones so offline devices
 learn about the deletion; the whole object is erased with the account.

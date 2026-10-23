@@ -13,6 +13,7 @@ import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline/promises";
 import path from "node:path";
 import {
+  FILES_BUCKET,
   parseDeployFlags,
   renderConfig,
   requiredSecrets,
@@ -229,6 +230,25 @@ async function ensureDatabase() {
   return created.uuid;
 }
 
+async function ensureFilesBucket(options: DeployOptions) {
+  if (options.attachments === "off") {
+    return;
+  }
+  style.step("Checking the R2 bucket for file attachments");
+  const listed = wranglerCapture(["r2", "bucket", "list"]);
+  if (!listed.ok) {
+    throw new Error(
+      "Could not list R2 buckets. Turn on R2 in the Cloudflare dashboard, or deploy with --attachments off",
+    );
+  }
+  if (new RegExp(`name:\\s+${FILES_BUCKET}\\b`).test(listed.stdout)) {
+    style.ok(`Reusing bucket "${FILES_BUCKET}"`);
+    return;
+  }
+  await wranglerInherit(["r2", "bucket", "create", FILES_BUCKET]);
+  style.ok(`Created bucket "${FILES_BUCKET}"`);
+}
+
 function writeGeneratedConfig(
   accountId: string,
   databaseId: string,
@@ -331,6 +351,7 @@ async function deploy() {
   await wranglerInherit(["d1", "migrations", "apply", DB_NAME, "--remote", "-c", configPath]);
 
   await ensureSecrets(configPath, options);
+  await ensureFilesBucket(options);
   buildAssets();
 
   style.step("Deploying the Worker");
@@ -496,6 +517,7 @@ async function ci() {
   style.step("Applying migrations");
   await wranglerInherit(["d1", "migrations", "apply", DB_NAME, "--remote", "-c", configPath]);
 
+  await ensureFilesBucket(options);
   buildAssets();
 
   style.step("Deploying the Worker");
@@ -528,6 +550,8 @@ if (!command || !(command in COMMANDS)) {
                                  share codes; needs the TURNSTILE_SECRET secret ("none" to drop)
            --site-service <name>  bind the SITE Worker that serves /, /vi, /privacy and
                                  /media/* ("none" to drop; deploy that Worker first)
+           --attachments <mode>  store encrypted file attachments in R2: all, paid
+                                 (Team and Enterprise organizations only) or off
            --privacy-url <url>   link this https privacy policy from the share page,
                                  /security, emails and the extension ("none" to drop)
   upgrade  Back up, pull the latest release, reinstall dependencies and deploy

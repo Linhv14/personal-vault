@@ -112,6 +112,23 @@ describe("site service option", () => {
   });
 });
 
+describe("attachments option", () => {
+  it("binds no bucket by default, so a server without R2 deploys", () => {
+    expect(DEFAULT_DEPLOY_OPTIONS.attachments).toBe("off");
+    const config = render();
+    expect(config.r2_buckets).toBeUndefined();
+    expect(config.vars).not.toHaveProperty("ATTACHMENTS");
+  });
+
+  it("binds FILES and sets the mode when turned on", () => {
+    expect(parseDeployFlags(["--attachments", "paid"])).toEqual({ attachments: "paid" });
+    expect(() => parseDeployFlags(["--attachments", "yes"])).toThrow(/all, paid or off/);
+    const config = render({ attachments: "all" });
+    expect(config.r2_buckets).toEqual([{ binding: "FILES", bucket_name: "vault-files" }]);
+    expect(config.vars).toMatchObject({ ATTACHMENTS: "all" });
+  });
+});
+
 describe("privacy url option", () => {
   it("reads and clears the address, and rejects anything but https", () => {
     expect(parseDeployFlags(["--privacy-url", "https://example.test/privacy"])).toEqual({

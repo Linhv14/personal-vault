@@ -9,6 +9,8 @@ import { InvalidBodyError } from "./http.js";
 import account from "./routes/account.js";
 import auth from "./routes/auth/index.js";
 import deviceUnlock from "./routes/device-unlock.js";
+import { attachmentsMode } from "./files.js";
+import files from "./routes/files.js";
 import items from "./routes/items.js";
 import orgs, { invites } from "./routes/orgs.js";
 import logos from "./routes/logos.js";
@@ -134,6 +136,7 @@ const authUnlessInvitePreview: MiddlewareHandler<AppBindings> = async (c, next) 
   c.req.method === "GET" && c.req.path.endsWith("/preview") ? next() : requireAuth(c, next);
 app.use("/api/invites/*", authUnlessInvitePreview);
 app.use("/api/auth/delete-account", requireAuth);
+app.use("/api/files/*", requireAuth);
 
 const authToCreateShare: MiddlewareHandler<AppBindings> = async (c, next) =>
   c.req.method === "POST" ? requireAuth(c, next) : next();
@@ -153,6 +156,7 @@ const limitWritesByAccount: MiddlewareHandler<AppBindings> = async (c, next) => 
 };
 
 app.use("/api/items/*", limitWritesByAccount);
+app.use("/api/files/*", limitWritesByAccount);
 app.use("/api/orgs", limitWritesByAccount);
 app.use("/api/orgs/*", limitWritesByAccount);
 app.use("/api/invites/*", limitWritesByAccount);
@@ -173,6 +177,7 @@ app.get("/api/config", (c) => {
     emailVerification: emailVerificationEnabled(c.env),
     ...(siteKey ? { turnstileSiteKey: siteKey } : {}),
     ...(privacy ? { privacyUrl: privacy } : {}),
+    attachments: attachmentsMode(c.env),
   });
 });
 
@@ -183,6 +188,7 @@ app.route("/api/orgs", orgs);
 app.route("/api/vaults", vaults);
 app.route("/api/invites", invites);
 app.route("/api/items", items);
+app.route("/api/files", files);
 app.route("/api/logo", logos);
 app.route("/api/shares", shares);
 app.route("/api/ci", ci);

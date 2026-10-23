@@ -110,14 +110,15 @@ export interface PlanLimits {
   seats: number;
   teams: number;
   projects: number;
+  attachments: boolean;
 }
 
-const FREE_PLAN: PlanLimits = { seats: 5, teams: Infinity, projects: Infinity };
+const FREE_PLAN: PlanLimits = { seats: 5, teams: Infinity, projects: Infinity, attachments: false };
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: FREE_PLAN,
-  team: { seats: 500, teams: Infinity, projects: Infinity },
-  enterprise: { seats: 10_000, teams: Infinity, projects: Infinity },
+  team: { seats: 500, teams: Infinity, projects: Infinity, attachments: true },
+  enterprise: { seats: 10_000, teams: Infinity, projects: Infinity, attachments: true },
 };
 
 export const HARD_LIMITS = { teams: 200, projects: 1000 } as const;

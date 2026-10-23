@@ -32,6 +32,9 @@ Exact, stored in D1 or the account's Durable Object.
 | Value                           | Limit                           | Defined in                    |
 | ------------------------------- | ------------------------------- | ----------------------------- |
 | Item ciphertext                 | 64 KiB decoded                  | `src/worker/routes/items.ts`  |
+| File attachment (plaintext)     | 25 MiB, `FILE_MAX_BYTES`        | `src/worker/files.ts`         |
+| File storage per account        | 250 MiB, `ACCOUNT_FILES_BYTES`  | `src/worker/files.ts`         |
+| Files per item                  | 20                              | `src/worker/files.ts`         |
 | Items per import batch          | 100                             | `src/worker/routes/items.ts`  |
 | Share ciphertext                | 16 KiB decoded                  | `src/worker/routes/shares.ts` |
 | AES-GCM nonce                   | 12 bytes                        | `src/core/crypto.ts`          |

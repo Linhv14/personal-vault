@@ -26,6 +26,9 @@ export interface Env extends StoreEnv {
   CI_TEST_ISSUER?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET?: string;
+  ATTACHMENTS?: string;
+  FILE_MAX_BYTES?: string;
+  ACCOUNT_FILES_BYTES?: string;
 }
 
 export interface SessionContext {

@@ -9,7 +9,14 @@ export interface DeployOptions {
   turnstileSiteKey: string | null;
   siteService: string | null;
   privacyUrl: string | null;
+  attachments: AttachmentsOption;
 }
+
+export type AttachmentsOption = (typeof ATTACHMENTS_OPTIONS)[number];
+
+const ATTACHMENTS_OPTIONS = ["off", "all", "paid"] as const;
+
+export const FILES_BUCKET = "vault-files";
 
 type EmailProvider = (typeof EMAIL_PROVIDERS)[number];
 
@@ -24,6 +31,7 @@ export const DEFAULT_DEPLOY_OPTIONS: Readonly<DeployOptions> = Object.freeze({
   turnstileSiteKey: null,
   siteService: null,
   privacyUrl: null,
+  attachments: "off",
 });
 
 function isEmailProvider(value: string): value is EmailProvider {
@@ -106,6 +114,14 @@ export function parseDeployFlags(argv: readonly string[]): Partial<DeployOptions
         flags.siteService = service;
         break;
       }
+      case "--attachments": {
+        const mode = takeValue();
+        if (!(ATTACHMENTS_OPTIONS as readonly string[]).includes(mode)) {
+          throw new Error(`--attachments takes all, paid or off, not ${mode}`);
+        }
+        flags.attachments = mode as AttachmentsOption;
+        break;
+      }
       case "--privacy-url": {
         const url = clearable(takeValue());
         if (url && !isHttpsUrl(url)) {
@@ -153,6 +169,7 @@ interface WranglerConfig {
   send_email?: { name: string }[];
   secrets?: { required: string[] };
   services?: { binding: string; service: string }[];
+  r2_buckets?: { binding: string; bucket_name: string }[];
 }
 
 export function renderConfig(
@@ -210,6 +227,14 @@ export function renderConfig(
       throw new Error(`Not an https URL: ${options.privacyUrl}`);
     }
     vars.PRIVACY_URL = options.privacyUrl;
+  }
+
+  if (options.attachments !== "off") {
+    config.r2_buckets = [
+      ...(config.r2_buckets ?? []).filter((bucket) => bucket.binding !== "FILES"),
+      { binding: "FILES", bucket_name: FILES_BUCKET },
+    ];
+    vars.ATTACHMENTS = options.attachments;
   }
 
   config.secrets = { required: requiredSecrets(options) };

@@ -85,6 +85,14 @@ export type ApiErrorCode =
   | "items.not_found"
   | "items.quota_exceeded"
   | "items.conflict"
+  | "files.invalid"
+  | "files.unavailable"
+  | "files.plan_required"
+  | "files.too_large"
+  | "files.quota_exceeded"
+  | "files.item_limit"
+  | "files.exists"
+  | "files.not_found"
   | "shares.invalid_payload"
   | "shares.invalid_ttl"
   | "shares.invalid_max_views"
@@ -188,6 +196,14 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   "items.not_found": "Item not found",
   "items.quota_exceeded": "This vault has reached its item limit",
   "items.conflict": "The item changed on the server since it was read",
+  "files.invalid": "File id, item id or Content-Length is missing or invalid",
+  "files.unavailable": "This server does not store file attachments",
+  "files.plan_required": "File attachments need the Team or Enterprise plan",
+  "files.too_large": "The file is larger than this server accepts",
+  "files.quota_exceeded": "Your file storage is full",
+  "files.item_limit": "This item already has the most files it can hold",
+  "files.exists": "A file with that id already exists",
+  "files.not_found": "File not found",
   "shares.invalid_payload": "Invalid ciphertext or nonce",
   "shares.invalid_ttl": "ttlSeconds must be between 60 and 2592000 (30 days)",
   "shares.invalid_max_views": "maxViews is out of range",

@@ -51,7 +51,8 @@ response also carries `turnstileSiteKey`, and `register`, `verify-email`,
 `recover/email`, `recover/start` and `POST /api/shares/:id/code` need a token
 in the `X-Turnstile-Token` header, or answer `403 auth.bot_check_failed`.
 When `PRIVACY_URL` is set, the response carries it as `privacyUrl`; clients
-link the privacy policy only when it is present.
+link the privacy policy only when it is present. `attachments` is `all`,
+`paid` or `off`; see [File attachments](#file-attachments).
 
 ### `GET /api/time`
 
@@ -625,6 +626,32 @@ write for rate limiting.
 
 Replaces the item with a tombstone. Returns `{ "id": string, "deletedAt": number }`,
 or `404 items.not_found`.
+
+## File attachments
+
+Sealed files on personal items; see
+[File attachments](../explanation/attachments.md). Session required. The body
+is the sealed object (a version byte and 1 MiB AES-GCM chunks), never JSON.
+
+### `PUT /api/files/:id?item=<item id>`
+
+`:id` and `item` are UUIDs chosen by the client; `Content-Length` is required.
+`201 { "id", "size" }`. Errors: `404 files.unavailable` (off on this server),
+`403 files.plan_required` (`paid` mode, no Team or Enterprise organization),
+`413 files.too_large`, `403 files.quota_exceeded`, `409 files.item_limit` (20
+per item), `409 files.exists`, `400 files.invalid`. A file whose item is not
+live 24 hours after upload is deleted.
+
+### `GET /api/files/:id`
+
+The sealed bytes, `application/octet-stream`, `Cache-Control: private,
+no-store`. `404 files.not_found` for another account's file.
+
+### `DELETE /api/files/:id`
+
+`{ "id" }`, or `404 files.not_found`. Deleting an item with
+`DELETE /api/items/:id` also deletes every file uploaded for it, and deleting
+the account deletes them all.
 
 ## Shares
 

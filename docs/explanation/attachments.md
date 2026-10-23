@@ -164,7 +164,7 @@ multiplies storage, and the threat model says so plainly.
 ## Self-hosting
 
 R2 must be turned on in the Cloudflare account (the free tier asks for a payment
-method), so the bucket is opt-in: `npm run deploy -- --attachments` creates it
+method), so the bucket is opt-in: `npm run deploy -- --attachments all` creates it
 and the `FILES` binding. Without the binding the server reports
 `attachments: "off"` and the clients hide the feature.
 

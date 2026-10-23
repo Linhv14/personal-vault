@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { now } from "./clock.js";
 import { fail, ok, type Result } from "./result.js";
+import { ORPHAN_SECONDS, personalFileKey } from "./files.js";
 import { dumpStore, restoreStore, type StoreDump } from "./migration.js";
 import type { StoreEnv } from "./store-env.js";
 
@@ -39,6 +40,13 @@ export class UserStore extends DurableObject<StoreEnv> {
         deleted_at INTEGER
       );
       CREATE INDEX IF NOT EXISTS items_updated ON items (updated_at);
+      CREATE TABLE IF NOT EXISTS files (
+        id TEXT PRIMARY KEY,
+        item_id TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS files_item ON files (item_id);
     `);
   }
 
@@ -190,7 +198,107 @@ export class UserStore extends DurableObject<StoreEnv> {
       deletedAt,
       id,
     ).rowsWritten;
-    return changed ? ok({ id, deletedAt }) : fail(404, "items.not_found");
+    if (!changed) {
+      return fail(404, "items.not_found");
+    }
+    await this.dropFiles(
+      this.sql
+        .exec<{ id: string }>("SELECT id FROM files WHERE item_id = ?", id)
+        .toArray()
+        .map((row) => row.id),
+    );
+    return ok({ id, deletedAt });
+  }
+
+  private async dropFiles(ids: string[]): Promise<void> {
+    const owner = this.meta("owner");
+    if (ids.length === 0 || owner === null) {
+      return;
+    }
+    for (const id of ids) {
+      this.sql.exec("DELETE FROM files WHERE id = ?", id);
+    }
+    for (let start = 0; start < ids.length; start += 1000) {
+      await this.env.FILES?.delete(
+        ids.slice(start, start + 1000).map((id) => personalFileKey(owner, id)),
+      );
+    }
+  }
+
+  async reserveFile(
+    accountId: string,
+    file: { id: string; itemId: string; size: number },
+    limits: { accountBytes: number; perItem: number },
+  ): Promise<Result<{ id: string }>> {
+    if (!(await this.open(accountId))) {
+      return fail(403, "items.forbidden");
+    }
+    if (this.sql.exec("SELECT 1 FROM files WHERE id = ?", file.id).toArray().length) {
+      return fail(409, "files.exists");
+    }
+    const onItem = this.sql
+      .exec<{ count: number }>("SELECT COUNT(*) AS count FROM files WHERE item_id = ?", file.itemId)
+      .one().count;
+    if (onItem >= limits.perItem) {
+      return fail(409, "files.item_limit");
+    }
+    const used = this.sql
+      .exec<{ used: number }>("SELECT COALESCE(SUM(size), 0) AS used FROM files")
+      .one().used;
+    if (used + file.size > limits.accountBytes) {
+      return fail(403, "files.quota_exceeded");
+    }
+    this.sql.exec(
+      "INSERT INTO files (id, item_id, size, created_at) VALUES (?, ?, ?, ?)",
+      file.id,
+      file.itemId,
+      file.size,
+      now(),
+    );
+    if ((await this.ctx.storage.getAlarm()) === null) {
+      await this.ctx.storage.setAlarm((now() + ORPHAN_SECONDS) * 1000);
+    }
+    return ok({ id: file.id });
+  }
+
+  async fileSize(accountId: string, id: string): Promise<number | null> {
+    if (!(await this.open(accountId))) {
+      return null;
+    }
+    const row = this.sql
+      .exec<{ size: number }>("SELECT size FROM files WHERE id = ?", id)
+      .toArray()[0];
+    return row?.size ?? null;
+  }
+
+  async removeFile(accountId: string, id: string): Promise<Result<{ id: string }>> {
+    if (!(await this.open(accountId))) {
+      return fail(403, "items.forbidden");
+    }
+    if (!this.sql.exec("SELECT 1 FROM files WHERE id = ?", id).toArray().length) {
+      return fail(404, "files.not_found");
+    }
+    await this.dropFiles([id]);
+    return ok({ id });
+  }
+
+  async alarm(): Promise<void> {
+    const cutoff = now() - ORPHAN_SECONDS;
+    const orphans = (live: "<" | ">=") =>
+      this.sql
+        .exec<{ id: string; created_at: number }>(
+          `SELECT id, created_at FROM files
+            WHERE created_at ${live} ?
+              AND item_id NOT IN (SELECT id FROM items WHERE deleted_at IS NULL)
+            ORDER BY created_at`,
+          cutoff,
+        )
+        .toArray();
+    await this.dropFiles(orphans("<").map((row) => row.id));
+    const next = orphans(">=")[0];
+    if (next) {
+      await this.ctx.storage.setAlarm((next.created_at + ORPHAN_SECONDS + 1) * 1000);
+    }
   }
 
   async destroy(accountId: string): Promise<void> {
@@ -198,6 +306,12 @@ export class UserStore extends DurableObject<StoreEnv> {
     if (owner !== null && owner !== accountId) {
       return;
     }
+    await this.dropFiles(
+      this.sql
+        .exec<{ id: string }>("SELECT id FROM files")
+        .toArray()
+        .map((row) => row.id),
+    );
     await this.ctx.storage.deleteAll();
   }
 
