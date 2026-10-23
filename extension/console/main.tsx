@@ -4,12 +4,13 @@ import { lock } from "../lib/storage.js";
 import { Account } from "../settings/pages/Account.js";
 import { Data } from "../settings/pages/Data.js";
 import { General } from "../settings/pages/General.js";
-import { Health } from "../settings/pages/Health.js";
+import { Health } from "../settings/pages/health/Health.js";
 import { Security } from "../settings/pages/Security.js";
 import { Trash } from "../settings/pages/Trash.js";
 import { localState, showToast, watchStorage } from "../settings/state.js";
 import { Icon } from "../ui/components/Icon.js";
 import { useT } from "../ui/i18n.js";
+import { showLogos } from "../ui/logos.js";
 import { refreshSession, vaultKeySignal } from "../ui/store/session.js";
 import type { PersonalPage } from "./ConsoleApp.js";
 import { ConsoleHost } from "./ConsoleHost.js";
@@ -39,6 +40,10 @@ function Locked() {
 function ExtensionConsole() {
   const t = useT();
   useEffect(() => watchStorage(), []);
+  const logos = localState.value.showLogos !== false;
+  useEffect(() => {
+    showLogos.value = logos;
+  }, [logos]);
   useEffect(() => {
     document.title = `${t("settings.title")} · 7key`;
   }, [t]);

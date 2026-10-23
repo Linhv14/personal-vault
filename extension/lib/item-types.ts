@@ -32,6 +32,7 @@ export interface FieldSpec {
   key: FieldKey;
   label: MessageKey;
   kind: FieldKind;
+  optional?: boolean;
 }
 
 export const PASSWORD_HISTORY_LIMIT = 10;
@@ -44,6 +45,7 @@ export const TYPE_FIELDS: Record<ItemType, FieldSpec[]> = {
     { key: "username", label: "common.username", kind: "text" },
     { key: "password", label: "common.password", kind: "password" },
     { key: "totp", label: "edit.totp_secret", kind: "totp" },
+    { key: "codes", label: "field.codes", kind: "codes", optional: true },
     NOTE,
   ],
   note: [{ key: "note", label: "common.note", kind: "multiline" }],

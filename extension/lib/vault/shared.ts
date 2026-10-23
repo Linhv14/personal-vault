@@ -7,17 +7,8 @@ import { ApiError, request } from "../api.js";
 import { knownIdentity } from "../identity.js";
 import { getLocal, setLocal, type CachedSharedVault, type LocalState } from "../storage.js";
 import type { VaultDef, VaultItem } from "./types.js";
+import { sharedVaultId, sharedVaultParts } from "./vault-ids.js";
 import { warn } from "../log.js";
-
-const PREFIX = "team:";
-
-export function sharedVaultId(orgId: string, teamId: string): string {
-  return `${PREFIX}${orgId}:${teamId}`;
-}
-
-export function isSharedVaultId(id: string | undefined): id is string {
-  return typeof id === "string" && id.startsWith(PREFIX);
-}
 
 function idOf(vault: Pick<CachedSharedVault, "orgId" | "teamId">): string {
   return sharedVaultId(vault.orgId, vault.teamId);
@@ -236,6 +227,6 @@ export async function removeSharedItem(vaultId: string, itemId: string): Promise
 }
 
 export function consolePathOf(vaultId: string): string {
-  const [orgId = "", teamId = ""] = vaultId.slice(PREFIX.length).split(":");
+  const { orgId, teamId } = sharedVaultParts(vaultId);
   return `#/${orgId}/teams/${teamId}`;
 }

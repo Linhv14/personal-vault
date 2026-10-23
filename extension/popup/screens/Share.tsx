@@ -12,7 +12,7 @@ import type { VaultItem } from "#ext/lib/vault/types.js";
 import { Icon } from "#ext/ui/components/Icon.js";
 import { useT } from "#ext/ui/i18n.js";
 import { IconButton } from "#ext/ui/components/IconButton.js";
-import { ItemIcon } from "../components/ItemIcons.js";
+import { ItemIcon } from "#ext/ui/components/ItemIcons.js";
 import { copy, formatDate, openSettings, showList, vaultKey } from "../state.js";
 
 const TTL_CHOICES: [string, MessageKey][] = [

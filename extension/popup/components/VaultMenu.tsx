@@ -19,7 +19,7 @@ import {
   vaultBusy,
   vaults,
 } from "../state.js";
-import { VaultBadge } from "./ItemIcons.js";
+import { VaultBadge } from "#ext/ui/components/ItemIcons.js";
 import { useDismiss } from "./Menu.js";
 
 type View =

@@ -10,7 +10,7 @@ async function freshPopup() {
   vi.resetModules();
   const { usePlatform } = await import("../extension/lib/platform.js");
   usePlatform({ local: memoryArea(), session, scheduleLock: async () => {} });
-  return import("../extension/popup/logos.js");
+  return import("../extension/ui/logos.js");
 }
 
 beforeEach(async () => {

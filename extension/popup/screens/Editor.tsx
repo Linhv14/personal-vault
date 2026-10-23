@@ -39,6 +39,7 @@ import {
   vaults,
 } from "../state.js";
 import { formatEntropy } from "../strength.js";
+import { OptionalField } from "../components/OptionalField.js";
 
 function EditField({
   spec,
@@ -354,17 +355,22 @@ export function Editor({
               {spec.key === "note" && (
                 <CustomFieldsEditor rows={customRows} onChange={setCustomRows} />
               )}
-              <EditField
-                spec={spec}
-                item={source}
-                type={type}
-                onScanned={(issuer) => {
-                  const title = titleField();
-                  if (issuer && title && !title.value) {
-                    title.value = issuer;
-                  }
-                }}
-              />
+              <OptionalField
+                filled={!spec.optional || initialValue(spec, source, tabUrl.value) !== ""}
+                label={t("edit.add_codes")}
+              >
+                <EditField
+                  spec={spec}
+                  item={source}
+                  type={type}
+                  onScanned={(issuer) => {
+                    const title = titleField();
+                    if (issuer && title && !title.value) {
+                      title.value = issuer;
+                    }
+                  }}
+                />
+              </OptionalField>
             </Fragment>
           ))}
         </div>

@@ -19,7 +19,7 @@ import { useT } from "#ext/ui/i18n.js";
 import { MenuList } from "../components/Menu.js";
 import { IconButton } from "#ext/ui/components/IconButton.js";
 import { Field, ValueRow } from "../components/FieldRow.js";
-import { ItemIcon } from "../components/ItemIcons.js";
+import { ItemIcon } from "#ext/ui/components/ItemIcons.js";
 import { TotpRow } from "../components/Totp.js";
 import {
   copy,

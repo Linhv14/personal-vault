@@ -436,6 +436,25 @@ describe("other files", () => {
     ]);
     expect(again.skipped).toEqual({ duplicate: 1 });
   });
+
+  it("adds a recovery codes file to the matching login instead of making a new item", async () => {
+    const source = await read(encode("a1b2c-3d4e5\nf6a7b-8c9d0\n"), "github-recovery-codes.txt");
+    const login = {
+      id: "gh",
+      createdAt: 0,
+      updatedAt: 0,
+      type: "login" as const,
+      title: "GitHub",
+      url: "https://github.com/login",
+      username: "octocat",
+      password: "hunter2",
+    };
+    const plan = planImport(source, [login]);
+    expect(plan.items).toEqual([]);
+    expect(plan.codesForExisting).toEqual([{ ...login, codes: ["a1b2c-3d4e5", "f6a7b-8c9d0"] }]);
+    const second = { ...login, id: "gh2", username: "work" };
+    expect(planImport(source, [login, second]).items).toHaveLength(1);
+  });
 });
 
 describe("more item types", () => {

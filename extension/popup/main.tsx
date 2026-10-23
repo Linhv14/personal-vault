@@ -10,7 +10,7 @@ import { BootSkeleton } from "./components/BootSkeleton.js";
 import { localeSignal, setUiLocale } from "../ui/i18n.js";
 import { Editor } from "./screens/Editor.js";
 import { Generator } from "./screens/Generator.js";
-import { showLogos } from "./logos.js";
+import { showLogos } from "#ext/ui/logos.js";
 import { Vault } from "./screens/Vault.js";
 import { Setup, type SetupProps } from "./screens/Setup.js";
 import { Share } from "./screens/Share.js";

@@ -1,4 +1,4 @@
-import { isSharedVaultId } from "./vault/shared.js";
+import { isSharedVaultId } from "./vault/vault-ids.js";
 import { decryptEverything } from "./vault/decrypt.js";
 import { removeItem, saveItem } from "./vault/store.js";
 import type { VaultItem } from "./vault/types.js";
@@ -40,6 +40,11 @@ export async function purgeExpiredTrash(key: CryptoKey, now: number): Promise<nu
     purged++;
   }
   return purged;
+}
+
+export async function moveToTrash(key: CryptoKey, item: VaultItem): Promise<VaultItem> {
+  const { updatedAt: _updatedAt, ...draft } = item;
+  return saveItem(key, { ...draft, trashedAt: Math.floor(Date.now() / 1000) }, item);
 }
 
 export async function restoreFromTrash(key: CryptoKey, item: VaultItem): Promise<VaultItem> {

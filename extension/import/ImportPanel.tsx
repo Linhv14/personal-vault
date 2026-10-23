@@ -58,12 +58,20 @@ function importErrorText(error: unknown, t: Translate): string {
 
 function noteLines(plan: ImportPlan, t: Translate): string[] {
   if (plan.format === "recovery") {
-    return plan.items.map((item) =>
-      t("import.recovery_file", {
-        title: item.title,
-        codes: t("item.codes_count", { count: item.codes?.length ?? 0 }),
-      }),
-    );
+    return [
+      ...plan.codesForExisting.map((item) =>
+        t("import.codes_existing", {
+          title: item.title,
+          codes: t("item.codes_count", { count: item.codes?.length ?? 0 }),
+        }),
+      ),
+      ...plan.items.map((item) =>
+        t("import.recovery_file", {
+          title: item.title,
+          codes: t("item.codes_count", { count: item.codes?.length ?? 0 }),
+        }),
+      ),
+    ];
   }
   const newPasskeys = plan.items.filter((item) => item.passkey).length;
   return [
@@ -165,8 +173,9 @@ export function ImportPanel() {
       setStep({ kind: "locked" });
       return;
     }
-    const { items: drafts, passkeysForExisting } = plan;
-    const total = drafts.length + passkeysForExisting.length;
+    const { items: drafts, passkeysForExisting, codesForExisting } = plan;
+    const updates = [...passkeysForExisting, ...codesForExisting];
+    const total = drafts.length + updates.length;
     const report = (saved: number) => {
       const progress = { kind: "progress" as const, saved, total, waiting: false };
       setStep(progress);
@@ -175,7 +184,7 @@ export function ImportPanel() {
     report(0);
     try {
       let saved = await importItems(key, drafts, report);
-      for (const item of passkeysForExisting) {
+      for (const item of updates) {
         const progress = report(saved);
         await saveItemPatiently(key, item, () => setStep({ ...progress, waiting: true }));
         saved += 1;
@@ -365,7 +374,7 @@ function ReviewStep({
   onCancel: () => void;
 }) {
   const t = useT();
-  const total = plan.items.length + plan.passkeysForExisting.length;
+  const total = plan.items.length + plan.passkeysForExisting.length + plan.codesForExisting.length;
   const byType = ITEM_TYPES.map((type) => ({
     type,
     count: plan.items.filter((item) => itemType(item) === type).length,

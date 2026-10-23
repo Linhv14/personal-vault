@@ -5,7 +5,7 @@ import { TYPE_ICON } from "#ext/ui/item-icons.js";
 import type { IconName } from "#ui/icons.js";
 import type { VaultDef, VaultItem } from "#ext/lib/vault/types.js";
 import { Icon } from "#ext/ui/components/Icon.js";
-import { knownLogo, logoDomainOf, logoFor, showLogos } from "../logos.js";
+import { knownLogo, logoDomainOf, logoFor, showLogos } from "#ext/ui/logos.js";
 
 export function Avatar({ title }: { title: string }) {
   return <span className="avatar">{[...title.trim()][0]?.toUpperCase() ?? "?"}</span>;

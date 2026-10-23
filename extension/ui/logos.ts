@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
-import * as api from "../lib/api.js";
-import { cachedLogo, logoDataUrl, rememberLogo } from "../lib/logo-cache.js";
+import * as api from "#ext/lib/api.js";
+import { cachedLogo, logoDataUrl, rememberLogo } from "#ext/lib/logo-cache.js";
 import { parseSiteUrl } from "#core/site.js";
 
 const MAX_PARALLEL = 6;

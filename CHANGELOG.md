@@ -21,9 +21,25 @@ version may change the API or storage format; such releases list the steps in
   proxy as `7key agent`. The user approves the secrets in the client's
   permission prompt, or with `--yes` for clients that cannot ask, and the login
   is set aside while the server runs.
+- A login keeps its recovery codes: the editor has an **Add recovery codes**
+  field, and importing a recovery codes file (such as
+  `github-recovery-codes.txt`) adds the codes to the matching login instead of
+  making a separate item.
+- Password health lists sites whose password, passkey and recovery codes sit in
+  separate items, and **Merge** moves them into the login (the leftovers go to
+  the trash).
 
 ### Changed
 
+- Password health is laid out by urgency: a summary with the breach check,
+  counts that jump to each list, exposed passwords first, reused passwords
+  grouped by the password they share, a strength bar for weak ones, and site
+  logos.
+- A new passkey goes into the site's only login even when the site names the
+  account differently (GitHub sends the handle, not the email), and the
+  username match ignores case and spaces.
+- Moving an item to the trash in the popup takes effect at once and is undone
+  if the server refuses it.
 - The popup opens faster: it shows a placeholder layout while it loads, reads
   storage once instead of five times, decrypts items in parallel, reuses one
   translator per language and draws the first rows of a long list before the
@@ -34,6 +50,12 @@ version may change the API or storage format; such releases list the steps in
   not asked for again for a day.
 - The console's suggestion of AI agent hosts takes one line, with the list
   behind **Show**, so it no longer pushes the secrets table down.
+
+### Fixed
+
+- Emptying or deleting from the console trash no longer waits for the whole
+  vault to decrypt again before closing, so its confirmation toast shows.
+- The console honours **Show site logos**.
 
 ## [0.5.0] - 2026-10-23
 

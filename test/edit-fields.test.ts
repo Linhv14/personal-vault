@@ -55,6 +55,14 @@ describe("reading the item editor", () => {
     );
   });
 
+  it("keeps recovery codes on a login and leaves them out when the field stays closed", () => {
+    expect(readEditedFields(form([["codes", "1111-2222\n3333-4444"]]), "login", []).codes).toEqual([
+      "1111-2222",
+      "3333-4444",
+    ]);
+    expect(readEditedFields(form([["username", "me"]]), "login", []).codes).toBeUndefined();
+  });
+
   it("splits pasted recovery codes", () => {
     const fields = readEditedFields(form([["codes", "1111-2222 3333-4444"]]), "recovery", []);
     expect(fields.codes?.length).toBeGreaterThan(0);

@@ -1,13 +1,8 @@
 import { sealJson } from "#core/crypto.js";
 import * as api from "../api.js";
 import { getLocal, setLocal, type CachedItem } from "../storage.js";
-import {
-  isSharedVaultId,
-  removeSharedItem,
-  saveSharedItem,
-  sharedVaultOf,
-  syncSharedVaults,
-} from "./shared.js";
+import { removeSharedItem, saveSharedItem, sharedVaultOf, syncSharedVaults } from "./shared.js";
+import { isSharedVaultId } from "./vault-ids.js";
 import { isLive, itemAssociatedData, openItem } from "./item-crypto.js";
 import type { VaultItem } from "./types.js";
 

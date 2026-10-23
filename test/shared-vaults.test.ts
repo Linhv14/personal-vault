@@ -5,12 +5,8 @@ import { createIdentity, randomKey, wrapForRecipient } from "../src/core/identit
 import { teamKeyContext } from "../src/core/org-model.js";
 import { sealTeamItem } from "../src/core/team-items.js";
 import { memoryArea, usePlatform } from "../extension/lib/platform.js";
-import {
-  consolePathOf,
-  decryptSharedVaults,
-  isSharedVaultId,
-  sharedVaultId,
-} from "../extension/lib/vault/shared.js";
+import { consolePathOf, decryptSharedVaults } from "../extension/lib/vault/shared.js";
+import { isSharedVaultId, sharedVaultId } from "../extension/lib/vault/vault-ids.js";
 import type { CachedSharedVault } from "../extension/lib/storage.js";
 
 const ORG = "11111111-1111-4111-8111-111111111111";

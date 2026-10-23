@@ -401,7 +401,7 @@ describe("extension popup", () => {
   });
 
   it("drops logos and their requests with website icons turned off", async () => {
-    const { showLogos } = await import("../extension/popup/logos.js");
+    const { showLogos } = await import("../extension/ui/logos.js");
     server.logoRequests.length = 0;
     showLogos.value = false;
     expect(document.querySelector(".site-logo")).toBeNull();

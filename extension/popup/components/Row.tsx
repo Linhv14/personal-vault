@@ -4,7 +4,7 @@ import { Icon } from "#ext/ui/components/Icon.js";
 import { useT } from "#ext/ui/i18n.js";
 import { daysUntilPurge } from "#ext/lib/trash.js";
 import { nowMs, selectItem, selectedId } from "../state.js";
-import { ItemIcon } from "./ItemIcons.js";
+import { ItemIcon } from "#ext/ui/components/ItemIcons.js";
 
 export function Row({ item }: { item: VaultItem }) {
   const t = useT();

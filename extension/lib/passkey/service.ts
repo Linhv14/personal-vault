@@ -1,9 +1,9 @@
 import type { TrustedSender } from "../autofill/senders.js";
-import { itemType } from "../item-types.js";
 import { getLocal, notePasskeys } from "../storage.js";
 import { registrableDomain } from "#core/site.js";
 import { byLastUsed } from "../vault/search.js";
 import { isPersonal, openVault } from "../vault/decrypt.js";
+import { loginForPasskey } from "../vault/site-match.js";
 import { markUsed, newItemId, saveItem } from "../vault/store.js";
 import type { VaultItem } from "../vault/types.js";
 import { createPasskey, signAssertion, type StoredPasskey } from "./authenticator.js";
@@ -28,19 +28,6 @@ function passkeysFor(items: VaultItem[], rpId: string, allowed: string[]): Saved
     const listed = allowed.length === 0 || (passkey && allowed.includes(passkey.credentialId));
     return passkey?.rpId === rpId && listed ? [{ item, passkey }] : [];
   });
-}
-
-function itemFor(items: VaultItem[], origin: string, userName: string): VaultItem | undefined {
-  const site = registrableDomain(origin);
-  return items.find(
-    (item) =>
-      isPersonal(item) &&
-      !item.passkey &&
-      itemType(item) === "login" &&
-      item.url !== undefined &&
-      registrableDomain(item.url) === site &&
-      (item.username ?? "") === userName,
-  );
 }
 
 async function query(
@@ -104,7 +91,8 @@ async function create(
     userName: options.userName,
     userDisplayName: options.userDisplayName,
   });
-  const existing = itemFor(vault.items, origin, options.userName);
+  const site = registrableDomain(origin);
+  const existing = site ? loginForPasskey(vault.items, site, options.userName) : undefined;
   await saveItem(
     vault.key,
     existing

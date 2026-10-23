@@ -748,6 +748,7 @@ export const en = {
   "field.licensed_to": "Licensed to",
   "field.website": "Website",
   "edit.add_website": "Add website",
+  "edit.add_codes": "Add recovery codes",
   "edit.match_host": "Suggest only on this exact host",
   "edit.add_field": "Add field",
   "edit.field_label": "Field name",
@@ -913,18 +914,35 @@ export const en = {
   "health.weak": "Weak",
   "health.reused": "Reused",
   "health.breached": "Exposed",
-  "health.weak_hint": "Short or easy to guess",
-  "health.reused_hint":
-    "{count, plural, one {Same password as # other item} other {Same password as # other items}}",
+  "health.scattered": "Split up",
+  "health.weak_lead": "Short or predictable passwords are quick to guess. Generate a new one.",
+  "health.reused_lead":
+    "When one of these sites leaks, the others are open with the same password.",
+  "health.breached_lead":
+    "These appear in public breach lists, so attackers try them first. Change them now.",
+  "health.merge_lead":
+    "A password, passkey and recovery codes for one site are kept in separate items. Merging puts them in the login and moves the leftovers to the trash.",
+  "health.reused_group": "{count, plural, other {Same password on # items}}",
   "health.breached_hint":
     "{count, plural, one {Seen once in data breaches} other {Seen # times in data breaches}}",
+  "health.strength": "Strength",
+  "health.merge_passkey": "Passkey from {title}",
+  "health.merge_codes": "Recovery codes from {title}",
+  "health.merge": "Merge",
+  "health.merging": "Merging…",
+  "health.summary_issues":
+    "{count, plural, one {# password needs attention} other {# passwords need attention}}",
+  "health.summary_clear": "Your passwords look healthy",
+  "health.summary_checked": "{count, plural, one {# password checked} other {# passwords checked}}",
+  "health.summary_unchecked": "Not checked against breaches yet",
+  "health.summary_breaches_done": "Checked against known breaches",
   "health.check_breaches": "Check for exposed passwords",
   "health.breach_privacy":
     "7key sends the first 5 characters of each password's SHA-1 hash to Have I Been Pwned. Passwords and full hashes never leave this device.",
   "health.check": "Check",
+  "health.recheck": "Check again",
   "health.checking": "Checking…",
-  "health.not_checked": "–",
-  "health.all_good": "No problems found.",
+  "health.not_checked": "Not checked",
   "health.fix": "Change",
   "settings.title": "Settings",
   "list.import": "Import from another app",
@@ -1062,6 +1080,7 @@ export const en = {
   "import.skipped_alias": "Email aliases, not supported: {count}",
   "import.skipped_other": "Other items, not supported: {count}",
   "import.passkeys_new": "{count, plural, one {Includes # passkey} other {Includes # passkeys}}",
+  "import.codes_existing": "{codes} added to {title}",
   "import.passkeys_existing":
     "{count, plural, one {Adds a passkey to # item already in your vault} other {Adds passkeys to # items already in your vault}}",
   "import.skipped_passkey": "Passkeys that couldn't be read: {count}",

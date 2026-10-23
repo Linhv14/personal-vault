@@ -4,7 +4,7 @@ import { Icon } from "#ext/ui/components/Icon.js";
 import { useT } from "#ext/ui/i18n.js";
 import { MenuList } from "./Menu.js";
 import { IconButton } from "#ext/ui/components/IconButton.js";
-import { TypeBadge } from "./ItemIcons.js";
+import { TypeBadge } from "#ext/ui/components/ItemIcons.js";
 import { VaultMenu } from "./VaultMenu.js";
 import { orgSnapshot } from "../promos.js";
 import { openConsole, drawerOpen, openEditor, searchQuery } from "../state.js";
