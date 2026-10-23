@@ -108,7 +108,51 @@ export function childEnvironment(
   return env;
 }
 
-function describe(selected: Plan): string[] {
+export interface Sandbox {
+  env(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+  close(): Promise<void>;
+}
+
+export async function openSandbox(
+  prepared: Plan,
+  options: {
+    onUse: (entry: Injectable, host: string) => void;
+    upstreamCa?: string;
+    resolve?: (host: string) => string;
+  },
+): Promise<Sandbox> {
+  const authority = createAuthority();
+  const directory = mkdtempSync(path.join(tmpdir(), "7key-agent-"));
+  const files = {
+    authority: path.join(directory, "ca.pem"),
+    bundle: path.join(directory, "bundle.pem"),
+  };
+  try {
+    writeFileSync(files.authority, authority.cert, { mode: 0o600 });
+    writeFileSync(files.bundle, [...tls.rootCertificates, authority.cert].join("\n"), {
+      mode: 0o600,
+    });
+    const proxy = await startProxy({
+      injectables: prepared.injectables,
+      authority,
+      upstreamCa: options.upstreamCa,
+      resolve: options.resolve,
+      onUse: options.onUse,
+    });
+    return {
+      env: (base) => childEnvironment(base, prepared, proxy.url, files),
+      close: async () => {
+        await proxy.close();
+        rmSync(directory, { recursive: true, force: true });
+      },
+    };
+  } catch (error) {
+    rmSync(directory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+export function describe(selected: Plan): string[] {
   const width = Math.max(4, ...selected.injectables.map((entry) => entry.name.length));
   const lines = selected.injectables.map(
     (entry) => `  ${entry.name.padEnd(width)}  → ${entry.hosts.join(", ")}`,
@@ -143,8 +187,7 @@ export async function runAgent(options: AgentOptions): Promise<number> {
       options.request,
       options.askCode,
     ));
-  let directory: string | undefined;
-  let proxy: Awaited<ReturnType<typeof startProxy>> | undefined;
+  let sandbox: Sandbox | undefined;
   try {
     const selected = options.select
       ? await options.select(session)
@@ -170,21 +213,8 @@ export async function runAgent(options: AgentOptions): Promise<number> {
       return 1;
     }
 
-    const authority = createAuthority();
-    directory = mkdtempSync(path.join(tmpdir(), "7key-agent-"));
-    const files = {
-      authority: path.join(directory, "ca.pem"),
-      bundle: path.join(directory, "bundle.pem"),
-    };
-    writeFileSync(files.authority, authority.cert, { mode: 0o600 });
-    writeFileSync(files.bundle, [...tls.rootCertificates, authority.cert].join("\n"), {
-      mode: 0o600,
-    });
-
     const reported = new Set<string>();
-    proxy = await startProxy({
-      injectables: prepared.injectables,
-      authority,
+    sandbox = await openSandbox(prepared, {
       upstreamCa: options.upstreamCa,
       resolve: options.resolve,
       onUse: (entry, host) => {
@@ -199,7 +229,7 @@ export async function runAgent(options: AgentOptions): Promise<number> {
         }
       },
     });
-    const env = childEnvironment(options.env, prepared, proxy.url, files);
+    const env = sandbox.env(options.env);
     options.log(
       options.session
         ? "7key: starting. 7key never asks for your password while this command runs."
@@ -233,10 +263,7 @@ export async function runAgent(options: AgentOptions): Promise<number> {
     options.log("7key: session ended; the secrets are no longer reachable.");
     return code;
   } finally {
-    await proxy?.close();
-    if (directory) {
-      rmSync(directory, { recursive: true, force: true });
-    }
+    await sandbox?.close();
     if (!options.session) {
       await signOut(session);
     }

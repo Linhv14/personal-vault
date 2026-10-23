@@ -66,6 +66,13 @@ secret and removes it from responses. A placeholder in a URL or request body is 
 replaced, and requests to other hosts get the placeholder, not the key. `7key run` is not
 available inside an agent session by design.
 
+## When 7key is your MCP server
+
+If your tools include `list_secrets` and `run_with_secrets` from the 7key MCP server, call
+`list_secrets` first to see which secrets exist and which hosts each may reach, then
+`run_with_secrets` with `sh -c` so the variables expand. You only receive placeholders and the
+command's output; a secret without allowed hosts cannot be used until the user sets them.
+
 ## CI
 
 In GitHub Actions use `Linhv14/7key-action@v1` with `permissions: id-token: write`; the

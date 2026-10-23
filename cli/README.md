@@ -63,6 +63,7 @@ stays the same when the project is renamed.
 | `--project <ref> --env <ref>` | Use a project without linking the folder              |
 | `7key login --sso`            | Sign in through your organization's identity provider |
 | `7key login --server <url>`   | Sign in to your own server instead of 7key.online     |
+| `7key mcp`                    | Serve the same to an AI agent over MCP                |
 | `7key --version`              | Print the version, for bug reports                    |
 | `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke        |
 
@@ -124,6 +125,19 @@ the API; it cannot read, print or send the key anywhere else.
 
 Works with Claude Code, Codex, Cursor and any command-line tool that honours
 `HTTPS_PROXY`: curl, Node, Python, Git and most SDKs.
+
+### As an MCP server
+
+```bash
+claude mcp add 7key -- 7key mcp
+```
+
+The agent keeps running on its own and calls 7key as a tool: `list_secrets`
+returns names and allowed hosts, `run_with_secrets` runs a command with
+placeholders through the same proxy, and nothing returns a value. You approve
+the secrets in the agent's permission prompt before the first command (or start
+the server with `--yes` for clients that cannot ask). Your login is set aside
+while it runs, as with `7key agent`.
 
 While the agent runs, 7key takes your login out of the keychain and keeps it
 in its own memory, so the agent cannot use `7key run` or read the keychain to

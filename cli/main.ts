@@ -16,6 +16,7 @@ import {
   type Flags,
 } from "./account/commands.js";
 import { agentMain } from "./agent/main.js";
+import { mcpMain } from "./mcp/main.js";
 import { CLI_VERSION } from "./version.js";
 import { CiError, DEFAULT_SERVER, exportToGithubEnv, fetchSecrets } from "./ci-client.js";
 
@@ -33,6 +34,7 @@ On your computer
                       Fill {{ 7key:NAME }} and {{ 7key://<project>/<env>/<NAME> }}
                       in a template (stdin by default); -o writes a 0600 file
   agent -- <command…> Let an AI agent use secrets it cannot see (7key agent --help)
+  mcp                 Serve the same to an AI agent over MCP (7key mcp --help)
   whoami | logout | --version
   login --insecure-file-store
                       Without a system keyring, keep the session in a plain
@@ -112,6 +114,9 @@ export async function main(
   }
   if (argv[0] === "agent") {
     return agentMain(argv.slice(1), env);
+  }
+  if (argv[0] === "mcp") {
+    return mcpMain(argv.slice(1), env);
   }
   const local = argv[0] ? LOCAL[argv[0]] : undefined;
   const ciCommand = argv[0] === "run" || argv[0] === "dotenv";

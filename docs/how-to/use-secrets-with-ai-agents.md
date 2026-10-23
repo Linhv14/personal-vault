@@ -94,6 +94,39 @@ Ctrl-C goes to the agent; 7key keeps the session until the agent exits.
 APIs that take a key in the URL or body (`?key=…`) do not work through
 `7key agent`; use a key passed in a header.
 
+## Or give the agent 7key as an MCP server
+
+Agents that speak the Model Context Protocol (Claude Code, Cursor, Codex and
+others) can keep running on their own and call 7key as a tool. Sign in once in a
+terminal, then add the server in the linked folder:
+
+```bash
+7key login
+claude mcp add 7key -- 7key mcp
+claude mcp add 7key -- 7key mcp --project payments-api --env development   # without a link
+```
+
+The server offers three tools, and none of them returns a value:
+
+| Tool               | What the agent gets                                                      |
+| ------------------ | ------------------------------------------------------------------------ |
+| `check_setup`      | Account, server, project and environment                                 |
+| `list_secrets`     | Secret names with their allowed hosts, and variable names                |
+| `run_with_secrets` | Runs a command with placeholders, through the same proxy as `7key agent` |
+
+Before the first command, 7key asks you in the agent's own permission prompt
+which secrets go to which hosts. Clients that cannot show that prompt refuse to
+run commands until the server is started with `--yes`, which you add to the MCP
+configuration yourself. While the server runs, your login is set aside, as with
+`7key agent`, so the agent cannot use `7key run` or `7key read` from its shell;
+other terminals get it back when the agent stops the server. Output is capped at
+64 KiB per stream and any value that slips into it is replaced by its
+placeholder.
+
+The MCP server never runs on the 7key server, yours or ours: the server only
+holds ciphertext, so a hosted MCP endpoint could not open a secret without
+taking the keys off your machine.
+
 ## How it works
 
 7key signs in like the extension, opens the team key with your account key and

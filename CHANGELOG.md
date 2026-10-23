@@ -15,6 +15,12 @@ version may change the API or storage format; such releases list the steps in
   `127.0.0.1` port (RFC 8252), then asks for the master password. Password
   sign-in under **Require SSO** now points there.
 - `7key --version`.
+- `7key mcp` serves 7key to AI agents over the Model Context Protocol (stdio):
+  `check_setup`, `list_secrets` (names and allowed hosts only) and
+  `run_with_secrets`, which runs a command with placeholders through the same
+  proxy as `7key agent`. The user approves the secrets in the client's
+  permission prompt, or with `--yes` for clients that cannot ask, and the login
+  is set aside while the server runs.
 
 ### Changed
 
