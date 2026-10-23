@@ -31,7 +31,18 @@ export function resolveLocale(preference: LocalePreference | undefined): Locale 
   return !preference || preference === "auto" ? detectLocale() : preference;
 }
 
+const translators = new Map<Locale, Translate>();
+
 export function createTranslator(locale: Locale): Translate {
+  let translate = translators.get(locale);
+  if (!translate) {
+    translate = buildTranslator(locale);
+    translators.set(locale, translate);
+  }
+  return translate;
+}
+
+function buildTranslator(locale: Locale): Translate {
   const catalogue = CATALOGUES[locale];
 
   const plurals = new Intl.PluralRules(locale);

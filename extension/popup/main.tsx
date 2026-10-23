@@ -6,6 +6,7 @@ import { defaultServer } from "../lib/server.js";
 import { getLocal, getUnlocked, loadPendingSignup } from "../lib/storage.js";
 import { frameTurnstileToken } from "../ui/turnstile-frame.js";
 import { Toast } from "../ui/components/Toast.js";
+import { BootSkeleton } from "./components/BootSkeleton.js";
 import { localeSignal, setUiLocale } from "../ui/i18n.js";
 import { Editor } from "./screens/Editor.js";
 import { Generator } from "./screens/Generator.js";
@@ -46,6 +47,7 @@ function App() {
   const inVault = ["list", "edit", "generator", "share", "vault"].includes(current);
   return (
     <>
+      {current === "loading" && <BootSkeleton />}
       {current === "setup" && <Setup {...setupProps} />}
       {current === "unlock" && <Unlock email={unlockEmail} />}
       {inVault && (
@@ -69,10 +71,12 @@ function App() {
 }
 
 async function boot(): Promise<void> {
-  const local = await getLocal();
+  const [local, [tab]] = await Promise.all([
+    getLocal(),
+    chrome.tabs.query({ active: true, currentWindow: true }),
+  ]);
   setUiLocale(local.locale);
   showLogos.value = local.showLogos !== false;
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabUrl.value = tab?.url;
   clockSkew.value = local.clockSkew ?? 0;
 

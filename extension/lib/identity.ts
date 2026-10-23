@@ -2,7 +2,7 @@ import { open, seal, type SealedData } from "#core/crypto.js";
 import { utf8Encode } from "#core/bytes.js";
 import { createIdentity, type Identity } from "#core/identity.js";
 import { ApiError, request } from "./api.js";
-import { getLocal, setLocal } from "./storage.js";
+import { getLocal, setLocal, type LocalState } from "./storage.js";
 
 interface StoredIdentity {
   publicKey: string;
@@ -52,8 +52,11 @@ export async function ensureIdentity(vaultKey: CryptoKey): Promise<Identity> {
   }
 }
 
-export async function knownIdentity(vaultKey: CryptoKey): Promise<Identity | null> {
-  const cached = (await getLocal()).identity;
+export async function knownIdentity(
+  vaultKey: CryptoKey,
+  local?: LocalState,
+): Promise<Identity | null> {
+  const cached = (local ?? (await getLocal())).identity;
   if (cached) {
     return opened(vaultKey, cached);
   }

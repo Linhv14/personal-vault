@@ -1770,8 +1770,67 @@ details.history .field-row {
     box-shadow: 0 0 0 11px var(--accent-soft);
   }
 }
+.boot-skeleton {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  opacity: 0;
+  animation: boot-show 160ms ease-out 150ms forwards;
+}
+.bone {
+  display: block;
+  border-radius: 6px;
+  background: var(--surface);
+  animation: bone-pulse 1.2s ease-in-out infinite;
+}
+.bone-pill {
+  width: 120px;
+  height: 30px;
+  border-radius: 999px;
+}
+.bone-search {
+  flex: 1;
+  height: 30px;
+  border-radius: 999px;
+}
+.bone-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.bone-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+.bone-lines {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+}
+.bone-title {
+  width: 70%;
+  height: 10px;
+}
+.bone-sub {
+  width: 50%;
+  height: 8px;
+}
+@keyframes boot-show {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes bone-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .bio-ring.working {
+  .bio-ring.working,
+  .bone {
     animation: none;
   }
 }

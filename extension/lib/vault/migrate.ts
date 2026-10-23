@@ -1,6 +1,6 @@
 import { sha256 } from "#core/primitives.js";
 import { toBase64, utf8Encode } from "#core/bytes.js";
-import { getLocal, setLocal } from "../storage.js";
+import { getLocal, setLocal, type LocalState } from "../storage.js";
 import { isLive, openItem } from "./item-crypto.js";
 import { saveItem } from "./store.js";
 import type { VaultItem } from "./types.js";
@@ -12,8 +12,13 @@ async function accountTag(apiUrl: string, email: string): Promise<string> {
   return toBase64(digest);
 }
 
-export async function unboundItemsAllowed(): Promise<boolean> {
-  const { unboundItemsMigrated = false, aadBoundAccounts = [], apiUrl, email } = await getLocal();
+export async function unboundItemsAllowed(local?: LocalState): Promise<boolean> {
+  const {
+    unboundItemsMigrated = false,
+    aadBoundAccounts = [],
+    apiUrl,
+    email,
+  } = local ?? (await getLocal());
   if (unboundItemsMigrated) {
     return false;
   }

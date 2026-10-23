@@ -8,6 +8,7 @@ import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { inScope, inVault, listView, live, scopeExists, typeCounts } from "../filters.js";
 import { Dropdown } from "./Menu.js";
 import { Row } from "./Row.js";
+import { useProgressiveRows } from "../useProgressiveRows.js";
 import {
   items,
   openEditor,
@@ -41,6 +42,7 @@ export function currentView() {
 export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
   const t = useT();
   const { all, currentScope, view, visible, selected } = state;
+  const rest = useProgressiveRows(view.rest);
   const counts = typeCounts(inScope(currentScope, all));
   const type = typeFilter.value;
 
@@ -135,7 +137,7 @@ export function ListPane({ state }: { state: ReturnType<typeof currentView> }) {
           </>
         )}
         <div id="all-list">
-          {view.rest.map((item) => (
+          {rest.map((item) => (
             <Row item={item} key={item.id} />
           ))}
         </div>

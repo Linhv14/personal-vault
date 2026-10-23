@@ -34,25 +34,30 @@ export async function decryptEverything(
   includeTrashed = false,
   includeShared = false,
 ): Promise<{ items: VaultItem[]; system: VaultItem[]; shared: VaultDef[] }> {
-  const { items = [] } = await getLocal();
-  const allowUnbound = await unboundItemsAllowed();
+  const local = await getLocal();
+  const allowUnbound = await unboundItemsAllowed(local);
   const output: VaultItem[] = [];
   const system: VaultItem[] = [];
 
-  for (const row of items) {
-    if (!isLive(row)) {
+  const opened = await Promise.all(
+    (local.items ?? []).filter(isLive).map(async (row) => {
+      try {
+        const { item } = await openItem(key, row, allowUnbound);
+        return { ...item, id: row.id, updatedAt: row.updatedAt };
+      } catch {
+        warn("Skipping item that failed to decrypt:", row.id);
+        return null;
+      }
+    }),
+  );
+  for (const resolved of opened) {
+    if (!resolved) {
       continue;
     }
-    try {
-      const { item } = await openItem(key, row, allowUnbound);
-      const resolved = { ...item, id: row.id, updatedAt: row.updatedAt };
-      if (resolved.system) {
-        system.push(resolved);
-      } else if (!resolved.trashedAt || includeTrashed) {
-        output.push(resolved);
-      }
-    } catch {
-      warn("Skipping item that failed to decrypt:", row.id);
+    if (resolved.system) {
+      system.push(resolved);
+    } else if (!resolved.trashedAt || includeTrashed) {
+      output.push(resolved);
     }
   }
 
@@ -61,6 +66,7 @@ export async function decryptEverything(
         key,
         includeTrashed,
         new Set([...output, ...system].map((item) => item.id)),
+        local,
       )
     : { items: [], vaults: [] };
   output.push(...shared.items);

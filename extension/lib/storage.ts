@@ -97,7 +97,12 @@ export async function clearAccountData(): Promise<void> {
 }
 
 async function getSession(): Promise<SessionState> {
-  const { vaultKeyRaw, token, lockAt, focusItem } = await platform().session.get(null);
+  const { vaultKeyRaw, token, lockAt, focusItem } = await platform().session.get([
+    "vaultKeyRaw",
+    "token",
+    "lockAt",
+    "focusItem",
+  ]);
   return {
     ...(typeof vaultKeyRaw === "string" ? { vaultKeyRaw } : {}),
     ...(typeof token === "string" ? { token } : {}),

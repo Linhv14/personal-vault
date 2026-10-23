@@ -5,7 +5,7 @@ import { teamKeyContext } from "#core/org-model.js";
 import { openTeamItem, sealTeamItem } from "#core/team-items.js";
 import { ApiError, request } from "../api.js";
 import { knownIdentity } from "../identity.js";
-import { getLocal, setLocal, type CachedSharedVault } from "../storage.js";
+import { getLocal, setLocal, type CachedSharedVault, type LocalState } from "../storage.js";
 import type { VaultDef, VaultItem } from "./types.js";
 import { warn } from "../log.js";
 
@@ -104,13 +104,14 @@ export async function decryptSharedVaults(
   vaultKey: CryptoKey,
   includeTrashed: boolean,
   taken: ReadonlySet<string> = new Set(),
+  local?: LocalState,
 ): Promise<{ items: VaultItem[]; vaults: VaultDef[] }> {
   const seen = new Set(taken);
-  const vaults = await cachedVaults();
+  const vaults = local ? (local.sharedVaults ?? []) : await cachedVaults();
   if (vaults.length === 0) {
     return { items: [], vaults: [] };
   }
-  const me = await knownIdentity(vaultKey).catch(() => null);
+  const me = await knownIdentity(vaultKey, local).catch(() => null);
   if (!me) {
     return { items: [], vaults: [] };
   }

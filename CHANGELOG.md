@@ -24,6 +24,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- The popup opens faster: it shows a placeholder layout while it loads, reads
+  storage once instead of five times, decrypts items in parallel, reuses one
+  translator per language and draws the first rows of a long list before the
+  rest.
 - Site logos stay in the browser's session memory between popup openings, so
   reopening the popup no longer fetches every logo again; they are still never
   written to disk, are wiped when the vault locks, and a site without a logo is
