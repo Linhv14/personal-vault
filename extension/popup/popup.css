@@ -1794,8 +1794,16 @@ details.history .field-row {
   display: grid;
   grid-template-columns: 1fr auto;
 }
+.auth .unlock-inline input {
+  min-width: 0;
+}
 .auth .unlock-inline button[type="submit"] {
+  grid-row: 1;
+  grid-column: 2;
   margin-top: 0;
+}
+.auth .unlock-inline .form-error {
+  grid-column: 1 / -1;
 }
 .auth .unlock-inline .link {
   grid-column: 1 / -1;
