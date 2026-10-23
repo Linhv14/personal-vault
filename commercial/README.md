@@ -12,9 +12,10 @@ subscription or the enterprise plan on 7key.online.
 | `extension/` | Sign-in and admin screens, mounted through `extension/commercial.ts`        |
 | `scripts/`   | `issue-license.ts`, which signs licence keys                                |
 
-The AGPL code reaches this folder only through two seams, `src/worker/index.ts`
-and `extension/commercial.ts`; ESLint (`import/no-restricted-paths`) rejects any
-other import. Code here may import the core through the usual `#core`, `#worker`,
+The AGPL code reaches this folder only through three seams, `src/worker/index.ts`,
+`extension/commercial.ts` for the extension pages and
+`extension/commercial-background.ts` for its service worker; ESLint
+(`import/no-restricted-paths`) rejects any other import. Code here may import the core through the usual `#core`, `#worker`,
 `#ext`, `#ui` and `#i18n` aliases, and is imported as `#commercial/*`.
 
 See [Single sign-on](../docs/explanation/sso.md) for the design and

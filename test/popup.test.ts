@@ -35,7 +35,11 @@ function area(store: Map<string, unknown>) {
 }
 
 const chromeMock = {
-  storage: { local: area(localArea), session: area(sessionArea) },
+  storage: {
+    local: area(localArea),
+    session: area(sessionArea),
+    onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+  },
   tabs: {
     query: vi.fn(async () => [{ url: "https://github.com/settings" }]),
     captureVisibleTab: vi.fn(),

@@ -21,6 +21,7 @@ import { resumeUnlock } from "./lib/resume.js";
 import { LOCK_ALARM, lock, scheduleLockAlarm } from "./lib/storage.js";
 import { warn } from "./lib/log.js";
 import { isPlainObject } from "#core/json.js";
+import { isSsoStart, runSsoAttempt } from "./commercial-background.js";
 
 chrome.runtime.onInstalled.addListener(() => {
   void scheduleLockAlarm();
@@ -56,6 +57,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const type = isPlainObject(message) ? message.type : undefined;
   if (type === "autofill:card-frame") {
     void rememberCardFrame(sender, chrome.runtime.id);
+    return false;
+  }
+  if (isSsoStart(message)) {
+    if (sender.id === chrome.runtime.id && sender.url?.startsWith(chrome.runtime.getURL(""))) {
+      void runSsoAttempt(message).catch((error: unknown) => warn("SSO sign-in failed:", error));
+    }
     return false;
   }
   if (type === "autofill:card-frame-capture") {

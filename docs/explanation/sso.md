@@ -88,7 +88,10 @@ option):
   `chrome.identity.launchWebAuthFlow` intercepts, for the official extension or
   the ids in `SSO_EXTENSION_IDS`. The target is fixed at `prepare` and matched
   exactly. A browser popup closes when the provider's window takes focus, so the
-  extension runs SSO from its sign-in screen opened in a tab.
+  popup hands the provider step to the extension's service worker: it runs
+  `launchWebAuthFlow`, redeems the grant, keeps the result for ten minutes in
+  `chrome.storage.session` (memory only, closed to content scripts) and opens
+  the popup again, which asks for the master password.
 - **Two-factor authentication.** As in Bitwarden, the IdP's sign-in stands in
   for 7key's account 2FA: an SSO sign-in is not asked for a 2FA code. Password
   sign-in, which owners and admins keep under Require SSO, still is.

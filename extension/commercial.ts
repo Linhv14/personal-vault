@@ -1,8 +1,8 @@
 export {
   PopupSsoSignIn,
   relayLinkOutcome,
-  ssoTabRequest,
   takeWebSsoReturn,
+  useSsoPending,
   WebSsoSignIn,
 } from "#commercial/extension/sso/hosts.js";
 export { SsoLinkPanel } from "#commercial/extension/sso/SsoLinkPanel.js";

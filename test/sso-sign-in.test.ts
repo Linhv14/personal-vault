@@ -194,14 +194,43 @@ describe("SSO sign-in", () => {
     expect(await screen.findByText(/do not match/i)).toBeTruthy();
   });
 
-  it("hands the attempt to a tab instead of starting it from the popup", async () => {
-    const delegate = vi.fn();
-    const fake = host();
-    render(h(SsoSignIn, { host: fake, delegate, onCancel: () => {} }));
+  it("waits for the service worker when the host hands the provider step over", async () => {
+    const fake = host(null);
+    render(h(SsoSignIn, { host: fake, onCancel: () => {} }));
     await submitLookup("acme");
-    expect(delegate).toHaveBeenCalledWith("acme");
+    await waitFor(() => expect(fake.launch).toHaveBeenCalled());
+    expect(document.querySelector("#sso-waiting")).toBeTruthy();
+    expect(requests.map((entry) => entry.path)).toEqual(["/api/sso/prepare"]);
+  });
+
+  it("opens on the master password step when the service worker finished the attempt", async () => {
+    const fake = host();
+    const session = { ...sessionReply, status: "signed_in" } as never;
+    render(
+      h(SsoSignIn, {
+        host: fake,
+        resumed: { at: Date.now(), server: API, session },
+        onCancel: () => {},
+      }),
+    );
+    expect(await screen.findByText("Unlock your vault")).toBeTruthy();
     expect(requests).toEqual([]);
-    expect(fake.launch).not.toHaveBeenCalled();
+  });
+
+  it("shows the error the service worker kept", async () => {
+    render(
+      h(SsoSignIn, {
+        host: host(),
+        resumed: {
+          at: Date.now(),
+          server: API,
+          failure: { messageKey: "error.sso.email_not_allowed", params: {} },
+        },
+        onCancel: () => {},
+      }),
+    );
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(document.querySelector("#form-sso")).toBeTruthy();
   });
 });
 

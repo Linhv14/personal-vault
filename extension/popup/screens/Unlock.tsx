@@ -11,7 +11,7 @@ import {
 } from "#ext/lib/biometric.js";
 import { ApiError } from "#ext/lib/api.js";
 import { clearAccountData, getLocal, getUnlocked, lock, setLocal } from "#ext/lib/storage.js";
-import { PopupSsoSignIn, ssoTabRequest } from "#ext/commercial.js";
+import { PopupSsoSignIn, useSsoPending } from "#ext/commercial.js";
 import { useT } from "#ext/ui/i18n.js";
 import {
   finishUnlock,
@@ -36,7 +36,8 @@ export function Unlock({ email }: { email: string }) {
   const [biometric, setBiometric] = useState(false);
   const [recovering, setRecovering] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingSignIn | null>(null);
-  const [sso, setSso] = useState<{ lookup: string; server: string } | null>(ssoTabRequest);
+  const [sso, setSso] = useState<{ lookup: string; server: string } | null>(null);
+  const ssoPending = useSsoPending();
   const method = t(biometricLabel());
 
   useEffect(() => {
@@ -152,12 +153,14 @@ export function Unlock({ email }: { email: string }) {
     );
   }
 
-  if (sso) {
+  const ssoServer = ssoPending?.server ?? sso?.server;
+  if (ssoServer !== undefined) {
     return (
       <AuthLayout id="screen-sso">
         <PopupSsoSignIn
-          apiUrl={sso.server}
-          initial={sso.lookup}
+          apiUrl={ssoServer}
+          initial={sso?.lookup ?? ""}
+          pending={ssoPending}
           expectedEmail={email}
           openVault={async (account, password, kdf, wrapped, token) => {
             await setLocal({ kdf, wrappedVaultKey: wrapped });

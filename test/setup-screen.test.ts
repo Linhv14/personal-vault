@@ -9,6 +9,12 @@ const serverConfig = vi.fn(async (_url: string) => ({
 }));
 
 vi.mock("../extension/lib/api.js", () => ({ serverConfig }));
+vi.mock("../commercial/extension/sso/flow.js", () => ({
+  readPending: async () => null,
+  watchPending: () => () => {},
+  clearPending: async () => {},
+  startInBackground: vi.fn(),
+}));
 vi.mock("../extension/lib/storage.js", () => ({
   clearPendingSignup: vi.fn(),
   savePendingSignup: vi.fn(),

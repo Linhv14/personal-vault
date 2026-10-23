@@ -4,7 +4,7 @@ import { createAccount } from "#core/crypto.js";
 import type { MasterPasswordIssue } from "#core/master-password.js";
 import { describeError } from "#i18n/index.js";
 import * as api from "#ext/lib/api.js";
-import { PopupSsoSignIn, ssoTabRequest } from "#ext/commercial.js";
+import { PopupSsoSignIn, useSsoPending } from "#ext/commercial.js";
 import { checkNewMasterPassword } from "#ext/lib/master-password.js";
 import {
   clearPendingSignup,
@@ -68,10 +68,8 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
   const [email, setEmail] = useState(signup?.email ?? "");
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
   const [secondFactor, setSecondFactor] = useState<PendingSignIn | null>(null);
-  const [sso, setSso] = useState<{ lookup: string; server: string } | null>(() => {
-    const request = ssoTabRequest();
-    return request ? { lookup: request.lookup, server: request.server } : null;
-  });
+  const [sso, setSso] = useState<{ lookup: string; server: string } | null>(null);
+  const ssoPending = useSsoPending();
 
   const registering = mode === "register";
   const codeStep = registering && verificationRequired && codeSentTo !== null;
@@ -252,14 +250,16 @@ export function Setup({ apiUrl, defaultServer, signup }: SetupProps) {
     );
   }
 
-  if (sso) {
+  const ssoServer = ssoPending?.server ?? sso?.server;
+  if (ssoServer !== undefined) {
     return (
       <AuthLayout id="screen-sso">
         <PopupSsoSignIn
-          apiUrl={sso.server}
-          initial={sso.lookup}
+          apiUrl={ssoServer}
+          initial={sso?.lookup ?? ""}
+          pending={ssoPending}
           openVault={async (account, password, kdf, wrapped, token) => {
-            await setLocal({ apiUrl: sso.server, email: account, kdf, wrappedVaultKey: wrapped });
+            await setLocal({ apiUrl: ssoServer, email: account, kdf, wrappedVaultKey: wrapped });
             await finishUnlock(account, password, kdf, wrapped, token);
           }}
           onCancel={() => setSso(null)}

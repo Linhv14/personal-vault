@@ -55,13 +55,17 @@ const CORE_ZONES = [
   },
 ];
 
-const COMMERCIAL_SEAMS = ["src/worker/index.ts", "extension/commercial.ts"];
+const COMMERCIAL_SEAMS = [
+  "src/worker/index.ts",
+  "extension/commercial.ts",
+  "extension/commercial-background.ts",
+];
 
 const COMMERCIAL_ZONE = {
   target: ["./src", "./extension", "./web", "./cli", "./share", "./action", "./scripts"],
   from: "./commercial",
   message:
-    "AGPL code reaches commercial/ only through src/worker/index.ts and extension/commercial.ts.",
+    "AGPL code reaches commercial/ only through src/worker/index.ts, extension/commercial.ts and extension/commercial-background.ts.",
 };
 
 export default defineConfig(

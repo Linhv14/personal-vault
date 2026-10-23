@@ -1,31 +1,31 @@
-import { useEffect } from "preact/hooks";
-import { setLocal } from "#ext/lib/storage.js";
+import { useEffect, useState } from "preact/hooks";
+import { localeSignal } from "#ext/ui/i18n.js";
 import {
   LINK_CHANNEL,
   readLinkOutcome,
   readOutcome,
   webReturnTarget,
 } from "#commercial/core/sso-model.js";
+import {
+  clearPending,
+  readPending,
+  startInBackground,
+  watchPending,
+  type SsoPending,
+} from "./flow.js";
 import { SsoSignIn, type SsoHost } from "./SsoSignIn.js";
 
 type OpenVault = SsoHost["openVault"];
 
-const TAB_PARAM = "sso";
-const SERVER_PARAM = "server";
 const VERIFIER_KEY = "7key-sso-verifier";
 
-export function ssoTabRequest(): { lookup: string; server: string } | null {
-  const params = new URLSearchParams(location.search);
-  const lookup = params.get(TAB_PARAM);
-  const server = params.get(SERVER_PARAM);
-  return lookup !== null && server ? { lookup, server } : null;
-}
-
-function openInTab(apiUrl: string, lookup: string): void {
-  const query = new URLSearchParams({ [TAB_PARAM]: lookup, [SERVER_PARAM]: apiUrl });
-  void chrome.tabs
-    .create({ url: chrome.runtime.getURL(`popup/popup.html?${query.toString()}`) })
-    .then(() => window.close());
+export function useSsoPending(): SsoPending | null {
+  const [pending, setPending] = useState<SsoPending | null>(null);
+  useEffect(() => {
+    void readPending().then(setPending);
+    return watchPending(setPending);
+  }, []);
+  return pending;
 }
 
 async function launchInBrowser(url: string): Promise<string | null> {
@@ -83,36 +83,47 @@ export function PopupSsoSignIn({
   apiUrl,
   initial = "",
   expectedEmail,
+  pending,
   openVault,
   onCancel,
 }: {
   apiUrl: string;
   initial?: string;
   expectedEmail?: string;
+  pending: SsoPending | null;
   openVault: OpenVault;
   onCancel: () => void;
 }) {
-  const request = ssoTabRequest();
-  const server = (request?.server ?? apiUrl).replace(/\/$/, "");
-  useEffect(() => {
-    if (request) {
-      void setLocal({ apiUrl: server });
-    }
-  }, []);
+  const server = (pending?.server ?? apiUrl).replace(/\/$/, "");
   const host: SsoHost = {
     apiUrl: server,
     returnTo: chrome.identity?.getRedirectURL() ?? "",
-    launch: launchInBrowser,
-    openVault,
+    launch: async (authorizeUrl, verifier) => {
+      startInBackground({
+        server,
+        authorizeUrl,
+        verifier,
+        expectedEmail: expectedEmail ?? null,
+        locale: localeSignal.value,
+      });
+      return null;
+    },
+    openVault: async (...args) => {
+      await openVault(...args);
+      await clearPending();
+    },
   };
   return (
     <SsoSignIn
+      key={pending?.at ?? 0}
       host={host}
-      initial={request?.lookup ?? initial}
-      autoStart={request !== null && request.lookup !== ""}
+      initial={initial}
+      resumed={pending}
       expectedEmail={expectedEmail}
-      delegate={request ? undefined : (lookup) => openInTab(server, lookup)}
-      onCancel={onCancel}
+      onCancel={() => {
+        void clearPending();
+        onCancel();
+      }}
     />
   );
 }

@@ -10,6 +10,7 @@ import { MasterPasswordInput } from "#ext/ui/components/MasterPasswordInput.js";
 import { localeSignal, useT } from "#ext/ui/i18n.js";
 import { readOutcome } from "#commercial/core/sso-model.js";
 import { newVerifier, prepareSso, startSsoSession, type SsoSession } from "./api.js";
+import type { SsoPending } from "./flow.js";
 
 export interface SsoHost {
   apiUrl: string;
@@ -27,10 +28,9 @@ export interface SsoHost {
 export interface SsoSignInProps {
   host: SsoHost;
   initial?: string;
-  autoStart?: boolean;
   resume?: { url: string; verifier: string } | null;
+  resumed?: SsoPending | null;
   expectedEmail?: string;
-  delegate?: (lookup: string) => void;
   variant?: "popup" | "web";
   onCancel: () => void;
 }
@@ -41,24 +41,38 @@ type Step =
   | { kind: "unlock"; session: Extract<SsoSession, { status: "signed_in" }> }
   | { kind: "create"; session: Extract<SsoSession, { status: "register" }> };
 
-export function outcomeMessage(code: string): MessageKey {
-  const key = `error.${code}`;
+function knownMessage(key: string): MessageKey {
   return key in en ? (key as MessageKey) : "error.sso.failed";
+}
+
+export function outcomeMessage(code: string): MessageKey {
+  return knownMessage(`error.${code}`);
+}
+
+function stepOf(session: SsoSession): Step {
+  return session.status === "signed_in" ? { kind: "unlock", session } : { kind: "create", session };
 }
 
 export function SsoSignIn({
   host,
   initial = "",
-  autoStart = false,
   resume = null,
+  resumed = null,
   expectedEmail,
-  delegate,
   variant = "popup",
   onCancel,
 }: SsoSignInProps) {
   const t = useT();
-  const [step, setStep] = useState<Step>({ kind: resume || autoStart ? "waiting" : "start" });
-  const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>(() =>
+    resumed && "session" in resumed
+      ? stepOf(resumed.session)
+      : { kind: resume ? "waiting" : "start" },
+  );
+  const [error, setError] = useState<string | null>(() =>
+    resumed && "failure" in resumed
+      ? t(knownMessage(resumed.failure.messageKey), resumed.failure.params)
+      : null,
+  );
   const [working, setWorking] = useState(false);
   const [passwordIssue, setPasswordIssue] = useState<MasterPasswordIssue | null>(null);
   const web = variant === "web";
@@ -90,17 +104,11 @@ export function SsoSignIn({
       setStep({ kind: "start" });
       return;
     }
-    setStep(
-      session.status === "signed_in" ? { kind: "unlock", session } : { kind: "create", session },
-    );
+    setStep(stepOf(session));
   };
 
   const start = async (lookup: string) => {
     setError(null);
-    if (delegate) {
-      delegate(lookup);
-      return;
-    }
     setStep({ kind: "waiting" });
     try {
       const verifier = newVerifier();
@@ -117,8 +125,6 @@ export function SsoSignIn({
   useEffect(() => {
     if (resume) {
       void complete(resume.url, resume.verifier).catch(fail);
-    } else if (autoStart && initial) {
-      void start(initial);
     }
   }, []);
 

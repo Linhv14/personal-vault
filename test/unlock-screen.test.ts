@@ -39,6 +39,12 @@ vi.mock("../extension/lib/account-recovery.js", async (original) => ({
   requestRecoveryEmail,
 }));
 vi.mock("../extension/lib/resume.js", () => ({ rememberUnlock: vi.fn() }));
+vi.mock("../commercial/extension/sso/flow.js", () => ({
+  readPending: async () => null,
+  watchPending: () => () => {},
+  clearPending: async () => {},
+  startInBackground: vi.fn(),
+}));
 class SecondFactorRequired extends Error {
   constructor(readonly pending: unknown) {
     super("Second factor required");
