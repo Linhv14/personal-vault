@@ -7,9 +7,11 @@ points at your server.
 
 ## Steps
 
-1. Install the extension on the new device: either copy `dist/extension` from
-   the machine you deployed from and load it unpacked, or install the build you
-   published (see [Publish to the Chrome Web Store](publish-to-chrome-web-store.md)).
+1. Install the extension on the new device. Download
+   `https://<your server>/download/7key-extension.zip` (every deployment
+   serves the build that points at it), unzip it, and load the folder unpacked
+   in `chrome://extensions`. Or install the build you published (see
+   [Publish to the Chrome Web Store](publish-to-chrome-web-store.md)).
 2. Open the popup and choose **Sign in to your vault**.
 3. Enter your email and master password.
 

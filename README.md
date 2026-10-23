@@ -1,6 +1,8 @@
 # 7key
 
 [![CI](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml/badge.svg)](https://github.com/Linhv14/personal-vault/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Linhv14/personal-vault)](https://github.com/Linhv14/personal-vault/releases/latest)
+[![npm](https://img.shields.io/npm/v/@7key/cli?label=%407key%2Fcli)](https://www.npmjs.com/package/@7key/cli)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 An end-to-end encrypted password manager with built-in 2FA codes and team
@@ -8,6 +10,12 @@ secrets: a Chrome extension, a web app and a CLI, backed by a Cloudflare Worker.
 Use the hosted service at **[7key.online](https://7key.online)** or run the
 server on your own Cloudflare account. Either way the server stores ciphertext
 and holds no key that opens it.
+
+<p align="center">
+  <img src="docs/images/popup.webp" alt="The 7key popup showing a Google login with a live 2FA code and backup codes" width="38%">
+  &nbsp;
+  <img src="docs/images/console.webp" alt="The 7key console showing a project's secrets across development, staging and production" width="58%">
+</p>
 
 - **End-to-end encrypted.** AES-256-GCM on your device; the server sees only
   ciphertext.
@@ -33,19 +41,13 @@ and holds no key that opens it.
 
 ### On 7key.online
 
-Create an account at [7key.online/app](https://7key.online/app/). The extension
-is not on the Chrome Web Store yet, so build it once; a fresh clone points at
-7key.online:
-
-```bash
-git clone https://github.com/Linhv14/personal-vault.git
-cd personal-vault
-npm ci
-npm run build
-```
-
-Then load `dist/extension` as in step 2 below and choose **Sign in to your
-vault** in the popup.
+1. Create an account at [7key.online/app](https://7key.online/app/).
+2. The extension is not on the Chrome Web Store yet. Download
+   [7key-extension.zip](https://7key.online/download/7key-extension.zip) and
+   unzip it.
+3. Open `chrome://extensions`, turn on **Developer mode**, choose **Load
+   unpacked** and pick the unzipped folder. In the popup, choose **Sign in to
+   your vault**.
 
 ### On your own server
 
@@ -69,8 +71,9 @@ deploys the Worker and builds the extension with your server's address. Then:
 3. In the popup, choose **Create a new vault** and enter the
    `REGISTRATION_TOKEN` from `.secrets.local.txt`.
 
-Keep it up to date with one command, which backs up, pulls, reinstalls and
-deploys:
+Other computers download the extension from your own server, already pointed
+at it: `https://<your worker>/download/7key-extension.zip`. Keep the server up
+to date with one command, which backs up, pulls, reinstalls and deploys:
 
 ```bash
 npm run upgrade
@@ -140,6 +143,7 @@ Everything is indexed in [`docs/README.md`](docs/README.md).
 
 - [Contributing](CONTRIBUTING.md): development setup and house rules.
 - [Security policy](SECURITY.md): how to report a vulnerability.
+- [Code of conduct](CODE_OF_CONDUCT.md).
 - [Changelog](CHANGELOG.md).
 
 ## License
