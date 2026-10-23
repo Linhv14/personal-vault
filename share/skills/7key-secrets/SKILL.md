@@ -26,8 +26,10 @@ a task needs a secret.
 ```
 
 If `7key` is missing, ask the user to install it (`brew install linhv14/7key/sevenkey` or
-`npm install -g @7key/cli`). If there is no session, ask the user to run `7key login`. If
-the folder is not linked, ask them to run `7key link`.
+`npm install -g @7key/cli`). If there is no session, ask the user to run `7key login`, or
+`7key login --sso` when their organization signs in through single sign-on; on a
+self-hosted server they add `--server https://<their server>` once. If the folder is not
+linked, ask them to run `7key link`. When reporting a problem, include `7key --version`.
 
 ## Run a command with secrets
 
@@ -52,8 +54,8 @@ Use the command substitution directly; do not echo the value.
 7key inject -i config.yml.tpl -o config.yml
 ```
 
-The template references values as `{{ 7key://<project>/<env>/<NAME> }}`. If any reference is
-missing, nothing is written.
+The template references values as `{{ 7key:NAME }}` (the linked project and environment)
+or `{{ 7key://<project>/<env>/<NAME> }}`. If any reference is missing, nothing is written.
 
 ## When you are the AI agent
 
