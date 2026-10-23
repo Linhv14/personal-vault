@@ -29,7 +29,8 @@ list with live 2FA codes, the editor, the generator and sharing. Settings and
 import are standalone pages that reuse the same UI foundation. It
 derives keys, encrypts and decrypts. The service worker does what must outlive
 the popup: the auto-lock alarm, clearing the clipboard 30 seconds after a copy,
-registering the autofill page script, and answering that script. An offscreen
+registering the autofill page script, answering that script, and the identity
+provider step of single sign-on, which must survive the popup closing. An offscreen
 document performs the clipboard clear, because a service worker has no
 clipboard access.
 
@@ -55,6 +56,11 @@ src/i18n/     Message catalogues (English, Vietnamese). Only the UI layer uses t
 src/ui/       Design tokens, logo and icons shared by the popup, page script and share page.
 src/worker/   The Worker: routes, sessions, at-rest protection, email.
 extension/    The MV3 extension: Preact UI pages, service worker, page script, offscreen document.
+cli/          The 7key command: login (password or SSO over a loopback redirect), link,
+              run, read, inject, agent, and the CI client the GitHub Action ships.
+commercial/   Single sign-on and licence keys, under the 7key Commercial License. Reached
+              only through src/worker/index.ts, extension/commercial.ts and
+              extension/commercial-background.ts.
 share/        The share page, the neutral home page, the security and API pages.
 migrations/   D1 schema, applied in order by `npm run deploy`.
 scripts/      Build, deploy and packaging tools, in TypeScript run by Node.
