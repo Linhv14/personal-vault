@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "7key API",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "description": "HTTP API of the 7key zero-knowledge password manager, served by a Cloudflare Worker. Clients derive keys and encrypt everything before sending it: the server only ever stores and returns ciphertext, wrapped keys and keyed hashes, never plaintext or the master password. Binary values (ciphertext, nonces, keys, salts) are standard base64 with padding unless noted as base64url; timestamps are Unix seconds. The API follows the extension release and is not a versioned public contract."
   },
   "servers": [

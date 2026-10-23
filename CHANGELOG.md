@@ -8,6 +8,10 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-23
+
+Upgrade with `npm run upgrade`, then reload the extension. No migrations.
+
 ### Added
 
 - `7key login --sso` signs in through the organization's identity provider:
@@ -772,7 +776,8 @@ Requires the upgrade steps in
 - English and Vietnamese interface.
 - One-command deployment to your own Cloudflare account.
 
-[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Linhv14/personal-vault/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/Linhv14/personal-vault/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Linhv14/personal-vault/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Linhv14/personal-vault/compare/v0.3.0...v0.4.0

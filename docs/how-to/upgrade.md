@@ -49,6 +49,11 @@ working against the migrated database while the new one rolls out.
 - **Data went wrong:** restore the database to a time before the deploy; see
   [Back up and restore](back-up-and-restore.md#restore-to-a-point-in-time).
 
+## From 0.5.x to 0.6.0
+
+`npm run upgrade`, then reload the extension. There are no migrations; the
+changes are in the extension and the CLI.
+
 ## From 0.4.x to 0.5.0
 
 1. `npm run upgrade`, or the routine by hand. Migrations `0013` to `0017` add
