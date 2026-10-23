@@ -1707,8 +1707,23 @@ tr.pending-row {
 .alert.suggest {
   background: var(--accent-soft);
 }
+.alert.suggest summary {
+  list-style: none;
+  cursor: pointer;
+}
+.alert.suggest summary::-webkit-details-marker {
+  display: none;
+}
+.alert.suggest .suggest-toggle {
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.alert.suggest details[open] .suggest-toggle {
+  display: none;
+}
 .alert.suggest ul {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   padding-left: 18px;
 }
 .alert.suggest code {

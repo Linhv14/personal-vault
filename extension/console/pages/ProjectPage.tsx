@@ -209,8 +209,11 @@ function ProjectView({
 
       {suggestedNames.length > 0 && editable && (
         <div className="alert suggest action">
-          <div>
-            <strong>{t("console.agent_hosts_suggest_title")}</strong>
+          <details>
+            <summary>
+              {t("console.agent_hosts_suggest_title", { count: suggestedNames.length })}{" "}
+              <span className="suggest-toggle">{t("console.agent_hosts_suggest_show")}</span>
+            </summary>
             <ul>
               {suggestedNames.map(({ secret, hosts }) => (
                 <li key={secret.name}>
@@ -218,7 +221,7 @@ function ProjectView({
                 </li>
               ))}
             </ul>
-          </div>
+          </details>
           <button type="button" className="btn primary sm" onClick={applySuggestions}>
             {t("console.agent_hosts_apply")}
           </button>

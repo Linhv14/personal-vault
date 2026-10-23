@@ -491,7 +491,9 @@ export const en = {
   "console.agent_hosts_hint":
     "7key agent sends this secret only to these hosts; the agent itself sees a placeholder. One per line, *.example.com for subdomains.",
   "console.agent_hosts_add": "Add host",
-  "console.agent_hosts_suggest_title": "Let AI agents use these secrets through 7key agent?",
+  "console.agent_hosts_suggest_title":
+    "{count, plural, one {# secret is} other {# secrets are}} ready for AI agents: 7key suggests the hosts they may be sent to.",
+  "console.agent_hosts_suggest_show": "Show",
   "console.agent_hosts_apply": "Apply suggested hosts",
   "console.agent_hosts_applied": "Agent hosts set",
   "console.agent_hosts_remove": "Remove {host}",
