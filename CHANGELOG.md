@@ -8,6 +8,14 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+### Fixed
+
+- A second `7key mcp` or `7key agent` started while another holds the login
+  now says which process holds it, instead of "Not logged in"; and when the
+  holder was killed before giving the login back, 7key says so, asks for
+  `7key login` and clears the stale marker. Messages name `7key mcp` or
+  `7key agent`, whichever holds it.
+
 ## [0.6.0] - 2026-10-23
 
 Upgrade with `npm run upgrade`, then reload the extension. No migrations.

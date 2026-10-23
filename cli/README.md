@@ -137,7 +137,8 @@ returns names and allowed hosts, `run_with_secrets` runs a command with
 placeholders through the same proxy, and nothing returns a value. You approve
 the secrets in the agent's permission prompt before the first command (or start
 the server with `--yes` for clients that cannot ask). Your login is set aside
-while it runs, as with `7key agent`.
+while it runs, as with `7key agent`, so only one of them runs at a time; a
+second one names the process that holds the login.
 
 While the agent runs, 7key takes your login out of the keychain and keeps it
 in its own memory, so the agent cannot use `7key run` or read the keychain to

@@ -5,7 +5,7 @@ import {
   resolveSelection,
   type Flags,
 } from "../account/commands.js";
-import { pauseLogin } from "../account/credentials.js";
+import { holdLogin } from "../account/login-hold.js";
 import { remember, remembered } from "./config.js";
 import { runAgent } from "./run.js";
 import { AgentError } from "./session.js";
@@ -95,7 +95,7 @@ export async function agentMain(argv: string[], env: NodeJS.ProcessEnv): Promise
     command: args.command,
   };
   if (session) {
-    const restore = pauseLogin(env, context.keyring);
+    const restore = holdLogin(env, context.keyring, "7key agent");
     const restoreOnExit = () => restore();
     process.once("exit", restoreOnExit);
     try {

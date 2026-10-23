@@ -119,7 +119,12 @@ which secrets go to which hosts. Clients that cannot show that prompt refuse to
 run commands until the server is started with `--yes`, which you add to the MCP
 configuration yourself. While the server runs, your login is set aside, as with
 `7key agent`, so the agent cannot use `7key run` or `7key read` from its shell;
-other terminals get it back when the agent stops the server. Output is capped at
+other terminals get it back when the agent stops the server. Only one
+`7key mcp` or `7key agent` can hold the login at a time, because a copy any
+other 7key process could reach would be within the agent's reach too: a second
+server answers with the process that holds it, so stop that one first. If the
+holder is killed before it can give the login back, run `7key login` again.
+Output is capped at
 64 KiB per stream and any value that slips into it is replaced by its
 placeholder.
 

@@ -203,38 +203,3 @@ export function loginOf(session: Session, email: string): StoredLogin {
     privateKey: toBase64(session.identity.privateKey),
   };
 }
-
-function pauseFile(env: NodeJS.ProcessEnv): string {
-  return path.join(configDirectory(env), "paused-by-agent");
-}
-
-export function pausedBy(env: NodeJS.ProcessEnv): number | null {
-  const file = pauseFile(env);
-  if (!existsSync(file)) {
-    return null;
-  }
-  const pid = Number(readFileSync(file, "utf8"));
-  try {
-    process.kill(pid, 0);
-    return pid;
-  } catch {
-    return null;
-  }
-}
-
-export function pauseLogin(env: NodeJS.ProcessEnv, keyring: Keyring): () => void {
-  const raw = keyring.read();
-  if (!raw) {
-    return () => {};
-  }
-  const file = pauseFile(env);
-  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, String(process.pid), { mode: 0o600 });
-  keyring.remove();
-  return () => {
-    if (!keyring.read()) {
-      keyring.write(raw);
-    }
-    rmSync(file, { force: true });
-  };
-}

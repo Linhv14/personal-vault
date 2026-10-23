@@ -20,7 +20,8 @@ import {
   whoami,
   type Context,
 } from "../cli/account/commands.js";
-import { loadLogin, pauseLogin, type Keyring } from "../cli/account/credentials.js";
+import { loadLogin, type Keyring } from "../cli/account/credentials.js";
+import { holdLogin } from "../cli/account/login-hold.js";
 import { LINK_FILE } from "../cli/account/link.js";
 
 const BASE = process.env.VAULT_E2E_URL ?? "http://127.0.0.1:8787";
@@ -176,9 +177,9 @@ describe.skipIf(!enabled)("7key login, link and run against Worker + D1", () => 
     await expect(dotenvLocal(parseFlags([]), context({ SEVENKEY_AGENT: "1" }))).rejects.toThrow(
       "inside 7key agent",
     );
-    const restore = pauseLogin(context().env, keyring);
+    const restore = holdLogin(context().env, keyring, "7key agent");
     expect(keyring.read()).toBeNull();
-    await expect(dotenvLocal(parseFlags([]), context())).rejects.toThrow("set aside");
+    await expect(dotenvLocal(parseFlags([]), context())).rejects.toThrow("in use by 7key agent");
     restore();
     expect(loadLogin(keyring)?.email).toBe(email);
   });

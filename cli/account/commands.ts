@@ -20,7 +20,6 @@ import { ask, askHidden, choose } from "../agent/terminal.js";
 import {
   loadLogin,
   loginOf,
-  pausedBy,
   saveLogin,
   sessionOf,
   INSECURE_FILE_STORE_FLAG,
@@ -28,6 +27,7 @@ import {
   type Keyring,
 } from "./credentials.js";
 import { findLink, LINK_FILE, writeLink } from "./link.js";
+import { forgetDeadHold, heldLoginMessage, loginHold } from "./login-hold.js";
 import { injectTemplate, parseReference, type Scope } from "./reference.js";
 import { ssoSignIn } from "./sso.js";
 
@@ -160,11 +160,10 @@ function requireSession(context: Context): Session {
   if (session) {
     return session;
   }
-  const pid = pausedBy(context.env);
-  if (pid) {
-    throw new AgentError(
-      `Your login is set aside while 7key agent (pid ${pid}) runs; it comes back when the agent exits`,
-    );
+  const hold = loginHold(context.env);
+  if (hold) {
+    forgetDeadHold(context.env);
+    throw new AgentError(heldLoginMessage(hold));
   }
   throw new AgentError("Not logged in. Run: 7key login");
 }
@@ -222,6 +221,7 @@ async function keepLogin(context: Context, email: string, session: Session): Pro
   }
   const stored = loginOf(session, email);
   saveLogin(context.keyring, stored);
+  forgetDeadHold(context.env);
   if (context.keyring.warning) {
     context.log(context.keyring.warning);
   }
@@ -247,7 +247,9 @@ export async function logout(_flags: Flags, context: Context): Promise<number> {
 export async function whoami(_flags: Flags, context: Context): Promise<number> {
   const stored = loadLogin(context.keyring);
   if (!stored) {
-    context.log("Not logged in. Run: 7key login");
+    const hold = loginHold(context.env);
+    forgetDeadHold(context.env);
+    context.log(hold ? heldLoginMessage(hold) : "Not logged in. Run: 7key login");
     return 1;
   }
   context.out(`${stored.email} on ${stored.server} (until ${date(stored.expiresAt)})\n`);
