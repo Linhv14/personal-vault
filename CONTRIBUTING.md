@@ -1,5 +1,18 @@
 # Contributing
 
+Thanks for helping. Report bugs and ideas through the
+[issue forms](https://github.com/Linhv14/personal-vault/issues/new/choose),
+security problems privately as [SECURITY.md](SECURITY.md) explains, and follow
+the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Releasing
+
+Move the `[Unreleased]` entries in `CHANGELOG.md` under the new version, bump
+`version` in `package.json`, `package-lock.json` and `extension/manifest.json`,
+commit, then push a tag such as `v0.5.0`. The Release workflow checks that the
+tag matches, runs the tests, and publishes a GitHub release with the extension
+zip (pointed at 7key.online), its SHA-256 sum and the changelog entry.
+
 ## Getting set up
 
 ```bash

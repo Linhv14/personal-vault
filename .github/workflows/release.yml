@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Check the tag matches the version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          manifest="$(node -p "require('./extension/manifest.json').version")"
+          test "v$version" = "$GITHUB_REF_NAME" && test "$version" = "$manifest"
+
+      - run: npm test
+
+      - run: npm run build
+
+      - name: Collect the release files
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir release
+          cp dist/public/download/7key-extension.zip "release/7key-extension-$version.zip"
+          (cd release && sha256sum -- * > SHA256SUMS)
+          {
+            echo "**Install:** download \`7key-extension-$version.zip\`, unzip it, and load the folder"
+            echo "unpacked in \`chrome://extensions\` (Developer mode). This build signs in to 7key.online;"
+            echo "a self-hosted server serves its own build at \`/download/7key-extension.zip\`."
+            echo
+          } > release/notes.md
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md \
+            | sed "s#](docs/#](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/docs/#g" \
+            >> release/notes.md
+          test -s release/notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            --title "7key $version" \
+            --notes-file release/notes.md \
+            --verify-tag \
+            "release/7key-extension-$version.zip" release/SHA256SUMS
