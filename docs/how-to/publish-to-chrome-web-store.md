@@ -9,9 +9,9 @@ shared server ([Run a shared server](run-a-shared-server.md)).
 - A [Chrome Web Store developer account](https://chrome.google.com/webstore/devconsole)
   (one-time registration fee).
 - A deployed Worker, and a privacy policy that matches it at a public URL.
-- Screenshots at 1280×800: the popup list, an item with its 2FA code, the
-  autofill menu on a login page, and the share page. Take them from the
-  installed extension and a real login page.
+- Screenshots at 1280×800 and a 440×280 small promo tile: the popup list, an
+  item with its 2FA code, the console's secrets and, if you use them, team and
+  AI agent features. Take them from the installed extension.
 
 ## Build the upload
 
@@ -38,20 +38,22 @@ Everything the dashboard asks for, ready to paste.
 **Name:** 7key
 
 **Summary (≤132 characters):**
-End-to-end encrypted password manager with built-in 2FA codes, autofill and self-destructing share links.
+Passwords, 2FA codes and team secrets, end-to-end encrypted. AI agents use your API keys without ever seeing them.
 
 **Description:**
 
-> 7key keeps your passwords and 2FA codes encrypted on your device.
-> The server only ever stores ciphertext: nobody, including whoever runs it, can
-> read your vault.
+> 7key keeps your passwords, 2FA codes and your team's API keys encrypted on
+> your device. The server only stores ciphertext: nobody, including whoever runs
+> it, can read your vault.
 >
-> - Passwords and notes, end-to-end encrypted with AES-256-GCM
-> - 2FA codes generated right in the extension, no phone needed
-> - Suggests and fills logins on websites, and offers to save new ones (optional)
-> - Strong password, passphrase and PIN generator
-> - Share a login through a link that expires after a set time or number of views
-> - Works offline from the copy on your device; syncs across your computers
+> - Passwords, notes, cards and addresses, encrypted with AES-256-GCM
+> - 2FA codes built in, with recovery codes that keep count
+> - Autofill and passkeys on websites, when you turn them on
+> - Share a login through a link that expires after a time or a number of views
+> - Shared vaults and per-environment project secrets for teams
+> - A CLI and a GitHub Action for secrets in code and CI; AI agents use keys
+>   through placeholders, and the real key only reaches the hosts you allow
+> - Works offline; syncs across your computers
 
 **Category:** Productivity · **Language:** English, Vietnamese
 
