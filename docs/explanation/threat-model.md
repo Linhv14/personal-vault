@@ -75,7 +75,10 @@ Cloudflare sees the IP address of every request, and the Worker's logs, which
 With website icons on (the default), the server also sees the domain of each
 saved login while it fetches that site's logo. The Worker keeps each logo in
 Cloudflare's edge cache for up to 7 days, keyed by domain only, not by account;
-the extension keeps fetched logos in memory only, never on disk. With the
+the extension keeps fetched logos in the browser's session storage, which
+lives in memory, never on disk: they survive closing and reopening the popup,
+and are wiped when the vault locks or the browser closes, so a stolen disk does
+not list the sites you have accounts on. With the
 option off, the server never learns site names. It never learns URLs,
 usernames, passwords, 2FA secrets, notes, card numbers, or the contents of a
 share.

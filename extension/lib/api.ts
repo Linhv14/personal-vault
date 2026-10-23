@@ -166,7 +166,7 @@ export function asSession(token: string) {
   return { auth: false, extraHeaders: { Authorization: `Bearer ${token}` } } as const;
 }
 
-export async function fetchLogo(domain: string): Promise<Blob | null> {
+export async function fetchLogo(domain: string): Promise<Blob | "missing" | null> {
   const [{ apiUrl }, session] = await Promise.all([getLocal(), getUnlocked()]);
   if (!apiUrl || !session?.token) {
     return null;
@@ -176,6 +176,9 @@ export async function fetchLogo(domain: string): Promise<Blob | null> {
       `${apiUrl.replace(/\/$/, "")}/api/logo?domain=${encodeURIComponent(domain)}`,
       { headers: { Authorization: `Bearer ${session.token}` }, cache: "no-store" },
     );
+    if (response.status === 404) {
+      return "missing";
+    }
     if (!response.ok || !response.headers.get("Content-Type")?.startsWith("image/")) {
       return null;
     }

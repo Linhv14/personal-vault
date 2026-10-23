@@ -24,6 +24,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Changed
 
+- Site logos stay in the browser's session memory between popup openings, so
+  reopening the popup no longer fetches every logo again; they are still never
+  written to disk, are wiped when the vault locks, and a site without a logo is
+  not asked for again for a day.
 - The console's suggestion of AI agent hosts takes one line, with the list
   behind **Show**, so it no longer pushes the secrets table down.
 
