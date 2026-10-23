@@ -4,12 +4,13 @@ All commands run from the repository root with Node 22 or newer.
 
 ## Operating a deployment
 
-| Command          | What it does                                                                                                            | Touches                                        |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `npm run deploy` | Creates the D1 database and secrets if absent, applies migrations, builds, deploys, rebuilds the extension. Idempotent. | Cloudflare account, `dist/`, local state files |
-| `npm run status` | Prints the account, database id, Worker URL and recent deployments.                                                     | Read-only                                      |
-| `npm run logs`   | Streams the Worker's live logs (`wrangler tail`).                                                                       | Read-only                                      |
-| `npm run backup` | Exports the remote database to `backups/vault-<timestamp>.sql`, mode 600.                                               | `backups/`                                     |
+| Command           | What it does                                                                                                                                  | Touches                                                |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `npm run deploy`  | Creates the D1 database and secrets if absent, applies migrations, builds, deploys, rebuilds the extension. Idempotent.                       | Cloudflare account, `dist/`, local state files         |
+| `npm run upgrade` | Refuses when tracked files have local changes. Otherwise runs `backup`, `git pull --ff-only`, `npm ci`, then `deploy` with the saved options. | Cloudflare account, the git clone, `backups/`, `dist/` |
+| `npm run status`  | Prints the account, database id, Worker URL and recent deployments.                                                                           | Read-only                                              |
+| `npm run logs`    | Streams the Worker's live logs (`wrangler tail`).                                                                                             | Read-only                                              |
+| `npm run backup`  | Exports the remote database to `backups/vault-<timestamp>.sql`, mode 600.                                                                     | `backups/`                                             |
 
 `deploy` accepts options, remembered in `.cf-state.json` for later runs:
 

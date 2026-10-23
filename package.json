@@ -15,6 +15,7 @@
     "build:dev": "node scripts/build.ts --dev",
     "deploy": "node scripts/vault.ts deploy",
     "deploy:ci": "node scripts/vault.ts ci",
+    "upgrade": "node scripts/vault.ts upgrade",
     "dev": "node scripts/vault.ts dev",
     "status": "node scripts/vault.ts status",
     "logs": "node scripts/vault.ts logs",

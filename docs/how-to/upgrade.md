@@ -7,14 +7,20 @@ routine below is listed there.
 ## Routine upgrade
 
 ```bash
-npm run backup          # a copy to fall back on
-git pull
-npm ci
-npm run deploy          # applies new migrations, then deploys
+npm run upgrade
 ```
 
-`npm run deploy` reuses your saved options (registration mode, domain, email
-sender), so you do not repeat the flags.
+It stops if tracked files have local changes, then backs up the database,
+pulls the latest release (`git pull --ff-only`), reinstalls dependencies and
+runs `npm run deploy`, which applies new migrations and reuses your saved
+options (registration mode, domain, email sender). The same steps by hand:
+
+```bash
+npm run backup
+git pull
+npm ci
+npm run deploy
+```
 
 Then update the extension everywhere it runs:
 

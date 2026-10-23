@@ -354,6 +354,10 @@ async function deploy() {
       ? "2. In the popup, choose Create a new vault"
       : `2. In the popup, create a vault with the token in ${path.basename(SECRETS_NOTE)}`,
   );
+  const server = readState().workerUrl;
+  if (server) {
+    style.info(`3. For the 7key CLI: 7key login --server ${server}`);
+  }
 }
 
 async function dev() {
@@ -440,6 +444,40 @@ async function backup() {
   );
 }
 
+function runStep(label: string, command: string, args: string[]): void {
+  const result = spawnSync(command, args, { cwd: root, stdio: "inherit" });
+  if (result.status !== 0) {
+    throw new Error(`${label} failed`);
+  }
+}
+
+async function upgrade() {
+  if (!existsSync(GENERATED)) {
+    throw new Error("Never deployed. Run: npm run deploy");
+  }
+  const changes = spawnSync("git", ["status", "--porcelain", "--untracked-files=no"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  if (changes.status !== 0) {
+    throw new Error("This folder is not a git clone; upgrade by hand (docs/how-to/upgrade.md)");
+  }
+  if (changes.stdout.trim()) {
+    throw new Error("Commit or stash your local changes first");
+  }
+  await backup();
+
+  style.step("Pulling the latest release");
+  runStep("git pull", "git", ["pull", "--ff-only"]);
+
+  style.step("Installing dependencies");
+  const npm = process.env.npm_execpath;
+  runStep("npm ci", npm ? process.execPath : "npm", npm ? [npm, "ci"] : ["ci"]);
+
+  runStep("deploy", process.execPath, [path.join(root, "scripts", "vault.ts"), "deploy"]);
+  style.info("Then reload 7key in chrome://extensions on every machine that uses this build.");
+}
+
 const PRODUCTION = path.join(root, "deploy", "production.json");
 
 async function ci() {
@@ -464,7 +502,15 @@ async function ci() {
   await wranglerInherit(["deploy", "-c", configPath]);
 }
 
-const COMMANDS: Record<string, () => Promise<void>> = { deploy, ci, dev, status, logs, backup };
+const COMMANDS: Record<string, () => Promise<void>> = {
+  deploy,
+  upgrade,
+  ci,
+  dev,
+  status,
+  logs,
+  backup,
+};
 
 const command = process.argv[2];
 if (!command || !(command in COMMANDS)) {
@@ -484,6 +530,8 @@ if (!command || !(command in COMMANDS)) {
                                  /media/* ("none" to drop; deploy that Worker first)
            --privacy-url <url>   link this https privacy policy from the share page,
                                  /security, emails and the extension ("none" to drop)
+  upgrade  Back up, pull the latest release, reinstall dependencies and deploy
+           with the saved options.
   ci       Deploy from Workers Builds with deploy/production.json: migrate,
            build and deploy. Secrets must already be set on the Worker.
   dev      Run the Worker and a local D1 at http://127.0.0.1:8787
