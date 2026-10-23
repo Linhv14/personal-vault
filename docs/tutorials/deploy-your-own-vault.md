@@ -87,6 +87,13 @@ exist only inside that ciphertext, and the key to it never left your browser.
 
 ## Where to go next
 
+- Use your team's secrets from the terminal: install the CLI
+  (`npm install -g @7key/cli`) and sign in to your server with the line the
+  deploy printed, `7key login --server <your Worker URL>`. See
+  [Use the CLI](../how-to/use-the-cli.md).
+- Keep the server current with `npm run upgrade`; see
+  [Upgrade a deployment](../how-to/upgrade.md).
+
 - Use the vault on a second computer:
   [Add another device](../how-to/add-another-device.md).
 - Turn on login suggestions on websites: **Settings → Suggest logins on

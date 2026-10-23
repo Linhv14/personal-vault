@@ -36,11 +36,25 @@ Every value becomes an environment variable for the later steps of the job.
 | `key`    | yes      | The repository key, stored as a secret            |
 | `server` | no       | Your server, when it is not `https://7key.online` |
 
+### With your own server
+
+Add `server` with your Worker's address; the console of that server shows the
+link and the key:
+
+```yaml
+- uses: Linhv14/7key-action@v1
+  with:
+    link: <the link shown in the console>
+    key: ${{ secrets.SEVENKEY_KEY }}
+    server: https://vault.example.com
+```
+
 ## Without the Action
 
 Each [release](https://github.com/Linhv14/7key-action/releases) carries
 `7key.mjs`, the same client as a single file for Node 20 or later, with its
-SHA-256 sum. With `SEVENKEY_KEY` and `SEVENKEY_LINK` in the environment:
+SHA-256 sum. With `SEVENKEY_KEY` and `SEVENKEY_LINK` in the environment (and
+`SEVENKEY_SERVER` for your own server):
 
 ```bash
 node 7key.mjs run -- npm run deploy    # values only for this command
@@ -53,8 +67,9 @@ node 7key.mjs dotenv > .env            # a .env file
 `@v1` follows the latest 1.x release. Pin a full version (`@v1.0.0`) or a
 commit SHA to control upgrades.
 
-This repository holds built files only; it is published from the 7key
-source on each release.
+This repository holds built files only; it is published from
+[Linhv14/personal-vault](https://github.com/Linhv14/personal-vault) on each
+release. Report issues there.
 
 ## License
 

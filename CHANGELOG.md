@@ -23,6 +23,8 @@ version may change the API or storage format; such releases list the steps in
 
 ### Fixed
 
+- With Touch ID offered, an unlock error no longer squeezes the master password
+  field: it shows on its own line below.
 - Random US phone numbers use real area codes instead of 555, and Vietnamese
   ones use real mobile prefixes, so checkout forms accept them.
 - The card expiry field only takes MM/YY.
@@ -32,6 +34,10 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- `npm run upgrade` backs up the database, pulls the latest release,
+  reinstalls dependencies and deploys with the saved options, refusing to run
+  over local changes. `npm run deploy` ends with the `7key login --server`
+  line for the CLI.
 - Card autofill works in the card fields that Shopify, Stripe, Braintree, Adyen
   and other payment providers put in their own frames.
 - Random details in the autofill menu can be made in either US or Vietnam

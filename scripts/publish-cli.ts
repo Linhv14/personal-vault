@@ -18,6 +18,28 @@ const root = path.resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const tapOnly = args.includes("--tap-only");
+
+const TAP_README = `# 7key Homebrew tap
+
+The [7key](https://7key.online) CLI: give your terminal, CI and AI agents the
+secrets of a project without showing the values.
+
+\`\`\`bash
+brew install linhv14/7key/sevenkey
+7key login                       # or: 7key login --server https://<your server>
+7key link                        # once per folder
+7key run -- npm run dev
+\`\`\`
+
+The formula is \`sevenkey\` because formula names cannot start with a digit; it
+installs the \`7key\` command. Also on npm: \`npm install -g @7key/cli\`.
+
+Documentation: [Use the CLI](https://github.com/Linhv14/personal-vault/blob/main/docs/how-to/use-the-cli.md).
+This repository is generated from
+[Linhv14/personal-vault](https://github.com/Linhv14/personal-vault) on each
+release; report issues there. Licensed under the GNU AGPL-3.0.
+`;
+
 const version = args.find((arg) => !arg.startsWith("--"));
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
   console.error("Usage: npm run publish:cli -- <version> [--dry-run], for example 1.3.1");
@@ -52,10 +74,7 @@ function updateTap(stage: string, release: string, sha256: string): void {
   writeFileSync(path.join(tap, "Formula", `${FORMULA}.rb`), formula(release, sha256));
   rmSync(path.join(tap, "Aliases", BIN), { force: true });
   symlinkSync(`../Formula/${FORMULA}.rb`, path.join(tap, "Aliases", BIN));
-  writeFileSync(
-    path.join(tap, "README.md"),
-    `# 7key Homebrew tap\n\nThe [7key](https://7key.online) CLI: give AI agents and CI your secrets without showing them the values.\n\n\`\`\`bash\nbrew install linhv14/7key/sevenkey\n\`\`\`\n\nThe formula is \`sevenkey\` because formula names cannot start with a digit; it installs the \`7key\` command. Also on npm: \`npm install -g @7key/cli\`.\n`,
-  );
+  writeFileSync(path.join(tap, "README.md"), TAP_README);
   run("git", ["add", "-A"], tap);
   if (run("git", ["status", "--porcelain"], tap)) {
     run("git", ["commit", "-m", `7key ${release}`], tap);

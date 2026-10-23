@@ -16,6 +16,18 @@ brew install linhv14/7key/sevenkey
 
 Or run it without installing: `npx @7key/cli <command>`. Needs Node 20 or later.
 
+## Use it with your own server
+
+The CLI talks to `https://7key.online` unless you name another server once, at
+login. It remembers it, and `.7key.json` records it for the folder:
+
+```bash
+7key login --server https://vault.example.com
+```
+
+`npm run deploy` prints this line with your Worker's address. For a one-off
+command or CI, `SEVENKEY_SERVER` does the same.
+
 ## Use your secrets on your computer
 
 ```bash
@@ -40,16 +52,17 @@ stays the same when the project is renamed.
 7key run --project trust1-portal --env production -- npm run migrate
 ```
 
-| Command                       | What it does                                   |
-| ----------------------------- | ---------------------------------------------- |
-| `7key run -- <command>`       | Run a command with the linked secrets          |
-| `7key dotenv > .env`          | Write them to a `.env` file                    |
-| `7key secrets`                | List the names, without values                 |
-| `7key read <reference>`       | Print one value                                |
-| `7key inject -i <template>`   | Fill a template with values                    |
-| `--env production`            | Use another environment of the linked project  |
-| `--project <ref> --env <ref>` | Use a project without linking the folder       |
-| `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke |
+| Command                       | What it does                                      |
+| ----------------------------- | ------------------------------------------------- |
+| `7key run -- <command>`       | Run a command with the linked secrets             |
+| `7key dotenv > .env`          | Write them to a `.env` file                       |
+| `7key secrets`                | List the names, without values                    |
+| `7key read <reference>`       | Print one value                                   |
+| `7key inject -i <template>`   | Fill a template with values                       |
+| `--env production`            | Use another environment of the linked project     |
+| `--project <ref> --env <ref>` | Use a project without linking the folder          |
+| `7key login --server <url>`   | Sign in to your own server instead of 7key.online |
+| `7key whoami`, `7key logout`  | Show the account and link; sign out and revoke    |
 
 ### Read one value or fill a template
 
@@ -146,4 +159,9 @@ export SEVENKEY_LINK=<organization>.<link>   # SEVENKEY_KEY comes from a CI secr
 - Use a restricted key and allow as few hosts as possible: the agent cannot
   see the key, but it can still call the API with it.
 
-[7key.online](https://7key.online) · MIT licensed
+## License
+
+Copyright (C) 2026 Linh BE. Licensed under the GNU AGPL-3.0 (see `LICENSE`).
+"7key" is a trademark of Linh BE. Source:
+[Linhv14/personal-vault](https://github.com/Linhv14/personal-vault) ·
+[7key.online](https://7key.online)

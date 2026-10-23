@@ -13,10 +13,16 @@ brew install linhv14/7key/sevenkey     # or Homebrew
 ## Sign in and link a folder
 
 ```bash
-7key login
+7key login                                    # 7key.online
+7key login --server https://vault.example.com # or your own server
 cd ~/code/payments
 7key link
 ```
+
+The CLI remembers the server from the login, and `.7key.json` records it for
+the folder, so you name your server once. `npm run deploy` prints the login
+line with your Worker's address; `SEVENKEY_SERVER` overrides it for one
+command.
 
 `7key login` asks for your email and master password once. The session lasts
 30 days and lives in the macOS Keychain, the Linux Secret Service keyring
