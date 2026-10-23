@@ -47,6 +47,7 @@ it teaches, instructs, describes or explains.
 | [Threat model](explanation/threat-model.md) | What each party can and cannot learn, and what is out of reach |
 
 - [Teams and CI secrets](explanation/teams.md): the design for company teams and secrets in CI.
+- [File attachments](explanation/attachments.md): the proposed design for encrypted files on vault items.
   | [Share links](explanation/share-links.md) | How a link carries its own key, and the controls on it |
   | [Autofill](explanation/autofill.md) | How the page script decides what to show and where |
   | [Passkeys](explanation/passkeys.md) | How 7key creates and uses passkeys, and what it refuses |
