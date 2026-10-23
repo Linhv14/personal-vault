@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest something 7key should do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: How you imagine it working. Mockups or examples from other tools are welcome.
+  - type: dropdown
+    id: who
+    attributes:
+      label: Who it is for
+      options:
+        - Me, on my own vault
+        - A family or a small team
+        - An organization
+        - Developers (CLI, CI, AI agents)
+        - People running their own server
+  - type: checkboxes
+    id: zero-knowledge
+    attributes:
+      label: Zero knowledge
+      options:
+        - label: I understand 7key will not add anything that lets the server read vault contents.

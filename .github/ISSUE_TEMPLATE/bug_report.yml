@@ -1,0 +1,65 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thanks for the report. Do not paste passwords, 2FA secrets, recovery codes,
+        tokens or `.secrets.local.txt`. Security issues go to the private advisory
+        form instead (see SECURITY.md).
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options:
+        - Extension
+        - Web app or console
+        - CLI (7key)
+        - GitHub Action
+        - Server, deploy or upgrade
+    validations:
+      required: true
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      options:
+        - 7key.online
+        - My own deployment
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The extension version in chrome://extensions, `npm ls -g @7key/cli` for the CLI, or the release you deployed.
+      placeholder: 0.5.0
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the popup
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Browser and operating system
+      placeholder: Chrome 131 on macOS 15
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Console output, `npm run logs`, or a screenshot. Check that nothing secret is visible.
+      render: text

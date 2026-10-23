@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Linhv14/personal-vault/security/advisories/new
+    about: Report it privately. Never in a public issue. See SECURITY.md.
+  - name: Ask a question
+    url: https://github.com/Linhv14/personal-vault/discussions
+    about: Setup help, ideas and questions go to Discussions.
