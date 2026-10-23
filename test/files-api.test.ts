@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomBytes, toBase64 } from "../src/core/bytes.js";
-import { durableNamespace, memoryBucket } from "./durable-storage.js";
+import { durableNamespace } from "./durable-storage.js";
+import { memoryBucket } from "./memory-bucket.js";
 import { addOrg, signedInAccount } from "./sso-harness.js";
 import { setTime, startWorker, T0, type TestWorker } from "./worker-harness.js";
 

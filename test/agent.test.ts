@@ -12,7 +12,8 @@ import { hostAllowed, normalizeHost, parseHosts } from "../src/core/projects.js"
 import { createAuthority, verifies } from "../cli/agent/certs.js";
 import { parseAgentArgs } from "../cli/agent/main.js";
 import { startProxy, type RunningProxy } from "../cli/agent/proxy.js";
-import { childEnvironment, plan } from "../cli/agent/run.js";
+import { plan } from "../cli/agent/plan.js";
+import { childEnvironment } from "../cli/agent/sandbox.js";
 import {
   scrub,
   Scrubber,

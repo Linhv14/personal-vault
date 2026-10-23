@@ -5,8 +5,8 @@ import { PassThrough } from "node:stream";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createAuthority } from "../cli/agent/certs.js";
 import type { Selected, Session } from "../cli/agent/session.js";
-import { vaultBackend } from "../cli/mcp/main.js";
-import { serveMcp, type McpBackend, type RunResult } from "../cli/mcp/server.js";
+import { vaultBackend, type McpBackend, type RunResult } from "../cli/mcp/backend.js";
+import { serveMcp } from "../cli/mcp/server.js";
 
 const SECRET = "sk_test_51NwRealValueThatMustStayHidden";
 
