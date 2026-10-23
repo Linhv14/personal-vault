@@ -53,8 +53,9 @@ cut into 1 MiB chunks, and each chunk is sealed with AES-256-GCM:
   complete: a missing tail fails because no chunk claims to be last.
 
 The stored object is a one-byte format version followed by the sealed chunks
-back to back, each 16 bytes longer than its plaintext. Decryption reads one
-chunk at a time, so memory stays bounded by the chunk size.
+back to back, each 16 bytes longer than its plaintext. The first version seals
+and opens a whole file in memory, which the 25 MiB limit keeps reasonable; the
+chunked format lets a later version stream large files a chunk at a time.
 
 The file key never reaches the server on its own. It sits with the file's name,
 type and plaintext size inside the item's ciphertext:
@@ -84,7 +85,10 @@ Files go to an R2 bucket bound as `FILES`, under two prefixes:
 
 A metadata row holds the file id, the item id it belongs to, the stored size,
 who uploaded it (team files) and when. Quotas, deletion and the activity log
-read these rows; nobody lists the bucket during normal work.
+read these rows; nobody lists the bucket during normal work. The rows are kept by `FileTables`
+(`src/worker/file-tables.ts`), pure SQL like the organization's table modules;
+`UserStore` composes it for personal files and `OrgStore` will for team files,
+while the Durable Object itself does the R2 calls and the alarm.
 
 ## API
 

@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { now } from "./clock.js";
 import { fail, ok, type Result } from "./result.js";
-import { ORPHAN_SECONDS, PENDING_SECONDS, personalFileKey } from "./files.js";
+import { FileTables, ORPHAN_SECONDS, PENDING_SECONDS, personalFileKey } from "./file-tables.js";
 import { dumpStore, restoreStore, type StoreDump } from "./migration.js";
 import type { StoreEnv } from "./store-env.js";
 
@@ -26,6 +26,7 @@ type Row = {
 
 export class UserStore extends DurableObject<StoreEnv> {
   private readonly sql: SqlStorage;
+  private readonly files: FileTables;
 
   constructor(ctx: DurableObjectState, env: StoreEnv) {
     super(ctx, env);
@@ -40,15 +41,11 @@ export class UserStore extends DurableObject<StoreEnv> {
         deleted_at INTEGER
       );
       CREATE INDEX IF NOT EXISTS items_updated ON items (updated_at);
-      CREATE TABLE IF NOT EXISTS files (
-        id TEXT PRIMARY KEY,
-        item_id TEXT NOT NULL,
-        size INTEGER NOT NULL,
-        created_at INTEGER NOT NULL,
-        ready INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE INDEX IF NOT EXISTS files_item ON files (item_id);
     `);
+    this.files = new FileTables(
+      this.sql,
+      "SELECT 1 FROM items i WHERE i.id = f.item_id AND i.deleted_at IS NULL",
+    );
   }
 
   private meta(key: string): string | null {
@@ -202,12 +199,8 @@ export class UserStore extends DurableObject<StoreEnv> {
     if (!changed) {
       return fail(404, "items.not_found");
     }
-    const files = this.sql
-      .exec<{ id: string }>("SELECT id FROM files WHERE item_id = ?", id)
-      .toArray()
-      .map((row) => row.id);
     try {
-      await this.dropFiles(files);
+      await this.dropFiles(this.files.ofItem(id));
     } catch {
       await this.wakeAt(now() + ORPHAN_SECONDS + 1);
     }
@@ -222,9 +215,7 @@ export class UserStore extends DurableObject<StoreEnv> {
     for (let start = 0; start < ids.length; start += 1000) {
       const batch = ids.slice(start, start + 1000);
       await this.env.FILES?.delete(batch.map((id) => personalFileKey(owner, id)));
-      for (const id of batch) {
-        this.sql.exec("DELETE FROM files WHERE id = ?", id);
-      }
+      this.files.forget(batch);
     }
   }
 
@@ -243,35 +234,17 @@ export class UserStore extends DurableObject<StoreEnv> {
     if (!(await this.open(accountId))) {
       return fail(403, "items.forbidden");
     }
-    if (this.sql.exec("SELECT 1 FROM files WHERE id = ?", file.id).toArray().length) {
-      return fail(409, "files.exists");
+    const reservation = this.files.reserve(file, limits, now());
+    if (reservation !== "reserved") {
+      return fail(reservation === "quota_exceeded" ? 403 : 409, `files.${reservation}`);
     }
-    const onItem = this.sql
-      .exec<{ count: number }>("SELECT COUNT(*) AS count FROM files WHERE item_id = ?", file.itemId)
-      .one().count;
-    if (onItem >= limits.perItem) {
-      return fail(409, "files.item_limit");
-    }
-    const used = this.sql
-      .exec<{ used: number }>("SELECT COALESCE(SUM(size), 0) AS used FROM files")
-      .one().used;
-    if (used + file.size > limits.accountBytes) {
-      return fail(403, "files.quota_exceeded");
-    }
-    this.sql.exec(
-      "INSERT INTO files (id, item_id, size, created_at) VALUES (?, ?, ?, ?)",
-      file.id,
-      file.itemId,
-      file.size,
-      now(),
-    );
     await this.wakeAt(now() + PENDING_SECONDS + 1);
     return ok({ id: file.id });
   }
 
   async confirmFile(accountId: string, id: string): Promise<void> {
     if (await this.open(accountId)) {
-      this.sql.exec("UPDATE files SET ready = 1 WHERE id = ?", id);
+      this.files.confirm(id);
     }
   }
 
@@ -279,17 +252,14 @@ export class UserStore extends DurableObject<StoreEnv> {
     if (!(await this.open(accountId))) {
       return null;
     }
-    const row = this.sql
-      .exec<{ size: number }>("SELECT size FROM files WHERE id = ? AND ready = 1", id)
-      .toArray()[0];
-    return row?.size ?? null;
+    return this.files.readySize(id);
   }
 
   async removeFile(accountId: string, id: string): Promise<Result<{ id: string }>> {
     if (!(await this.open(accountId))) {
       return fail(403, "items.forbidden");
     }
-    if (!this.sql.exec("SELECT 1 FROM files WHERE id = ?", id).toArray().length) {
+    if (!this.files.has(id)) {
       return fail(404, "files.not_found");
     }
     await this.dropFiles([id]);
@@ -297,21 +267,8 @@ export class UserStore extends DurableObject<StoreEnv> {
   }
 
   async alarm(): Promise<void> {
-    const due = (row: { created_at: number; ready: number; live: number }) =>
-      row.created_at + (row.ready ? ORPHAN_SECONDS : PENDING_SECONDS);
-    const rows = this.sql
-      .exec<{ id: string; created_at: number; ready: number; live: number }>(
-        `SELECT f.id, f.created_at, f.ready,
-                EXISTS (SELECT 1 FROM items i WHERE i.id = f.item_id AND i.deleted_at IS NULL) AS live
-           FROM files f`,
-      )
-      .toArray()
-      .filter((row) => !row.ready || !row.live);
-    const time = now();
-    await this.dropFiles(rows.filter((row) => due(row) <= time).map((row) => row.id));
-    const next = rows
-      .filter((row) => due(row) > time)
-      .reduce<number | null>((soonest, row) => Math.min(soonest ?? Infinity, due(row)), null);
+    const { due, next } = this.files.sweep(now());
+    await this.dropFiles(due);
     if (next !== null) {
       await this.ctx.storage.setAlarm((next + 1) * 1000);
     }
@@ -322,12 +279,7 @@ export class UserStore extends DurableObject<StoreEnv> {
     if (owner !== null && owner !== accountId) {
       return;
     }
-    await this.dropFiles(
-      this.sql
-        .exec<{ id: string }>("SELECT id FROM files")
-        .toArray()
-        .map((row) => row.id),
-    );
+    await this.dropFiles(this.files.all());
     await this.ctx.storage.deleteAll();
   }
 

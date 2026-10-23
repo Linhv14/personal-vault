@@ -185,6 +185,20 @@ export class OrgDirectory {
       .run();
   }
 
+  async inAnyPlan(accountId: string, plans: readonly string[]): Promise<boolean> {
+    if (plans.length === 0) {
+      return false;
+    }
+    const row = await this.db
+      .prepare(
+        `SELECT 1 AS found FROM org_members m JOIN orgs o ON o.id = m.org_id
+          WHERE m.account_id = ? AND o.plan IN (${plans.map(() => "?").join(", ")}) LIMIT 1`,
+      )
+      .bind(accountId, ...plans)
+      .first<{ found: number }>();
+    return row !== null;
+  }
+
   async orgIdsOf(accountId: string): Promise<string[]> {
     const { results } = await this.db
       .prepare("SELECT org_id FROM org_members WHERE account_id = ?")

@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { apiError } from "../errors.js";
 import { respond } from "../http.js";
 import { userStore } from "../durable-objects.js";
-import { attachmentsMode, fileLimits, mayAttach, personalFileKey } from "../files.js";
+import { personalFileKey } from "../file-tables.js";
+import { attachmentsMode, fileLimits, mayAttach } from "../files.js";
 import type { AppBindings } from "../types.js";
 import { isUuid } from "../validate.js";
 
