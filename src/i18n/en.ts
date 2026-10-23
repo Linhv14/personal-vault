@@ -15,7 +15,7 @@ export const en = {
   "error.files.invalid": "That file could not be uploaded. Try again.",
   "error.files.unavailable": "This server does not store file attachments.",
   "error.files.plan_required": "File attachments come with the Team and Enterprise plans.",
-  "error.files.too_large": "That file is too large. Attach files up to {limit}.",
+  "error.files.too_large": "That file is too large. Attach files up to {limit} MB.",
   "error.files.quota_exceeded": "Your file storage is full. Delete some attachments first.",
   "error.files.item_limit": "This item already has 20 files.",
   "error.files.exists": "That file is already uploaded.",

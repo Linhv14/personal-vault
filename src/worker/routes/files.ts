@@ -31,7 +31,10 @@ files.put("/:id", async (c) => {
   }
   const limits = fileLimits(c.env);
   if (size > limits.sealedMax) {
-    return c.json(apiError("files.too_large", { limit: limits.sealedMax }), 413);
+    return c.json(
+      apiError("files.too_large", { limit: Math.floor(limits.fileMax / (1024 * 1024)) }),
+      413,
+    );
   }
   const store = userStore(c.env, accountId);
   const reserved = await store.reserveFile(accountId, { id, itemId, size }, limits);
@@ -49,6 +52,7 @@ files.put("/:id", async (c) => {
     await store.removeFile(accountId, id);
     throw error;
   }
+  await store.confirmFile(accountId, id);
   return c.json({ id, size }, 201);
 });
 

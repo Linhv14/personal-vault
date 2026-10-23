@@ -8,6 +8,11 @@ let worker: TestWorker;
 let bucket: ReturnType<typeof memoryBucket>;
 interface FileStore {
   alarm(): Promise<void>;
+  reserveFile(
+    accountId: string,
+    file: { id: string; itemId: string; size: number },
+    limits: { accountBytes: number; perItem: number },
+  ): Promise<{ ok: boolean }>;
 }
 
 const STORE = new URL("../src/worker/user-vault-object.ts", import.meta.url).href;
@@ -136,8 +141,12 @@ describe("file attachments API", () => {
     await upload(ana.token, orphan, uuid());
     const store = users.binding.get(`user:${ana.id}`);
     const state = users.state(`user:${ana.id}`);
-    expect(state.alarmAt()).toBe((T0 + 24 * 3600) * 1000);
-    setTime(T0 + 24 * 3600 + 5);
+    expect(state.alarmAt()).toBe((T0 + 3601) * 1000);
+    setTime(T0 + 3601);
+    await store.alarm();
+    expect(bucket.objects.size).toBe(2);
+    expect(state.alarmAt()).toBe((T0 + 24 * 3600 + 1) * 1000);
+    setTime(T0 + 24 * 3600 + 1);
     await store.alarm();
     expect(bucket.objects.has(`a/${ana.id}/${kept}`)).toBe(true);
     expect(bucket.objects.has(`a/${ana.id}/${orphan}`)).toBe(false);
@@ -155,6 +164,51 @@ describe("file attachments API", () => {
       json: { currentAuthKey: ana.record.authKey },
     });
     expect(deleted.status).toBe(200);
+    expect(bucket.objects.size).toBe(0);
+  });
+
+  it("frees the quota of an upload that never finished, even on a live item", async () => {
+    await start({ ACCOUNT_FILES_BYTES: "1000" });
+    const ana = await signedInAccount(worker, "ana@acme.com");
+    const item = uuid();
+    await saveItem(ana.token, item);
+    const store = users.binding.get(`user:${ana.id}`);
+    const stuck = uuid();
+    expect(
+      (
+        await store.reserveFile(
+          ana.id,
+          { id: stuck, itemId: item, size: 900 },
+          {
+            accountBytes: 1000,
+            perItem: 20,
+          },
+        )
+      ).ok,
+    ).toBe(true);
+    expect((await worker.fetch(`/api/files/${stuck}`, { token: ana.token })).status).toBe(404);
+    expect((await upload(ana.token, uuid(), item, randomBytes(200))).status).toBe(403);
+    setTime(T0 + 3601);
+    await store.alarm();
+    expect((await upload(ana.token, uuid(), item, randomBytes(200))).status).toBe(201);
+  });
+
+  it("still deletes the item when R2 fails, and retries the files later", async () => {
+    await start();
+    const ana = await signedInAccount(worker, "ana@acme.com");
+    const item = uuid();
+    await saveItem(ana.token, item);
+    const file = uuid();
+    await upload(ana.token, file, item);
+    const remove = bucket.binding.delete;
+    bucket.binding.delete = () => Promise.reject(new Error("R2 down"));
+    expect(
+      (await worker.fetch(`/api/items/${item}`, { method: "DELETE", token: ana.token })).status,
+    ).toBe(200);
+    bucket.binding.delete = remove;
+    expect(bucket.objects.has(`a/${ana.id}/${file}`)).toBe(true);
+    setTime(T0 + 24 * 3600 + 2);
+    await users.binding.get(`user:${ana.id}`).alarm();
     expect(bucket.objects.size).toBe(0);
   });
 });

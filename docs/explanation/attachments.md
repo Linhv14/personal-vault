@@ -150,8 +150,10 @@ Uploading and deleting team files are written to the activity log as
 | Per team vault         | 1 GiB   | Shared documents of a small team                        |
 | Files per item         | 20      | Keeps the item well under 64 KiB                        |
 
-Self-hosted servers can raise them with variables (`FILE_MAX_BYTES`,
-`ACCOUNT_FILES_BYTES`, `TEAM_FILES_BYTES`).
+Self-hosted servers change them at deploy time (`--file-max-mb`,
+`--account-files-mb`); the values go into the generated config, so a later
+deploy keeps them. Moving a server with the migration endpoints carries the
+file rows but not the R2 objects: copy the bucket separately.
 
 ## What the server learns
 
@@ -176,7 +178,11 @@ and the `FILES` binding. Without the binding the server reports
    quotas, deletion with the item and the account, `attachments` in
    `/api/config`.
 3. Extension: attach, list, download and remove in the editor and detail view;
-   images and PDFs open in a new tab from a `blob:` URL.
+   images and PDFs open in a new tab from a `blob:` URL. Until step 4, moving
+   an item with files to a team vault (one item, or **Share with a team**) is
+   refused, because deleting the personal copy deletes its files. A file the
+   server no longer has (an item deleted on one device and saved again from an
+   offline one) shows as missing instead of failing the item.
 4. Team scope: `team_files`, team routes, copy on move, deletion with the team,
    activity log.
 5. Console and web dashboard; deploy option; limits, HTTP API, data model,

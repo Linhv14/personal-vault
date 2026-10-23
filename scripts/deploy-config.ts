@@ -10,6 +10,8 @@ export interface DeployOptions {
   siteService: string | null;
   privacyUrl: string | null;
   attachments: AttachmentsOption;
+  fileMaxMb: number | null;
+  accountFilesMb: number | null;
 }
 
 export type AttachmentsOption = (typeof ATTACHMENTS_OPTIONS)[number];
@@ -32,7 +34,20 @@ export const DEFAULT_DEPLOY_OPTIONS: Readonly<DeployOptions> = Object.freeze({
   siteService: null,
   privacyUrl: null,
   attachments: "off",
+  fileMaxMb: null,
+  accountFilesMb: null,
 });
+
+function megabytes(flag: string, value: string): number | null {
+  if (value === "none") {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100_000) {
+    throw new Error(`${flag} takes a whole number of megabytes, not ${value}`);
+  }
+  return parsed;
+}
 
 function isEmailProvider(value: string): value is EmailProvider {
   return (EMAIL_PROVIDERS as readonly string[]).includes(value);
@@ -122,6 +137,12 @@ export function parseDeployFlags(argv: readonly string[]): Partial<DeployOptions
         flags.attachments = mode as AttachmentsOption;
         break;
       }
+      case "--file-max-mb":
+        flags.fileMaxMb = megabytes(flag, takeValue());
+        break;
+      case "--account-files-mb":
+        flags.accountFilesMb = megabytes(flag, takeValue());
+        break;
       case "--privacy-url": {
         const url = clearable(takeValue());
         if (url && !isHttpsUrl(url)) {
@@ -235,6 +256,12 @@ export function renderConfig(
       { binding: "FILES", bucket_name: FILES_BUCKET },
     ];
     vars.ATTACHMENTS = options.attachments;
+    if (options.fileMaxMb) {
+      vars.FILE_MAX_BYTES = String(options.fileMaxMb * 1024 * 1024);
+    }
+    if (options.accountFilesMb) {
+      vars.ACCOUNT_FILES_BYTES = String(options.accountFilesMb * 1024 * 1024);
+    }
   }
 
   config.secrets = { required: requiredSecrets(options) };

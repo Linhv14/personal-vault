@@ -9,6 +9,7 @@ const DEFAULT_FILE_MAX_BYTES = 25 * MIB;
 const DEFAULT_ACCOUNT_FILES_BYTES = 250 * MIB;
 export const FILES_PER_ITEM = 20;
 export const ORPHAN_SECONDS = 24 * 60 * 60;
+export const PENDING_SECONDS = 60 * 60;
 
 export function attachmentsMode(env: Env): AttachmentsMode {
   if (!env.FILES) {
@@ -25,6 +26,7 @@ function bytes(value: string | undefined, fallback: number): number {
 export function fileLimits(env: Env) {
   const fileMax = bytes(env.FILE_MAX_BYTES, DEFAULT_FILE_MAX_BYTES);
   return {
+    fileMax,
     sealedMax: sealedFileSize(fileMax),
     accountBytes: bytes(env.ACCOUNT_FILES_BYTES, DEFAULT_ACCOUNT_FILES_BYTES),
     perItem: FILES_PER_ITEM,

@@ -552,6 +552,8 @@ if (!command || !(command in COMMANDS)) {
                                  /media/* ("none" to drop; deploy that Worker first)
            --attachments <mode>  store encrypted file attachments in R2: all, paid
                                  (Team and Enterprise organizations only) or off
+           --file-max-mb <n>     largest attachment, in MB (default 25; "none" to reset)
+           --account-files-mb <n>  attachment storage per account, in MB (default 250)
            --privacy-url <url>   link this https privacy policy from the share page,
                                  /security, emails and the extension ("none" to drop)
   upgrade  Back up, pull the latest release, reinstall dependencies and deploy

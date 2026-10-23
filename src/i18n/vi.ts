@@ -17,7 +17,7 @@ export const vi: Catalogue = {
   "error.files.invalid": "Không tải tệp lên được. Hãy thử lại.",
   "error.files.unavailable": "Máy chủ này không lưu tệp đính kèm.",
   "error.files.plan_required": "Tệp đính kèm có trong gói Team và Enterprise.",
-  "error.files.too_large": "Tệp quá lớn. Chỉ đính kèm được tệp đến {limit}.",
+  "error.files.too_large": "Tệp quá lớn. Chỉ đính kèm được tệp đến {limit} MB.",
   "error.files.quota_exceeded": "Dung lượng lưu tệp đã đầy. Hãy xoá bớt tệp đính kèm.",
   "error.files.item_limit": "Mục này đã có đủ 20 tệp.",
   "error.files.exists": "Tệp này đã được tải lên.",

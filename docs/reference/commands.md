@@ -14,14 +14,15 @@ All commands run from the repository root with Node 22 or newer.
 
 `deploy` accepts options, remembered in `.cf-state.json` for later runs:
 
-| Option                        | Effect                                                                                                                                                                       |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--open-registration`         | Anyone can create an account.                                                                                                                                                |
-| `--token-registration`        | Creating an account needs `REGISTRATION_TOKEN` (default).                                                                                                                    |
-| `--domain <host>`             | Serve on a custom domain in the same account. `none` removes it.                                                                                                             |
-| `--email-from <address>`      | Send verification and share codes from this address; requires verification at sign-up. `none` removes it.                                                                    |
-| `--email-provider <provider>` | `resend` (default, needs the `RESEND_API_KEY` secret) or `cloudflare` (Workers Paid).                                                                                        |
-| `--attachments <mode>`        | `all` or `paid` (Team and Enterprise organizations only) store encrypted file attachments in an R2 bucket `vault-files`, created if missing; `off` (default) keeps them off. |
+| Option                                        | Effect                                                                                                                                                                       |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--open-registration`                         | Anyone can create an account.                                                                                                                                                |
+| `--token-registration`                        | Creating an account needs `REGISTRATION_TOKEN` (default).                                                                                                                    |
+| `--domain <host>`                             | Serve on a custom domain in the same account. `none` removes it.                                                                                                             |
+| `--email-from <address>`                      | Send verification and share codes from this address; requires verification at sign-up. `none` removes it.                                                                    |
+| `--email-provider <provider>`                 | `resend` (default, needs the `RESEND_API_KEY` secret) or `cloudflare` (Workers Paid).                                                                                        |
+| `--attachments <mode>`                        | `all` or `paid` (Team and Enterprise organizations only) store encrypted file attachments in an R2 bucket `vault-files`, created if missing; `off` (default) keeps them off. |
+| `--file-max-mb <n>`, `--account-files-mb <n>` | Largest attachment and storage per account, in MB (defaults 25 and 250); `none` resets. Only with attachments on.                                                            |
 
 Pass options after `--`: `npm run deploy -- --open-registration`.
 

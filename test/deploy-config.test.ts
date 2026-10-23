@@ -127,6 +127,20 @@ describe("attachments option", () => {
     expect(config.r2_buckets).toEqual([{ binding: "FILES", bucket_name: "vault-files" }]);
     expect(config.vars).toMatchObject({ ATTACHMENTS: "all" });
   });
+
+  it("writes the file limits into the config, where a deploy cannot wipe them", () => {
+    expect(parseDeployFlags(["--file-max-mb", "100", "--account-files-mb", "none"])).toEqual({
+      fileMaxMb: 100,
+      accountFilesMb: null,
+    });
+    expect(() => parseDeployFlags(["--file-max-mb", "1.5"])).toThrow(/whole number/);
+    const config = render({ attachments: "all", fileMaxMb: 100, accountFilesMb: 2048 });
+    expect(config.vars).toMatchObject({
+      FILE_MAX_BYTES: String(100 * 1024 * 1024),
+      ACCOUNT_FILES_BYTES: String(2048 * 1024 * 1024),
+    });
+    expect(render({ fileMaxMb: 100 }).vars).not.toHaveProperty("FILE_MAX_BYTES");
+  });
 });
 
 describe("privacy url option", () => {
