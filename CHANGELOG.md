@@ -8,6 +8,25 @@ version may change the API or storage format; such releases list the steps in
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-23
+
+Upgrade with `npm run upgrade`. Migrations `0013` to `0017` only add tables
+and columns. See [Upgrade a deployment](docs/how-to/upgrade.md#from-04x-to-050).
+
+### Security
+
+- Sign-in, recovery, email and share codes are throttled per network, and
+  each attempt is counted atomically, so parallel guesses cannot exceed the
+  limits. Sign-in no longer reveals whether an address is registered.
+- The server enforces the 600,000-iteration KDF floor, and the extension
+  re-derives an older vault key at that strength after sign-in.
+- Master passwords need 12 characters and are checked against known breaches
+  (k-anonymity, only a hash prefix leaves the device).
+- Lookalike domains of saved logins are flagged before autofill, and card
+  fills are pinned to the registered payment frame.
+- `7key agent` scrubs base64, hex and percent-encoded forms of a secret, and
+  the CLI refuses an unencrypted session file unless explicitly asked.
+
 ### Changed
 
 - Privacy policy links on the share page, `/security`, `/api-docs`, email
@@ -34,6 +53,25 @@ version may change the API or storage format; such releases list the steps in
 
 ### Added
 
+- **Single sign-on** for organizations (enterprise plan, or a `LICENSE_KEY` on
+  a self-hosted server): OpenID Connect with Google Workspace, Entra ID, Okta
+  and others, DNS-verified domains, **Require SSO** and **Single organization**
+  policies. The identity provider is trusted only for addresses on verified
+  domains; members on other domains link their account once, after
+  re-entering their master password. In the extension, the provider step runs
+  in the background and the popup reopens on the master password. See
+  [Set up single sign-on](docs/how-to/set-up-sso.md).
+- **Two-factor authentication for the account:** turn it on with a QR code in
+  Settings → Security; the extension, the web app and the CLI ask for the code
+  or a backup code after the master password.
+- **Signed-in devices** in Settings, with sign-out per device or for all
+  others.
+- Optional Turnstile check on sign-up, recovery and share codes
+  (`--turnstile-site-key`).
+- Autofill: save prompts show and let you edit the username and password,
+  warn when the password is reused, can be turned off per site, and come back
+  from the popup for five minutes after being dismissed. Typed cards,
+  addresses and lone phone numbers can be saved too.
 - `npm run upgrade` backs up the database, pulls the latest release,
   reinstalls dependencies and deploys with the saved options, refusing to run
   over local changes. `npm run deploy` ends with the `7key login --server`
@@ -681,7 +719,8 @@ Requires the upgrade steps in
 - English and Vietnamese interface.
 - One-command deployment to your own Cloudflare account.
 
-[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/Linhv14/personal-vault/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Linhv14/personal-vault/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Linhv14/personal-vault/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Linhv14/personal-vault/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Linhv14/personal-vault/compare/v0.2.0...v0.3.0

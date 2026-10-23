@@ -24,9 +24,10 @@ npm run deploy
 
 Then update the extension everywhere it runs:
 
-- **Loaded unpacked:** `dist/extension` was rebuilt by the deploy. Copy it to
-  each machine that uses its own copy, then press the reload icon on 7key in
-  `chrome://extensions`.
+- **Loaded unpacked:** on the machine you deployed from, `dist/extension` was
+  rebuilt; press the reload icon on 7key in `chrome://extensions`. On other
+  machines, download `https://<your server>/download/7key-extension.zip`
+  again, unzip it over the old folder, then reload.
 - **Published:** run `npm run package` and upload the zip; see
   [Publish to the Chrome Web Store](publish-to-chrome-web-store.md).
 
@@ -47,6 +48,18 @@ working against the migrated database while the new one rolls out.
   which the old code ignores.
 - **Data went wrong:** restore the database to a time before the deploy; see
   [Back up and restore](back-up-and-restore.md#restore-to-a-point-in-time).
+
+## From 0.4.x to 0.5.0
+
+1. `npm run upgrade`, or the routine by hand. Migrations `0013` to `0017` add
+   the throttle, device, account two-factor and single sign-on tables;
+   nothing is rewritten.
+2. Reload the extension. On its first sign-in, an account made with fewer
+   than 600,000 KDF iterations is re-derived at that strength, which takes a
+   few seconds once.
+3. Single sign-on stays off until an organization on the enterprise plan, or
+   a server with a `LICENSE_KEY`, sets it up; see
+   [Set up single sign-on](set-up-sso.md).
 
 ## From 0.2.x to 0.3.0
 
