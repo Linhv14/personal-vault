@@ -17,6 +17,28 @@ proposed; nothing below is built yet.
   from Bitwarden or 1Password imports. Each is listed under
   [Later](#later).
 
+## Availability
+
+Attachments are a paid feature on 7key.online and free when you run your own
+server:
+
+- **7key.online** sets `ATTACHMENTS = "paid"`. A team vault takes files when its
+  organization is on the Team or Enterprise plan (`attachments` in
+  `PLAN_LIMITS`, next to seats and teams), and a person can attach files to
+  personal items while they belong to such an organization. On the Free plan the
+  clients show the feature as part of Team, without an upload button.
+- **A self-hosted server** defaults to `ATTACHMENTS = "all"`: every account and
+  every team, with no licence key, once the `FILES` bucket exists.
+- `ATTACHMENTS = "off"`, or no `FILES` binding, turns the feature off.
+
+`/api/config` reports `attachments: "all" | "paid" | "off"`; whether a given
+account or team may upload is decided by the server on each upload, and the
+answer for the signed-in account comes with its organizations.
+
+Files already uploaded stay readable and deletable if an organization drops back
+to Free; only new uploads are refused (`403 files.plan_required`), so nobody
+loses a document because a payment lapsed.
+
 ## Encryption
 
 Each file gets a fresh 256-bit **file key** and a random UUID. The plaintext is
@@ -124,7 +146,7 @@ Uploading and deleting team files are written to the activity log as
 | Limit                  | Value   | Why                                                     |
 | ---------------------- | ------- | ------------------------------------------------------- |
 | One file               | 25 MiB  | Decrypted in memory for download; covers scans and PDFs |
-| Per account (personal) | 250 MiB | Fits many accounts in R2's free 10 GB on 7key.online    |
+| Per account (personal) | 250 MiB | Personal documents of a member of a paid organization   |
 | Per team vault         | 1 GiB   | Shared documents of a small team                        |
 | Files per item         | 20      | Keeps the item well under 64 KiB                        |
 
@@ -142,17 +164,17 @@ multiplies storage, and the threat model says so plainly.
 ## Self-hosting
 
 R2 must be turned on in the Cloudflare account (the free tier asks for a payment
-method). Attachments are therefore optional: `npm run deploy -- --attachments`
-creates the bucket and the binding, and without the binding the
-server says `attachments: false` in `/api/config`, and the clients hide the
-feature.
+method), so the bucket is opt-in: `npm run deploy -- --attachments` creates it
+and the `FILES` binding. Without the binding the server reports
+`attachments: "off"` and the clients hide the feature.
 
 ## Delivery plan
 
 1. `src/core/files.ts`: chunked sealing and opening, with tests.
-2. Worker, personal scope: optional `FILES` binding, `files` table and alarm in
-   `UserStore`, the three routes, quotas, deletion with the item and the
-   account, `attachments` in `/api/config`.
+2. Worker, personal scope: optional `FILES` binding, `ATTACHMENTS` mode and the
+   plan check, `files` table and alarm in `UserStore`, the three routes,
+   quotas, deletion with the item and the account, `attachments` in
+   `/api/config`.
 3. Extension: attach, list, download and remove in the editor and detail view;
    images and PDFs open in a new tab from a `blob:` URL.
 4. Team scope: `team_files`, team routes, copy on move, deletion with the team,
@@ -166,4 +188,4 @@ feature.
 - Files in share links: a separate one-time object under the share's key.
 - Encrypted exports that include files, and attachments from Bitwarden and
   1Password exports.
-- Plan-based quotas once billing opens.
+- Larger quotas per plan once billing opens.
