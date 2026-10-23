@@ -13,6 +13,7 @@ export const vi: Catalogue = {
   "error.crypto.empty_password": "Chưa nhập mật khẩu chính",
   "error.crypto.wrong_password": "Sai mật khẩu chính",
   "error.crypto.bad_key_length": "Khoá kho phải dài đúng 32 byte",
+  "error.crypto.bad_file": "Tệp này đã hỏng hoặc bị thay đổi nên không mở được",
   "error.share.passphrase_required": "Link này cần mật khẩu",
   "error.share.invalid_key": "Link này không hợp lệ",
   "error.share.wrong_passphrase": "Sai mật khẩu",

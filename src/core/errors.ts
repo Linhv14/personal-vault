@@ -10,6 +10,7 @@ export type ErrorCode =
   | "crypto.empty_password"
   | "crypto.wrong_password"
   | "crypto.bad_key_length"
+  | "crypto.bad_file"
   | "share.passphrase_required"
   | "share.invalid_key"
   | "share.wrong_passphrase"

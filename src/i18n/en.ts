@@ -11,6 +11,7 @@ export const en = {
   "error.crypto.empty_password": "The master password is empty",
   "error.crypto.wrong_password": "Incorrect master password",
   "error.crypto.bad_key_length": "The vault key must be 32 bytes",
+  "error.crypto.bad_file": "This file is damaged or was changed, and cannot be opened",
   "error.share.passphrase_required": "This link needs a password",
   "error.share.invalid_key": "This link is not valid",
   "error.share.wrong_passphrase": "Wrong password",
