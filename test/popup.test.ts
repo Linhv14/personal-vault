@@ -321,8 +321,7 @@ describe("extension popup", () => {
 
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
-
-    expect(server.items.size).toBe(1);
+    await waitFor(() => server.items.size === 1, "the saved item on the server");
 
     const sent = server.received.join("\n");
     expect(sent).not.toContain("GitHub");
@@ -524,7 +523,7 @@ describe("extension popup", () => {
     setField(form, "cardExpiry", "4/2027");
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await waitFor(() => visibleScreen() === "screen-list", "the list after saving");
-    expect(server.items.size).toBe(2);
+    await waitFor(() => server.items.size === 2, "the saved card on the server");
 
     expect(typeOptions().map((option) => option.textContent)).toEqual([
       "All2",
@@ -590,7 +589,7 @@ describe("extension popup", () => {
     detailButton("Delete forever").click();
     await waitFor(() => scopes().includes("Trash0"), "the permanent delete");
     confirm.mockRestore();
-    expect(server.items.size).toBe(1);
+    await waitFor(() => server.items.size === 1, "the delete on the server");
     expect(scopes()).toContain("All items1");
   });
 

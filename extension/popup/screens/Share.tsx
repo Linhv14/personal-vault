@@ -13,7 +13,8 @@ import { Icon } from "#ext/ui/components/Icon.js";
 import { useT } from "#ext/ui/i18n.js";
 import { IconButton } from "#ext/ui/components/IconButton.js";
 import { ItemIcon } from "#ext/ui/components/ItemIcons.js";
-import { copy, formatDate, openSettings, showList, vaultKey } from "../state.js";
+import { formatDate, openSettings, showList, vaultKey } from "../state.js";
+import { copy } from "../item-actions.js";
 
 const TTL_CHOICES: [string, MessageKey][] = [
   ["3600", "share.ttl_1h"],

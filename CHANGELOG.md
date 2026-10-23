@@ -38,8 +38,12 @@ version may change the API or storage format; such releases list the steps in
 - A new passkey goes into the site's only login even when the site names the
   account differently (GitHub sends the handle, not the email), and the
   username match ignores case and spaces.
-- Moving an item to the trash in the popup takes effect at once and is undone
-  if the server refuses it.
+- Popup changes no longer wait for the server: saving, favoriting, marking
+  recovery codes used, moving to the trash, restoring and deleting show at once
+  with a toast, are written in the background one after another per item, and
+  are undone (a failed save reopens the editor with the draft) if the server
+  refuses them. Copying no longer decrypts the whole vault again, and **Share**
+  opens without waiting for the server's settings.
 - The popup opens faster: it shows a placeholder layout while it loads, reads
   storage once instead of five times, decrypts items in parallel, reuses one
   translator per language and draws the first rows of a long list before the

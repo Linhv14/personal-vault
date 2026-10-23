@@ -21,20 +21,8 @@ import { IconButton } from "#ext/ui/components/IconButton.js";
 import { Field, ValueRow } from "../components/FieldRow.js";
 import { ItemIcon } from "#ext/ui/components/ItemIcons.js";
 import { TotpRow } from "../components/Totp.js";
-import {
-  copy,
-  CopySource,
-  deleteForever,
-  nowMs,
-  formatDate,
-  openEditor,
-  openShare,
-  setFavorite,
-  setTrashed,
-  setUsedCodes,
-  vaults,
-  toast,
-} from "../state.js";
+import { CopySource, nowMs, formatDate, openEditor, openShare, vaults, toast } from "../state.js";
+import { copy, deleteForever, setFavorite, setTrashed, setUsedCodes } from "../item-actions.js";
 
 const KEY_ICON: Partial<Record<string, IconName>> = {
   username: "person",
@@ -249,7 +237,7 @@ function Actions({ item }: { item: VaultItem }) {
             icon="share"
             className="pill-icon"
             label={t("share.title")}
-            onClick={() => void openShare(item)}
+            onClick={() => openShare(item)}
           />
         )}
       </div>
@@ -267,7 +255,7 @@ function Actions({ item }: { item: VaultItem }) {
           icon="share"
           className="pill-icon"
           label={t("share.title")}
-          onClick={() => void openShare(item)}
+          onClick={() => openShare(item)}
         />
       )}
       <div className="more">

@@ -165,6 +165,11 @@ async function upsertCache(row: CachedItem): Promise<void> {
   await setLocal({ items: next });
 }
 
+export function draftOf(item: VaultItem): Omit<VaultItem, "createdAt" | "updatedAt"> {
+  const { createdAt: _createdAt, updatedAt: _updatedAt, ...draft } = item;
+  return draft;
+}
+
 export function newItemId(): string {
   return crypto.randomUUID();
 }

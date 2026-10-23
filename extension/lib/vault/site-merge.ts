@@ -1,7 +1,7 @@
 import { itemType } from "../item-types.js";
 import { moveToTrash } from "../trash.js";
 import { domainsOf, isOwnLogin, labelFromTitle, siteLabel } from "./site-match.js";
-import { saveItem } from "./store.js";
+import { draftOf, saveItem } from "./store.js";
 import { isSharedVaultId } from "./vault-ids.js";
 import type { VaultItem } from "./types.js";
 
@@ -76,8 +76,7 @@ export function mergedItem(merge: SiteMerge): VaultItem {
 }
 
 export async function applySiteMerge(key: CryptoKey, merge: SiteMerge): Promise<void> {
-  const { createdAt: _createdAt, updatedAt: _updatedAt, ...draft } = mergedItem(merge);
-  await saveItem(key, draft, merge.target);
+  await saveItem(key, draftOf(mergedItem(merge)), merge.target);
   for (const donor of [merge.passkeyFrom, merge.codesFrom]) {
     if (donor) {
       await moveToTrash(key, donor);

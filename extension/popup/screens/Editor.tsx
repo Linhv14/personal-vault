@@ -13,7 +13,7 @@ import {
   type ItemType,
 } from "#ext/lib/item-types.js";
 import { parseRecoveryCodes } from "#ext/lib/recovery-codes.js";
-import { newItemId, saveItem } from "#ext/lib/vault/store.js";
+import { newItemId } from "#ext/lib/vault/store.js";
 import type { VaultItem } from "#ext/lib/vault/types.js";
 import { DEFAULT_VAULT_ID, vaultOf } from "#ext/lib/vault/defs.js";
 import { IconButton } from "#ext/ui/components/IconButton.js";
@@ -26,18 +26,8 @@ import {
 } from "../components/EditorRows.js";
 import { initialValue, InvalidField, readEditedFields, type EditedFields } from "../edit-fields.js";
 import { scanTotpFromTab, type ScanHint } from "../qr-scan.js";
-import {
-  newItemVault,
-  nowMs,
-  reloadItems,
-  setTrashed,
-  showList,
-  tabUrl,
-  toast,
-  translator,
-  vaultKey,
-  vaults,
-} from "../state.js";
+import { newItemVault, nowMs, showList, tabUrl, toast, vaults } from "../state.js";
+import { saveEditedItem, setTrashed } from "../item-actions.js";
 import { formatEntropy } from "../strength.js";
 import { OptionalField } from "../components/OptionalField.js";
 
@@ -231,7 +221,7 @@ export function Editor({
   const form = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [customRows, setCustomRows] = useState<CustomRow[]>(() =>
-    (item?.fields ?? []).map((field) => ({
+    (source?.fields ?? []).map((field) => ({
       key: rowKey(),
       label: field.label,
       value: field.value,
@@ -247,7 +237,7 @@ export function Editor({
 
   const titleField = () => form.current?.querySelector<HTMLInputElement>('[name="title"]');
 
-  const submit = async (event: Event) => {
+  const submit = (event: Event) => {
     event.preventDefault();
     setError(null);
     const data = new FormData(event.currentTarget as HTMLFormElement);
@@ -267,43 +257,26 @@ export function Editor({
       return;
     }
 
-    const key = vaultKey.value;
-    if (!key) {
-      return;
-    }
-    try {
-      await saveItem(
-        key,
-        {
-          ...item,
-          id: item?.id ?? newItemId(),
-          type,
-          title: formText(data, "title").trim(),
-          vault: storedVault(formText(data, "vault") || initialVault),
-          ...fields,
-          usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
-          passwordHistory: HAS_PASSWORD_HISTORY.has(type)
-            ? withPasswordHistory(item, fields.password, Math.floor(nowMs() / 1000))
-            : item?.passwordHistory,
-        },
-        item ?? undefined,
-      );
-      await reloadItems();
-      showList();
-      toast(translator()(item ? "edit.saved" : "edit.added"));
-    } catch (failure) {
-      setError(describeError(failure, t));
-    }
+    void saveEditedItem(
+      {
+        ...item,
+        id: item?.id ?? newItemId(),
+        type,
+        title: formText(data, "title").trim(),
+        vault: storedVault(formText(data, "vault") || initialVault),
+        ...fields,
+        usedCodes: keepUsedCodes(fields.codes, item?.usedCodes),
+        passwordHistory: HAS_PASSWORD_HISTORY.has(type)
+          ? withPasswordHistory(item, fields.password, Math.floor(nowMs() / 1000))
+          : item?.passwordHistory,
+      },
+      item,
+    );
   };
 
-  const moveToTrash = async () => {
-    if (!item) {
-      return;
-    }
-    try {
-      await setTrashed(item, true);
-    } catch (failure) {
-      setError(describeError(failure, t));
+  const moveToTrash = () => {
+    if (item) {
+      void setTrashed(item, true);
     }
   };
 
@@ -313,7 +286,7 @@ export function Editor({
         <IconButton icon="back" label={t("common.back")} onClick={showList} />
         <h1 id="edit-title">{t(item ? "edit.edit_title" : NEW_LABEL[type])}</h1>
       </header>
-      <form id="form-edit" className="stack" ref={form} onSubmit={(event) => void submit(event)}>
+      <form id="form-edit" className="stack" ref={form} onSubmit={submit}>
         <label>
           <span>{t("edit.name")}</span>
           <input name="title" required autoComplete="off" defaultValue={source?.title ?? ""} />
@@ -391,7 +364,7 @@ export function Editor({
           className="link danger"
           id="edit-delete"
           hidden={!item}
-          onClick={() => void moveToTrash()}
+          onClick={moveToTrash}
         >
           {t("edit.move_to_trash")}
         </button>

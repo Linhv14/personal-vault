@@ -105,7 +105,7 @@ export function VaultEditor({ vault }: { vault: VaultDef | null }) {
           </div>
         </fieldset>
         <button className="primary" type="submit" disabled={working}>
-          {t("vault.save")}
+          {working ? t("vault.saving") : t("vault.save")}
         </button>
         {vault && vault.id !== DEFAULT_VAULT_ID && (
           <button

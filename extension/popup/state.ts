@@ -5,18 +5,18 @@ import { createTranslator, describeError, type Translate } from "#i18n/index.js"
 import { formatDateTime } from "../ui/format.js";
 import { localeSignal } from "../ui/i18n.js";
 import * as api from "../lib/api.js";
-import { scheduleClipboardClear } from "../lib/clipboard.js";
 import { getLocal, lock, notePasskeys, setLocal, takeItemFocus, touch } from "../lib/storage.js";
 import { decryptEverything } from "../lib/vault/decrypt.js";
 import {
+  draftOf,
   newItemId,
-  markUsed,
   removeItem,
   saveItem,
   saveItemPatiently,
   sync,
 } from "../lib/vault/store.js";
 import { importKey } from "../lib/vault/item-crypto.js";
+import { settled } from "./write-queue.js";
 import { migrateUnboundItems } from "../lib/vault/migrate.js";
 import type { VaultDef, VaultItem } from "../lib/vault/types.js";
 import { itemType, type ItemType } from "../lib/item-types.js";
@@ -88,17 +88,6 @@ export function toast(message: string): void {
   toastTimer = setTimeout(() => (toastMessage.value = null), 1800);
 }
 
-export async function copy(value: string, what: string, from?: VaultItem): Promise<void> {
-  await navigator.clipboard.writeText(value);
-  toast(translator()("common.copied", { what }));
-  if (from && vaultKey.value) {
-    void markUsed(vaultKey.value, from)
-      .then(reloadItems)
-      .catch(() => {});
-  }
-  await scheduleClipboardClear();
-}
-
 export const CopySource = createContext<VaultItem | undefined>(undefined);
 
 function setItems(next: VaultItem[]): void {
@@ -109,6 +98,7 @@ function setItems(next: VaultItem[]): void {
 let vaultRecords: VaultItem[] = [];
 
 export async function reloadItems(): Promise<void> {
+  await settled();
   if (!vaultKey.value) {
     return;
   }
@@ -182,6 +172,7 @@ async function rewriteItems(
   if (!key) {
     return 0;
   }
+  await settled();
   const affected = items.value.filter((item) => vaultOf(item) === vaultId);
   vaultBusy.value = true;
   try {
@@ -204,7 +195,7 @@ export async function moveVaultItems(from: VaultDef, to: VaultDef): Promise<void
   const t = translator();
   try {
     const moved = await rewriteItems(from.id, (item) => ({
-      ...withoutTimestamps(item),
+      ...draftOf(item),
       vault: to.id === DEFAULT_VAULT_ID ? undefined : to.id,
     }));
     await reloadItems();
@@ -227,7 +218,7 @@ export async function deleteVault(vault: VaultDef): Promise<void> {
   }
   const now = Math.floor(nowMs() / 1000);
   await rewriteItems(vault.id, (item) => ({
-    ...withoutTimestamps(item),
+    ...draftOf(item),
     vault: undefined,
     trashedAt: item.trashedAt ?? now,
   }));
@@ -314,11 +305,20 @@ export function openEditor(
   screen.value = "edit";
 }
 
-export async function openShare(item: VaultItem): Promise<void> {
-  const { apiUrl } = await getLocal();
-  const config = await api.serverConfig(apiUrl ?? "");
-  sharing.value = { item, emailAccess: config.emailVerification };
+let emailAccess = false;
+
+export function openShare(item: VaultItem): void {
+  sharing.value = { item, emailAccess };
   screen.value = "share";
+  void getLocal()
+    .then(({ apiUrl }) => api.serverConfig(apiUrl ?? ""))
+    .then((config) => {
+      emailAccess = config.emailVerification;
+      if (sharing.value?.item.id === item.id) {
+        sharing.value = { item, emailAccess };
+      }
+    })
+    .catch(() => undefined);
 }
 
 export function openGenerator(): void {
@@ -342,71 +342,6 @@ export function openImport(): void {
 export async function lockNow(): Promise<void> {
   await lock();
   location.reload();
-}
-
-function withoutTimestamps(item: VaultItem): Omit<VaultItem, "createdAt" | "updatedAt"> {
-  const { createdAt: _createdAt, updatedAt: _updatedAt, ...draft } = item;
-  return draft;
-}
-
-async function replaceItem(draft: Omit<VaultItem, "createdAt" | "updatedAt">): Promise<void> {
-  if (!vaultKey.value) {
-    return;
-  }
-  const saved = await saveItem(vaultKey.value, draft, draft);
-  items.value = items.value.map((candidate) => (candidate.id === saved.id ? saved : candidate));
-}
-
-export async function setFavorite(item: VaultItem, favorite: boolean): Promise<void> {
-  try {
-    await replaceItem({ ...withoutTimestamps(item), favorite });
-  } catch (error) {
-    toast(describeError(error, translator()));
-  }
-}
-
-export async function setUsedCodes(item: VaultItem, usedCodes: string[] | undefined) {
-  try {
-    const { usedCodes: _usedCodes, ...draft } = withoutTimestamps(item);
-    await replaceItem(usedCodes ? { ...draft, usedCodes } : draft);
-  } catch (error) {
-    toast(describeError(error, translator()));
-  }
-}
-
-const trashing = new Map<string, Promise<void>>();
-
-export async function setTrashed(item: VaultItem, trashed: boolean): Promise<void> {
-  const { trashedAt: _trashedAt, ...draft } = withoutTimestamps(item);
-  const next = trashed ? { ...draft, trashedAt: Math.floor(nowMs() / 1000) } : draft;
-  const put = (value: VaultItem) => {
-    items.value = items.value.map((candidate) => (candidate.id === item.id ? value : candidate));
-  };
-  put({ ...next, createdAt: item.createdAt, updatedAt: item.updatedAt });
-  showList();
-  toast(translator()(trashed ? "edit.trashed" : "edit.restored"));
-  const saving = replaceItem(next).catch((error: unknown) => {
-    put(item);
-    toast(describeError(error, translator()));
-  });
-  trashing.set(item.id, saving);
-  await saving;
-  trashing.delete(item.id);
-}
-
-export async function deleteForever(item: VaultItem): Promise<void> {
-  const t = translator();
-  if (!confirm(t("edit.delete_confirm", { title: item.title }))) {
-    return;
-  }
-  try {
-    await trashing.get(item.id);
-    await removeItem(item.id, item);
-    items.value = items.value.filter((candidate) => candidate.id !== item.id);
-    toast(t("edit.deleted"));
-  } catch (error) {
-    toast(describeError(error, t));
-  }
 }
 
 export function formatDate(epochSeconds: number): string {

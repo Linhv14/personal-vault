@@ -9,7 +9,8 @@ import {
 import { describeError, type MessageKey } from "#i18n/index.js";
 import { useT } from "#ext/ui/i18n.js";
 import { IconButton } from "#ext/ui/components/IconButton.js";
-import { copy, showList } from "../state.js";
+import { showList } from "../state.js";
+import { copy } from "../item-actions.js";
 import { formatEntropy } from "../strength.js";
 
 type Mode = "password" | "passphrase" | "pin";
