@@ -91,6 +91,7 @@ npm install -g @7key/cli         # or: brew install linhv14/7key/sevenkey
 7key link                        # once per folder: pick a project and environment
 7key run -- npm run dev          # the command gets the secrets as variables
 7key agent -- claude             # the agent gets placeholders, never the keys
+7key mcp                         # the same for MCP clients: claude mcp add 7key -- 7key mcp
 ```
 
 In GitHub Actions, use [`Linhv14/7key-action`](https://github.com/Linhv14/7key-action).
